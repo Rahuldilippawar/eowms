@@ -8,7 +8,9 @@ $canManage = hasPermission('manage_teaching_academics') || isManagementOrAbove()
 $viewTeacherId = $canManage && !empty($_GET['teacher_id']) ? (int)$_GET['teacher_id'] : $user['id'];
 if ($viewTeacherId !== (int)$user['id'] && !$canManage) { http_response_code(403); die('परवानगी नाही.'); }
 
-$fy = date('Y') . '-' . substr(date('Y') + 1, 2);
+// शैक्षणिक वर्ष जूनपासून सुरू — जानेवारी-मे मध्ये मागच्या वर्षाचंच Academic Year
+$fyStartYear = (int)date('Y') - ((int)date('n') < 6 ? 1 : 0);
+$fy = $fyStartYear . '-' . substr((string)($fyStartYear + 1), 2);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';

@@ -3,7 +3,9 @@ require_once __DIR__ . '/../includes/student-auth.php';
 requireStudentLogin('');
 $student = currentStudent();
 $orgId = $student['organization_id'];
-$fy = date('Y') . '-' . substr(date('Y') + 1, 2);
+// शैक्षणिक वर्ष जूनपासून सुरू — जानेवारी-मे मध्ये मागच्या वर्षाचंच Academic Year
+$fyStartYear = (int)date('Y') - ((int)date('n') < 6 ? 1 : 0);
+$fy = $fyStartYear . '-' . substr((string)($fyStartYear + 1), 2);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $teacherId = (int)($_POST['teacher_id'] ?? 0);
