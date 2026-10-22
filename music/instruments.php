@@ -36,23 +36,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $holderName = trim($_POST['holder_name'] ?? '');
         $remarks = trim($_POST['remarks'] ?? '');
 
+        $ownStmt = $pdo->prepare("SELECT id FROM music_instruments WHERE id = ? AND organization_id = ?");
+        $ownStmt->execute([$instrumentId, $orgId]);
+        if (!$ownStmt->fetch()) { header('Location: instruments.php'); exit; }
+
         $pdo->prepare("INSERT INTO music_instrument_log (instrument_id, action_type, holder_name, remarks, logged_by) VALUES (?, ?, ?, ?, ?)")
             ->execute([$instrumentId, $logType, $holderName, $remarks, $user['id']]);
 
         if ($logType === 'issued') {
-            $pdo->prepare("UPDATE music_instruments SET remarks = ? WHERE id = ?")->execute(["सध्या: $holderName कडे", $instrumentId]);
+            $pdo->prepare("UPDATE music_instruments SET remarks = ? WHERE id = ? AND organization_id = ?")->execute(["सध्या: $holderName कडे", $instrumentId, $orgId]);
         } elseif ($logType === 'returned') {
-            $pdo->prepare("UPDATE music_instruments SET remarks = NULL WHERE id = ?")->execute([$instrumentId]);
+            $pdo->prepare("UPDATE music_instruments SET remarks = NULL WHERE id = ? AND organization_id = ?")->execute([$instrumentId, $orgId]);
         } elseif ($logType === 'tuned') {
-            $pdo->prepare("UPDATE music_instruments SET last_tuned_date = CURDATE(), condition_status = 'good' WHERE id = ?")->execute([$instrumentId]);
+            $pdo->prepare("UPDATE music_instruments SET last_tuned_date = CURDATE(), condition_status = 'good' WHERE id = ? AND organization_id = ?")->execute([$instrumentId, $orgId]);
         } elseif ($logType === 'repaired') {
-            $pdo->prepare("UPDATE music_instruments SET condition_status = 'good' WHERE id = ?")->execute([$instrumentId]);
+            $pdo->prepare("UPDATE music_instruments SET condition_status = 'good' WHERE id = ? AND organization_id = ?")->execute([$instrumentId, $orgId]);
         }
         $_SESSION['flash'] = 'नोंद जतन झाली.';
     } elseif ($action === 'update_status') {
         $instrumentId = (int)($_POST['instrument_id'] ?? 0);
         $status = $_POST['condition_status'] ?? 'good';
-        $pdo->prepare("UPDATE music_instruments SET condition_status = ? WHERE id = ?")->execute([$status, $instrumentId]);
+        $pdo->prepare("UPDATE music_instruments SET condition_status = ? WHERE id = ? AND organization_id = ?")->execute([$status, $instrumentId, $orgId]);
         $_SESSION['flash'] = 'स्थिती अद्ययावत केली.';
     }
     header('Location: instruments.php');

@@ -120,7 +120,7 @@ try {
       <select name="department_id" id="departmentSelect" class="form-select-custom" style="width:auto;" onchange="this.form.submit()">
         <option value=""><?= h(t('s18')) ?></option>
         <?php foreach ($departments as $dept): ?>
-          <option value="<?= $dept['id'] ?>" <?= (string)$filterDeptId === (string)$dept['id'] ? 'selected' : '' ?>><?= h($dept['name_local'] ?: $dept['name']) ?></option>
+          <option value="<?= $dept['id'] ?>" <?= (string)$requestedDeptId === (string)$dept['id'] ? 'selected' : '' ?>><?= h($dept['name_local'] ?: $dept['name']) ?></option>
         <?php endforeach; ?>
       </select>
       <?php if (count($campusesForCascade) > 1): ?>

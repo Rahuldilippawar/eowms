@@ -74,7 +74,7 @@ $completionDate = ($status === 'completed') ? date('Y-m-d') : null;
 $countStmt = $pdo->prepare("SELECT COUNT(*) c FROM work_records WHERE organization_id = ?");
 $countStmt->execute([$department['organization_id']]);
 $seq = $countStmt->fetch()['c'] + 1;
-$workCode = sprintf('WRK-%s%04d', date('y'), $seq);
+$workCode = generateUniqueCode($pdo, 'work_records', 'work_code', 'WRK-%s%04d', $seq, date('y'));
 
 $insert = $pdo->prepare("
     INSERT INTO work_records

@@ -7,6 +7,10 @@ $orgId = activeOrgId();
 $id = (int)($_GET['id'] ?? 0);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Suggestion याच संस्थेची आहे ना — नसेल तर काहीच करायचं नाही
+    $ownStmt = $pdo->prepare("SELECT id FROM software_suggestions WHERE id = ? AND organization_id = ?");
+    $ownStmt->execute([$id, $orgId]);
+    if (!$ownStmt->fetch()) { http_response_code(404); die('Suggestion सापडलं नाही.'); }
     $action = $_POST['action'] ?? '';
     if ($action === 'vote_here') {
         try {

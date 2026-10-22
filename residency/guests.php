@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../includes/auth.php';
 requireLogin('../');
+requirePermission('manage_residency_all_depts', '../');
 $user = currentUser();
 $orgId = activeOrgId();
 

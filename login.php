@@ -64,13 +64,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         if ($user) {
             // Wrong password for a real account — count the attempt
-            $attempts = (int)$user['failed_login_attempts'] + 1;
+            // आधीचा Lockout संपला असेल तर मोजणी शून्यापासून — नाहीतर पुढच्याच
+            // एका चुकीनंतर खाते पुन्हा लगेच Lock होतं
+            $priorAttempts = !empty($user['locked_until']) ? 0 : (int)$user['failed_login_attempts'];
+            $attempts = $priorAttempts + 1;
             if ($attempts >= 5) {
                 $pdo->prepare("UPDATE users SET failed_login_attempts = ?, locked_until = DATE_ADD(NOW(), INTERVAL 15 MINUTE) WHERE id = ?")
                     ->execute([$attempts, $user['id']]);
                 $error = "खूप चुकीचे प्रयत्न झाले — सुरक्षिततेसाठी हे खाते १५ मिनिटांसाठी तात्पुरते बंद केले आहे.";
             } else {
-                $pdo->prepare("UPDATE users SET failed_login_attempts = ? WHERE id = ?")->execute([$attempts, $user['id']]);
+                $pdo->prepare("UPDATE users SET failed_login_attempts = ?, locked_until = NULL WHERE id = ?")->execute([$attempts, $user['id']]);
                 $remaining = 5 - $attempts;
                 $error = "चुकीचा ईमेल किंवा पासवर्ड — $remaining प्रयत्न शिल्लक आहेत, त्यानंतर खाते तात्पुरते बंद होईल.";
             }

@@ -8,6 +8,7 @@
  * Hostinger cPanel -> Cron Jobs मध्ये टाका:
  *   0 20 * * *  php /home/xxxx/public_html/cron/check-sop-compliance.php
  */
+if (PHP_SAPI !== 'cli') { http_response_code(403); exit('CLI only'); }
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/sop-helpers.php';
 

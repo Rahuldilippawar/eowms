@@ -12,6 +12,7 @@
 // management. Avoids sending the same reminder more than once a day.
 // ============================================================
 
+if (PHP_SAPI !== 'cli') { http_response_code(403); exit('CLI only'); }
 require_once __DIR__ . '/../config/db.php';
 
 const REMINDER_DAYS = 3;

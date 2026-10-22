@@ -32,7 +32,7 @@ function itGenerateAssetTag($pdo, $orgId, $assetType) {
     $stmt = $pdo->prepare("SELECT COUNT(*) c FROM it_assets WHERE organization_id = ? AND asset_type = ?");
     $stmt->execute([$orgId, $assetType]);
     $seq = (int)$stmt->fetch()['c'] + 1;
-    return sprintf('%s-%s-%04d', $prefix, $year, $seq);
+    return generateUniqueCode($pdo, 'it_assets', 'asset_tag', '%s-%s-%04d', $seq, $prefix, $year);
 }
 
 /** Warranty Expiry ला "नूतनीकरण व अनुपालन" पानाशी जोडतं (वाहन Module सारखंच) */

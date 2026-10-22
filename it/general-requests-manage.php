@@ -19,8 +19,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $resolutionNotes = trim($_POST['resolution_notes'] ?? '');
             $pdo->prepare("UPDATE it_repair_tickets SET status = 'resolved', resolution_notes = ?, resolved_by = ?, resolved_at = NOW() WHERE id = ? AND organization_id = ?")
                 ->execute([$resolutionNotes, $user['id'], $requestId, $orgId]);
-            $tStmt = $pdo->prepare("SELECT asset_id FROM it_repair_tickets WHERE id = ?");
-            $tStmt->execute([$requestId]);
+            $tStmt = $pdo->prepare("SELECT asset_id FROM it_repair_tickets WHERE id = ? AND organization_id = ?");
+            $tStmt->execute([$requestId, $orgId]);
             $assetId = $tStmt->fetch()['asset_id'] ?? null;
             if ($assetId) {
                 $otherPending = $pdo->prepare("SELECT COUNT(*) c FROM it_repair_tickets WHERE asset_id = ? AND status != 'resolved'");

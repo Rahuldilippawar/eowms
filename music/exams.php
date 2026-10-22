@@ -21,7 +21,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $subject = trim($_POST['subject'] ?? '');
     $examDate = $_POST['exam_date'] ?? '';
 
-    if ($studentId && $examBoard && $examDate) {
+    $ownStmt = $pdo->prepare("SELECT id FROM music_students WHERE id = ? AND organization_id = ?");
+    $ownStmt->execute([$studentId, $orgId]);
+
+    if ($studentId && $examBoard && $examDate && $ownStmt->fetch()) {
         $pdo->prepare("INSERT INTO music_exams (student_id, exam_board, grade_level, subject, exam_date, created_by) VALUES (?, ?, ?, ?, ?, ?)")
             ->execute([$studentId, $examBoard, $gradeLevel, $subject, $examDate, $user['id']]);
         logActivity('संगीत परीक्षा नोंदवली', 'music_exam', $pdo->lastInsertId());
@@ -36,8 +39,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 if (isset($_GET['update_result'])) {
     $examId = (int)$_GET['update_result'];
     $result = $_GET['result'] ?? 'pending';
-    $marks = $_GET['marks'] ?? null;
-    $pdo->prepare("UPDATE music_exams SET result = ?, marks = ? WHERE id = ?")->execute([$result, $marks, $examId]);
+    if (!in_array($result, ['pending', 'pass', 'distinction', 'fail'], true)) { $result = 'pending'; }
+    $marks = trim($_GET['marks'] ?? '');
+    if ($marks === '') { $marks = null; }
+    $pdo->prepare("UPDATE music_exams e JOIN music_students s ON s.id = e.student_id SET e.result = ?, e.marks = ? WHERE e.id = ? AND s.organization_id = ?")->execute([$result, $marks, $examId, $orgId]);
     header('Location: exams.php');
     exit;
 }

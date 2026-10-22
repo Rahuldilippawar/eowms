@@ -9,9 +9,9 @@ $id = (int)($_GET['id'] ?? 0);
 $stmt = $pdo->prepare("
     SELECT sub.*, ca.classroom_id, vc.department_id FROM classroom_assignment_submissions sub
     JOIN classroom_assignments ca ON ca.id = sub.assignment_id JOIN virtual_classrooms vc ON vc.id = ca.classroom_id
-    WHERE sub.id = ?
+    WHERE sub.id = ? AND vc.organization_id = ?
 ");
-$stmt->execute([$id]);
+$stmt->execute([$id, $orgId]);
 $submission = $stmt->fetch();
 if (!$submission || !$submission['file_path']) { http_response_code(404); die('सापडलं नाही.'); }
 

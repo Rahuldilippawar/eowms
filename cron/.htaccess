@@ -1,0 +1,8 @@
+# cron/ मधील Scripts फक्त Command-Line (php ...) वरूनच चालाव्यात — Browser वरून नाही
+<IfModule mod_authz_core.c>
+  Require all denied
+</IfModule>
+<IfModule !mod_authz_core.c>
+  Order allow,deny
+  Deny from all
+</IfModule>

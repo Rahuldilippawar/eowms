@@ -28,7 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $countStmt = $pdo->prepare("SELECT COUNT(*) c FROM letters WHERE organization_id = ? AND created_at BETWEEN ? AND ?");
             $countStmt->execute([$orgId, $fyStart . ' 00:00:00', $fyEnd . ' 23:59:59']);
             $seq = $countStmt->fetch()['c'] + 1;
-            $fileNumber = sprintf('FILE-%s%04d', getFinancialYearLabel(), $seq);
+            $fileNumber = generateUniqueCode($pdo, 'letters', 'file_number', 'FILE-%s%04d', $seq, getFinancialYearLabel());
             $outwardNo = generateOutwardNumber($pdo, $orgId, $departmentId);
 
             $status = $hodId ? 'in_progress' : 'draft';
@@ -95,7 +95,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $countStmt = $pdo->prepare("SELECT COUNT(*) c FROM letters WHERE organization_id = ? AND created_at BETWEEN ? AND ?");
         $countStmt->execute([$orgId, $fyStart . ' 00:00:00', $fyEnd . ' 23:59:59']);
         $seq = $countStmt->fetch()['c'] + 1;
-        $fileNumber = sprintf('FILE-%s%04d', getFinancialYearLabel(), $seq);
+        $fileNumber = generateUniqueCode($pdo, 'letters', 'file_number', 'FILE-%s%04d', $seq, getFinancialYearLabel());
         $outwardNo = $departmentId ? generateOutwardNumber($pdo, $orgId, $departmentId) : null;
 
         // If a recipient was chosen directly (quick "पत्र पाठवा" flow), send

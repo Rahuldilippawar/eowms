@@ -24,7 +24,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canManage) {
         $borrowedBy = (int)($_POST['borrowed_by'] ?? 0);
         $purpose = trim($_POST['purpose'] ?? '');
         $expectedReturn = ($_POST['expected_return_at'] ?? '') ?: null;
-        if ($itemId && $borrowedBy) {
+        $ownStmt = $pdo->prepare("SELECT (SELECT COUNT(*) FROM checkout_items WHERE id = ? AND organization_id = ?) + (SELECT COUNT(*) FROM users WHERE id = ? AND organization_id = ?) AS c");
+        $ownStmt->execute([$itemId, $orgId, $borrowedBy, $orgId]);
+        if ($itemId && $borrowedBy && (int)$ownStmt->fetch()['c'] === 2) {
             $pdo->prepare("INSERT INTO checkout_logs (item_id, borrowed_by, issued_by, purpose, checkout_at, expected_return_at) VALUES (?, ?, ?, ?, NOW(), ?)")
                 ->execute([$itemId, $borrowedBy, $user['id'], $purpose ?: null, $expectedReturn]);
             $newLogId = $pdo->lastInsertId();
@@ -37,7 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canManage) {
         }
     } elseif ($action === 'return') {
         $logId = (int)($_POST['log_id'] ?? 0);
-        $pdo->prepare("UPDATE checkout_logs SET actual_return_at = NOW(), returned_to = ? WHERE id = ?")->execute([$user['id'], $logId]);
+        $pdo->prepare("UPDATE checkout_logs l JOIN checkout_items i ON i.id = l.item_id SET l.actual_return_at = NOW(), l.returned_to = ? WHERE l.id = ? AND i.organization_id = ? AND l.actual_return_at IS NULL")->execute([$user['id'], $logId, $orgId]);
         $_SESSION['flash'] = 'परत जमा झालं.';
     } elseif ($action === 'delete_item') {
         $itemId = (int)($_POST['item_id'] ?? 0);

@@ -34,6 +34,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $validCode = $codeStmt->fetch();
 
         if (!$validCode) {
+            // Brute-force संरक्षण — 5 चुकीच्या प्रयत्नांनंतर Code रद्द, नवीन Code मागवावा लागेल
+            $_SESSION['reset_attempts'] = ($_SESSION['reset_attempts'] ?? 0) + 1;
+            if ($_SESSION['reset_attempts'] >= 5) {
+                $pdo->prepare("UPDATE password_reset_codes SET used = 1 WHERE user_id = ? AND used = 0")->execute([$foundUser['id']]);
+                unset($_SESSION['reset_email'], $_SESSION['reset_attempts']);
+                header('Location: forgot-password.php');
+                exit;
+            }
             $error = 'Code चुकीचा आहे किंवा त्याची मुदत संपली आहे (१५ मिनिटे). परत विनंती करा.';
         } else {
             $pdo->prepare("UPDATE users SET password = ?, must_change_password = 0 WHERE id = ?")
@@ -41,7 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->prepare("UPDATE password_reset_codes SET used = 1 WHERE id = ?")->execute([$validCode['id']]);
             logActivity('पासवर्ड रिसेट (self-service)', 'user', $foundUser['id'], $foundUser['name']);
 
-            unset($_SESSION['reset_email']);
+            unset($_SESSION['reset_email'], $_SESSION['reset_attempts']);
             $_SESSION['reset_success'] = true;
             header('Location: login.php');
             exit;

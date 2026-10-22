@@ -10,9 +10,10 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $id = (int)($_POST['id'] ?? 0);
 $status = $_POST['status'] ?? 'pending';
+if (!in_array($status, ['pending', 'in_progress', 'completed'], true)) { $status = 'pending'; }
 
-$stmt = $pdo->prepare("SELECT * FROM work_requests WHERE id = ?");
-$stmt->execute([$id]);
+$stmt = $pdo->prepare("SELECT * FROM work_requests WHERE id = ? AND organization_id = ?");
+$stmt->execute([$id, activeOrgId()]);
 $request = $stmt->fetch();
 
 if (!$request) {
