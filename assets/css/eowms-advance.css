@@ -1,0 +1,95 @@
+/* ============================================================
+   EOWMS Advance UI — Dark Mode, Command Palette, Module Moods,
+   Skeleton Loading, Empty States, Micro-Celebrations
+   ============================================================ */
+
+/* ---------- 1. Dark Mode ---------- */
+[data-theme="dark"] {
+  --ink:#F3F4F7; --ink-soft:#DCEFEC; --canvas:#0F1420; --surface:#171D2E;
+  --rail:#2FB3A8; --rail-soft:#173832; --amber:#E0994A; --amber-soft:#3A2A14;
+  --rose:#E06070; --rose-soft:#3A1B20; --line:#2A3145; --text:#E4E6EC; --text-dim:#8A90AC;
+}
+[data-theme="dark"] body { background: var(--canvas); }
+[data-theme="dark"] .panel, [data-theme="dark"] .kpi-mini { background: var(--surface); border-color: var(--line); }
+[data-theme="dark"] .rail-sidebar { background: #0A0E1A; }
+[data-theme="dark"] .form-control-custom, [data-theme="dark"] .form-select-custom {
+  background: var(--surface); border-color: var(--line); color: var(--text);
+}
+[data-theme="dark"] .rtable thead { background: #1C2338; }
+[data-theme="dark"] img.eowms-invert-in-dark { filter: brightness(0.9); }
+.theme-toggle-btn { position: relative; }
+.theme-toggle-btn .theme-icon-sun { display: inline; }
+.theme-toggle-btn .theme-icon-moon { display: none; }
+[data-theme="dark"] .theme-toggle-btn .theme-icon-sun { display: none; }
+[data-theme="dark"] .theme-toggle-btn .theme-icon-moon { display: inline; }
+
+/* ---------- 2. Module Moods (subtle accent per module) ---------- */
+body[data-module="it"] .page-title, body[data-module="it"] .page-eyebrow { color: #1B8A83; }
+body[data-module="store"] .page-title, body[data-module="store"] .page-eyebrow { color: #C97F1D; }
+body[data-module="purchase"] .page-eyebrow { color: #2255AA; }
+body[data-module="guests"] .page-eyebrow { color: #8A5CD6; }
+body[data-module="events"] .page-eyebrow { color: #B23A48; }
+body[data-module="cctv"] .page-eyebrow { color: #10162B; }
+body[data-module="vehicles"] .page-eyebrow { color: #2255AA; }
+body[data-module="meditation"] .page-eyebrow { color: #1B8A83; }
+body[data-module="music"] .page-eyebrow { color: #8A5CD6; }
+body[data-module="hostels"], body[data-module="residency"] { }
+body[data-module] .rail-brand { border-bottom-color: rgba(255,255,255,.08); }
+
+/* ---------- 3. Command Palette ---------- */
+.cmdk-overlay {
+  position: fixed; inset: 0; background: rgba(10,14,26,.55); backdrop-filter: blur(3px);
+  z-index: 2000; display: none; align-items: flex-start; justify-content: center; padding-top: 12vh;
+}
+.cmdk-overlay.open { display: flex; }
+.cmdk-box {
+  background: var(--surface); width: 92%; max-width: 560px; border-radius: 16px;
+  box-shadow: 0 30px 70px rgba(0,0,0,.35); overflow: hidden; animation: cmdkIn .15s ease;
+}
+@keyframes cmdkIn { from { transform: translateY(-8px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+.cmdk-input-row { display: flex; align-items: center; gap: 10px; padding: 16px 18px; border-bottom: 1px solid var(--line); }
+.cmdk-input-row i { color: var(--text-dim); }
+.cmdk-input-row input { flex: 1; border: none; outline: none; background: transparent; font-size: 15px; color: var(--text); font-family: inherit; }
+.cmdk-hint { font-size: 10.5px; color: var(--text-dim); border: 1px solid var(--line); border-radius: 5px; padding: 2px 6px; }
+.cmdk-results { max-height: 360px; overflow-y: auto; padding: 8px; }
+.cmdk-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; cursor: pointer; text-decoration: none; color: var(--text); }
+.cmdk-item:hover, .cmdk-item.active { background: var(--rail-soft); }
+.cmdk-item .icon { width: 30px; height: 30px; border-radius: 8px; background: var(--canvas); display: flex; align-items: center; justify-content: center; color: var(--rail); flex-shrink: 0; }
+.cmdk-item .label { font-size: 13.5px; font-weight: 600; }
+.cmdk-item .sub { font-size: 11px; color: var(--text-dim); }
+.cmdk-empty { padding: 30px; text-align: center; color: var(--text-dim); font-size: 13px; }
+.cmdk-trigger-hint { font-size: 10px; color: var(--text-dim); border: 1px solid var(--line); border-radius: 5px; padding: 1px 6px; margin-left: auto; }
+
+/* ---------- 4. Skeleton Loading ---------- */
+.skel { background: linear-gradient(90deg, var(--line) 25%, rgba(255,255,255,.5) 37%, var(--line) 63%); background-size: 400% 100%; animation: skelShimmer 1.4s ease infinite; border-radius: 8px; }
+[data-theme="dark"] .skel { background: linear-gradient(90deg, #232B42 25%, #2E3854 37%, #232B42 63%); background-size: 400% 100%; }
+@keyframes skelShimmer { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
+.skel-line { height: 14px; margin-bottom: 8px; }
+.skel-card { height: 90px; border-radius: 12px; }
+
+/* ---------- 5. Empty States ---------- */
+.empty-state { text-align: center; padding: 48px 24px; }
+.empty-state .icon { width: 64px; height: 64px; border-radius: 50%; background: var(--canvas); display: flex; align-items: center; justify-content: center; font-size: 26px; margin: 0 auto 16px; color: var(--text-dim); }
+.empty-state .title { font-size: 14.5px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+.empty-state .sub { font-size: 12.5px; color: var(--text-dim); margin-bottom: 16px; }
+
+/* ---------- 6. Micro-Celebrations ---------- */
+.confetti-piece { position: fixed; top: -10px; width: 8px; height: 8px; z-index: 3000; pointer-events: none; border-radius: 2px; animation: confettiFall 1.6s ease-in forwards; }
+@keyframes confettiFall { to { transform: translateY(100vh) rotate(540deg); opacity: 0; } }
+.pulse-check { animation: pulseCheck .4s ease; }
+@keyframes pulseCheck { 0% { transform: scale(1); } 40% { transform: scale(1.3); } 100% { transform: scale(1); } }
+
+/* ---------- 7. Animated Counters + Sparkline ---------- */
+.kpi-mini .val[data-counter] { font-variant-numeric: tabular-nums; }
+.sparkline-wrap { height: 28px; margin-top: 6px; }
+
+/* ---------- 8. Onboarding Tour ---------- */
+.tour-highlight { position: relative; z-index: 1501; box-shadow: 0 0 0 4px rgba(27,138,131,.35), 0 0 0 9999px rgba(10,14,26,.55); border-radius: 10px; }
+.tour-tooltip { position: fixed; z-index: 1502; background: var(--surface); color: var(--text); border-radius: 12px; padding: 16px 18px; max-width: 280px; box-shadow: 0 20px 50px rgba(0,0,0,.3); font-size: 13px; }
+.tour-tooltip .tour-title { font-weight: 700; font-size: 14px; margin-bottom: 6px; }
+.tour-tooltip .tour-actions { display: flex; justify-content: space-between; margin-top: 12px; align-items: center; }
+
+/* ---------- 9. Swipe Row ---------- */
+.swipe-row { position: relative; overflow: hidden; touch-action: pan-y; }
+.swipe-row-content { transition: transform .2s ease; background: var(--surface); position: relative; z-index: 1; }
+.swipe-row-action { position: absolute; top: 0; right: 0; bottom: 0; display: flex; align-items: center; padding: 0 20px; color: #fff; font-weight: 700; font-size: 12.5px; }

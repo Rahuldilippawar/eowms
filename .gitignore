@@ -1,0 +1,6 @@
+uploads/*
+!uploads/.gitkeep
+backups/*.sql
+backups/*.zip
+*.log
+.DS_Store

@@ -1,0 +1,10 @@
+# सुरक्षा: या Folder मध्ये कुठलीही PHP File (अगदी attachment/photo म्हणून
+# चुकून/जाणूनबुजून upload झाली तरी) कधीही चालवली (Execute) जाणार नाही —
+# फक्त प्रतिमा/PDF/दस्तऐवज म्हणूनच वापरली जाईल, कधीही Code म्हणून नाही.
+
+<FilesMatch "\.(php|php3|php4|php5|php7|phtml|pht|phar|cgi|pl|py|sh|exe)$">
+  Require all denied
+</FilesMatch>
+
+# Directory Listing सुद्धा बंद
+Options -Indexes

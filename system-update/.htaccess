@@ -1,0 +1,10 @@
+# हे Folder उघडंच राहायला हवं (Login + Super Admin Check आतमध्ये, PHP
+# कडूनच होतो) — जर वरच्या कुठल्या Config मुळे चुकून Block झालं असेल,
+# तर हे स्पष्टपणे Allow करून तो Override करतं.
+<IfModule mod_authz_core.c>
+  Require all granted
+</IfModule>
+<IfModule !mod_authz_core.c>
+  Order allow,deny
+  Allow from all
+</IfModule>

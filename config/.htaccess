@@ -1,0 +1,8 @@
+# config/ मधील फाइल्स (db.php, firebase-service-account.json) Browser वरून उघडू नयेत
+<IfModule mod_authz_core.c>
+  Require all denied
+</IfModule>
+<IfModule !mod_authz_core.c>
+  Order allow,deny
+  Deny from all
+</IfModule>
