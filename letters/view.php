@@ -27,12 +27,6 @@ $loadLetter = function () use ($pdo, $letterId) {
 $letter = $loadLetter();
 if (!$letter) { die('फाईल सापडली नाही.'); }
 
-// आधीच्या Clerk-Gatekeeper पद्धतीत Clerk कडे अडकलेलं पत्र थेट अधिकाऱ्याकडे
-if (($letter['clerk_stage'] ?? 'none') !== 'none') {
-    letterReleaseLegacyClerkStage($pdo, $letter);
-    $letter = $loadLetter();
-}
-
 // पाहण्याची परवानगी: तयार करणारा, सध्याचा धारक, हालचालीत कधीही आलेला कोणीही,
 // किंवा याच संस्थेचं पत्र असेल तर संस्था-स्तरीय परवानगी असलेले.
 $stmt = $pdo->prepare("SELECT COUNT(*) c FROM letter_actions WHERE letter_id = ? AND (from_user_id = ? OR to_user_id = ?)");

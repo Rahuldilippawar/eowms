@@ -606,35 +606,8 @@ CREATE TABLE letter_attachments (
 ALTER TABLE letters ADD COLUMN current_holder_seen_at TIMESTAMP NULL AFTER current_holder_id;
 
 -- CC / Watchers — can view + get notified, but cannot act
-CREATE TABLE letter_watchers (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  letter_id INT NOT NULL,
-  user_id INT NOT NULL,
-  added_by INT NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (letter_id) REFERENCES letters(id) ON DELETE CASCADE,
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-  FOREIGN KEY (added_by) REFERENCES users(id) ON DELETE CASCADE,
-  UNIQUE KEY uniq_letter_watcher (letter_id, user_id)
-) ENGINE=InnoDB;
 
 -- Letter Templates — quick-start pre-filled drafts
-CREATE TABLE letter_templates (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  organization_id INT NOT NULL,
-  name VARCHAR(150) NOT NULL,
-  subject_template VARCHAR(255) NOT NULL,
-  description_template TEXT NULL,
-  category_id INT NULL,
-  workflow_template_id INT NULL,
-  is_active TINYINT(1) DEFAULT 1,
-  created_by INT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
-  FOREIGN KEY (category_id) REFERENCES letter_categories(id) ON DELETE SET NULL,
-  FOREIGN KEY (workflow_template_id) REFERENCES workflow_templates(id) ON DELETE SET NULL,
-  FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
-) ENGINE=InnoDB;
 
 -- ============================================================
 -- FROM: migration-force-password-change.sql
@@ -985,19 +958,12 @@ CREATE TABLE letter_inward_numbers (
 -- ============================================================
 
 -- कोणत्या अधिकाऱ्यासाठी कोणता Clerk काम बघतो
-ALTER TABLE users ADD COLUMN gatekeeper_clerk_id INT NULL AFTER department_id;
-ALTER TABLE users ADD FOREIGN KEY (gatekeeper_clerk_id) REFERENCES users(id) ON DELETE SET NULL;
 
 -- फाईल तांत्रिकदृष्ट्या Clerk कडे असली, तरी ती खरं कोणासाठी आहे हे दाखवण्यासाठी
-ALTER TABLE letters ADD COLUMN intended_recipient_id INT NULL AFTER current_holder_id;
-ALTER TABLE letters ADD FOREIGN KEY (intended_recipient_id) REFERENCES users(id) ON DELETE SET NULL;
 
 -- Executive ने "कुठे पुढे पाठवायचं" ठरवलं, पण अजून Clerk ने Approve केलेलं नाही
-ALTER TABLE letters ADD COLUMN pending_forward_to INT NULL AFTER intended_recipient_id;
-ALTER TABLE letters ADD FOREIGN KEY (pending_forward_to) REFERENCES users(id) ON DELETE SET NULL;
 
 -- फाईल सध्या clerk-प्रक्रियेच्या कोणत्या टप्प्यावर आहे
-ALTER TABLE letters ADD COLUMN clerk_stage ENUM('none','awaiting_inward','awaiting_forward_approval') NOT NULL DEFAULT 'none' AFTER pending_forward_to;
 
 -- ============================================================
 -- FROM: migration-sister-organizations.sql
@@ -2404,10 +2370,6 @@ ALTER TABLE maintenance_locations ADD COLUMN capacity INT NULL AFTER location_co
 -- Run this in phpMyAdmin -> your database -> SQL tab
 -- ============================================================
 
-ALTER TABLE letters ADD COLUMN parent_letter_id INT NULL AFTER reference_no;
-ALTER TABLE letters ADD COLUMN batch_ref VARCHAR(40) NULL AFTER parent_letter_id;
-ALTER TABLE letters ADD CONSTRAINT fk_letters_parent FOREIGN KEY (parent_letter_id) REFERENCES letters(id) ON DELETE SET NULL;
-ALTER TABLE letters ADD INDEX idx_batch_ref (batch_ref);
 
 -- ============================================================
 -- FROM: migration-biometric-attendance.sql
@@ -3624,16 +3586,6 @@ ALTER TABLE letters ADD COLUMN dispatch_date DATE NULL AFTER dispatch_tracking_n
 -- ============================================================
 -- Migration: पत्रव्यवहार — Attachment-Level Remarks
 -- ============================================================
-CREATE TABLE letter_attachment_remarks (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  attachment_id INT NOT NULL,
-  user_id INT NOT NULL,
-  remark_text TEXT NOT NULL,
-  is_resolved TINYINT(1) DEFAULT 0,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (attachment_id) REFERENCES letter_attachments(id) ON DELETE CASCADE,
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-) ENGINE=InnoDB;
 
 -- ============================================================
 -- FROM: migration-attachment-remark-position.sql
@@ -3641,8 +3593,6 @@ CREATE TABLE letter_attachment_remarks (
 -- ============================================================
 -- Migration: Attachment-Remarks — Image वर थेट Point करून Comment
 -- ============================================================
-ALTER TABLE letter_attachment_remarks ADD COLUMN x_position DECIMAL(5,2) NULL COMMENT '% पासून डावीकडून — फक्त Image-Attachment साठी' AFTER remark_text;
-ALTER TABLE letter_attachment_remarks ADD COLUMN y_position DECIMAL(5,2) NULL COMMENT '% पासून वरून' AFTER x_position;
 
 -- ============================================================
 -- FROM: migration-room-booking-messaging-grievances.sql
@@ -4002,3 +3952,19 @@ UPDATE letters SET current_holder_id = intended_recipient_id, clerk_stage = 'non
 UPDATE letters SET current_holder_id = pending_forward_to, clerk_stage = 'none', pending_forward_to = NULL, current_holder_seen_at = NULL
   WHERE clerk_stage = 'awaiting_forward_approval' AND pending_forward_to IS NOT NULL;
 UPDATE users SET gatekeeper_clerk_id = NULL WHERE gatekeeper_clerk_id IS NOT NULL;
+
+-- ============================================================
+-- FROM: migration-letters-drop-unused.sql
+-- ============================================================
+-- पत्र व्यवहारातून काढलेल्या सुविधांचे Tables/Columns पूर्णपणे काढतो
+-- (Clerk-Gatekeeper, CC, Bulk परिपत्रक, Templates, Reply-thread, Pin-remarks).
+-- वरचे UPDATE आधी Clerk कडे अडकलेली पत्रं अधिकाऱ्याकडे हलवतात — मगच हे.
+ALTER TABLE letters DROP COLUMN clerk_stage;
+ALTER TABLE letters DROP COLUMN intended_recipient_id;
+ALTER TABLE letters DROP COLUMN pending_forward_to;
+ALTER TABLE letters DROP COLUMN parent_letter_id;
+ALTER TABLE letters DROP COLUMN batch_ref;
+ALTER TABLE users DROP COLUMN gatekeeper_clerk_id;
+DROP TABLE IF EXISTS letter_watchers;
+DROP TABLE IF EXISTS letter_templates;
+DROP TABLE IF EXISTS letter_attachment_remarks;

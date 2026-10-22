@@ -196,24 +196,3 @@ function letterSendTo($pdo, $letter, $toUserId, $fromUserId, $actionType, $remar
     assignInwardForHolder($pdo, $letter['id'], $toUserId, $letter['department_id'], $orgId);
     notifyUser($toUserId, $orgId, 'नवीन फाईल तुमच्याकडे आली', $letter['subject'] . ' — ' . $letter['file_number'], 'letters/view.php?id=' . $letter['id']);
 }
-
-/**
- * आधीच्या Clerk-Gatekeeper पद्धतीत Clerk च्या टेबलावर अडकलेली पत्रं — ती
- * पद्धत काढल्यावर — थेट संबंधित अधिकाऱ्याकडे हलवते.
- */
-function letterReleaseLegacyClerkStage($pdo, $letter) {
-    $stage = $letter['clerk_stage'] ?? 'none';
-    if ($stage === 'awaiting_inward' && !empty($letter['intended_recipient_id'])) {
-        $target = (int)$letter['intended_recipient_id'];
-    } elseif ($stage === 'awaiting_forward_approval' && !empty($letter['pending_forward_to'])) {
-        $target = (int)$letter['pending_forward_to'];
-    } else {
-        return $letter;
-    }
-    $pdo->prepare("UPDATE letters SET current_holder_id=?, clerk_stage='none', intended_recipient_id=NULL, pending_forward_to=NULL, current_holder_seen_at=NULL WHERE id=?")
-        ->execute([$target, $letter['id']]);
-    $letter['current_holder_id'] = $target;
-    $letter['clerk_stage'] = 'none';
-    $letter['current_holder_seen_at'] = null;
-    return $letter;
-}

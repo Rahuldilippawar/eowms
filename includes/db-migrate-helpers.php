@@ -254,6 +254,14 @@ function dbmRunMigrationFile($pdo, $file) {
                         continue;
                     }
                     if (dbmAlterClauseAlreadyApplied($pdo, $table, $clause)) { $result['skipped']++; continue; }
+                    // Column काढण्याआधी — त्यावरची Foreign Key काढावी लागते, नाहीतर DROP अयशस्वी होतो
+                    if (preg_match('/^DROP\s+(?:COLUMN\s+)?(?!INDEX\b|KEY\b|FOREIGN\b|PRIMARY\b)`?(\w+)`?\s*$/i', $clause, $dm)) {
+                        $fkStmt = $pdo->prepare("SELECT CONSTRAINT_NAME FROM information_schema.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ? AND REFERENCED_TABLE_NAME IS NOT NULL");
+                        $fkStmt->execute([$table, $dm[1]]);
+                        foreach ($fkStmt->fetchAll(PDO::FETCH_COLUMN) as $fkName) {
+                            $exec("ALTER TABLE `$table` DROP FOREIGN KEY `$fkName`");
+                        }
+                    }
                     $exec("ALTER TABLE `$table` $clause");
                 }
                 continue;
@@ -267,6 +275,18 @@ function dbmRunMigrationFile($pdo, $file) {
             if (preg_match('/^INSERT\s+INTO\b/i', $stmt) && stripos($stmt, 'NOT EXISTS') === false && !$sectionCreatedTable) {
                 // Seed Data — हा Migration आधीच झालेला आहे, पुन्हा घातल्यास Data दुप्पट होईल
                 $result['skipped']++;
+                continue;
+            }
+
+            if (preg_match('/^UPDATE\s/i', $stmt)) {
+                // Data-दुरुस्ती — संबंधित Table/Column आता नसेल (उदा. नवीन Install) तर काही करायचंच नाही
+                try {
+                    $pdo->exec($stmt);
+                    $result['ran']++;
+                } catch (PDOException $e) {
+                    if (in_array((int)($e->errorInfo[1] ?? 0), [1054, 1146], true)) { $result['skipped']++; continue; }
+                    $result['errors'][] = [$sectionName, mb_substr(preg_replace('/\s+/', ' ', $stmt), 0, 300), $e->getMessage()];
+                }
                 continue;
             }
 
