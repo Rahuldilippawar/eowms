@@ -17,5 +17,6 @@ if (!is_file($filePath)) { die('Backup file सापडली नाही — 
 header('Content-Type: application/json; charset=utf-8');
 header('Content-Disposition: attachment; filename="' . basename($backup['filename']) . '"');
 header('Content-Length: ' . filesize($filePath));
+csrfStopOutputRewrite();
 readfile($filePath);
 exit;

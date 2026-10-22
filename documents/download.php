@@ -26,5 +26,6 @@ logActivity('दस्तऐवज Download केला', 'document', $id, $doc
 header('Content-Type: application/octet-stream');
 header('Content-Disposition: attachment; filename="' . basename($doc['original_filename'] ?: $doc['file_path']) . '"');
 header('Content-Length: ' . filesize($filePath));
+csrfStopOutputRewrite();
 readfile($filePath);
 exit;

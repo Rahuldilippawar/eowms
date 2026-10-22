@@ -70,12 +70,13 @@ $sql = "
 ";
 $params = [$orgId];
 if (!$isMgmt) { $sql .= " AND u.department_id = ?"; $params[] = $user['department_id'] ?? 0; }
+$baseSql = $sql;
 $sql .= " ORDER BY la.created_at";
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $pending = $stmt->fetchAll();
 
-$histSql = str_replace("la.status = 'pending'", "la.status != 'pending'", $sql) . " ORDER BY la.approved_at DESC LIMIT 30";
+$histSql = str_replace("la.status = 'pending'", "la.status != 'pending'", $baseSql) . " ORDER BY la.approved_at DESC LIMIT 30";
 $histStmt = $pdo->prepare($histSql);
 $histStmt->execute($params);
 $history = $histStmt->fetchAll();

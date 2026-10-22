@@ -27,5 +27,6 @@ header('Content-Type: application/zip');
 header('Content-Disposition: attachment; filename="' . basename($filePath) . '"');
 header('Content-Length: ' . filesize($filePath));
 header('Cache-Control: no-store');
+csrfStopOutputRewrite();
 readfile($filePath);
 exit;
