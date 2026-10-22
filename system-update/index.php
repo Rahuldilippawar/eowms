@@ -38,7 +38,10 @@ if (is_dir($backupHistoryDir)) {
 <div class="page-eyebrow"><?= h(activeOrgName()) ?></div>
 <div class="d-flex justify-content-between align-items-start mb-1">
   <div class="page-title mb-0">🔄 System Update</div>
-  <a href="push-setup.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13px;padding:9px 16px;"><i class="fa-solid fa-bell me-1"></i>📲 Push Notification Setup</a>
+  <div class="d-flex gap-2">
+    <a href="db-update.php" class="btn" style="border:1px solid var(--rail);color:var(--rail);border-radius:9px;font-size:13px;padding:9px 16px;font-weight:600;"><i class="fa-solid fa-database me-1"></i>🛠️ Database Update</a>
+    <a href="push-setup.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13px;padding:9px 16px;"><i class="fa-solid fa-bell me-1"></i>📲 Push Notification Setup</a>
+  </div>
 </div>
 <p style="font-size:12.5px;color:var(--text-dim);margin-bottom:20px;">Developer कडून मिळालेली नवीन ZIP Upload करून, App स्वतःच Update करा — FTP/File Manager ची गरज नाही.</p>
 
