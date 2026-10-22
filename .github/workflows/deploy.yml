@@ -1,0 +1,113 @@
+# Hostinger वर आपोआप Deploy — main मध्ये PR merge झाला की (किंवा Actions
+# tab मधून "Run workflow" दाबल्यावर) बदललेल्या Files FTP ने Upload होतात.
+#
+# GitHub → Settings → Secrets and variables → Actions मध्ये लागणारे Secrets:
+#   FTP_SERVER    — hPanel → Files → FTP Accounts मधला FTP Hostname/IP
+#   FTP_USERNAME  — FTP Username
+#   FTP_PASSWORD  — FTP Password
+# ऐच्छिक Variables (त्याच पानावर "Variables" tab):
+#   FTP_SERVER_DIR — FTP Login नंतर App च्या Files कुठे आहेत (default: ./ —
+#                    म्हणजे FTP Account ची Directory थेट public_html असेल तर)
+#   FTP_PROTOCOL   — ftps (default) किंवा ftp
+
+name: Deploy to Hostinger
+
+on:
+  push:
+    branches: [main]
+  # PR वर फक्त तपासणी (FTP Login + Folder) — Upload नाही
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-hostinger-${{ github.event_name == 'pull_request' && github.ref || 'live' }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      SERVER_DIR: ${{ vars.FTP_SERVER_DIR || './' }}
+      PROTOCOL: ${{ vars.FTP_PROTOCOL || 'ftps' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check all PHP files for syntax errors
+        run: |
+          find . -name '*.php' -not -path './.git/*' -print0 | xargs -0 -n1 -P4 php -l > /dev/null
+
+      # सुरक्षा-तपासणी — चुकीच्या Folder मध्ये संपूर्ण App Upload होऊ नये म्हणून,
+      # आधी खात्री करतो की त्या Folder मध्ये आधीच login.php आहे.
+      - name: Verify target folder already contains the app
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        run: |
+          if [ -z "$FTP_SERVER" ] || [ -z "$FTP_USERNAME" ] || [ -z "$FTP_PASSWORD" ]; then
+            echo "::error::FTP_SERVER / FTP_USERNAME / FTP_PASSWORD secrets are not set"
+            exit 1
+          fi
+          sudo apt-get install -y -qq lftp > /dev/null
+          if [ "$PROTOCOL" = "ftps" ]; then
+            # FTPS Certificate कोणत्या नावासाठी आहे — FTP_SERVER हेच नाव असायला हवं
+            echo "FTPS certificate names:"
+            python3 - "$FTP_SERVER" <<'PY' || echo "(could not read certificate)"
+          import ftplib, ssl, subprocess, sys
+          ctx = ssl.create_default_context(); ctx.check_hostname = False; ctx.verify_mode = ssl.CERT_NONE
+          host = sys.argv[1].strip().split("://")[-1].split("/")[0].split(":")[0]
+          if host != sys.argv[1]: print("NOTE: FTP_SERVER secret contains extra characters (scheme, port, path or spaces) — set it to the bare host name")
+          f = ftplib.FTP_TLS(context=ctx, timeout=20); f.connect(host, 21); f.auth()
+          der = f.sock.getpeercert(binary_form=True); f.close()
+          print(subprocess.run(["openssl", "x509", "-inform", "DER", "-noout", "-subject", "-ext", "subjectAltName"], input=der, capture_output=True).stdout.decode())
+          PY
+            SSL="set ftp:ssl-force true; set ftp:ssl-protect-data true;"
+          else
+            SSL="set ftp:ssl-allow false;"
+          fi
+          set +e
+          OUT=$(lftp -u "$FTP_USERNAME,$FTP_PASSWORD" "$FTP_SERVER" -e "set net:max-retries 1; set net:timeout 20; $SSL cls -1 ${SERVER_DIR%/}/login.php; bye" 2>&1)
+          RC=$?
+          set -e
+          echo "$OUT"
+          if echo "$OUT" | grep -q "Certificate verification"; then
+            echo "::error::FTPS certificate does not match FTP_SERVER. Set the FTP_SERVER secret to one of the certificate names printed above (not the IP)."
+            exit 1
+          fi
+          if echo "$OUT" | grep -qiE "Login incorrect|530"; then
+            echo "::error::FTP login failed — check the FTP_USERNAME and FTP_PASSWORD secrets"
+            exit 1
+          fi
+          if [ $RC -ne 0 ]; then
+            if echo "$OUT" | grep -qiE "No such file|550"; then
+              echo "::error::login.php not found in '$SERVER_DIR' on the FTP server — set the FTP_SERVER_DIR variable to the folder that holds the app"
+            else
+              echo "::error::Could not connect to the FTP server (see output above)"
+            fi
+            exit 1
+          fi
+          echo "$OUT" | grep -qE '^[^ ]*login\.php$' || { echo "::error::login.php not found in '$SERVER_DIR' on the FTP server — set the FTP_SERVER_DIR variable to the folder that holds the app"; exit 1; }
+          echo "FTP login OK and app found in '$SERVER_DIR'"
+
+      - name: Upload changed files
+        if: github.event_name != 'pull_request'
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ${{ env.PROTOCOL }}
+          server-dir: ${{ env.SERVER_DIR }}
+          # Server वरचा Data/Password कधीही बदलू नये — हे कधीच Upload होत नाहीत
+          exclude: |
+            **/.git*
+            **/.git*/**
+            .github/**
+            config/**
+            assets/uploads/**
+            assets/audio/**
+            backups/**
+            update-staging/**
+            database/**
+            README.md
