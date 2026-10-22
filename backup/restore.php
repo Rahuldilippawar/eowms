@@ -1605,16 +1605,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                 $stepMap[$ws['id']] = $pdo->lastInsertId();
             }
 
-            foreach ($data['letter_templates'] ?? [] as $lt) {
-                $newCategoryId = !empty($lt['category_id']) ? ($categoryMap[$lt['category_id']] ?? null) : null;
-                $newWfTemplateId = !empty($lt['workflow_template_id']) ? ($workflowMap[$lt['workflow_template_id']] ?? null) : null;
-                $newCreatedByLt = $lt['created_by'] ? ($userMap[$lt['created_by']] ?? null) : null;
-                $pdo->prepare("
-                    INSERT INTO letter_templates (organization_id, name, subject_template, description_template, category_id, workflow_template_id, is_active, created_by, created_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ")->execute([$orgId, $lt['name'], $lt['subject_template'], $lt['description_template'], $newCategoryId, $newWfTemplateId, $lt['is_active'], $newCreatedByLt, $lt['created_at']]);
-            }
-
             $existingLetterStmt = $pdo->prepare("SELECT id, department_id, created_by, subject FROM letters WHERE organization_id = ?");
             $existingLetterStmt->execute([$orgId]);
             $existingLetterKeys = [];
@@ -1632,11 +1622,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                 }
                 $fileNo = $l['file_number'] . '-R' . substr(uniqid(), -4);
                 $ins = $pdo->prepare("
-                    INSERT INTO letters (organization_id, file_number, outward_no, reference_no, batch_ref, subject, description, category_id, department_id, priority, status, workflow_template_id, current_step_order, created_by, is_budget_expense, budget_category, requested_amount, approved_amount, budget_deducted)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'completed', ?, ?, ?, ?, ?, ?, ?, ?)
+                    INSERT INTO letters (organization_id, file_number, outward_no, reference_no, subject, description, category_id, department_id, priority, status, workflow_template_id, current_step_order, created_by, is_budget_expense, budget_category, requested_amount, approved_amount, budget_deducted)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'completed', ?, ?, ?, ?, ?, ?, ?, ?)
                 ");
                 $ins->execute([
-                    $orgId, $fileNo, $l['outward_no'], $l['reference_no'], $l['batch_ref'] ?? null, $l['subject'], $l['description'],
+                    $orgId, $fileNo, $l['outward_no'], $l['reference_no'], $l['subject'], $l['description'],
                     $l['category_id'] ? ($categoryMap[$l['category_id']] ?? null) : null, $newDeptId, $l['priority'],
                     $l['workflow_template_id'] ? ($workflowMap[$l['workflow_template_id']] ?? null) : null, $l['current_step_order'] ?? 0,
                     $newCreatedBy, $l['is_budget_expense'] ?? 0, $l['budget_category'], $l['requested_amount'], $l['approved_amount'], $l['budget_deducted'] ?? 0,
@@ -1645,15 +1635,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                 $existingLetterKeys[$letterKey] = $letterMap[$l['id']];
                 $newlyAddedLetters[$l['id']] = true;
                 $counts['letters'] = ($counts['letters'] ?? 0) + 1;
-            }
-            // parent_letter_id — Self-referencing FK असल्याने, सगळी Letters आधी
-            // Insert झाल्यावरच, दुसऱ्या फेरीत (letterMap वापरून) जोडतो.
-            foreach ($data['letters'] ?? [] as $l) {
-                if (empty($l['parent_letter_id']) || empty($newlyAddedLetters[$l['id']])) continue;
-                $newLetterId2 = $letterMap[$l['id']] ?? null;
-                $newParentId = $letterMap[$l['parent_letter_id']] ?? null;
-                if (!$newLetterId2 || !$newParentId) continue;
-                $pdo->prepare("UPDATE letters SET parent_letter_id = ? WHERE id = ?")->execute([$newParentId, $newLetterId2]);
             }
             // Actions/Watchers/Signatures — फक्त नव्याने घातलेल्या (Duplicate नसलेल्या) Letters साठीच घालतो,
             // नाहीतर आधीच अस्तित्वात असलेल्या पत्रावर पुन्हा-पुन्हा त्याच नोंदी साचत जातील.
@@ -1664,13 +1645,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                 if (!$newLetterId || !$newFromId) continue;
                 $ins = $pdo->prepare("INSERT INTO letter_actions (letter_id, action_type, from_user_id, to_user_id, remark) VALUES (?, ?, ?, ?, ?)");
                 $ins->execute([$newLetterId, $la['action_type'], $newFromId, $la['to_user_id'] ? ($userMap[$la['to_user_id']] ?? null) : null, $la['remark']]);
-            }
-            foreach ($data['letter_watchers'] ?? [] as $lw) {
-                if (empty($newlyAddedLetters[$lw['letter_id']])) continue;
-                $newLetterId = $letterMap[$lw['letter_id']] ?? null;
-                $newWatcherId = $userMap[$lw['user_id']] ?? null;
-                if (!$newLetterId || !$newWatcherId) continue;
-                try { $pdo->prepare("INSERT INTO letter_watchers (letter_id, user_id, added_by) VALUES (?, ?, ?)")->execute([$newLetterId, $newWatcherId, $userMap[$lw['added_by']] ?? $newWatcherId]); } catch (PDOException $e) {}
             }
             foreach ($data['letter_signatures'] ?? [] as $ls) {
                 if (empty($newlyAddedLetters[$ls['letter_id']])) continue;
@@ -1689,15 +1663,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                 $insAtt->execute([$newLetterId, $latt['file_path'], $latt['original_name'], $latt['uploaded_by'] ? ($userMap[$latt['uploaded_by']] ?? null) : null, $latt['uploaded_at']]);
                 $letterAttachmentMap[$latt['id']] = $pdo->lastInsertId();
             }
-            try {
-                foreach ($data['letter_attachment_remarks'] ?? [] as $lar) {
-                    $newAttId = $letterAttachmentMap[$lar['attachment_id']] ?? null;
-                    $newUserIdLar = $userMap[$lar['user_id']] ?? null;
-                    if (!$newAttId || !$newUserIdLar) continue;
-                    $pdo->prepare("INSERT INTO letter_attachment_remarks (attachment_id, user_id, remark_text, x_position, y_position, is_resolved, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)")
-                        ->execute([$newAttId, $newUserIdLar, $lar['remark_text'], $lar['x_position'] ?? null, $lar['y_position'] ?? null, $lar['is_resolved'], $lar['created_at']]);
-                }
-            } catch (PDOException $e) { /* table not migrated yet */ }
             foreach ($data['letter_inward_numbers'] ?? [] as $lin) {
                 if (empty($newlyAddedLetters[$lin['letter_id']])) continue;
                 $newLetterId = $letterMap[$lin['letter_id']] ?? null;

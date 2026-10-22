@@ -52,67 +52,50 @@ function resolveStepApprover($pdo, $step, $letter) {
     return null;
 }
 
-/**
- * Moves the letter to the next workflow step.
- * Returns an array: ['holder' => int|null, 'intended_recipient_id' => int|null,
- * 'clerk_stage' => string, 'completed' => bool, 'error' => string|null].
- * If the resolved approver has their own Clerk (gatekeeper_clerk_id), the
- * file is routed to the Clerk first — exactly like manual forwarding does —
- * so Workflow-driven letters respect Clerk-Gatekeeper too, not just manual ones.
- * If the next step's approver cannot be resolved (e.g. that department has no
- * HOD assigned), the letter is deliberately NOT advanced — it stays with the
- * current holder and an error is returned — instead of silently going stuck
- * with no one able to act on it.
- */
-function advanceLetterToNextStep($pdo, $letter, $orgId) {
-    if (!$letter['workflow_template_id']) {
-        return ['holder' => null, 'intended_recipient_id' => null, 'clerk_stage' => 'none', 'completed' => false, 'error' => null];
-    }
-    $nextOrder = (int)$letter['current_step_order'] + 1;
-    $stmt = $pdo->prepare("SELECT * FROM workflow_steps WHERE workflow_template_id = ? AND step_order = ?");
-    $stmt->execute([$letter['workflow_template_id'], $nextOrder]);
-    $nextStep = $stmt->fetch();
+/** कार्यप्रवाहातली आधीची पायरी (नसेल तर 0 — म्हणजे तयार करणारा) */
+function letterPreviousWorkflowStepOrder($pdo, $letter) {
+    $stmt = $pdo->prepare("SELECT MAX(step_order) FROM workflow_steps WHERE workflow_template_id = ? AND step_order < ?");
+    $stmt->execute([$letter['workflow_template_id'], (int)$letter['current_step_order']]);
+    return (int)$stmt->fetchColumn();
+}
 
-    if (!$nextStep) {
-        // No more steps — letter is complete
-        $pdo->prepare("UPDATE letters SET status='completed', current_holder_id=NULL WHERE id=?")->execute([$letter['id']]);
-        return ['holder' => null, 'intended_recipient_id' => null, 'clerk_stage' => 'none', 'completed' => true, 'error' => null];
-    }
-
-    $resolvedApprover = resolveStepApprover($pdo, $nextStep, $letter);
-    if (!$resolvedApprover) {
-        // Can't resolve an approver — do NOT advance (avoids a stuck, ownerless file)
-        return ['holder' => null, 'intended_recipient_id' => null, 'clerk_stage' => 'none', 'completed' => false,
-            'error' => "\"{$nextStep['step_name']}\" या पायरीसाठी कोणीही नेमलेले नाही (विभागाला HOD नाही) — Super Admin ला \"कार्यप्रवाह टेम्प्लेट\" मधून दुरुस्त करायला सांगा, किंवा खालून थेट एखाद्या व्यक्तीकडे पाठवा."];
-    }
-
-    // हा Approver Gatekept आहे का (त्याचा स्वतःचा Clerk नेमलेला आहे का) —
-    // असेल तर आधी Clerk कडेच जाईल, Workflow मध्येही तेच नियम लागू.
-    $resolved = resolveHolderForRecipient($pdo, $resolvedApprover);
-
-    $pdo->prepare("UPDATE letters SET status='in_progress', current_step_order=?, current_holder_id=?, intended_recipient_id=?, clerk_stage=?, current_holder_seen_at=NULL WHERE id=?")
-        ->execute([$nextOrder, $resolved['holder_id'], $resolved['intended_recipient_id'], $resolved['clerk_stage'], $letter['id']]);
-    return ['holder' => $resolved['holder_id'], 'intended_recipient_id' => $resolved['intended_recipient_id'], 'clerk_stage' => $resolved['clerk_stage'], 'completed' => false, 'error' => null];
+/** कार्यप्रवाहात सध्याच्या पायरीनंतर आणखी पायरी आहे का */
+function letterHasNextWorkflowStep($pdo, $letter) {
+    if (empty($letter['workflow_template_id'])) { return false; }
+    $stmt = $pdo->prepare("SELECT 1 FROM workflow_steps WHERE workflow_template_id = ? AND step_order > ? LIMIT 1");
+    $stmt->execute([$letter['workflow_template_id'], (int)$letter['current_step_order']]);
+    return (bool)$stmt->fetchColumn();
 }
 
 /**
- * एखाद्या व्यक्तीला (उदा. Executive President) पत्र पाठवायचं असेल, आणि
- * त्यांचा स्वतःचा Clerk नेमलेला असेल, तर फाईल तांत्रिकदृष्ट्या आधी Clerk
- * कडे जाते — पण "खरं कोणासाठी आहे" हे intended_recipient_id मध्ये राहतं.
- * Clerk नेमलेला नसेल तर थेट त्या व्यक्तीकडेच जाते (जुनी पद्धत).
+ * पत्र कार्यप्रवाहाच्या पुढच्या पायरीकडे पाठवते.
+ * परत: ['holder' => int|null, 'error' => string|null]
+ * शेवटच्या पायरीवर पत्र इथून पूर्ण होत नाही — ते फक्त Sign & Approve ने
+ * (ओळख पडताळून) पूर्ण होते. पुढच्या पायरीचा अधिकारी ठरत नसेल (उदा.
+ * विभागाला HOD नाही) तर पत्र पुढे सरकवत नाही — कोणाकडेच नसलेलं, अडकलेलं
+ * पत्र तयार होऊ नये म्हणून.
  */
-function resolveHolderForRecipient($pdo, $intendedUserId) {
-    if (!$intendedUserId) {
-        return ['holder_id' => null, 'intended_recipient_id' => null, 'clerk_stage' => 'none'];
-    }
-    $stmt = $pdo->prepare("SELECT gatekeeper_clerk_id FROM users WHERE id = ?");
-    $stmt->execute([$intendedUserId]);
-    $clerkId = $stmt->fetch()['gatekeeper_clerk_id'] ?? null;
+function advanceLetterToNextStep($pdo, $letter) {
+    // पायरी Delete झाल्यामुळे क्रमांकात खंड (उदा. 1, 3) असला तरी पुढची पायरी सापडावी
+    $stmt = $pdo->prepare("SELECT * FROM workflow_steps WHERE workflow_template_id = ? AND step_order > ? ORDER BY step_order LIMIT 1");
+    $stmt->execute([$letter['workflow_template_id'], (int)$letter['current_step_order']]);
+    $nextStep = $stmt->fetch();
 
-    if ($clerkId) {
-        return ['holder_id' => $clerkId, 'intended_recipient_id' => $intendedUserId, 'clerk_stage' => 'awaiting_inward'];
+    if (!$nextStep) {
+        if ((int)$letter['current_step_order'] === 0) {
+            return ['holder' => null, 'error' => 'या कार्यप्रवाहात एकही पायरी नाही — Super Admin ला "कार्यप्रवाह" मध्ये पायऱ्या जोडायला सांगा.'];
+        }
+        return ['holder' => null, 'error' => 'ही कार्यप्रवाहाची शेवटची पायरी आहे — पत्र पूर्ण करण्यासाठी "Sign & Approve" वापरा.'];
     }
-    return ['holder_id' => $intendedUserId, 'intended_recipient_id' => null, 'clerk_stage' => 'none'];
+
+    $approver = resolveStepApprover($pdo, $nextStep, $letter);
+    if (!$approver) {
+        return ['holder' => null, 'error' => "\"{$nextStep['step_name']}\" या पायरीसाठी कोणीही नेमलेले नाही (विभागाला HOD नाही) — Super Admin ला \"कार्यप्रवाह\" दुरुस्त करायला सांगा."];
+    }
+
+    $pdo->prepare("UPDATE letters SET status='in_progress', current_step_order=?, current_holder_id=?, current_holder_seen_at=NULL WHERE id=?")
+        ->execute([(int)$nextStep['step_order'], $approver, $letter['id']]);
+    return ['holder' => (int)$approver, 'error' => null];
 }
 
 /**
@@ -138,7 +121,8 @@ function generateOutwardNumber($pdo, $orgId, $departmentId) {
     $countStmt->execute([$deptOrgId, $departmentId, $fyStart . ' 00:00:00', $fyEnd . ' 23:59:59']);
     $seq = (int)$countStmt->fetch()['c'] + 1;
 
-    return sprintf('%s/%s/%04d', $deptCode, $fyLabel, $seq);
+    // एखादं पत्र Delete झालं असेल तर COUNT मागे जातो — तोच जावक क्रमांक पुन्हा येऊ नये
+    return generateUniqueCode($pdo, 'letters', 'outward_no', '%s/%s/%04d', $seq, $deptCode, $fyLabel);
 }
 
 /**
@@ -172,7 +156,8 @@ function assignInwardNumberIfNeeded($pdo, $letterId, $departmentId, $orgId) {
     ");
     $countStmt->execute([$deptOrgId, $departmentId, $fyStartYear]);
     $seq = (int)$countStmt->fetch()['c'] + 1;
-    $inwardNo = sprintf('%s/%s/%04d', $deptCode, $fyLabel, $seq);
+    $inwardNo = generateUniqueCode($pdo, 'letter_inward_numbers', 'inward_no', '%s/%s/%04d', $seq, $deptCode, $fyLabel);
+    $seq = (int)substr($inwardNo, strrpos($inwardNo, '/') + 1);
 
     try {
         $pdo->prepare("INSERT INTO letter_inward_numbers (letter_id, department_id, inward_no, year, sequence_no) VALUES (?, ?, ?, ?, ?)")
@@ -194,4 +179,20 @@ function assignInwardForHolder($pdo, $letterId, $holderUserId, $originDepartment
     $holderDeptId = $stmt->fetch()['department_id'] ?? null;
     if (!$holderDeptId || (int)$holderDeptId === (int)$originDepartmentId) return;
     assignInwardNumberIfNeeded($pdo, $letterId, $holderDeptId, $orgId);
+}
+
+/**
+ * पत्र एखाद्या व्यक्तीकडे पाठवते — Holder बदलतो, हालचालीची नोंद करतो,
+ * त्या व्यक्तीच्या विभागाला आवक क्रमांक देतो आणि Notification पाठवतो.
+ * ($holderAlreadySet = true — कार्यप्रवाहाने Holder आधीच बदलला असेल तेव्हा)
+ */
+function letterSendTo($pdo, $letter, $toUserId, $fromUserId, $actionType, $remark, $orgId, $holderAlreadySet = false) {
+    if (!$holderAlreadySet) {
+        $pdo->prepare("UPDATE letters SET status='in_progress', current_holder_id=?, current_holder_seen_at=NULL WHERE id=?")
+            ->execute([$toUserId, $letter['id']]);
+    }
+    $pdo->prepare("INSERT INTO letter_actions (letter_id, action_type, from_user_id, to_user_id, remark) VALUES (?, ?, ?, ?, ?)")
+        ->execute([$letter['id'], $actionType, $fromUserId, $toUserId, $remark ?: null]);
+    assignInwardForHolder($pdo, $letter['id'], $toUserId, $letter['department_id'], $orgId);
+    notifyUser($toUserId, $orgId, 'नवीन फाईल तुमच्याकडे आली', $letter['subject'] . ' — ' . $letter['file_number'], 'letters/view.php?id=' . $letter['id']);
 }

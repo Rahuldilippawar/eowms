@@ -38,19 +38,5 @@ if ($action === 'staff_for_department') {
     exit;
 }
 
-if ($action === 'search_letters') {
-    $q = trim($_GET['q'] ?? '');
-    if (mb_strlen($q) < 2) { echo json_encode(['letters' => []]); exit; }
-    $stmt = $pdo->prepare("
-        SELECT id, file_number, subject FROM letters
-        WHERE organization_id = ? AND (file_number LIKE ? OR subject LIKE ?)
-        ORDER BY created_at DESC LIMIT 8
-    ");
-    $like = "%$q%";
-    $stmt->execute([$orgId, $like, $like]);
-    echo json_encode(['letters' => $stmt->fetchAll()], JSON_UNESCAPED_UNICODE);
-    exit;
-}
-
 echo json_encode(['error' => 'अवैध Action']);
 exit;

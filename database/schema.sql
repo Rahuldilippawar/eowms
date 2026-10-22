@@ -76,7 +76,6 @@ CREATE TABLE users (
   campus_id INT NOT NULL,
   department_id INT NULL,
   can_edit_daily_work TINYINT(1) DEFAULT 0,
-  gatekeeper_clerk_id INT NULL,
   employee_code VARCHAR(50) NULL UNIQUE,
   biometric_pin VARCHAR(20) NULL,
   name VARCHAR(255) NOT NULL,
@@ -140,7 +139,6 @@ CREATE TABLE users (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
   FOREIGN KEY (campus_id) REFERENCES campuses(id) ON DELETE CASCADE,
-  FOREIGN KEY (gatekeeper_clerk_id) REFERENCES users(id) ON DELETE SET NULL,
   UNIQUE KEY uniq_biometric_pin (organization_id, biometric_pin)
 ) ENGINE=InnoDB;
 
@@ -651,8 +649,6 @@ CREATE TABLE letters (
   dispatch_tracking_no VARCHAR(100) NULL,
   dispatch_date DATE NULL,
   reference_no VARCHAR(100) NULL,
-  parent_letter_id INT NULL,
-  batch_ref VARCHAR(40) NULL,
   is_budget_expense TINYINT(1) DEFAULT 0,
   budget_category ENUM('नवीन खरेदी','देखभाल','इंधन','इतर') NULL,
   requested_amount DECIMAL(12,2) NULL,
@@ -667,9 +663,6 @@ CREATE TABLE letters (
   workflow_template_id INT NULL,
   current_step_order INT DEFAULT 0,
   current_holder_id INT NULL,
-  intended_recipient_id INT NULL,
-  pending_forward_to INT NULL,
-  clerk_stage ENUM('none','awaiting_inward','awaiting_forward_approval') NOT NULL DEFAULT 'none',
   current_holder_seen_at TIMESTAMP NULL,
   created_by INT NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -679,13 +672,9 @@ CREATE TABLE letters (
   FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE SET NULL,
   FOREIGN KEY (workflow_template_id) REFERENCES workflow_templates(id) ON DELETE SET NULL,
   FOREIGN KEY (current_holder_id) REFERENCES users(id) ON DELETE SET NULL,
-  FOREIGN KEY (intended_recipient_id) REFERENCES users(id) ON DELETE SET NULL,
-  FOREIGN KEY (pending_forward_to) REFERENCES users(id) ON DELETE SET NULL,
   FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE,
-  FOREIGN KEY (parent_letter_id) REFERENCES letters(id) ON DELETE SET NULL,
   INDEX idx_holder (current_holder_id),
-  INDEX idx_org_status (organization_id, status),
-  INDEX idx_batch_ref (batch_ref)
+  INDEX idx_org_status (organization_id, status)
 ) ENGINE=InnoDB;
 
 CREATE TABLE letter_inward_numbers (
@@ -725,34 +714,7 @@ CREATE TABLE letter_attachments (
   FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
-CREATE TABLE letter_watchers (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  letter_id INT NOT NULL,
-  user_id INT NOT NULL,
-  added_by INT NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (letter_id) REFERENCES letters(id) ON DELETE CASCADE,
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-  FOREIGN KEY (added_by) REFERENCES users(id) ON DELETE CASCADE,
-  UNIQUE KEY uniq_letter_watcher (letter_id, user_id)
-) ENGINE=InnoDB;
 
-CREATE TABLE letter_templates (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  organization_id INT NOT NULL,
-  name VARCHAR(150) NOT NULL,
-  subject_template VARCHAR(255) NOT NULL,
-  description_template TEXT NULL,
-  category_id INT NULL,
-  workflow_template_id INT NULL,
-  is_active TINYINT(1) DEFAULT 1,
-  created_by INT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
-  FOREIGN KEY (category_id) REFERENCES letter_categories(id) ON DELETE SET NULL,
-  FOREIGN KEY (workflow_template_id) REFERENCES workflow_templates(id) ON DELETE SET NULL,
-  FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
-) ENGINE=InnoDB;
 
 CREATE TABLE password_reset_codes (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -2636,18 +2598,6 @@ CREATE TABLE grievances (
   FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
-CREATE TABLE letter_attachment_remarks (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  attachment_id INT NOT NULL,
-  user_id INT NOT NULL,
-  remark_text TEXT NOT NULL,
-  x_position DECIMAL(5,2) NULL,
-  y_position DECIMAL(5,2) NULL,
-  is_resolved TINYINT(1) DEFAULT 0,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (attachment_id) REFERENCES letter_attachments(id) ON DELETE CASCADE,
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-) ENGINE=InnoDB;
 
 CREATE TABLE gaushala_cattle (
   id INT AUTO_INCREMENT PRIMARY KEY,

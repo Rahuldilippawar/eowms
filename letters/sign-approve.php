@@ -19,6 +19,11 @@ try {
 
     $isHolder = (int)$letter['current_holder_id'] === (int)$user['id'] && in_array($letter['status'], ['in_progress', 'returned'], true);
     if (!$isHolder) { throw new Exception('तुम्ही या फाईलचे सध्याचे धारक नाही आहात.'); }
+    // कार्यप्रवाह असेल तर फक्त शेवटच्या पायरीवरच पत्र पूर्ण करता येतं — नाहीतर
+    // पुढच्या पायऱ्यांचे अधिकारी (उदा. President) पूर्णपणे वगळले जातील
+    if (!empty($letter['workflow_template_id']) && ((int)$letter['current_step_order'] === 0 || letterHasNextWorkflowStep($pdo, $letter))) {
+        throw new Exception('ही कार्यप्रवाहाची शेवटची पायरी नाही — फाईल "पुढे पाठवा".');
+    }
 
     // ---- ओळख पडताळणी (Identity Verification) ----
     if ($method === 'fingerprint') {
@@ -45,6 +50,7 @@ try {
     $approvedAmount = null;
     if (!empty($letter['is_budget_expense']) && !$letter['budget_deducted']) {
         $approvedAmount = ($_POST['approved_amount'] ?? '') !== '' ? (float)$_POST['approved_amount'] : (float)$letter['requested_amount'];
+        if ($approvedAmount < 0) { throw new Exception('मंजूर रक्कम ऋण (minus) असू शकत नाही.'); }
         $pdo->prepare("UPDATE letters SET status='completed', current_holder_id=NULL, approved_amount=?, budget_deducted=1 WHERE id=?")
             ->execute([$approvedAmount, $letterId]);
         if ($approvedAmount > 0) {
@@ -70,10 +76,8 @@ try {
 
     logActivity('फाईल Digitally Sign करून पूर्ण/दाखल केली', 'letter', $letterId, $letter['file_number']);
 
-    $watcherStmt = $pdo->prepare("SELECT user_id FROM letter_watchers WHERE letter_id = ?");
-    $watcherStmt->execute([$letterId]);
-    foreach ($watcherStmt->fetchAll(PDO::FETCH_COLUMN) as $wId) {
-        notifyUser($wId, $orgId, 'CC केलेली फाईल पूर्ण/दाखल झाली', $letter['subject'] . ' — ' . $letter['file_number'], 'letters/view.php?id=' . $letterId);
+    if ((int)$letter['created_by'] !== (int)$user['id']) {
+        notifyUser($letter['created_by'], $orgId, '✅ तुमची फाईल मंजूर/पूर्ण झाली', $letter['subject'] . ' — ' . $letter['file_number'], 'letters/view.php?id=' . $letterId);
     }
 
     echo json_encode([

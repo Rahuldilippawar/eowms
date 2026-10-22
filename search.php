@@ -41,12 +41,11 @@ if ($q !== '') {
             SELECT l.*, u.name AS holder_name FROM letters l LEFT JOIN users u ON u.id = l.current_holder_id
             WHERE l.organization_id = ? AND (l.subject LIKE ? OR l.file_number LIKE ?)
               AND (l.created_by = ? OR l.current_holder_id = ? OR ? = 1
-                   OR l.id IN (SELECT letter_id FROM letter_actions WHERE from_user_id = ? OR to_user_id = ?)
-                   OR l.id IN (SELECT letter_id FROM letter_watchers WHERE user_id = ?))
+                   OR l.id IN (SELECT letter_id FROM letter_actions WHERE from_user_id = ? OR to_user_id = ?))
             LIMIT 10
         ");
         $isMgmt = isManagementOrAbove() ? 1 : 0;
-        $stmt->execute([$orgId, $like, $like, $user['id'], $user['id'], $isMgmt, $user['id'], $user['id'], $user['id']]);
+        $stmt->execute([$orgId, $like, $like, $user['id'], $user['id'], $isMgmt, $user['id'], $user['id']]);
         $results['letters'] = $stmt->fetchAll();
     } catch (PDOException $e) {
         $results['letters'] = [];

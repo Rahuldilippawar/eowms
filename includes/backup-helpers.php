@@ -251,14 +251,6 @@ function buildOrgBackup($pdo, $orgId) {
         'letter_attachments' => safeFetchAll($pdo, "
             SELECT lat.* FROM letter_attachments lat JOIN letters l ON l.id = lat.letter_id
             WHERE l.organization_id = ?", [$orgId]),
-        'letter_attachment_remarks' => safeFetchAll($pdo, "
-            SELECT lar.* FROM letter_attachment_remarks lar
-            JOIN letter_attachments lat ON lat.id = lar.attachment_id JOIN letters l ON l.id = lat.letter_id
-            WHERE l.organization_id = ?", [$orgId]),
-        'letter_watchers' => safeFetchAll($pdo, "
-            SELECT lw.* FROM letter_watchers lw JOIN letters l ON l.id = lw.letter_id
-            WHERE l.organization_id = ?", [$orgId]),
-        'letter_templates' => safeFetchAll($pdo, "SELECT * FROM letter_templates WHERE organization_id = ?", [$orgId]),
         'letter_inward_numbers' => safeFetchAll($pdo, "
             SELECT lin.* FROM letter_inward_numbers lin JOIN letters l ON l.id = lin.letter_id
             WHERE l.organization_id = ?", [$orgId]),

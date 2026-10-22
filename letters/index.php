@@ -40,7 +40,7 @@ if ($view === 'sent') {
         SELECT l.*, lc.name_local AS category_name, u.name AS holder_name
         FROM letters l LEFT JOIN letter_categories lc ON lc.id = l.category_id
         LEFT JOIN users u ON u.id = l.current_holder_id
-        WHERE l.current_holder_id = ? AND l.status = 'in_progress'$searchCondition
+        WHERE l.current_holder_id = ? AND l.status IN ('in_progress', 'returned')$searchCondition
         ORDER BY FIELD(l.priority,'urgent','high','normal','low'), l.updated_at DESC
     ");
     $stmt->execute(array_merge([$user['id']], $searchParam));
@@ -54,9 +54,6 @@ $letters = $stmt->fetchAll();
   <div class="d-flex gap-2">
     <?php if (!empty($user['department_id']) || hasPermission('manage_letters_org_wide')): ?>
       <a href="register.php" target="_blank" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13.5px;padding:9px 18px;"><i class="fa-solid fa-book me-1"></i>आवक/जावक नोंदवही</a>
-    <?php endif; ?>
-    <?php if (hasPermission('manage_letters_org_wide')): ?>
-      <a href="annual-report.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13.5px;padding:9px 18px;"><i class="fa-solid fa-chart-column me-1"></i>वार्षिक अहवाल</a>
     <?php endif; ?>
     <a href="create.php" class="btn" style="background:var(--rail);color:#fff;border-radius:9px;font-size:13.5px;padding:9px 20px;font-weight:600;"><i class="fa-solid fa-plus me-1"></i>नवीन पत्र / फाईल</a>
   </div>
@@ -91,7 +88,7 @@ $letters = $stmt->fetchAll();
         <tr><td colspan="7" style="text-align:center;color:var(--text-dim);padding:24px;">कोणतीही फाईल सापडली नाही</td></tr>
       <?php endif; ?>
       <?php foreach ($letters as $l):
-        $daysPending = in_array($l['status'], ['draft', 'in_progress'], true) ? (int)((time() - strtotime($l['updated_at'])) / 86400) : null;
+        $daysPending = in_array($l['status'], ['draft', 'in_progress', 'returned'], true) ? (int)((time() - strtotime($l['updated_at'])) / 86400) : null;
         $isStuck = $daysPending !== null && $daysPending >= 3;
       ?>
         <tr style="cursor:pointer;<?= ($view === 'inbox' && empty($l['current_holder_seen_at'])) ? 'font-weight:600;background:var(--rail-soft);' : '' ?>" onclick="window.location='view.php?id=<?= $l['id'] ?>'">
