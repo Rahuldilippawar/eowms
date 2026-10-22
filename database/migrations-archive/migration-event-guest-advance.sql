@@ -6,7 +6,7 @@
 
 ALTER TABLE events ADD COLUMN is_recurring TINYINT(1) DEFAULT 0 AFTER status;
 ALTER TABLE events ADD COLUMN recurrence_pattern ENUM('yearly','monthly') NULL AFTER is_recurring;
-ALTER TABLE events ADD COLUMN parent_event_id INT NULL AFTER recurrence_pattern COMMENT 'मूळ Recurring Event — पुढच्या वर्षीच्या Auto-Created Event साठी';
+ALTER TABLE events ADD COLUMN parent_event_id INT NULL COMMENT 'मूळ Recurring Event — पुढच्या वर्षीच्या Auto-Created Event साठी' AFTER recurrence_pattern;
 ALTER TABLE events ADD CONSTRAINT fk_events_parent FOREIGN KEY (parent_event_id) REFERENCES events(id) ON DELETE SET NULL;
 
 CREATE TABLE event_attendance (

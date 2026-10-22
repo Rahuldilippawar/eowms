@@ -6,4 +6,4 @@
 -- ============================================================
 
 ALTER TABLE role_definitions ADD COLUMN restricted_mode TINYINT(1) DEFAULT 0 AFTER is_system;
-ALTER TABLE role_definitions ADD COLUMN restricted_modules VARCHAR(255) NULL AFTER restricted_mode COMMENT 'Comma-separated Module Keys — उदा. it,store';
+ALTER TABLE role_definitions ADD COLUMN restricted_modules VARCHAR(255) NULL COMMENT 'Comma-separated Module Keys — उदा. it,store' AFTER restricted_mode;
