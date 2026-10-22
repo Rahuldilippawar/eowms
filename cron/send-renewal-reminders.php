@@ -93,7 +93,7 @@ foreach ($items as $item) {
         // Email साठी — संस्थेचं नाव एकदाच काढतो
         $orgStmt = $pdo->prepare("SELECT name FROM organizations WHERE id = ?");
         $orgStmt->execute([$item['organization_id']]);
-        $orgName = $orgStmt->fetch()['name'] ?? 'EOWMS';
+        $orgName = $orgStmt->fetch()['name'] ?? 'E-Admin';
         $emailLink = rtrim(SITE_BASE_URL, '/') . '/renewals/index.php?item=' . $item['id'];
 
         foreach ($notifyIds as $uid) {

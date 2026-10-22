@@ -1,4 +1,4 @@
-# EOWMS — Plain PHP + XAMPP Version (no Composer/Laravel needed)
+# E-Admin — Smart Administration (EOWMS) — Plain PHP + XAMPP Version (no Composer/Laravel needed)
 
 This is a **Composer-free** version of the project — plain PHP + PDO + MySQL.
 Drop it into `htdocs` and it runs directly on XAMPP.

@@ -93,6 +93,7 @@ $loginOrgName = $loginOrg['name'] ?? 'VJMAT';
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title><?= h(t('s157')) ?> <?= h($loginOrgName) ?></title>
+<link rel="icon" type="image/png" href="assets/brand/favicon-32.png">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Noto+Sans+Devanagari:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/eowms.css">
@@ -128,11 +129,14 @@ $loginOrgName = $loginOrg['name'] ?? 'VJMAT';
 </script>
 <script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async></script>
   <div style="width:380px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:32px;">
+    <div style="text-align:center;margin:-8px 0 18px;">
+      <img src="assets/brand/e-admin-logo.png" alt="E-Admin — Smart Administration" style="width:150px;height:auto;">
+    </div>
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:24px;">
       <div style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,var(--rail),#0F5E58);display:flex;align-items:center;justify-content:center;color:#fff;font-family:'Space Grotesk';font-weight:700;"><?= h(mb_substr($loginOrgName, 0, 2)) ?></div>
       <div>
         <div style="font-family:'Space Grotesk';font-weight:700;font-size:16px;color:var(--ink);"><?= h($loginOrgName) ?></div>
-        <div style="font-size:11.5px;color:var(--text-dim);">Enterprise Operations & Workflow Management</div>
+        <div style="font-size:11.5px;color:var(--text-dim);">E-Admin — Smart Administration</div>
       </div>
     </div>
 

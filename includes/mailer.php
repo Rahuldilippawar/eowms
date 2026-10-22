@@ -31,17 +31,17 @@ function sendWelcomeEmail($email, $name, $username, $plainPassword, $orgName, $c
     }
 
     $intro = roleWiseIntroLine($category);
-    $subject = "$orgName — तुमचं EOWMS खातं तयार झालं";
+    $subject = "$orgName — तुमचं E-Admin खातं तयार झालं";
 
     $body = "
     <div style='font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;background:#F3F4F7;'>
       <div style='background:#10162B;padding:20px 24px;border-radius:10px 10px 0 0;'>
         <div style='color:#fff;font-size:20px;font-weight:bold;'>$orgName</div>
-        <div style='color:#DCEFEC;font-size:13px;margin-top:4px;'>Enterprise Operations & Workflow Management System</div>
+        <div style='color:#DCEFEC;font-size:13px;margin-top:4px;'>E-Admin — Smart Administration</div>
       </div>
       <div style='background:#fff;padding:24px;border-radius:0 0 10px 10px;'>
         <p style='font-size:14px;color:#1A1D29;'>नमस्कार <strong>$name</strong>,</p>
-        <p style='font-size:14px;color:#1A1D29;line-height:1.6;'>$orgName च्या EOWMS प्रणालीमध्ये तुमचं खातं तयार करण्यात आलं आहे. $intro</p>
+        <p style='font-size:14px;color:#1A1D29;line-height:1.6;'>$orgName च्या E-Admin प्रणालीमध्ये तुमचं खातं तयार करण्यात आलं आहे. $intro</p>
         <div style='background:#F3F4F7;border-radius:8px;padding:16px 20px;margin:18px 0;'>
           <div style='font-size:12px;color:#666B7D;text-transform:uppercase;'>Login ID</div>
           <div style='font-size:16px;font-weight:bold;color:#1B8A83;margin-bottom:10px;'>$username</div>

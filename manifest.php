@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/includes/auth.php';
 
-$orgName = 'EOWMS';
+$orgName = 'E-Admin';
 $orgIcon192 = 'icon.php?size=192';
 $orgIcon512 = 'icon.php?size=512';
 
@@ -20,9 +20,9 @@ if (currentUser()) {
 
 header('Content-Type: application/manifest+json');
 echo json_encode([
-    'name' => $orgName . ' — EOWMS',
-    'short_name' => 'EOWMS',
-    'description' => 'Enterprise Operations & Workflow Management System',
+    'name' => 'E-Admin — ' . $orgName,
+    'short_name' => 'E-Admin',
+    'description' => 'E-Admin — Smart Administration',
     'start_url' => './index.php',
     'scope' => './',
     'display' => 'standalone',

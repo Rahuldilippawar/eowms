@@ -598,6 +598,10 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
     <a href="<?= $rp ?>account/profile.php" style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:12px;color:#B7BBD6;text-decoration:none;">
       <i class="fa-solid fa-user fa-fw"></i><span><?= h(t('nav_profile')) ?></span>
     </a>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.08);">
+      <img src="<?= $rp ?>assets/brand/e-admin-mark.png" alt="" style="width:26px;height:26px;border-radius:6px;background:#fff;padding:2px;">
+      <div style="line-height:1.2;"><div style="font-size:12px;color:#fff;font-weight:700;letter-spacing:.3px;">E-Admin</div><div style="font-size:10px;color:#8A90AC;">Smart Administration</div></div>
+    </div>
   </div>
 </aside>
 
