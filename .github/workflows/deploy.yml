@@ -53,11 +53,13 @@ jobs:
           if [ "$PROTOCOL" = "ftps" ]; then
             # FTPS Certificate कोणत्या नावासाठी आहे — FTP_SERVER हेच नाव असायला हवं
             echo "FTPS certificate names:"
-            timeout 20 openssl s_client -starttls ftp -connect "$FTP_SERVER:21" </dev/null 2>/dev/null \
-              | openssl x509 -noout -subject -ext subjectAltName 2>/dev/null \
-              || timeout 30 lftp -d -u "$FTP_USERNAME,$FTP_PASSWORD" "$FTP_SERVER" -e "set net:max-retries 1; set ftp:ssl-force true; ls; bye" 2>&1 \
-                   | grep -iE "Certificate:|subject|CN ?=" | grep -v "$FTP_PASSWORD" | head -5 \
-              || echo "(could not read certificate)"
+            python3 - "$FTP_SERVER" <<'PY' || echo "(could not read certificate)"
+          import ftplib, ssl, subprocess, sys
+          ctx = ssl.create_default_context(); ctx.check_hostname = False; ctx.verify_mode = ssl.CERT_NONE
+          f = ftplib.FTP_TLS(context=ctx, timeout=20); f.connect(sys.argv[1], 21); f.auth()
+          der = f.sock.getpeercert(binary_form=True); f.close()
+          print(subprocess.run(["openssl", "x509", "-inform", "DER", "-noout", "-subject", "-ext", "subjectAltName"], input=der, capture_output=True).stdout.decode())
+          PY
             SSL="set ftp:ssl-force true; set ftp:ssl-protect-data true;"
           else
             SSL="set ftp:ssl-allow false;"
