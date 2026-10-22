@@ -27,9 +27,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         foreach ($stepNames as $i => $stepName) {
             $stepName = trim($stepName);
             if (!$stepName) continue;
-            $type = $approverTypes[$i] ?? 'department_hod';
-            $deptId = $deptIds[$i] !== '' ? (int)$deptIds[$i] : null;
-            $userId = $userIds[$i] !== '' ? (int)$userIds[$i] : null;
+            $type = in_array($approverTypes[$i] ?? '', ['department_hod', 'specific_user', 'letter_dept_hod'], true) ? $approverTypes[$i] : 'department_hod';
+            $deptId = ($deptIds[$i] ?? '') !== '' ? (int)$deptIds[$i] : null;
+            $userId = ($userIds[$i] ?? '') !== '' ? (int)$userIds[$i] : null;
+            if (($type === 'department_hod' && !$deptId) || ($type === 'specific_user' && !$userId)) continue; // अर्धवट पायरी — ज्याला कोणी अधिकारीच नाही
             $stepInsert->execute([$templateId, $order, $stepName, $type, $type === 'department_hod' ? $deptId : null, $type === 'specific_user' ? $userId : null]);
             $order++;
         }

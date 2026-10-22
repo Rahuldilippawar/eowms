@@ -20,9 +20,6 @@ $campusesForCascade = $pdo->prepare("SELECT id, name FROM campuses WHERE organiz
 $campusesForCascade->execute([activeOrgId()]);
 $campusesForCascade = $campusesForCascade->fetchAll();
 
-$stmt = $pdo->prepare("SELECT id, name, designation FROM users WHERE organization_id = ? AND is_active = 1 AND id != ? ORDER BY name");
-$stmt->execute([activeOrgId(), $staffMember['id']]);
-$clerkCandidates = $stmt->fetchAll();
 
 try {
     $roleDefs = $pdo->query("SELECT * FROM role_definitions ORDER BY FIELD(category,'super_admin','management','hod','staff'), label")->fetchAll();
@@ -177,15 +174,6 @@ try {
       <div class="col-md-4">
         <label class="form-label-custom">पगार (₹) — फक्त Management ला दिसेल</label>
         <input type="number" step="0.01" name="salary" class="form-control-custom" value="<?= h($staffMember['salary']) ?>">
-      </div>
-      <div class="col-md-8">
-        <label class="form-label-custom">Clerk/Gatekeeper <span style="font-weight:400;color:var(--text-dim);font-size:11px;">— या व्यक्तीला पाठवलेली पत्रं आधी कोणाकडून नोंदणी होऊन येतील (उदा. Executive President चा Clerk)</span></label>
-        <select name="gatekeeper_clerk_id" class="form-select-custom">
-          <option value="">-- कोणी नाही (थेट पत्र येईल) --</option>
-          <?php foreach ($clerkCandidates as $c): ?>
-            <option value="<?= $c['id'] ?>" <?= (int)($staffMember['gatekeeper_clerk_id'] ?? 0) === (int)$c['id'] ? 'selected' : '' ?>><?= h($c['name']) ?><?= $c['designation'] ? ' — ' . h($c['designation']) : '' ?></option>
-          <?php endforeach; ?>
-        </select>
       </div>
       <?php if (hasRole('super_admin')): ?>
       <div class="col-12">

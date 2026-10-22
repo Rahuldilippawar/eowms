@@ -106,7 +106,7 @@ $dirToGroup = [
 // साधं Directory-Match इथे चुकीचं ठरेल.
 $activeGroup = $dirToGroup[$currentDir] ?? null;
 if ($currentDir === 'departments' && $currentPage === 'index.php') { $activeGroup = 'admin'; }
-if ($currentDir === 'letters' && in_array($currentPage, ['categories.php', 'workflows.php', 'workflow-create.php', 'workflow-edit.php', 'templates.php'])) { $activeGroup = 'admin'; }
+if ($currentDir === 'letters' && in_array($currentPage, ['categories.php', 'workflows.php', 'workflow-create.php', 'workflow-edit.php'])) { $activeGroup = 'admin'; }
 if ($currentDir === 'staff' && $currentPage === 'import.php') { $activeGroup = 'admin'; }
 if ($currentDir === 'it' && in_array($currentPage, ['general-request.php', 'my-general-requests.php'])) { $activeGroup = 'letters'; }
 if ($currentDir === 'about-manage' || $currentPage === 'about-manage.php') { $activeGroup = 'admin'; }
@@ -189,7 +189,7 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
 
       $pendingLettersCount = 0;
       try {
-          $letCountStmt = $pdo->prepare("SELECT COUNT(*) c FROM letters WHERE current_holder_id = ? AND status = 'in_progress'");
+          $letCountStmt = $pdo->prepare("SELECT COUNT(*) c FROM letters WHERE current_holder_id = ? AND status IN ('in_progress', 'returned')");
           $letCountStmt->execute([$user['id']]);
           $pendingLettersCount = $letCountStmt->fetch()['c'];
       } catch (PDOException $e) { /* letters table not migrated yet */ }
@@ -559,9 +559,6 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
         </a>
         <a href="<?= $rp ?>letters/workflows.php" class="tree-node <?= $currentDir === 'letters' && in_array($currentPage, ['workflows.php','workflow-create.php','workflow-edit.php']) ? 'active' : '' ?>">
           <i class="fa-solid fa-diagram-project fa-fw"></i><span>कार्यप्रवाह टेम्प्लेट</span>
-        </a>
-        <a href="<?= $rp ?>letters/templates.php" class="tree-node <?= $currentDir === 'letters' && $currentPage === 'templates.php' ? 'active' : '' ?>">
-          <i class="fa-solid fa-file-lines fa-fw"></i><span>पत्र Templates</span>
         </a>
         <a href="<?= $rp ?>about-manage.php" class="tree-node <?= $currentPage === 'about-manage.php' ? 'active' : '' ?>">
           <i class="fa-solid fa-om fa-fw"></i><span>About Page व्यवस्थापन</span>

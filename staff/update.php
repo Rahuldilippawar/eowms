@@ -19,7 +19,6 @@ $isActive = isset($_POST['is_active']) ? (int)$_POST['is_active'] : 1;
 $newPassword = trim($_POST['new_password'] ?? '');
 $unlockAccount = isset($_POST['unlock_account']);
 $salary = trim($_POST['salary'] ?? '') !== '' ? (float)$_POST['salary'] : null;
-$gatekeeperClerkId = ($_POST['gatekeeper_clerk_id'] ?? '') !== '' ? (int)$_POST['gatekeeper_clerk_id'] : null;
 $joiningDate = ($_POST['joining_date'] ?? '') ?: null;
 $dateOfBirth = ($_POST['date_of_birth'] ?? '') ?: null;
 
@@ -82,11 +81,11 @@ if ($wasActive === 1 && $isActive === 0) {
 }
 
 if ($newPassword !== '') {
-    $update = $pdo->prepare("UPDATE users SET name=?, designation=?, teaching_mode=?, department_id=?, campus_id=?, role=?, is_active=?, salary=?, joining_date=?, left_date=?, date_of_birth=?, photo_path=COALESCE(?, photo_path), gatekeeper_clerk_id=?, password=?, must_change_password=1 WHERE id=?");
-    $update->execute([$name, $designation, $teachingMode, $departmentId, $dept['campus_id'], $role, $isActive, $salary, $joiningDate, $leftDate, $dateOfBirth, $photoPath, $gatekeeperClerkId, password_hash($newPassword, PASSWORD_DEFAULT), $id]);
+    $update = $pdo->prepare("UPDATE users SET name=?, designation=?, teaching_mode=?, department_id=?, campus_id=?, role=?, is_active=?, salary=?, joining_date=?, left_date=?, date_of_birth=?, photo_path=COALESCE(?, photo_path), password=?, must_change_password=1 WHERE id=?");
+    $update->execute([$name, $designation, $teachingMode, $departmentId, $dept['campus_id'], $role, $isActive, $salary, $joiningDate, $leftDate, $dateOfBirth, $photoPath, password_hash($newPassword, PASSWORD_DEFAULT), $id]);
 } else {
-    $update = $pdo->prepare("UPDATE users SET name=?, designation=?, teaching_mode=?, department_id=?, campus_id=?, role=?, is_active=?, salary=?, joining_date=?, left_date=?, date_of_birth=?, photo_path=COALESCE(?, photo_path), gatekeeper_clerk_id=? WHERE id=?");
-    $update->execute([$name, $designation, $teachingMode, $departmentId, $dept['campus_id'], $role, $isActive, $salary, $joiningDate, $leftDate, $dateOfBirth, $photoPath, $gatekeeperClerkId, $id]);
+    $update = $pdo->prepare("UPDATE users SET name=?, designation=?, teaching_mode=?, department_id=?, campus_id=?, role=?, is_active=?, salary=?, joining_date=?, left_date=?, date_of_birth=?, photo_path=COALESCE(?, photo_path) WHERE id=?");
+    $update->execute([$name, $designation, $teachingMode, $departmentId, $dept['campus_id'], $role, $isActive, $salary, $joiningDate, $leftDate, $dateOfBirth, $photoPath, $id]);
 }
 
 logActivity('कर्मचारी संपादित केला', 'user', $id, "$name — role: $role, active: $isActive");

@@ -7,17 +7,24 @@ $user = currentUser();
 $id = (int)($_GET['id'] ?? $_POST['id'] ?? 0);
 $orgId = activeOrgId();
 
+$stmt = $pdo->prepare("SELECT * FROM workflow_templates WHERE id = ? AND organization_id = ?");
+$stmt->execute([$id, $orgId]);
+$template = $stmt->fetch();
+if (!$template) { die('टेम्प्लेट सापडला नाही.'); }
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['action']) && $_POST['action'] === 'add_step') {
         $maxOrder = $pdo->prepare("SELECT COALESCE(MAX(step_order),0) m FROM workflow_steps WHERE workflow_template_id = ?");
         $maxOrder->execute([$id]);
         $nextOrder = $maxOrder->fetch()['m'] + 1;
 
-        $type = $_POST['approver_type'] ?? 'department_hod';
+        $type = in_array($_POST['approver_type'] ?? '', ['department_hod', 'specific_user', 'letter_dept_hod'], true) ? $_POST['approver_type'] : 'department_hod';
         $deptId = ($_POST['step_department_id'] ?? '') !== '' ? (int)$_POST['step_department_id'] : null;
         $userId = ($_POST['step_user_id'] ?? '') !== '' ? (int)$_POST['step_user_id'] : null;
         $stepName = trim($_POST['step_name'] ?? '');
 
+        if ($type === 'department_hod' && !$deptId) { $stepName = ''; $_SESSION['form_error'] = 'या पायरीसाठी विभाग निवडा.'; }
+        if ($type === 'specific_user' && !$userId) { $stepName = ''; $_SESSION['form_error'] = 'या पायरीसाठी व्यक्ती निवडा.'; }
         if ($stepName) {
             $pdo->prepare("INSERT INTO workflow_steps (workflow_template_id, step_order, step_name, approver_type, department_id, user_id) VALUES (?, ?, ?, ?, ?, ?)")
                 ->execute([$id, $nextOrder, $stepName, $type, $type === 'department_hod' ? $deptId : null, $type === 'specific_user' ? $userId : null]);
@@ -36,10 +43,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
 }
 
-$stmt = $pdo->prepare("SELECT * FROM workflow_templates WHERE id = ? AND organization_id = ?");
-$stmt->execute([$id, $orgId]);
-$template = $stmt->fetch();
-if (!$template) { die('टेम्प्लेट सापडला नाही.'); }
 
 $stmt = $pdo->prepare("
     SELECT ws.*, d.name_local AS dept_name, u.name AS user_name
@@ -68,6 +71,10 @@ require_once __DIR__ . '/../includes/header.php';
 
 <div class="page-eyebrow"><?= h(activeOrgName()) ?></div>
 <div class="page-title"><?= h($template['name']) ?> — संपादित करा</div>
+<?php if (!empty($_SESSION['form_error'])): ?>
+  <div class="alert alert-danger" style="border-radius:10px;font-size:13px;"><?= h($_SESSION['form_error']) ?></div>
+  <?php unset($_SESSION['form_error']); ?>
+<?php endif; ?>
 
 <div class="panel mb-3">
   <form method="POST" style="padding:20px;">
