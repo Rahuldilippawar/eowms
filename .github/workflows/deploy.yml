@@ -50,9 +50,38 @@ jobs:
             exit 1
           fi
           sudo apt-get install -y -qq lftp > /dev/null
-          if [ "$PROTOCOL" = "ftps" ]; then SSL="set ftp:ssl-force true; set ftp:ssl-protect-data true;"; else SSL="set ftp:ssl-allow false;"; fi
-          lftp -u "$FTP_USERNAME,$FTP_PASSWORD" "$FTP_SERVER" -e "$SSL cls -1 ${SERVER_DIR%/}/login.php; bye" | grep -q 'login.php' \
-            || { echo "::error::login.php not found in '$SERVER_DIR' on the FTP server — set the FTP_SERVER_DIR variable to the folder that holds the app"; exit 1; }
+          if [ "$PROTOCOL" = "ftps" ]; then
+            # FTPS Certificate कोणत्या नावासाठी आहे — FTP_SERVER हेच नाव असायला हवं
+            echo "FTPS certificate names:"
+            timeout 20 openssl s_client -starttls ftp -connect "$FTP_SERVER:21" -servername "$FTP_SERVER" </dev/null 2>/dev/null \
+              | openssl x509 -noout -subject -ext subjectAltName 2>/dev/null || echo "(could not read certificate)"
+            SSL="set ftp:ssl-force true; set ftp:ssl-protect-data true;"
+          else
+            SSL="set ftp:ssl-allow false;"
+          fi
+          set +e
+          OUT=$(lftp -u "$FTP_USERNAME,$FTP_PASSWORD" "$FTP_SERVER" -e "set net:max-retries 1; set net:timeout 20; $SSL cls -1 ${SERVER_DIR%/}/login.php; bye" 2>&1)
+          RC=$?
+          set -e
+          echo "$OUT"
+          if echo "$OUT" | grep -q "Certificate verification"; then
+            echo "::error::FTPS certificate does not match FTP_SERVER. Set the FTP_SERVER secret to one of the certificate names printed above (not the IP)."
+            exit 1
+          fi
+          if echo "$OUT" | grep -qiE "Login incorrect|530"; then
+            echo "::error::FTP login failed — check the FTP_USERNAME and FTP_PASSWORD secrets"
+            exit 1
+          fi
+          if [ $RC -ne 0 ]; then
+            if echo "$OUT" | grep -qiE "No such file|550"; then
+              echo "::error::login.php not found in '$SERVER_DIR' on the FTP server — set the FTP_SERVER_DIR variable to the folder that holds the app"
+            else
+              echo "::error::Could not connect to the FTP server (see output above)"
+            fi
+            exit 1
+          fi
+          echo "$OUT" | grep -qE '^[^ ]*login\.php$' || { echo "::error::login.php not found in '$SERVER_DIR' on the FTP server — set the FTP_SERVER_DIR variable to the folder that holds the app"; exit 1; }
+          echo "FTP login OK and app found in '$SERVER_DIR'"
 
       - name: Upload changed files
         if: github.event_name != 'pull_request'
