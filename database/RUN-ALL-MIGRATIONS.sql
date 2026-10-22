@@ -3007,7 +3007,7 @@ CREATE TABLE user_extra_campus_access (
 -- ============================================================
 
 ALTER TABLE purchase_pending_register MODIFY COLUMN department_id INT NULL;
-ALTER TABLE purchase_pending_register ADD COLUMN unmatched_department_text VARCHAR(255) NULL AFTER department_id COMMENT 'Import करताना टाइप केलेलं विभागाचं नाव — System मधल्या कुठल्याही विभागाशी जुळलं नाही तर, ते इथे जपून ठेवतो';
+ALTER TABLE purchase_pending_register ADD COLUMN unmatched_department_text VARCHAR(255) NULL COMMENT 'Import करताना टाइप केलेलं विभागाचं नाव — System मधल्या कुठल्याही विभागाशी जुळलं नाही तर, ते इथे जपून ठेवतो' AFTER department_id;
 
 -- ============================================================
 -- FROM: migration-events-guests.sql
@@ -3113,7 +3113,7 @@ INSERT IGNORE INTO permissions (permission_key, label, label_local, sort_order) 
 
 ALTER TABLE events ADD COLUMN is_recurring TINYINT(1) DEFAULT 0 AFTER status;
 ALTER TABLE events ADD COLUMN recurrence_pattern ENUM('yearly','monthly') NULL AFTER is_recurring;
-ALTER TABLE events ADD COLUMN parent_event_id INT NULL AFTER recurrence_pattern COMMENT 'मूळ Recurring Event — पुढच्या वर्षीच्या Auto-Created Event साठी';
+ALTER TABLE events ADD COLUMN parent_event_id INT NULL COMMENT 'मूळ Recurring Event — पुढच्या वर्षीच्या Auto-Created Event साठी' AFTER recurrence_pattern;
 ALTER TABLE events ADD CONSTRAINT fk_events_parent FOREIGN KEY (parent_event_id) REFERENCES events(id) ON DELETE SET NULL;
 
 CREATE TABLE event_attendance (
@@ -3180,7 +3180,7 @@ ALTER TABLE it_assets ADD CONSTRAINT fk_it_assets_power_updater FOREIGN KEY (pow
 -- ============================================================
 
 ALTER TABLE role_definitions ADD COLUMN restricted_mode TINYINT(1) DEFAULT 0 AFTER is_system;
-ALTER TABLE role_definitions ADD COLUMN restricted_modules VARCHAR(255) NULL AFTER restricted_mode COMMENT 'Comma-separated Module Keys — उदा. it,store';
+ALTER TABLE role_definitions ADD COLUMN restricted_modules VARCHAR(255) NULL COMMENT 'Comma-separated Module Keys — उदा. it,store' AFTER restricted_mode;
 
 -- ============================================================
 -- FROM: migration-onboarding-tracking.sql
