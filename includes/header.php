@@ -26,7 +26,7 @@ $titleOrgName = activeOrgName();
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="<?= $rootPath ?? '' ?>assets/css/eowms.css?v=4">
-<link rel="stylesheet" href="<?= $rootPath ?? '' ?>assets/css/eowms-advance.css?v=1">
+<link rel="stylesheet" href="<?= $rootPath ?? '' ?>assets/css/eowms-advance.css?v=2">
 <script>
   // Dark Mode — Body Render होण्याआधीच लागू करतो, नाहीतर आधी पांढरं
   // दिसून मग एकदम काळं होईल असं "Flash" दिसेल.
