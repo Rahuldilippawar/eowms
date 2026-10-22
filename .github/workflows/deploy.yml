@@ -56,7 +56,9 @@ jobs:
             python3 - "$FTP_SERVER" <<'PY' || echo "(could not read certificate)"
           import ftplib, ssl, subprocess, sys
           ctx = ssl.create_default_context(); ctx.check_hostname = False; ctx.verify_mode = ssl.CERT_NONE
-          f = ftplib.FTP_TLS(context=ctx, timeout=20); f.connect(sys.argv[1], 21); f.auth()
+          host = sys.argv[1].strip().split("://")[-1].split("/")[0].split(":")[0]
+          if host != sys.argv[1]: print("NOTE: FTP_SERVER secret contains extra characters (scheme, port, path or spaces) — set it to the bare host name")
+          f = ftplib.FTP_TLS(context=ctx, timeout=20); f.connect(host, 21); f.auth()
           der = f.sock.getpeercert(binary_form=True); f.close()
           print(subprocess.run(["openssl", "x509", "-inform", "DER", "-noout", "-subject", "-ext", "subjectAltName"], input=der, capture_output=True).stdout.decode())
           PY
