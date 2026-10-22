@@ -59,6 +59,10 @@ body[data-module] .rail-brand { border-bottom-color: rgba(255,255,255,.08); }
 .cmdk-item .sub { font-size: 11px; color: var(--text-dim); }
 .cmdk-empty { padding: 30px; text-align: center; color: var(--text-dim); font-size: 13px; }
 .cmdk-trigger-hint { font-size: 10px; color: var(--text-dim); border: 1px solid var(--line); border-radius: 5px; padding: 1px 6px; margin-left: auto; }
+/* Phone/Tablet वर Keyboard Shortcut नाही — आणि अरुंद Search Box मधून हा Hint बाहेर
+   सरकून शेजारच्या बटणाखाली अर्धवट ("K") दिसत होता */
+.global-search { overflow: hidden; }
+@media (max-width: 991px) { .cmdk-trigger-hint { display: none; } }
 
 /* ---------- 4. Skeleton Loading ---------- */
 .skel { background: linear-gradient(90deg, var(--line) 25%, rgba(255,255,255,.5) 37%, var(--line) 63%); background-size: 400% 100%; animation: skelShimmer 1.4s ease infinite; border-radius: 8px; }
