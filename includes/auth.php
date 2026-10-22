@@ -41,14 +41,22 @@ function requireMigratedTable($pdo, $tableName, $rootPath = '', $requiredColumn 
         $pdo->query("SELECT $colExpr FROM `$tableName` LIMIT 1");
     } catch (PDOException $e) {
         http_response_code(503);
+        $isSuperAdmin = (currentUser()['role'] ?? '') === 'super_admin';
+        $howTo = $isSuperAdmin
+            ? 'हा Feature वापरण्याआधी Database मध्ये नवीन Tables जोडाव्या लागतील — खालचं बटण दाबा, एका Click मध्ये होईल.'
+            : 'हा Feature वापरण्याआधी Database Update करावं लागेल — कृपया Super Admin ला सांगा (System Update → Database Update).';
+        $updateBtn = $isSuperAdmin
+            ? '<a href="' . htmlspecialchars($rootPath) . 'system-update/db-update.php" style="display:inline-block;margin:14px 6px 0;background:#1B8A83;color:#fff;text-decoration:none;padding:10px 22px;border-radius:9px;font-size:13px;font-weight:600;">🛠️ Database Update करा</a>'
+            : '';
         die('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Database Update आवश्यक</title>
         <meta name="viewport" content="width=device-width, initial-scale=1"></head>
         <body style="font-family:\'Noto Sans Devanagari\',sans-serif;background:#F5F6FA;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:20px;">
         <div style="background:#fff;border-radius:16px;padding:36px 32px;max-width:460px;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.08);">
           <div style="font-size:40px;">🛠️</div>
           <div style="font-size:17px;font-weight:700;margin:12px 0 8px;color:#10162B;">Database Update आवश्यक आहे</div>
-          <p style="font-size:13px;color:#666B7D;line-height:1.8;">हा Feature वापरण्याआधी — Super Admin ने <code style="background:#F0F1F5;padding:2px 6px;border-radius:4px;">database/RUN-ALL-MIGRATIONS.sql</code> ही File Database वर (phpMyAdmin → तुमचा Database → SQL Tab → Paste → Go) चालवावी लागेल.</p>
-          <a href="' . htmlspecialchars($rootPath) . 'index.php" style="display:inline-block;margin-top:14px;background:#1B8A83;color:#fff;text-decoration:none;padding:10px 26px;border-radius:9px;font-size:13px;font-weight:600;">Dashboard वर परत जा</a>
+          <p style="font-size:13px;color:#666B7D;line-height:1.8;">' . $howTo . '</p>
+          ' . $updateBtn . '
+          <a href="' . htmlspecialchars($rootPath) . 'index.php" style="display:inline-block;margin:14px 6px 0;border:1px solid #1B8A83;color:#1B8A83;text-decoration:none;padding:10px 22px;border-radius:9px;font-size:13px;font-weight:600;">Dashboard वर परत जा</a>
         </div>
         </body></html>');
     }
