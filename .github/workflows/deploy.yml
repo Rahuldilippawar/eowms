@@ -15,10 +15,13 @@ name: Deploy to Hostinger
 on:
   push:
     branches: [main]
+  # PR वर फक्त तपासणी (FTP Login + Folder) — Upload नाही
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 concurrency:
-  group: deploy-hostinger
+  group: deploy-hostinger-${{ github.event_name == 'pull_request' && github.ref || 'live' }}
   cancel-in-progress: false
 
 jobs:
@@ -52,6 +55,7 @@ jobs:
             || { echo "::error::login.php not found in '$SERVER_DIR' on the FTP server — set the FTP_SERVER_DIR variable to the folder that holds the app"; exit 1; }
 
       - name: Upload changed files
+        if: github.event_name != 'pull_request'
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
