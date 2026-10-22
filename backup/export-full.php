@@ -66,6 +66,7 @@ logActivity('Full Backup (Files सकट) Download केलं', 'backup', nul
 header('Content-Type: application/zip');
 header('Content-Disposition: attachment; filename="' . $zipFilename . '"');
 header('Content-Length: ' . filesize($tmpZipPath));
+csrfStopOutputRewrite();
 readfile($tmpZipPath);
 unlink($tmpZipPath);
 exit;

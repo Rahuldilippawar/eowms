@@ -14,6 +14,17 @@ if (!$isMusicDept && !hasPermission('manage_music') && !isManagementOrAbove()) {
     die('<div style="font-family:sans-serif;padding:40px;">तुम्हाला संगीत विभाग व्यवस्थापित करण्याची परवानगी नाही. <a href="../index.php">Dashboard var परत जा</a></div>');
 }
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_result'])) {
+    $examId = (int)$_POST['update_result'];
+    $result = $_POST['result'] ?? 'pending';
+    if (!in_array($result, ['pending', 'pass', 'distinction', 'fail'], true)) { $result = 'pending'; }
+    $marks = trim($_POST['marks'] ?? '');
+    if ($marks === '') { $marks = null; }
+    $pdo->prepare("UPDATE music_exams e JOIN music_students s ON s.id = e.student_id SET e.result = ?, e.marks = ? WHERE e.id = ? AND s.organization_id = ?")->execute([$result, $marks, $examId, $orgId]);
+    header('Location: exams.php');
+    exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $studentId = (int)($_POST['student_id'] ?? 0);
     $examBoard = trim($_POST['exam_board'] ?? '');
@@ -36,16 +47,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
 }
 
-if (isset($_GET['update_result'])) {
-    $examId = (int)$_GET['update_result'];
-    $result = $_GET['result'] ?? 'pending';
-    if (!in_array($result, ['pending', 'pass', 'distinction', 'fail'], true)) { $result = 'pending'; }
-    $marks = trim($_GET['marks'] ?? '');
-    if ($marks === '') { $marks = null; }
-    $pdo->prepare("UPDATE music_exams e JOIN music_students s ON s.id = e.student_id SET e.result = ?, e.marks = ? WHERE e.id = ? AND s.organization_id = ?")->execute([$result, $marks, $examId, $orgId]);
-    header('Location: exams.php');
-    exit;
-}
 
 $pageTitle = 'परीक्षा/Grade Tracking';
 $rootPath = '../';
@@ -122,7 +123,7 @@ $resultChips = ['pending' => 'pending', 'pass' => 'done', 'distinction' => 'done
         </tr>
         <div class="modal fade" id="resultModal<?= $e['id'] ?>" tabindex="-1">
           <div class="modal-dialog"><div class="modal-content" style="border-radius:14px;">
-            <form method="GET">
+            <form method="POST">
               <input type="hidden" name="update_result" value="<?= $e['id'] ?>">
               <div class="modal-body" style="padding:20px;">
                 <label class="form-label-custom">निकाल</label>

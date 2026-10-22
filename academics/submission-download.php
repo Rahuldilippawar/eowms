@@ -31,5 +31,6 @@ if (!is_file($filePath)) { http_response_code(404); die('File Server वर स�
 header('Content-Type: application/octet-stream');
 header('Content-Disposition: attachment; filename="' . basename($submission['original_filename'] ?: $submission['file_path']) . '"');
 header('Content-Length: ' . filesize($filePath));
+csrfStopOutputRewrite();
 readfile($filePath);
 exit;

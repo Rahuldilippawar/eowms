@@ -5,6 +5,14 @@ requirePermission('manage_residency_all_depts', '../');
 $user = currentUser();
 $orgId = activeOrgId();
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['mark_paid'])) {
+    $shareId = (int)$_POST['mark_paid'];
+    $pdo->prepare("UPDATE residency_bill_shares s JOIN residency_bills rb ON rb.id = s.bill_id SET s.status = 'paid', s.paid_at = NOW() WHERE s.id = ? AND rb.organization_id = ?")->execute([$shareId, $orgId]);
+    $_SESSION['flash'] = 'भरणा नोंदवला गेला.';
+    header('Location: bills.php');
+    exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $locationId = (int)($_POST['location_id'] ?? 0);
     $billingMonth = $_POST['billing_month'] ?? date('Y-m');
@@ -55,13 +63,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
 }
 
-if (isset($_GET['mark_paid'])) {
-    $shareId = (int)$_GET['mark_paid'];
-    $pdo->prepare("UPDATE residency_bill_shares s JOIN residency_bills rb ON rb.id = s.bill_id SET s.status = 'paid', s.paid_at = NOW() WHERE s.id = ? AND rb.organization_id = ?")->execute([$shareId, $orgId]);
-    $_SESSION['flash'] = 'भरणा नोंदवला गेला.';
-    header('Location: bills.php');
-    exit;
-}
 
 $pageTitle = 'निवास-बिल (भाडं/वीज)';
 $rootPath = '../';
@@ -149,7 +150,7 @@ $bills = $billsStmt->fetchAll();
               <div style="font-size:11px;margin-bottom:2px;">
                 <?= h($s['user_name'] ?? $s['occ_name']) ?> —
                 <?php if ($s['status'] === 'paid'): ?><span style="color:var(--rail);">✅ भरलं (<?= date('d M Y, h:i A', strtotime($s['paid_at'])) ?>)</span>
-                <?php else: ?><a href="?mark_paid=<?= $s['id'] ?>" style="color:var(--amber);">⏳ भरायचं (भरलं म्हणून नोंदवा)</a><?php endif; ?>
+                <?php else: ?><form method="POST" style="display:inline;"><input type="hidden" name="mark_paid" value="<?= $s['id'] ?>"><button type="submit" style="background:none;border:none;padding:0;color:var(--amber);font-size:inherit;cursor:pointer;text-decoration:underline;">⏳ भरायचं (भरलं म्हणून नोंदवा)</button></form><?php endif; ?>
               </div>
             <?php endforeach; ?>
           </td>
