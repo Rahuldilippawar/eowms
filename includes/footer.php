@@ -11,7 +11,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
-<script src="<?= $rootPath ?? '' ?>assets/js/eowms-advance.js?v=1"></script>
+<script src="<?= $rootPath ?? '' ?>assets/js/eowms-advance.js?v=2"></script>
 <script>
 // Mobile hamburger menu — opens/closes the sidebar on small screens
 (function () {

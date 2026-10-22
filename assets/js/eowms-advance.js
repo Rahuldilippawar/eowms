@@ -266,7 +266,11 @@
   };
 
   // ---------- 7. Onboarding Tour ----------
-  window.eowmsStartTour = function (steps) {
+  window.eowmsStartTour = function (steps, userId) {
+    // एकदा दाखवला की "पाहिला" — अर्ध्यात सोडला तरी पुन्हा पुन्हा येऊ नये
+    const seenKey = 'eowms_tour_seen_' + (userId || '');
+    try { if (localStorage.getItem(seenKey)) { return; } localStorage.setItem(seenKey, '1'); } catch (e) {}
+    fetch(rootPath + 'ajax-onboarding-seen.php', { method: 'POST' }).catch(function () {});
     let idx = 0;
     let overlay, tooltip;
     function cleanup() {
@@ -275,7 +279,7 @@
     }
     function showStep() {
       cleanup();
-      if (idx >= steps.length) { fetch(rootPath + 'ajax-onboarding-seen.php', { method: 'POST' }); return; }
+      if (idx >= steps.length) { return; }
       const step = steps[idx];
       const target = document.querySelector(step.selector);
       if (!target) { idx++; showStep(); return; }

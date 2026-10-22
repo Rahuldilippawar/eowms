@@ -553,7 +553,7 @@ document.addEventListener('DOMContentLoaded', function () {
       { selector: '.global-search', title: '⌨️ कुठेही पटकन जा', text: 'इथे Click करा, किंवा Ctrl+K दाबा — कुठलंही Page, Module, किंवा व्यक्ती लगेच शोधता येईल.' },
       { selector: '.rail-sidebar', title: '📂 Sidebar', text: 'तुम्हाला दिलेले सगळे Modules इथे दिसतील — Click करून आत जा.' },
       { selector: '.theme-toggle-btn', title: '🌙 Dark Mode', text: 'रात्री काम करताना डोळ्यांना आराम — इथून Light/Dark Mode बदलता येईल.' },
-    ]);
+    ], <?= (int)$user['id'] ?>);
   }, 500);
 });
 </script>
