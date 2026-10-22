@@ -22,7 +22,10 @@ if (!$canReply) { http_response_code(403); die('परवानगी नाह�
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $questionId = (int)($_POST['question_id'] ?? 0);
     $replyText = trim($_POST['reply_text'] ?? '');
-    if ($replyText) {
+    // प्रश्न याच Classroom चा आहे ना — तपासतो
+    $qCheck = $pdo->prepare("SELECT id FROM classroom_questions WHERE id = ? AND classroom_id = ?");
+    $qCheck->execute([$questionId, $classroomId]);
+    if ($replyText && $qCheck->fetch()) {
         $pdo->prepare("INSERT INTO classroom_question_replies (question_id, replied_by, reply_text) VALUES (?, ?, ?)")->execute([$questionId, $user['id'], $replyText]);
         $pdo->prepare("UPDATE classroom_questions SET status = 'answered' WHERE id = ?")->execute([$questionId]);
         $qStmt = $pdo->prepare("SELECT student_id, question_text FROM classroom_questions WHERE id = ?");

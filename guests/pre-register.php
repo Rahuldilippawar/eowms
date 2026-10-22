@@ -32,7 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ")->execute([$orgId, $campusId, $name, $mobile, $guestOrg, $purpose, $meetingWith, $expectedDate, $regCode]);
 
         if ($meetingWith) {
-            try { notifyUser($meetingWith, $orgId, '📱 पाहुण्याने Pre-Register केलं', "$name — " . date('d M Y', strtotime($expectedDate)), 'guests/pre-registrations.php'); } catch (Exception $e) {}
+            try { notifyUser($meetingWith, $orgId, '📱 पाहुण्याने Pre-Register केलं', "$name — " . date('d M Y', strtotime($expectedDate)), 'guests/index.php'); } catch (Exception $e) {}
         }
         $success = true;
     }

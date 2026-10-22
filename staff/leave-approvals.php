@@ -13,12 +13,16 @@ if (!$canApprove) {
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $appId = (int)($_POST['app_id'] ?? 0);
-    $decision = $_POST['decision'] ?? 'rejected';
+    $decision = ($_POST['decision'] ?? '') === 'approved' ? 'approved' : 'rejected';
     $rejectionReason = trim($_POST['rejection_reason'] ?? '');
 
-    $appStmt = $pdo->prepare("SELECT * FROM leave_applications WHERE id = ? AND organization_id = ? AND status = 'pending'");
+    $appStmt = $pdo->prepare("SELECT la.*, u.department_id AS applicant_dept_id FROM leave_applications la JOIN users u ON u.id = la.user_id WHERE la.id = ? AND la.organization_id = ? AND la.status = 'pending'");
     $appStmt->execute([$appId, $orgId]);
     $app = $appStmt->fetch();
+    // HOD फक्त स्वतःच्या विभागाचे (आणि स्वतःचे नव्हे) रजा-अर्ज मंजूर करू शकतो
+    if ($app && !$isMgmt && ((int)$app['applicant_dept_id'] !== (int)($user['department_id'] ?? 0) || (int)$app['user_id'] === (int)$user['id'])) {
+        $app = null;
+    }
 
     if ($app) {
         $pdo->prepare("UPDATE leave_applications SET status = ?, approved_by = ?, approved_at = NOW(), rejection_reason = ? WHERE id = ?")

@@ -89,6 +89,7 @@ $verifyUrl = (isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . $_SERVER['H
 $qrSrc = 'https://api.qrserver.com/v1/create-qr-code/?size=140x140&margin=1&data=' . urlencode($verifyUrl);
 
 $statusLabels = ['working' => '✅ चालू', 'faulty' => '🔴 बिघडलेलं', 'under_repair' => '🟡 दुरुस्तीत', 'scrapped' => '⚫ बाद केलेलं'];
+$statusChips = ['working' => 'done', 'faulty' => 'overdue', 'under_repair' => 'pending', 'scrapped' => 'overdue'];
 ?>
 
 <div class="page-eyebrow"><?= h($asset['lab_name']) ?></div>

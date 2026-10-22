@@ -10,6 +10,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $taskId = (int)($_POST['task_id'] ?? 0);
 $status = $_POST['status'] ?? 'pending';
+if (!in_array($status, ['pending', 'in_progress', 'completed'], true)) { $status = 'pending'; }
 $completionRemarks = trim($_POST['completion_remarks'] ?? '') ?: null;
 $costIncurred = ($_POST['cost_incurred'] ?? '') !== '' ? (float)$_POST['cost_incurred'] : null;
 

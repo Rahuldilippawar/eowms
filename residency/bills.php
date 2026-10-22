@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../includes/auth.php';
 requireLogin('../');
+requirePermission('manage_residency_all_depts', '../');
 $user = currentUser();
 $orgId = activeOrgId();
 
@@ -16,8 +17,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // वेगळे मोजत नाही — ते त्या Staff च्याच बिलात समाविष्ट धरले जातात).
     // एकच Staff (त्याचं कुटुंब असो वा नसो) असेल — त्याला पूर्ण बिल.
     // अनेक Staff (Sharing/भाडेकरू पद्धत) असतील — प्रत्येकाला समान वाटा.
-    $occStmt = $pdo->prepare("SELECT id, user_id, name FROM residency_occupants WHERE location_id = ? AND occupant_type = 'staff' AND status = 'active'");
-    $occStmt->execute([$locationId]);
+    $occStmt = $pdo->prepare("SELECT id, user_id, name FROM residency_occupants WHERE location_id = ? AND organization_id = ? AND occupant_type = 'staff' AND status = 'active'");
+    $occStmt->execute([$locationId, $orgId]);
     $staffOccupants = $occStmt->fetchAll();
 
     if ($locationId && $totalAmount > 0 && !empty($staffOccupants)) {
@@ -37,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             foreach ($staffOccupants as $occ) {
                 $insShare->execute([$billId, $occ['id'], $perPersonAmount]);
                 if ($occ['user_id']) {
-                    notifyUser($occ['user_id'], $orgId, 'निवास-बिल तयार झालं', "$billingMonth साठी ₹" . number_format($perPersonAmount, 0) . " भरायचे आहे", 'residency/bills.php');
+                    notifyUser($occ['user_id'], $orgId, 'निवास-बिल तयार झालं', "$billingMonth साठी ₹" . number_format($perPersonAmount, 0) . " भरायचे आहे", 'residency/my-residency.php');
                 }
             }
             $pdo->commit();
@@ -56,7 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 if (isset($_GET['mark_paid'])) {
     $shareId = (int)$_GET['mark_paid'];
-    $pdo->prepare("UPDATE residency_bill_shares SET status = 'paid', paid_at = NOW() WHERE id = ?")->execute([$shareId]);
+    $pdo->prepare("UPDATE residency_bill_shares s JOIN residency_bills rb ON rb.id = s.bill_id SET s.status = 'paid', s.paid_at = NOW() WHERE s.id = ? AND rb.organization_id = ?")->execute([$shareId, $orgId]);
     $_SESSION['flash'] = 'भरणा नोंदवला गेला.';
     header('Location: bills.php');
     exit;

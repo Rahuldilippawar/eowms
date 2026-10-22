@@ -460,6 +460,22 @@ function notifyDepartment($departmentId, $orgId, $title, $message = null, $link 
     }
 }
 
+/**
+ * COUNT(*)+1 वरून बनवलेला क्रमांक (TSK-/WRK-/REQ- इ.) — एखादी नोंद Delete
+ * झाली असेल, किंवा दुसऱ्या संस्थेने तोच क्रमांक आधीच घेतला असेल, तर
+ * UNIQUE Column मुळे Insert Fail होतो. म्हणून आधीच वापरलेला क्रमांक
+ * असेल तर पुढचा मोकळा क्रमांक शोधतो. $format मध्ये %d/%04d हा शेवटचा
+ * (seq) Argument असतो.
+ */
+function generateUniqueCode($pdo, $table, $column, $format, $seq, ...$prefixArgs) {
+    $stmt = $pdo->prepare("SELECT 1 FROM `$table` WHERE `$column` = ? LIMIT 1");
+    do {
+        $code = sprintf($format, ...array_merge($prefixArgs, [$seq++]));
+        $stmt->execute([$code]);
+    } while ($stmt->fetch());
+    return $code;
+}
+
 /** Record an entry in the activity log. Fails silently if not migrated yet. */
 function logActivity($action, $entityType = null, $entityId = null, $details = null) {
     global $pdo;

@@ -26,10 +26,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     } elseif ($action === 'decide' && $canApprove) {
         $reqId = (int)($_POST['request_id'] ?? 0);
-        $decision = $_POST['decision'] ?? 'rejected';
-        $reqStmt = $pdo->prepare("SELECT * FROM attendance_regularization_requests WHERE id = ? AND organization_id = ?");
+        $decision = ($_POST['decision'] ?? '') === 'approved' ? 'approved' : 'rejected';
+        $reqStmt = $pdo->prepare("SELECT r.*, u.department_id AS requester_dept_id FROM attendance_regularization_requests r JOIN users u ON u.id = r.user_id WHERE r.id = ? AND r.organization_id = ?");
         $reqStmt->execute([$reqId, $orgId]);
         $req = $reqStmt->fetch();
+        // HOD फक्त स्वतःच्या विभागाच्या (आणि स्वतःच्या नव्हे) विनंत्यांवर निर्णय घेऊ शकतो
+        $isMgmtApprover = hasPermission('view_org_wide_dashboards') || hasRole('super_admin');
+        if ($req && !$isMgmtApprover && ((int)$req['requester_dept_id'] !== (int)($user['department_id'] ?? 0) || (int)$req['user_id'] === (int)$user['id'])) {
+            $req = null;
+        }
         if ($req) {
             $pdo->prepare("UPDATE attendance_regularization_requests SET status = ?, approved_by = ?, approved_at = NOW() WHERE id = ?")
                 ->execute([$decision, $user['id'], $reqId]);

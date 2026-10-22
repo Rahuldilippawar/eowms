@@ -11,6 +11,13 @@ if (empty($input['endpoint']) || empty($input['keys']['p256dh']) || empty($input
     exit;
 }
 
+// Browser Push Endpoint नेहमी https:// असतो — Server नंतर याच URL ला Request
+// पाठवतो, त्यामुळे http://localhost सारखे अंतर्गत पत्ते (SSRF) नाकारतो.
+if (!is_string($input['endpoint']) || stripos($input['endpoint'], 'https://') !== 0 || strlen($input['endpoint']) > 512) {
+    echo json_encode(['success' => false, 'error' => 'अवैध endpoint']);
+    exit;
+}
+
 try {
     $pdo->prepare("
         INSERT INTO push_subscriptions (user_id, endpoint, p256dh, auth) VALUES (?, ?, ?, ?)

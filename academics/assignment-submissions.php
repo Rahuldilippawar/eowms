@@ -6,8 +6,8 @@ $orgId = activeOrgId();
 $isMgmt = isManagementOrAbove() || hasRole('super_admin') || hasPermission('manage_academics');
 
 $assignmentId = (int)($_GET['id'] ?? 0);
-$assignStmt = $pdo->prepare("SELECT ca.*, vc.name AS classroom_name, vc.department_id FROM classroom_assignments ca JOIN virtual_classrooms vc ON vc.id = ca.classroom_id WHERE ca.id = ?");
-$assignStmt->execute([$assignmentId]);
+$assignStmt = $pdo->prepare("SELECT ca.*, vc.name AS classroom_name, vc.department_id FROM classroom_assignments ca JOIN virtual_classrooms vc ON vc.id = ca.classroom_id WHERE ca.id = ? AND vc.organization_id = ?");
+$assignStmt->execute([$assignmentId, $orgId]);
 $assignment = $assignStmt->fetch();
 if (!$assignment) { die('Assignment सापडलं नाही.'); }
 
@@ -22,8 +22,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $submissionId = (int)($_POST['submission_id'] ?? 0);
     $marks = ($_POST['marks_obtained'] ?? '') !== '' ? (float)$_POST['marks_obtained'] : null;
     $feedback = trim($_POST['feedback'] ?? '');
-    $pdo->prepare("UPDATE classroom_assignment_submissions SET marks_obtained = ?, feedback = ?, graded_by = ?, graded_at = NOW() WHERE id = ?")
-        ->execute([$marks, $feedback, $user['id'], $submissionId]);
+    $pdo->prepare("UPDATE classroom_assignment_submissions SET marks_obtained = ?, feedback = ?, graded_by = ?, graded_at = NOW() WHERE id = ? AND assignment_id = ?")
+        ->execute([$marks, $feedback, $user['id'], $submissionId, $assignmentId]);
     $_SESSION['flash'] = 'Grade जतन झालं.';
     header('Location: assignment-submissions.php?id=' . $assignmentId);
     exit;

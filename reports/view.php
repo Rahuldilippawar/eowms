@@ -58,9 +58,13 @@ $addressLine = implode(', ', $addressParts);
 $scopeDept = null;
 if ($scope === 'department') {
     $deptId = $isHod && !$isManagement ? $user['department_id'] : $requestedDeptId;
-    $stmt = $pdo->prepare("SELECT d.*, u.name AS hod_name FROM departments d LEFT JOIN users u ON u.id = d.hod_id WHERE d.id = ?");
-    $stmt->execute([$deptId]);
+    $stmt = $pdo->prepare("SELECT d.*, u.name AS hod_name FROM departments d LEFT JOIN users u ON u.id = d.hod_id WHERE d.id = ? AND d.organization_id = ?");
+    $stmt->execute([$deptId, activeOrgId()]);
     $scopeDept = $stmt->fetch();
+    if (!$scopeDept) {
+        http_response_code(404);
+        die(t('s553'));
+    }
 }
 if ($scope === 'personal' && $user['department_id']) {
     $stmt = $pdo->prepare("SELECT d.*, u.name AS hod_name FROM departments d LEFT JOIN users u ON u.id = d.hod_id WHERE d.id = ?");

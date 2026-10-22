@@ -11,7 +11,7 @@ $id = (int)($_POST['id'] ?? 0);
 $eventId = (int)($_POST['event_id'] ?? 0);
 
 if ($id) {
-    $pdo->prepare("DELETE FROM satsang_duties WHERE id = ?")->execute([$id]);
+    $pdo->prepare("DELETE sd FROM satsang_duties sd JOIN satsang_events se ON se.id = sd.satsang_event_id WHERE sd.id = ? AND se.organization_id = ?")->execute([$id, activeOrgId()]);
     $_SESSION['flash'] = t('s621');
 }
 

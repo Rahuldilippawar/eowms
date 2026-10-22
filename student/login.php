@@ -17,18 +17,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'खूप चुकीचे Attempts झाले — 15 मिनिटांनी पुन्हा प्रयत्न करा.';
     } elseif ($student && password_verify($password, $student['password_hash'])) {
         $pdo->prepare("UPDATE students SET failed_login_attempts = 0, locked_until = NULL WHERE id = ?")->execute([$student['id']]);
+        session_regenerate_id(true);
         unset($student['password_hash']);
         $_SESSION['student'] = $student;
         header('Location: dashboard.php');
         exit;
     } else {
         if ($student) {
-            $attempts = (int)$student['failed_login_attempts'] + 1;
+            $priorAttempts = !empty($student['locked_until']) ? 0 : (int)$student['failed_login_attempts'];
+            $attempts = $priorAttempts + 1;
             if ($attempts >= 5) {
                 $pdo->prepare("UPDATE students SET failed_login_attempts = ?, locked_until = DATE_ADD(NOW(), INTERVAL 15 MINUTE) WHERE id = ?")
                     ->execute([$attempts, $student['id']]);
             } else {
-                $pdo->prepare("UPDATE students SET failed_login_attempts = ? WHERE id = ?")->execute([$attempts, $student['id']]);
+                $pdo->prepare("UPDATE students SET failed_login_attempts = ?, locked_until = NULL WHERE id = ?")->execute([$attempts, $student['id']]);
             }
         }
         $error = 'Roll No किंवा Password चुकीचा आहे.';

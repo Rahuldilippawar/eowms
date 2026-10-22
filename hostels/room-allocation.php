@@ -3,8 +3,11 @@ require_once __DIR__ . '/../includes/auth.php';
 requireLogin('../');
 $user = currentUser();
 $orgId = activeOrgId();
+require_once __DIR__ . '/../includes/hostel-helpers.php';
+requireHostelStaffAccess($pdo, $user);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    requireHostelPostIdsInOrg($pdo, $orgId);
     $action = $_POST['action'] ?? '';
     if ($action === 'add_room') {
         $hostelId = (int)($_POST['hostel_id'] ?? 0);

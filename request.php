@@ -26,13 +26,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $deptId = (int)($_POST['department_id'] ?? 0);
     $description = trim($_POST['work_description'] ?? '');
 
-    if (!$name || !$deptId || !$description) {
+    // विभाग याच संस्थेचा, सक्रिय आहे ना — तपासतो
+    $deptValid = in_array($deptId, array_map('intval', array_column($departments, 'id')), true);
+
+    if (!$name || !$deptId || !$description || !$deptValid) {
         $error = t('s453');
     } else {
         $countStmt = $pdo->prepare("SELECT COUNT(*) c FROM work_requests WHERE organization_id = ?");
         $countStmt->execute([$orgId]);
         $seq = $countStmt->fetch()['c'] + 1;
-        $requestCode = sprintf('REQ-%s%04d', date('y'), $seq);
+        // एखादी विनंती Delete झाली असेल तर COUNT मागे जातो — request_code
+        // UNIQUE असल्यामुळे आधीच वापरलेला Code पुन्हा येऊ नये म्हणून पुढे सरकतो
+        $requestCode = generateUniqueCode($pdo, 'work_requests', 'request_code', 'REQ-%s%04d', $seq, date('y'));
 
         $insert = $pdo->prepare("
             INSERT INTO work_requests (request_code, organization_id, department_id, requester_name, requester_contact, work_description, status)

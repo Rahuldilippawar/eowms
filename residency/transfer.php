@@ -14,7 +14,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $occStmt->execute([$occupantId, $orgId]);
     $occupant = $occStmt->fetch();
 
-    if ($occupant && $toLocationId && $toLocationId != $occupant['location_id']) {
+    $toLocStmt = $pdo->prepare("SELECT id FROM maintenance_locations WHERE id = ? AND organization_id = ?");
+    $toLocStmt->execute([$toLocationId, $orgId]);
+
+    if ($occupant && $toLocationId && $toLocationId != $occupant['location_id'] && $toLocStmt->fetch()) {
         $pdo->prepare("INSERT INTO residency_room_transfers (occupant_id, from_location_id, to_location_id, transfer_date, reason, transferred_by) VALUES (?, ?, ?, CURDATE(), ?, ?)")
             ->execute([$occupantId, $occupant['location_id'], $toLocationId, $reason, $user['id']]);
         $pdo->prepare("UPDATE residency_occupants SET location_id = ? WHERE id = ?")->execute([$toLocationId, $occupantId]);

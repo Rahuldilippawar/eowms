@@ -96,7 +96,7 @@ foreach ($departments as $dept) {
 // (HOD/Staff साठी फक्त त्यांच्याच विभागाचा कल — Management ला संपूर्ण संस्थेचा)
 $trendLabels = [];
 $trendTotal = [];
-$trendCompleted = [];
+$trendCompletedSeries = [];
 for ($i = 6; $i >= 0; $i--) {
     $d = date('Y-m-d', strtotime("-$i days"));
     $trendLabels[] = date('d M', strtotime($d));
@@ -105,7 +105,7 @@ for ($i = 6; $i >= 0; $i--) {
     $trendTotal[] = (int)$t->fetch()['c'];
     $c = $pdo->prepare("SELECT COUNT(*) c FROM work_records WHERE organization_id=? AND work_date=? AND status='completed'$deptScopeSql");
     $c->execute(array_merge([$orgId, $d], $deptScopeParams));
-    $trendCompleted[] = (int)$c->fetch()['c'];
+    $trendCompletedSeries[] = (int)$c->fetch()['c'];
 }
 
 // Department-wise work distribution (last 30 days) — for the doughnut chart
@@ -489,7 +489,7 @@ new Chart(document.getElementById('trendChart'), {
     labels: <?= json_encode($trendLabels) ?>,
     datasets: [
       { label: 'एकूण', data: <?= json_encode($trendTotal) ?>, borderColor: '#6B7080', backgroundColor: 'rgba(107,112,128,.08)', tension: .35, fill: true },
-      { label: 'पूर्ण', data: <?= json_encode($trendCompleted) ?>, borderColor: '#1B8A83', backgroundColor: 'rgba(27,138,131,.12)', tension: .35, fill: true }
+      { label: 'पूर्ण', data: <?= json_encode($trendCompletedSeries) ?>, borderColor: '#1B8A83', backgroundColor: 'rgba(27,138,131,.12)', tension: .35, fill: true }
     ]
   },
   options: {

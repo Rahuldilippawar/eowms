@@ -15,7 +15,7 @@ try {
     $stmt = $pdo->prepare("SELECT id, name, employee_code, designation FROM users WHERE organization_id = ? AND is_active = 1 AND (name LIKE ? OR employee_code LIKE ?) LIMIT 5");
     $stmt->execute([$orgId, $like, $like]);
     foreach ($stmt->fetchAll() as $r) {
-        $results[] = ['type' => 'कर्मचारी', 'icon' => '👤', 'title' => $r['name'], 'subtitle' => trim(($r['employee_code'] ?? '') . ' · ' . ($r['designation'] ?? '')), 'url' => 'staff/view.php?id=' . $r['id']];
+        $results[] = ['type' => 'कर्मचारी', 'icon' => '👤', 'title' => $r['name'], 'subtitle' => trim(($r['employee_code'] ?? '') . ' · ' . ($r['designation'] ?? '')), 'url' => 'staff/profile.php?id=' . $r['id']];
     }
 } catch (PDOException $e) {}
 

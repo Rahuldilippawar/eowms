@@ -3,8 +3,11 @@ require_once __DIR__ . '/../includes/auth.php';
 requireLogin('../');
 $user = currentUser();
 $orgId = activeOrgId();
+require_once __DIR__ . '/../includes/hostel-helpers.php';
+requireHostelStaffAccess($pdo, $user);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    requireHostelPostIdsInOrg($pdo, $orgId);
     $action = $_POST['action'] ?? '';
     if ($action === 'save_health') {
         $studentId = (int)($_POST['student_id'] ?? 0);
@@ -45,6 +48,8 @@ $studentsStmt->execute([$orgId]);
 $students = $studentsStmt->fetchAll();
 
 $selectedId = (int)($_GET['student_id'] ?? ($students[0]['id'] ?? 0));
+// फक्त याच संस्थेच्या विद्यार्थ्याची वैद्यकीय माहिती दाखवतो
+if ($selectedId && !in_array($selectedId, array_map('intval', array_column($students, 'id')), true)) { $selectedId = 0; }
 $health = null;
 $incidents = [];
 if ($selectedId) {

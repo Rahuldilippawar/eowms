@@ -9,6 +9,7 @@
  * Hostinger cPanel -> Cron Jobs मध्ये टाका (रोज रात्री 2 वाजता):
  *   0 2 * * *  php /home/xxxx/public_html/cron/scheduled-backup.php
  */
+if (PHP_SAPI !== 'cli') { http_response_code(403); exit('CLI only'); }
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/backup-helpers.php';
 

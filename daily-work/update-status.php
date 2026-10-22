@@ -10,10 +10,11 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $id = (int)($_POST['id'] ?? 0);
 $status = $_POST['status'] ?? 'pending';
+if (!in_array($status, ['pending', 'in_progress', 'completed'], true)) { $status = 'pending'; }
 $remarks = trim($_POST['remarks'] ?? '') ?: null;
 
-$stmt = $pdo->prepare("SELECT * FROM work_records WHERE id = ?");
-$stmt->execute([$id]);
+$stmt = $pdo->prepare("SELECT * FROM work_records WHERE id = ? AND organization_id = ?");
+$stmt->execute([$id, activeOrgId()]);
 $record = $stmt->fetch();
 
 if (!$record) {

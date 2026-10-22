@@ -32,14 +32,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $eventId = (int)($_POST['event_id'] ?? 0);
         $studentId = (int)($_POST['student_id'] ?? 0);
         $performanceItem = trim($_POST['performance_item'] ?? '');
-        if ($eventId && $studentId) {
+        $ownStmt = $pdo->prepare("SELECT (SELECT COUNT(*) FROM music_events WHERE id = ? AND organization_id = ?) + (SELECT COUNT(*) FROM music_students WHERE id = ? AND organization_id = ?) AS c");
+        $ownStmt->execute([$eventId, $orgId, $studentId, $orgId]);
+        if ($eventId && $studentId && (int)$ownStmt->fetch()['c'] === 2) {
             $pdo->prepare("INSERT INTO music_event_participants (event_id, student_id, performance_item) VALUES (?, ?, ?)")->execute([$eventId, $studentId, $performanceItem]);
             $_SESSION['flash'] = 'सहभागी जोडला गेला.';
         }
     } elseif ($action === 'set_result') {
         $participantId = (int)($_POST['participant_id'] ?? 0);
         $result = trim($_POST['result'] ?? '');
-        $pdo->prepare("UPDATE music_event_participants SET result = ? WHERE id = ?")->execute([$result, $participantId]);
+        $pdo->prepare("UPDATE music_event_participants p JOIN music_events e ON e.id = p.event_id SET p.result = ? WHERE p.id = ? AND e.organization_id = ?")->execute([$result, $participantId, $orgId]);
         $_SESSION['flash'] = 'निकाल जतन झाला.';
     }
     header('Location: events.php');

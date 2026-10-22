@@ -19,8 +19,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $code = (string)random_int(100000, 999999);
         $expiresAt = date('Y-m-d H:i:s', strtotime('+15 minutes'));
 
+        // नवीन Code दिला की जुने (न वापरलेले) Codes रद्द — एका वेळी एकच Code चालू
+        $pdo->prepare("UPDATE password_reset_codes SET used = 1 WHERE user_id = ? AND used = 0")->execute([$foundUser['id']]);
         $pdo->prepare("INSERT INTO password_reset_codes (user_id, code, expires_at) VALUES (?, ?, ?)")
             ->execute([$foundUser['id'], $code, $expiresAt]);
+        $_SESSION['reset_attempts'] = 0;
 
         $orgStmt = $pdo->prepare("SELECT name FROM organizations WHERE id = ?");
         $orgStmt->execute([$foundUser['organization_id']]);

@@ -47,7 +47,7 @@ $department = $deptStmt->fetch();
 $countStmt = $pdo->prepare("SELECT COUNT(*) c FROM tasks WHERE organization_id = ?");
 $countStmt->execute([$department['organization_id']]);
 $seq = $countStmt->fetch()['c'] + 1;
-$taskCode = sprintf('TSK-%s%04d', date('y'), $seq);
+$taskCode = generateUniqueCode($pdo, 'tasks', 'task_code', 'TSK-%s%04d', $seq, date('y'));
 
 $insert = $pdo->prepare("
     INSERT INTO tasks (task_code, organization_id, campus_id, department_id, assigned_by, assigned_to, title, description, priority, target_date, status)

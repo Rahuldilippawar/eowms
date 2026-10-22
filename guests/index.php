@@ -42,7 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canManage) {
             ")->execute([$orgId, $campusId, $name, $mobile, $guestOrg, $purpose, $meetingWith, $passCode, $photoPath, $preRegId, $user['id']]);
             $newGuestId = $pdo->lastInsertId();
             if ($preRegId) {
-                $pdo->prepare("UPDATE guest_pre_registrations SET status = 'arrived' WHERE id = ?")->execute([$preRegId]);
+                $pdo->prepare("UPDATE guest_pre_registrations SET status = 'arrived' WHERE id = ? AND organization_id = ?")->execute([$preRegId, $orgId]);
             }
             if ($meetingWith) {
                 notifyUser($meetingWith, $orgId, '🎫 तुम्हाला भेटायला पाहुणे आले आहेत', "$name" . ($guestOrg ? " ($guestOrg)" : ''), 'guests/index.php');

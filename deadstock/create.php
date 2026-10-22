@@ -41,7 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $countStmt = $pdo->prepare("SELECT COUNT(*) c FROM dead_stock_items WHERE department_id = ?");
         $countStmt->execute([$departmentId]);
         $seq = $countStmt->fetch()['c'] + 1;
-        $itemCode = sprintf('DS-%s-%04d', $deptCode, $seq);
+        $itemCode = generateUniqueCode($pdo, 'dead_stock_items', 'item_code', 'DS-%s-%04d', $seq, $deptCode);
 
         $insert = $pdo->prepare("
             INSERT INTO dead_stock_items (organization_id, department_id, item_master_id, item_code, item_name, category, quantity, unit, purchase_date, purchase_cost, is_new_purchase, `condition`, location, remarks, added_by)

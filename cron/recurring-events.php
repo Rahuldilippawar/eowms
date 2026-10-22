@@ -8,6 +8,7 @@
 //   php /home/USERNAME/domains/YOURDOMAIN/public_html/cron/recurring-events.php
 // ============================================================
 
+if (PHP_SAPI !== 'cli') { http_response_code(403); exit('CLI only'); }
 require_once __DIR__ . '/../config/db.php';
 
 $today = date('Y-m-d');

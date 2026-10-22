@@ -11,7 +11,7 @@ if ($action === 'delete_document') {
     $docStmt = $pdo->prepare("SELECT user_id, file_path FROM staff_documents WHERE id = ?");
     $docStmt->execute([$docId]);
     $doc = $docStmt->fetch();
-    if ($doc && ($doc['user_id'] === (int)$user['id'] || hasRole('super_admin'))) {
+    if ($doc && ((int)$doc['user_id'] === (int)$user['id'] || hasRole('super_admin'))) {
         $pdo->prepare("DELETE FROM staff_documents WHERE id = ?")->execute([$docId]);
         $filePath = __DIR__ . '/../' . $doc['file_path'];
         if (is_file($filePath)) { unlink($filePath); }
@@ -44,7 +44,7 @@ if ($action === 'delete_achievement') {
     $achStmt = $pdo->prepare("SELECT user_id FROM staff_achievements WHERE id = ?");
     $achStmt->execute([$achId]);
     $ach = $achStmt->fetch();
-    if ($ach && ($ach['user_id'] === (int)$user['id'] || hasRole('super_admin'))) {
+    if ($ach && ((int)$ach['user_id'] === (int)$user['id'] || hasRole('super_admin'))) {
         $pdo->prepare("DELETE FROM staff_achievements WHERE id = ?")->execute([$achId]);
         $_SESSION['flash'] = 'काढलं गेलं.';
     }
