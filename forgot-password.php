@@ -27,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $orgStmt = $pdo->prepare("SELECT name FROM organizations WHERE id = ?");
         $orgStmt->execute([$foundUser['organization_id']]);
-        $orgName = $orgStmt->fetch()['name'] ?? 'EOWMS';
+        $orgName = $orgStmt->fetch()['name'] ?? 'E-Admin';
 
         sendPasswordResetEmail($foundUser['email'], $foundUser['name'], $code, $orgName);
         $_SESSION['reset_email'] = $email;
@@ -41,6 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>पासवर्ड विसरलात?</title>
+<link rel="icon" type="image/png" href="assets/brand/favicon-32.png">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   *{box-sizing:border-box;}

@@ -99,7 +99,7 @@ $todayLabel = $marathiDays[(int)date('w')] . ', ' . (int)date('j') . ' ' . $mara
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="EOWMS">
+<meta name="apple-mobile-web-app-title" content="E-Admin">
 <link rel="apple-touch-icon" href="icon.php?size=192">
 <link rel="icon" type="image/png" sizes="192x192" href="icon.php?size=192">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css">
@@ -350,7 +350,7 @@ $todayLabel = $marathiDays[(int)date('w')] . ', ' . (int)date('j') . ' ' . $mara
   <?php endif; ?>
   <div class="today-strip"><span class="dot"></span><?= h($todayLabel) ?></div>
   <div class="hero-eyebrow">ॐ जय जंगली महाराज</div>
-  <h1><?= htmlspecialchars($org['name'] ?? 'Enterprise Operations & Workflow Management System') ?></h1>
+  <h1><?= htmlspecialchars($org['name'] ?? 'E-Admin — Smart Administration') ?></h1>
   <p><?= h(t('s145')) ?></p>
 
   <div class="action-row">

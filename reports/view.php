@@ -420,7 +420,7 @@ if ($scope === 'organization') {
   <?php endif; ?>
 
   <div class="doc-footer">
-    <div>VJMAT — Enterprise Operations & Workflow Management System</div>
+    <div>VJMAT — E-Admin (Smart Administration)</div>
     <div><?= h($org['name'] ?? '') ?> · Generated <?= date('d M Y, h:i A') ?></div>
   </div>
 </div>

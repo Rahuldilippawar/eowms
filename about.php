@@ -20,7 +20,7 @@ $contributors = $contribStmt->fetchAll();
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>आमच्याबद्दल — <?= htmlspecialchars($org['name'] ?? 'EOWMS') ?></title>
+<title>आमच्याबद्दल — <?= htmlspecialchars($org['name'] ?? 'E-Admin') ?></title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -136,7 +136,7 @@ $contributors = $contribStmt->fetchAll();
   <a href="welcome.php" class="back-link"><i class="fa-solid fa-arrow-left"></i> मुख्य पानावर</a>
   <div class="top-inner">
     <div class="om-big">ॐ</div>
-    <h1><?= htmlspecialchars($org['name'] ?? 'EOWMS') ?></h1>
+    <h1><?= htmlspecialchars($org['name'] ?? 'E-Admin') ?></h1>
     <p>आमच्या श्रद्धेचा, गुरुकृपेचा आणि या प्रकल्पामागील सर्वांच्या योगदानाचा हा एक छोटासा परिचय</p>
   </div>
 </div>

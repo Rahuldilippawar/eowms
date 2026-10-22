@@ -26,6 +26,7 @@ $pdo->prepare("UPDATE student_notifications SET is_read = 1 WHERE student_id = ?
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>विद्यार्थी Portal</title>
+<link rel="icon" type="image/png" href="../assets/brand/favicon-32.png">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
