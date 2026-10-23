@@ -15,6 +15,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $backupLocation = trim($_POST['backup_location'] ?? '');
     $remarks = trim($_POST['remarks'] ?? '');
 
+    // DVR याच संस्थेचा व सक्रिय असावा; तारीख वैध असावी
+    $dvrCheck = $pdo->prepare("SELECT id FROM cctv_dvrs WHERE id = ? AND organization_id = ? AND is_active = 1");
+    $dvrCheck->execute([$dvrId, $orgId]);
+    if (!$dvrCheck->fetch() || !DateTime::createFromFormat('!Y-m-d', $checkupDate) || $checkupDate > date('Y-m-d')) {
+        $_SESSION['flash'] = 'DVR सापडला नाही किंवा तारीख अवैध आहे — Checkup नोंदवली नाही.';
+        header('Location: checkup.php');
+        exit;
+    }
+
+    // Camera — याच DVR चे सक्रिय Camera, व स्थिती फक्त परवानगी असलेली
+    $camStmt = $pdo->prepare("SELECT id FROM cctv_cameras WHERE dvr_id = ? AND organization_id = ? AND is_active = 1");
+    $camStmt->execute([$dvrId, $orgId]);
+    $validCameraIds = array_map('intval', $camStmt->fetchAll(PDO::FETCH_COLUMN));
+    $cameraStatuses = (array)($_POST['camera_status'] ?? []);
+    foreach ($cameraStatuses as $cameraId => $status) {
+        if (!in_array((int)$cameraId, $validCameraIds, true) || !in_array($status, ['working', 'not_working', 'needs_attention'], true)) {
+            $_SESSION['flash'] = 'अवैध Camera किंवा स्थिती — Checkup नोंदवली नाही.';
+            header('Location: checkup.php?dvr_id=' . $dvrId);
+            exit;
+        }
+    }
+
     // आधीच याच DVR ची, याच दिवसाची Checkup असेल तर Update करा (Duplicate टाळण्यासाठी)
     $existing = cctvGetTodayCheckup($pdo, $dvrId, $checkupDate);
     if ($existing) {
@@ -28,11 +50,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // प्रत्येक Camera ची स्थिती साठवा
-    $cameraStatuses = $_POST['camera_status'] ?? [];
-    $cameraRemarks = $_POST['camera_remarks'] ?? [];
+    $cameraRemarks = (array)($_POST['camera_remarks'] ?? []);
     foreach ($cameraStatuses as $cameraId => $status) {
         $cameraId = (int)$cameraId;
-        $camRemark = trim($cameraRemarks[$cameraId] ?? '');
+        $camRemark = trim((string)($cameraRemarks[$cameraId] ?? ''));
         $pdo->prepare("
             INSERT INTO cctv_camera_status (checkup_id, camera_id, status, remarks) VALUES (?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE status = VALUES(status), remarks = VALUES(remarks)
