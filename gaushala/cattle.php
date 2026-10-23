@@ -5,6 +5,7 @@ requireMigratedTable($pdo, 'gaushala_cattle', '../', 'approx_age_months');
 require_once __DIR__ . '/helpers.php';
 $user = currentUser();
 $orgId = activeOrgId();
+gsAutoPromoteCalves($pdo, $orgId); // वय पूर्ण झालेली वासरं → गाय/गोऱ्हा
 $canManage = hasPermission('manage_gaushala') || isManagementOrAbove();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canManage) {
@@ -109,7 +110,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canManage) {
         $recordDate = ($_POST['record_date'] ?? '') ?: date('Y-m-d');
         $nextDueDate = ($_POST['next_due_date'] ?? '') ?: null;
         $cost = ($_POST['cost'] ?? '') !== '' ? (float)$_POST['cost'] : null;
-        if ($cattleId && $description) {
+        $cattleOrgChk = $pdo->prepare("SELECT COUNT(*) FROM gaushala_cattle WHERE id = ? AND organization_id = ?");
+        $cattleOrgChk->execute([$cattleId, $orgId]);
+        if ($cattleId && $description && (int)$cattleOrgChk->fetchColumn() > 0) {
             $pdo->prepare("INSERT INTO gaushala_health_records (cattle_id, record_type, description, vet_name, record_date, next_due_date, cost, recorded_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
                 ->execute([$cattleId, $recordType, $description, $vetName, $recordDate, $nextDueDate, $cost, $user['id']]);
             $_SESSION['flash'] = 'आरोग्य-नोंद जोडली गेली.';

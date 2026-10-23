@@ -49,3 +49,21 @@ function gsBreakdown($rows) {
     uasort($out, function ($a, $b) { return $b['count'] <=> $a['count']; });
     return array_values($out);
 }
+
+// वासरू किती महिन्यांनंतर मोठं धरायचं (गाय / गोऱ्हा)
+const GS_CALF_ADULT_MONTHS = 24;
+
+// वय पूर्ण झालेली वासरं आपोआप पुढच्या प्रकारात — मादी → गाय (दूध-नोंदीत दिसावी), नर → गोऱ्हा
+function gsAutoPromoteCalves($pdo, $orgId) {
+    try {
+        $stmt = $pdo->prepare("SELECT id, gender, date_of_birth, approx_age_months, created_at FROM gaushala_cattle WHERE organization_id = ? AND status = 'active' AND animal_category = 'Calf'");
+        $stmt->execute([$orgId]);
+        $upd = $pdo->prepare("UPDATE gaushala_cattle SET animal_category = ? WHERE id = ? AND organization_id = ? AND animal_category = 'Calf'");
+        foreach ($stmt->fetchAll() as $c) {
+            $months = gsAgeMonths($c['date_of_birth'], $c['approx_age_months'], $c['created_at']);
+            if ($months !== null && $months >= GS_CALF_ADULT_MONTHS) {
+                $upd->execute([$c['gender'] === 'Male' ? 'Young Bull' : 'Cow', $c['id'], $orgId]);
+            }
+        }
+    } catch (PDOException $e) { /* Table/Column अजून Migrate झालेलं नाही */ }
+}

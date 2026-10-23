@@ -4,6 +4,8 @@ requireLogin('../');
 requireMigratedTable($pdo, 'gaushala_cattle', '../', 'animal_category');
 $user = currentUser();
 $orgId = activeOrgId();
+require_once __DIR__ . '/helpers.php';
+gsAutoPromoteCalves($pdo, $orgId); // वय पूर्ण झालेली वासरं → गाय/गोऱ्हा
 
 $pageTitle = 'गौशाळा Report';
 $rootPath = '../';

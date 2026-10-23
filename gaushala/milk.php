@@ -6,6 +6,7 @@ requireMigratedTable($pdo, 'gaushala_cattle', '../', 'animal_category');
 require_once __DIR__ . '/helpers.php';
 $user = currentUser();
 $orgId = activeOrgId();
+gsAutoPromoteCalves($pdo, $orgId); // वय पूर्ण झालेली वासरं → गाय/गोऱ्हा
 $canManage = hasPermission('manage_gaushala') || isManagementOrAbove();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canManage) {
