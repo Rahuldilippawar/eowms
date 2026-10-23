@@ -12,6 +12,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $capacity = ($_POST['capacity'] ?? '') !== '' ? (int)$_POST['capacity'] : null;
     $assistantId = ($_POST['assistant_id'] ?? '') !== '' ? (int)$_POST['assistant_id'] : null;
 
+    // Assistant याच संस्थेचा सक्रिय कर्मचारी असावा
+    if ($assistantId) {
+        $asstStmt = $pdo->prepare("SELECT id FROM users WHERE id = ? AND organization_id = ? AND is_active = 1");
+        $asstStmt->execute([$assistantId, $orgId]);
+        if (!$asstStmt->fetch()) {
+            $_SESSION['flash'] = 'निवडलेला Assistant सापडला नाही — Lab जोडली नाही.';
+            header('Location: labs.php');
+            exit;
+        }
+    }
+
     if ($labName) {
         $deptStmt = $pdo->prepare("SELECT id FROM departments WHERE organization_id = ? AND code = 'IT' LIMIT 1");
         $deptStmt->execute([$orgId]);

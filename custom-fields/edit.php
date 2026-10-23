@@ -10,10 +10,17 @@ $orgId = activeOrgId();
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $label = trim($_POST['field_label'] ?? '');
     $type = $_POST['field_type'] ?? 'text';
+    // फक्त परवानगी असलेले Field-प्रकार
+    if (!in_array($type, ['text', 'textarea', 'number', 'date', 'select', 'checkbox'], true)) { $type = 'text'; }
     $options = trim($_POST['field_options'] ?? '') ?: null;
     $isRequired = isset($_POST['is_required']) ? 1 : 0;
     $sortOrder = (int)($_POST['sort_order'] ?? 0);
-    $isActive = (int)($_POST['is_active'] ?? 1);
+    $isActive = (int)($_POST['is_active'] ?? 1) === 1 ? 1 : 0;
+    if ($label === '') {
+        $_SESSION['form_error'] = t('s562');
+        header('Location: edit.php?id=' . $id);
+        exit;
+    }
 
     $stmt = $pdo->prepare("UPDATE custom_fields SET field_label=?, field_type=?, field_options=?, is_required=?, sort_order=?, is_active=? WHERE id=? AND organization_id=?");
     $stmt->execute([$label, $type, $options, $isRequired, $sortOrder, $isActive, $id, $orgId]);
@@ -35,6 +42,10 @@ require_once __DIR__ . '/../includes/header.php';
 
 <div class="page-eyebrow"><?= h(activeOrgName()) ?></div>
 <div class="page-title"><?= h($field['field_label']) ?> <?= h(t('s11')) ?></div>
+<?php if (!empty($_SESSION['form_error'])): ?>
+  <div class="alert alert-danger" style="border-radius:10px;font-size:13px;"><?= h($_SESSION['form_error']) ?></div>
+  <?php unset($_SESSION['form_error']); ?>
+<?php endif; ?>
 
 <div class="panel">
   <form method="POST" style="padding:22px 24px;">

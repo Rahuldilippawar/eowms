@@ -35,7 +35,11 @@ $existingLabStmt->execute([$orgId]);
 $labIdByName = [];
 foreach ($existingLabStmt->fetchAll() as $el) { $labIdByName[mb_strtolower(trim($el['lab_name']))] = $el['id']; }
 
-$labInsert = $pdo->prepare("INSERT INTO it_labs (organization_id, lab_name, location, capacity, is_active) VALUES (?, ?, ?, ?, 1)");
+// नवीन Lab — संस्थेच्या IT विभागाशी जोडतो (Warranty-नूतनीकरण नोंदीसाठी विभाग लागतो)
+$itDeptStmt = $pdo->prepare("SELECT id FROM departments WHERE organization_id = ? AND code = 'IT' LIMIT 1");
+$itDeptStmt->execute([$orgId]);
+$itDeptIdForLabs = $itDeptStmt->fetch()['id'] ?? null;
+$labInsert = $pdo->prepare("INSERT INTO it_labs (organization_id, department_id, lab_name, location, capacity, is_active) VALUES (?, ?, ?, ?, ?, 1)");
 $assetInsert = $pdo->prepare("
     INSERT INTO it_assets (organization_id, lab_id, workstation_no, asset_tag, asset_type, brand, model, serial_no, purchase_date, purchase_cost, warranty_expiry, os_license, license_expiry, added_by)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -64,7 +68,7 @@ while (($row = fgetcsv($handle)) !== false) {
     // Lab आधीच अस्तित्वात नसेल तरच नवीन तयार करा
     if (!isset($labIdByName[$labKey])) {
         $capacity = is_numeric($get('capacity')) ? (int)$get('capacity') : null;
-        $labInsert->execute([$orgId, $labName, $get('lab_location'), $capacity]);
+        $labInsert->execute([$orgId, $itDeptIdForLabs, $labName, $get('lab_location'), $capacity]);
         $labIdByName[$labKey] = $pdo->lastInsertId();
         $labsCreated++;
     }

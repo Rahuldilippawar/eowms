@@ -11,7 +11,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $workDate = $_POST['work_date'] ?? null;
 $departmentId = (int)($_POST['department_id'] ?? 0);
 $requestedBy = trim($_POST['requested_by'] ?? '') ?: null;
-$employeeIds = array_values(array_unique(array_filter(array_map('intval', $_POST['employee_ids'] ?? []))));
+$employeeIds = array_values(array_unique(array_filter(array_map('intval', (array)($_POST['employee_ids'] ?? [])))));
 $employeeId = $employeeIds[0] ?? 0; // primary/first-listed employee — kept for backward-compatible reporting
 $title = trim($_POST['title'] ?? '');
 $description = trim($_POST['description'] ?? '');
@@ -28,9 +28,9 @@ if (!$workDate || !$departmentId || empty($employeeIds) || !$title) {
     exit;
 }
 
-// Fetch department for organization/campus context
-$deptStmt = $pdo->prepare("SELECT * FROM departments WHERE id = ?");
-$deptStmt->execute([$departmentId]);
+// विभाग सक्रिय संस्थेचाच असला पाहिजे (दुसऱ्या संस्थेचा id चालणार नाही)
+$deptStmt = $pdo->prepare("SELECT * FROM departments WHERE id = ? AND organization_id = ? AND is_active = 1");
+$deptStmt->execute([$departmentId, activeOrgId()]);
 $department = $deptStmt->fetch();
 
 if (!$department) {
@@ -39,10 +39,83 @@ if (!$department) {
     exit;
 }
 
-// Department-scoped access control — staff/HOD can only submit for their own department
-if (isDeptScoped() && (int)$user['department_id'] !== $departmentId) {
+// Department-scoped access control — staff/HOD फक्त स्वतःच्या (व Extra दिलेल्या) विभागासाठी
+$visibleDeptIds = getVisibleDepartmentIds();
+if ($visibleDeptIds !== null && !in_array($departmentId, $visibleDeptIds, true)) {
     http_response_code(403);
     die(t('s434'));
+}
+
+// Priority / Status — फक्त परवानगी असलेली मूल्यं
+if (!in_array($priority, ['urgent', 'high', 'normal', 'low'], true)
+    || !in_array($status, ['pending', 'in_progress', 'completed'], true)) {
+    $_SESSION['form_error'] = 'अवैध प्राधान्य किंवा स्थिती निवडली आहे.';
+    header('Location: entry.php');
+    exit;
+}
+
+// तारखा व खर्च — योग्य स्वरूपात असावेत
+$isValidDate = function ($d) { return $d === null || (bool)DateTime::createFromFormat('!Y-m-d', $d); };
+if (!$isValidDate($workDate) || !$isValidDate($startDate) || !$isValidDate($dueDate)
+    || ($estimatedCost !== null && !is_numeric($estimatedCost)) || ($actualCost !== null && !is_numeric($actualCost))) {
+    $_SESSION['form_error'] = 'तारीख किंवा खर्चाची रक्कम चुकीच्या स्वरूपात आहे.';
+    header('Location: entry.php');
+    exit;
+}
+
+// निवडलेले कर्मचारी — याच संस्थेचे, सक्रिय व (विभाग-मर्यादित असल्यास) दिसणाऱ्या विभागातले असावेत
+$empPh = implode(',', array_fill(0, count($employeeIds), '?'));
+$empStmt = $pdo->prepare("SELECT id, department_id FROM users WHERE id IN ($empPh) AND organization_id = ? AND is_active = 1");
+$empStmt->execute(array_merge($employeeIds, [activeOrgId()]));
+$validEmployees = $empStmt->fetchAll();
+$employeesOk = count($validEmployees) === count($employeeIds);
+if ($employeesOk && $visibleDeptIds !== null) {
+    foreach ($validEmployees as $emp) {
+        if (!in_array((int)$emp['department_id'], $visibleDeptIds, true)) { $employeesOk = false; break; }
+    }
+}
+if (!$employeesOk) {
+    $_SESSION['form_error'] = 'निवडलेले कर्मचारी अवैध आहेत — कृपया यादीतूनच निवडा.';
+    header('Location: entry.php');
+    exit;
+}
+
+// संस्थेचे सक्रिय Custom Fields — आवश्यक (required) व प्रकार Server वरच तपासतो
+$customFieldDefs = [];
+try {
+    $cfStmt = $pdo->prepare("SELECT field_key, field_label, field_type, field_options, is_required FROM custom_fields WHERE organization_id = ? AND is_active = 1");
+    $cfStmt->execute([$department['organization_id']]);
+    $customFieldDefs = $cfStmt->fetchAll();
+} catch (PDOException $e) { /* custom_fields table not migrated yet */ }
+
+$customValues = [];
+foreach ($customFieldDefs as $cf) {
+    $val = trim((string)($_POST['custom_' . $cf['field_key']] ?? ''));
+    if ($val === '') {
+        if ($cf['is_required']) {
+            $_SESSION['form_error'] = "'{$cf['field_label']}' हे फील्ड भरणे आवश्यक आहे.";
+            header('Location: entry.php');
+            exit;
+        }
+        continue;
+    }
+    $typeOk = true;
+    if ($cf['field_type'] === 'number') {
+        $typeOk = is_numeric($val);
+    } elseif ($cf['field_type'] === 'date') {
+        $typeOk = (bool)DateTime::createFromFormat('!Y-m-d', $val);
+    } elseif ($cf['field_type'] === 'select') {
+        $opts = array_filter(array_map('trim', explode(',', $cf['field_options'] ?? '')), 'strlen');
+        $typeOk = in_array($val, $opts, true);
+    } elseif ($cf['field_type'] === 'checkbox') {
+        $typeOk = in_array($val, ['होय', 'नाही'], true);
+    }
+    if (!$typeOk) {
+        $_SESSION['form_error'] = "'{$cf['field_label']}' या फील्डचे मूल्य अवैध आहे.";
+        header('Location: entry.php');
+        exit;
+    }
+    $customValues[$cf['field_key']] = $val;
 }
 
 // Handle before/after photo uploads
@@ -104,10 +177,14 @@ try {
     $materialItemIds = $_POST['material_item_id'] ?? [];
     $materialQuantities = $_POST['material_quantity'] ?? [];
     $matInsert = $pdo->prepare("INSERT INTO work_record_materials (work_record_id, item_id, quantity_used) VALUES (?, ?, ?)");
-    foreach ($materialItemIds as $idx => $itemId) {
+    // साहित्य याच संस्थेच्या Store मधलंच असावं
+    $orgItemStmt = $pdo->prepare("SELECT id FROM store_items WHERE organization_id = ?");
+    $orgItemStmt->execute([$department['organization_id']]);
+    $orgItemIds = array_map('intval', $orgItemStmt->fetchAll(PDO::FETCH_COLUMN));
+    foreach ((array)$materialItemIds as $idx => $itemId) {
         $itemId = (int)$itemId;
         $qty = isset($materialQuantities[$idx]) && is_numeric($materialQuantities[$idx]) ? (float)$materialQuantities[$idx] : 0;
-        if ($itemId && $qty > 0) {
+        if ($itemId && $qty > 0 && in_array($itemId, $orgItemIds, true)) {
             $matInsert->execute([$newWorkRecordId, $itemId, $qty]);
         }
     }
@@ -115,17 +192,10 @@ try {
 
 // Save any organization-specific custom field values submitted with this entry
 try {
-    $cfStmt = $pdo->prepare("SELECT field_key FROM custom_fields WHERE organization_id = ? AND is_active = 1");
-    $cfStmt->execute([$department['organization_id']]);
-    $activeFieldKeys = $cfStmt->fetchAll(PDO::FETCH_COLUMN);
-
-    if (!empty($activeFieldKeys)) {
+    if (!empty($customValues)) {
         $cfInsert = $pdo->prepare("INSERT INTO custom_field_values (work_record_id, field_key, field_value) VALUES (?, ?, ?)");
-        foreach ($activeFieldKeys as $key) {
-            $postKey = 'custom_' . $key;
-            if (isset($_POST[$postKey]) && $_POST[$postKey] !== '') {
-                $cfInsert->execute([$newWorkRecordId, $key, trim($_POST[$postKey])]);
-            }
+        foreach ($customValues as $key => $val) {
+            $cfInsert->execute([$newWorkRecordId, $key, $val]);
         }
     }
 } catch (PDOException $e) {

@@ -27,10 +27,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $licenseExpiry = ($_POST['license_expiry'] ?? '') ?: null;
     $remarks = trim($_POST['remarks'] ?? '');
 
+    // प्रकार व तारखा — फक्त वैध मूल्यं
+    $validDate = fn($d) => $d === null || (bool)DateTime::createFromFormat('!Y-m-d', $d);
+    if (!in_array($assetType, ['computer', 'monitor', 'keyboard', 'mouse', 'cpu', 'ups', 'smartboard', 'projector', 'printer', 'other'], true)
+        || !$validDate($purchaseDate) || !$validDate($warrantyExpiry) || !$validDate($licenseExpiry)) {
+        $_SESSION['flash'] = 'अवैध प्रकार किंवा तारीख — बदल जतन झाले नाहीत.';
+        header('Location: asset-edit.php?id=' . $assetId);
+        exit;
+    }
+
     $pdo->prepare("
         UPDATE it_assets SET asset_type = ?, workstation_no = ?, brand = ?, model = ?, serial_no = ?, purchase_date = ?, purchase_cost = ?, warranty_expiry = ?, os_license = ?, license_expiry = ?, remarks = ?
         WHERE id = ? AND organization_id = ?
     ")->execute([$assetType, $workstationNo ?: null, $brand, $model, $serialNo, $purchaseDate, $purchaseCost, $warrantyExpiry, $osLicense, $licenseExpiry, $remarks, $assetId, $orgId]);
+
+    // Warranty तारीख बदलली/काढली — नूतनीकरण नोंदही अद्ययावत
+    syncItAssetWarranty($pdo, $assetId, $orgId, $asset['lab_id'], $asset['asset_tag'], $assetType, $warrantyExpiry);
 
     logActivity('IT Asset Edit केलं', 'it_asset', $assetId, $asset['asset_tag']);
     $_SESSION['flash'] = "'{$asset['asset_tag']}' Update झालं.";

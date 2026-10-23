@@ -3,12 +3,22 @@ $pageTitle = 'दैनंदिन कामाचा अहवाल';
 $rootPath = '../';
 require_once __DIR__ . '/../includes/header.php';
 
-$stmt = $pdo->prepare("SELECT * FROM departments WHERE organization_id = ? AND is_active = 1" . (isDeptScoped() ? " AND id = ?" : "") . " ORDER BY name_local");
-$stmt->execute(isDeptScoped() ? [activeOrgId(), $user['department_id']] : [activeOrgId()]);
+// स्वतःचा विभाग + Super Admin ने दिलेले Extra विभाग (null = सगळे)
+$entryVisibleDeptIds = getVisibleDepartmentIds();
+$entryDeptFilter = '';
+$entryDeptParams = [];
+if ($entryVisibleDeptIds !== null) {
+    $entryDeptIdsSafe = $entryVisibleDeptIds ?: [0];
+    $entryDeptFilter = ' AND %s IN (' . implode(',', array_fill(0, count($entryDeptIdsSafe), '?')) . ')';
+    $entryDeptParams = $entryDeptIdsSafe;
+}
+
+$stmt = $pdo->prepare("SELECT * FROM departments WHERE organization_id = ? AND is_active = 1" . sprintf($entryDeptFilter, 'id') . " ORDER BY name_local");
+$stmt->execute(array_merge([activeOrgId()], $entryDeptParams));
 $departments = $stmt->fetchAll();
 
-$stmt = $pdo->prepare("SELECT id, name, department_id, designation FROM users WHERE organization_id = ? AND is_active = 1" . (isDeptScoped() ? " AND department_id = ?" : "") . " ORDER BY name");
-$stmt->execute(isDeptScoped() ? [activeOrgId(), $user['department_id']] : [activeOrgId()]);
+$stmt = $pdo->prepare("SELECT id, name, department_id, designation FROM users WHERE organization_id = ? AND is_active = 1" . sprintf($entryDeptFilter, 'department_id') . " ORDER BY name");
+$stmt->execute(array_merge([activeOrgId()], $entryDeptParams));
 $allStaff = $stmt->fetchAll();
 
 $stmt = $pdo->prepare("SELECT * FROM campuses WHERE organization_id = ? AND is_active = 1 ORDER BY (college_type = 'Trust HQ') DESC, name");

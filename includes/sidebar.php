@@ -405,6 +405,19 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
       $showStore = ($vehUserDeptCode === 'STR') || hasPermission('manage_store') || isManagementOrAbove();
       $showCctv = ($vehUserDeptCode === 'CCTV') || hasPermission('manage_cctv') || isManagementOrAbove();
       $showIt = ($vehUserDeptCode === 'IT') || hasPermission('manage_it') || isManagementOrAbove();
+      // IT Requests व्यवस्थापन — पानावरचाच नियम (IT विभाग सदस्य किंवा manage_it)
+      require_once __DIR__ . '/it-helpers.php';
+      $showItRequestsManage = false;
+      $myItLabs = [];
+      try {
+          $showItRequestsManage = canManageItRequests($pdo, $user);
+          // Lab Assistant — फक्त स्वतःच्या Lab(s) चे Assets
+          if (!$showIt) {
+              $myLabStmt = $pdo->prepare("SELECT id, lab_name FROM it_labs WHERE organization_id = ? AND assistant_id = ? AND is_active = 1 ORDER BY lab_name");
+              $myLabStmt->execute([$activeOrgId, $user['id']]);
+              $myItLabs = $myLabStmt->fetchAll();
+          }
+      } catch (PDOException $e) { /* IT tables not migrated yet */ }
     ?>
     <?php if ($showVehicles || $showMaintenance || $showDeadStock): ?>
       <div class="nav-group-header" data-bs-toggle="collapse" data-bs-target="#navGroupAssets" aria-expanded="<?= navGroupExpanded('assets', $activeGroup) ?>">
@@ -441,7 +454,7 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
     <?php endif; ?>
 
     <!-- ==================== तांत्रिक विभाग ==================== -->
-    <?php if ($showCctv || $showIt): ?>
+    <?php if ($showCctv || $showIt || !empty($myItLabs)): ?>
       <div class="nav-group-header" data-bs-toggle="collapse" data-bs-target="#navGroupTechDept" aria-expanded="<?= navGroupExpanded('techdept', $activeGroup) ?>">
         <span class="label"><i class="fa-solid fa-server fa-fw"></i> तांत्रिक विभाग</span>
         <i class="fa-solid fa-chevron-right chevron"></i>
@@ -456,10 +469,17 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
           <a href="<?= $rp ?>it/index.php" class="tree-node <?= $currentDir === 'it' && $currentPage === 'index.php' ? 'active' : '' ?>">
             <i class="fa-solid fa-desktop fa-fw"></i><span>IT विभाग</span>
           </a>
+        <?php endif; ?>
+        <?php if ($showItRequestsManage): ?>
           <a href="<?= $rp ?>it/general-requests-manage.php" class="tree-node <?= $currentDir === 'it' && $currentPage === 'general-requests-manage.php' ? 'active' : '' ?>">
             <i class="fa-solid fa-headset fa-fw"></i><span>🖥️ IT Requests व्यवस्थापन</span>
           </a>
         <?php endif; ?>
+        <?php foreach ($myItLabs as $myLab): ?>
+          <a href="<?= $rp ?>it/assets.php?lab_id=<?= (int)$myLab['id'] ?>" class="tree-node <?= $currentDir === 'it' && in_array($currentPage, ['assets.php', 'asset-view.php', 'asset-edit.php']) ? 'active' : '' ?>">
+            <i class="fa-solid fa-desktop fa-fw"></i><span>माझी Lab — <?= h($myLab['lab_name']) ?></span>
+          </a>
+        <?php endforeach; ?>
       </div>
     <?php endif; ?>
 
