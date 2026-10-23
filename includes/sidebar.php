@@ -400,7 +400,8 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
       $mtnDeptCheck = $pdo->prepare("SELECT has_issue_register FROM departments WHERE id = ?");
       $mtnDeptCheck->execute([$user['department_id'] ?? 0]);
       $userHasIssueRegister = !empty($mtnDeptCheck->fetch()['has_issue_register']);
-      $showMaintenance = $userHasIssueRegister || isManagementOrAbove() || hasRole('super_admin');
+      // देखभाल — maintenance/index.php व create.php चाच नियम (Issue Register असलेला विभाग किंवा manage_maintenance_settings)
+      $showMaintenance = $userHasIssueRegister || hasPermission('manage_maintenance_settings');
       $showDeadStock = !empty($user['department_id']) || isManagementOrAbove() || hasRole('super_admin');
       $showStore = ($vehUserDeptCode === 'STR') || hasPermission('manage_store') || isManagementOrAbove();
       $showCctv = ($vehUserDeptCode === 'CCTV') || hasPermission('manage_cctv') || isManagementOrAbove();
