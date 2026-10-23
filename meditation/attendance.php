@@ -9,7 +9,8 @@ $deptCodeCheck = $pdo->prepare("SELECT code FROM departments WHERE id = ?");
 $deptCodeCheck->execute([$user['department_id'] ?? 0]);
 $userDeptCode = $deptCodeCheck->fetch()['code'] ?? null;
 
-if (!hasRole('super_admin') && $userDeptCode !== 'MED') {
+// Management/अध्यक्ष किंवा ध्यान-विभाग व्यवस्थापन परवानगी असलेलेही हजेरी नोंदवू शकतात (event.php प्रमाणेच)
+if (!hasRole('super_admin') && $userDeptCode !== 'MED' && !isManagementOrAbove() && !hasPermission('manage_meditation')) {
     http_response_code(403);
     die('<div style="font-family:sans-serif;padding:40px;">तुम्हाला सत्संग हजेरी नोंदवण्याची परवानगी नाही — फक्त Super Admin किंवा "ध्यान विभाग" चा स्टाफ/HOD करू शकतो. <a href="../index.php">Dashboard var परत जा</a></div>');
 }
@@ -23,8 +24,11 @@ $event = $stmt->fetch();
 if (!$event) { die('सत्संग कार्यक्रम सापडला नाही.'); }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $statuses = $_POST['status'] ?? [];   // [user_id => 'present'/'absent']
-    $remarks = $_POST['remark'] ?? [];    // [user_id => remark text]
+    $statuses = is_array($_POST['status'] ?? null) ? $_POST['status'] : [];   // [user_id => 'present'/'absent'] — न निवडलेले = नोंद नाही
+    $remarks = is_array($_POST['remark'] ?? null) ? $_POST['remark'] : [];    // [user_id => remark text]
+    $orgUserStmt = $pdo->prepare("SELECT id FROM users WHERE organization_id = ?");
+    $orgUserStmt->execute([$orgId]);
+    $orgUserIds = array_map('intval', $orgUserStmt->fetchAll(PDO::FETCH_COLUMN));
 
     $upsert = $pdo->prepare("
         INSERT INTO satsang_attendance (satsang_event_id, user_id, status, remark, marked_by)
@@ -33,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     ");
     foreach ($statuses as $uid => $status) {
         $uid = (int)$uid;
-        $status = $status === 'present' ? 'present' : 'absent';
+        if (!in_array($uid, $orgUserIds, true) || !in_array($status, ['present', 'absent'], true)) { continue; }
         $remark = trim($remarks[$uid] ?? '') ?: null;
         $upsert->execute([$eventId, $uid, $status, $status === 'absent' ? $remark : null, $user['id']]);
     }
@@ -91,6 +95,10 @@ foreach ($stmt->fetchAll() as $row) { $existing[$row['user_id']] = $row; }
 
 <form method="POST">
   <input type="hidden" name="event_id" value="<?= $eventId ?>">
+  <div class="d-flex align-items-center gap-2 mb-3" style="font-size:12.5px;color:var(--text-dim);">
+    <span>न निवडलेल्यांची हजेरी "नोंद नाही" राहील.</span>
+    <button type="button" class="btn btn-sm" style="border:1px solid var(--line);border-radius:7px;font-size:12px;" onclick="markRemainingPresent()">उरलेले सगळे उपस्थित निवडा</button>
+  </div>
 
   <?php foreach ($grouped as $deptName => $staffList): ?>
     <div class="panel mb-3">
@@ -99,7 +107,7 @@ foreach ($stmt->fetchAll() as $row) { $existing[$row['user_id']] = $row; }
         <thead><tr><th>नाव</th><th>पदनाम</th><th style="width:200px;">हजेरी</th><th>टिप्पणी (अनुपस्थित असल्यास)</th></tr></thead>
         <tbody>
           <?php foreach ($staffList as $s):
-            $curStatus = $existing[$s['id']]['status'] ?? 'present';
+            $curStatus = $existing[$s['id']]['status'] ?? null; // नोंद नसेल तर काहीच निवडलेलं नाही — आपोआप "उपस्थित" नाही
             $curRemark = $existing[$s['id']]['remark'] ?? '';
           ?>
             <tr>
@@ -116,7 +124,7 @@ foreach ($stmt->fetchAll() as $row) { $existing[$row['user_id']] = $row; }
                 </div>
               </td>
               <td>
-                <input type="text" name="remark[<?= $s['id'] ?>]" id="remark_<?= $s['id'] ?>" class="form-control-custom" style="<?= $curStatus === 'present' ? 'display:none;' : '' ?>" value="<?= h($curRemark) ?>" placeholder="कारण (ऐच्छिक)">
+                <input type="text" name="remark[<?= $s['id'] ?>]" id="remark_<?= $s['id'] ?>" class="form-control-custom" style="<?= $curStatus !== 'absent' ? 'display:none;' : '' ?>" value="<?= h($curRemark) ?>" placeholder="कारण (ऐच्छिक)">
               </td>
             </tr>
           <?php endforeach; ?>
@@ -131,6 +139,11 @@ foreach ($stmt->fetchAll() as $row) { $existing[$row['user_id']] = $row; }
 </form>
 
 <script>
+function markRemainingPresent() {
+  var names = {};
+  document.querySelectorAll('input[type=radio][name^="status["]').forEach(function (r) { names[r.name] = names[r.name] || document.querySelector('input[name="' + r.name + '"]:checked'); });
+  Object.keys(names).forEach(function (n) { if (!names[n]) { var p = document.querySelector('input[name="' + n + '"][value=present]'); if (p) p.checked = true; } });
+}
 function toggleRemark(userId, show) {
   document.getElementById('remark_' + userId).style.display = show ? 'block' : 'none';
 }
