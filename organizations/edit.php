@@ -8,22 +8,37 @@ $id = (int)($_GET['id'] ?? $_POST['id'] ?? 0);
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $name = trim($_POST['name'] ?? '');
     $type = $_POST['type'] ?? 'trust';
+    // फक्त ENUM मधलेच प्रकार स्वीकारा
+    if (!in_array($type, ['trust', 'school', 'hospital', 'corporate'], true)) { $type = 'trust'; }
     $email = trim($_POST['contact_email'] ?? '') ?: null;
     $phone = trim($_POST['contact_phone'] ?? '') ?: null;
-    $isActive = (int)($_POST['is_active'] ?? 1);
+    $isActive = (int)($_POST['is_active'] ?? 1) === 0 ? 0 : 1;
     $parentOrgId = ($_POST['parent_organization_id'] ?? '') !== '' ? (int)$_POST['parent_organization_id'] : null;
 
-    // सुरक्षितता: स्वतःलाच parent बनवणे किंवा A↔B असं थेट वर्तुळाकार नातं टाळा
+    // सुरक्षितता: स्वतःचीच (Login असलेली) संस्था निष्क्रिय केली तर Super Admin स्वतःच बाहेर अडकतो
+    if ($isActive === 0 && $id === (int)currentUser()['organization_id']) {
+        $isActive = 1;
+        $_SESSION['form_error'] = 'तुम्ही ज्या संस्थेतून Login आहात ती निष्क्रिय करता येणार नाही — बाकी बदल जतन केले.';
+    }
+
+    // सुरक्षितता: स्वतःलाच parent बनवणे किंवा कितीही पायऱ्यांचं वर्तुळाकार नातं टाळा —
+    // निवडलेल्या Parent पासून वरपर्यंत संपूर्ण साखळी तपासतो
     if ($parentOrgId === $id) {
         $parentOrgId = null;
         $_SESSION['form_error'] = 'एखादी संस्था स्वतःचीच Parent असू शकत नाही — हे बदल वगळले.';
     } elseif ($parentOrgId) {
         $checkStmt = $pdo->prepare("SELECT parent_organization_id FROM organizations WHERE id = ?");
-        $checkStmt->execute([$parentOrgId]);
-        $chosenParentsParent = $checkStmt->fetch()['parent_organization_id'] ?? null;
-        if ((int)$chosenParentsParent === $id) {
-            $parentOrgId = null;
-            $_SESSION['form_error'] = 'निवडलेली संस्था आधीच या संस्थेची उप-शाखा आहे — वर्तुळाकार नातं तयार होऊ शकत नाही.';
+        $cursor = $parentOrgId;
+        $seen = [];
+        while ($cursor && !isset($seen[$cursor])) {
+            $seen[$cursor] = true;
+            $checkStmt->execute([$cursor]);
+            $cursor = (int)($checkStmt->fetch()['parent_organization_id'] ?? 0);
+            if ($cursor === $id) {
+                $parentOrgId = null;
+                $_SESSION['form_error'] = 'निवडलेली संस्था आधीच या संस्थेची उप-शाखा आहे — वर्तुळाकार नातं तयार होऊ शकत नाही.';
+                break;
+            }
         }
     }
 

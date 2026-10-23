@@ -87,6 +87,24 @@ function requireLogin($rootPath = '') {
     }
     $_SESSION['last_activity'] = time();
 
+    // सुरक्षा: Login नंतर खातं (किंवा संस्था) निष्क्रिय केलं तरी जुनं Session
+    // चालूच राहू नये — दर ~60 सेकंदांनी एकदा Database मध्ये तपासतो.
+    if (empty($_SESSION['user_recheck_at']) || (time() - (int)$_SESSION['user_recheck_at']) >= 60) {
+        global $pdo;
+        $chk = $pdo->prepare("SELECT u.is_active, o.is_active AS org_active FROM users u LEFT JOIN organizations o ON o.id = u.organization_id WHERE u.id = ?");
+        $chk->execute([(int)currentUser()['id']]);
+        $chkRow = $chk->fetch();
+        if (!$chkRow || (int)$chkRow['is_active'] !== 1 || (int)($chkRow['org_active'] ?? 0) !== 1) {
+            session_unset();
+            session_destroy();
+            session_start();
+            $_SESSION['account_deactivated'] = true;
+            header('Location: ' . $rootPath . 'login.php');
+            exit;
+        }
+        $_SESSION['user_recheck_at'] = time();
+    }
+
     // 🛠️ Site Maintenance Mode — Super Admin ने Site "Off" केली असेल तर,
     // Super Admin सोडून बाकी सगळ्यांना Maintenance-पानावर वळवतो.
     $currentScriptForMaintenance = basename($_SERVER['SCRIPT_NAME']);
@@ -152,6 +170,21 @@ function requireLogin($rootPath = '') {
         header('Location: ' . $rootPath . 'force-password-change.php');
         exit;
     }
+}
+
+/**
+ * Visitor चा खरा IP — X-Forwarded-For हा Header कोणीही खोटा पाठवू शकतो,
+ * म्हणून तो फक्त तेव्हाच मानतो जेव्हा REMOTE_ADDR स्वतःच Private/Proxy पत्ता असेल.
+ */
+function clientIp() {
+    $remote = $_SERVER['REMOTE_ADDR'] ?? '';
+    if ($remote === '') return 'unknown';
+    $isPrivate = filter_var($remote, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false;
+    if ($isPrivate && !empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+        $first = trim(explode(',', $_SERVER['HTTP_X_FORWARDED_FOR'])[0]);
+        if (filter_var($first, FILTER_VALIDATE_IP)) return $first;
+    }
+    return $remote;
 }
 
 // Escapes output for safe HTML display

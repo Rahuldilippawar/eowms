@@ -28,6 +28,7 @@ try {
         SELECT wc.id AS webauthn_cred_id, wc.sign_count, wc.public_key_pem, wc.device_label, u.*
         FROM webauthn_credentials wc
         JOIN users u ON u.id = wc.user_id
+        JOIN organizations o ON o.id = u.organization_id AND o.is_active = 1
         WHERE wc.credential_id = ? AND u.email = ? AND u.is_active = 1
     ");
     $credStmt->execute([$credentialId, $email]);
@@ -77,6 +78,7 @@ try {
     $mustChange = !empty($userRow['must_change_password']);
     $_SESSION['user'] = $userRow;
     $_SESSION['last_activity'] = time();
+    $_SESSION['user_recheck_at'] = time();
     $_SESSION['play_welcome_chime'] = true;
 
     logActivity('Fingerprint/Face ID ने Login केलं', 'user', $cred['id'], $cred['device_label'] ?? '');

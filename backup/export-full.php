@@ -27,18 +27,27 @@ if ($zip->open($tmpZipPath, ZipArchive::CREATE) !== true) {
 // 1. Database Data — तोच JSON, फक्त आता Zip च्या आत
 $zip->addFromString('data.json', $jsonData);
 
-// 2. सगळ्या Uploaded Files (Logo, Letter Attachments, Classroom Material,
-// Work-Photos, इ.) — जशाच्या तशा, Folder-Structure सकट
+// 2. फक्त याच संस्थेच्या नोंदींमध्ये उल्लेख असलेल्या Uploaded Files (Logo,
+// Letter Attachments, Classroom Material, Work-Photos, इ.) — दुसऱ्या
+// संस्थांच्या Files या Backup मध्ये कधीही जाऊ नयेत.
 $uploadsDir = __DIR__ . '/../assets/uploads';
-if (is_dir($uploadsDir)) {
-    $iterator = new RecursiveIteratorIterator(
-        new RecursiveDirectoryIterator($uploadsDir, RecursiveDirectoryIterator::SKIP_DOTS),
-        RecursiveIteratorIterator::LEAVES_ONLY
-    );
-    foreach ($iterator as $file) {
-        if ($file->isFile()) {
-            $filePath = $file->getRealPath();
-            $relativePath = 'uploads/' . substr($filePath, strlen(realpath($uploadsDir)) + 1);
+$uploadsRealRoot = realpath($uploadsDir);
+$referencedPaths = [];
+$collectPaths = function ($value) use (&$collectPaths, &$referencedPaths) {
+    if (is_array($value)) {
+        foreach ($value as $v) { $collectPaths($v); }
+    } elseif (is_string($value) && strpos($value, 'assets/uploads/') !== false) {
+        if (preg_match_all('#assets/uploads/[^"\'\s,;<>|]+#u', $value, $m)) {
+            foreach ($m[0] as $p) { $referencedPaths[$p] = true; }
+        }
+    }
+};
+$collectPaths($backup);
+if ($uploadsRealRoot) {
+    foreach (array_keys($referencedPaths) as $relPath) {
+        $filePath = realpath(__DIR__ . '/../' . $relPath);
+        if ($filePath && is_file($filePath) && strpos($filePath, $uploadsRealRoot . '/') === 0) {
+            $relativePath = 'uploads/' . substr($filePath, strlen($uploadsRealRoot) + 1);
             $zip->addFile($filePath, $relativePath);
         }
     }

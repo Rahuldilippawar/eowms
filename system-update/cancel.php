@@ -4,6 +4,12 @@ requireLogin('../');
 requireRole(['super_admin'], '../');
 require_once __DIR__ . '/../includes/update-helpers.php';
 
+// फक्त POST — नुसत्या Link/Image (GET) ने Staged Update रद्द होऊ नये
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    header('Location: index.php');
+    exit;
+}
+
 $stagingDir = __DIR__ . '/../update-staging';
 updateClearDir($stagingDir);
 

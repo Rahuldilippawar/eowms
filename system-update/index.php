@@ -105,7 +105,7 @@ if (is_dir($backupHistoryDir)) {
         <button type="submit" class="btn" style="background:var(--rose);color:#fff;border-radius:9px;font-size:13.5px;padding:9px 22px;font-weight:600;">
           <i class="fa-solid fa-triangle-exclamation me-1"></i>Update Apply करा
         </button>
-        <a href="cancel.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13.5px;padding:9px 22px;">रद्द करा</a>
+        <button type="submit" formaction="cancel.php" formnovalidate class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13.5px;padding:9px 22px;">रद्द करा</button>
       </div>
     </form>
   </div>

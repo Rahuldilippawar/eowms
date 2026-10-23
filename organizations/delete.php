@@ -44,8 +44,21 @@ if (($totalSuperAdmins - $superAdminsInThisOrg) < 1) {
     exit;
 }
 
-// FK cascades (ON DELETE CASCADE) will remove all campuses, departments, users,
-// work_records, renewal_items, and tasks under this organization.
+// सुरक्षितता: संस्था डिलीट केल्यास FK Cascade मुळे तिचे सगळे कॅम्पस, विभाग,
+// कर्मचारी व त्यांचा सगळा डेटा कायमचा नष्ट होतो — म्हणून संस्थेत अजून
+// एकही कर्मचारी/कॅम्पस/विभाग असेल तर डिलीट नाकारतो.
+$cntStmt = $pdo->prepare("SELECT
+    (SELECT COUNT(*) FROM users WHERE organization_id = ?) AS users_count,
+    (SELECT COUNT(*) FROM campuses WHERE organization_id = ?) AS campuses_count,
+    (SELECT COUNT(*) FROM departments WHERE organization_id = ?) AS depts_count");
+$cntStmt->execute([$id, $id, $id]);
+$cnt = $cntStmt->fetch();
+if ((int)$cnt['users_count'] > 0 || (int)$cnt['campuses_count'] > 0 || (int)$cnt['depts_count'] > 0) {
+    $_SESSION['form_error'] = "'{$org['name']}' डिलीट करता येणार नाही — या संस्थेत अजून {$cnt['users_count']} कर्मचारी, {$cnt['campuses_count']} कॅम्पस आणि {$cnt['depts_count']} विभाग जोडलेले आहेत. डिलीट केल्यास हा सगळा डेटा कायमचा नष्ट होईल. आधी कर्मचारी दुसरीकडे हलवा / काढून टाका, कॅम्पस व विभाग काढा — किंवा संस्था फक्त निष्क्रिय (Inactive) करा.";
+    header('Location: index.php');
+    exit;
+}
+
 $pdo->prepare("DELETE FROM organizations WHERE id = ?")->execute([$id]);
 
 // If the acting Super Admin just deleted their own organization, log them out.
@@ -53,6 +66,11 @@ if ((int)$user['organization_id'] === $id) {
     session_destroy();
     header('Location: ../login.php');
     exit;
+}
+
+// ज्या संस्थेत Switch केलं होतं तीच डिलीट झाली — परत स्वतःच्या संस्थेवर या
+if ((int)($_SESSION['active_org_id'] ?? 0) === $id) {
+    $_SESSION['active_org_id'] = (int)$user['organization_id'];
 }
 
 logActivity('संस्था कायमची डिलीट केली', 'organization', $id, $org['name']);
