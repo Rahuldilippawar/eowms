@@ -8,12 +8,20 @@ $orgId = activeOrgId();
 $isMgmt = hasPermission('manage_dead_stock_master');
 $error = null;
 
-// Department scoping: staff/HOD can only add to their own department;
-// Super Admin/Management can add to any department they pick.
-$lockedDeptId = !hasRole('super_admin') ? (int)($user['department_id'] ?? 0) : null;
+// Department scoping: staff/HOD — स्वतःचा विभाग (+ Extra दिलेले विभाग);
+// Super Admin/Management — जे विभाग दिसतात त्यापैकी कुठलाही (null = सगळे).
+$visibleDeptIds = getVisibleDepartmentIds();
+$canPickAnyDept = $visibleDeptIds === null;
+$lockedDeptId = (!$canPickAnyDept && count($visibleDeptIds) === 1) ? (int)$visibleDeptIds[0] : null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $departmentId = hasRole('super_admin') ? (int)($_POST['department_id'] ?? 0) : $lockedDeptId;
+    $departmentId = $lockedDeptId ?: (int)($_POST['department_id'] ?? 0);
+    // विभाग — याच संस्थेचा व या व्यक्तीला दिसणारा असावा
+    $deptOkStmt = $pdo->prepare("SELECT id FROM departments WHERE id = ? AND organization_id = ? AND is_active = 1");
+    $deptOkStmt->execute([$departmentId, $orgId]);
+    if (!$deptOkStmt->fetch() || (!$canPickAnyDept && !in_array($departmentId, $visibleDeptIds, true))) {
+        $departmentId = 0;
+    }
     $itemMasterId = (int)($_POST['item_master_id'] ?? 0);
     $quantity = max(1, (int)($_POST['quantity'] ?? 1));
     $unit = trim($_POST['unit'] ?? '') ?: null;
@@ -30,6 +38,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (!$departmentId || !$masterItem) {
         $error = 'कृपया विभाग व यादीतून वस्तू निवडा.';
+    } elseif (!in_array($condition, ['चांगली', 'दुरुस्तीयोग्य', 'खराब', 'भंगार'], true)
+        || ($purchaseDate && !DateTime::createFromFormat('!Y-m-d', $purchaseDate))) {
+        $error = 'स्थिती किंवा खरेदी दिनांक अवैध आहे.';
     } else {
         $itemName = $masterItem['item_name'];
         $category = $masterItem['category'];
@@ -65,13 +76,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $departments = [];
 $campusesForCascade = [];
-if (hasRole('super_admin')) {
+if ($canPickAnyDept) {
     $stmt = $pdo->prepare("SELECT * FROM departments WHERE organization_id = ? AND is_active = 1 ORDER BY name_local");
     $stmt->execute([$orgId]);
     $departments = $stmt->fetchAll();
     $cStmt = $pdo->prepare("SELECT id, name FROM campuses WHERE organization_id = ? AND is_active = 1 ORDER BY name");
     $cStmt->execute([$orgId]);
     $campusesForCascade = $cStmt->fetchAll();
+} elseif (!$lockedDeptId && !empty($visibleDeptIds)) {
+    // स्वतःचा + Extra दिलेले विभाग — त्यातूनच निवड
+    $ph = implode(',', array_fill(0, count($visibleDeptIds), '?'));
+    $stmt = $pdo->prepare("SELECT * FROM departments WHERE organization_id = ? AND is_active = 1 AND id IN ($ph) ORDER BY name_local");
+    $stmt->execute(array_merge([$orgId], $visibleDeptIds));
+    $departments = $stmt->fetchAll();
 } elseif (!$lockedDeptId) {
     http_response_code(403);
     die('तुम्हाला कोणताही विभाग नेमलेला नाही — Dead Stock नोंदवण्यासाठी विभाग असणे आवश्यक आहे.');
@@ -97,7 +114,15 @@ require_once __DIR__ . '/../includes/header.php';
 <div class="panel">
   <form method="POST" style="padding:22px 24px;">
     <div class="row g-3">
-      <?php if (hasRole('super_admin')): ?>
+      <?php if (!$canPickAnyDept && !$lockedDeptId): ?>
+        <div class="col-md-6">
+          <label class="form-label-custom">विभाग</label>
+          <select name="department_id" class="form-select-custom" required>
+            <?php foreach ($departments as $d): ?><option value="<?= $d['id'] ?>"><?= h($d['name_local'] ?: $d['name']) ?></option><?php endforeach; ?>
+          </select>
+        </div>
+      <?php endif; ?>
+      <?php if ($canPickAnyDept): ?>
         <div class="col-md-3">
           <label class="form-label-custom">College/School</label>
           <select id="campusSelect" class="form-select-custom" onchange="loadDeptsCascade(this.value, 'deptSelect')">
