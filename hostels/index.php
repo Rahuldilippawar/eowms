@@ -30,9 +30,11 @@ $hostels = $stmt->fetchAll();
     <a href="bulk-import.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:12.5px;padding:8px 16px;font-weight:600;">
       <i class="fa-solid fa-file-csv me-1"></i>वसतिगृह CSV आयात
     </a>
+    <?php if (hasRole('super_admin')): ?>
     <a href="student-import.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:12.5px;padding:8px 16px;font-weight:600;">
       <i class="fa-solid fa-file-csv me-1"></i>विद्यार्थी CSV आयात
     </a>
+    <?php endif; ?>
     <a href="create.php" class="btn" style="background:var(--rail);color:#fff;border-radius:9px;font-size:12.5px;padding:8px 16px;font-weight:600;">
       <i class="fa-solid fa-plus me-1"></i><?= h(t('s198')) ?>
     </a>

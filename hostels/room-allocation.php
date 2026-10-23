@@ -26,11 +26,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $studentId = (int)($_POST['student_id'] ?? 0);
         $bedLabel = trim($_POST['bed_label'] ?? '');
 
-        $capStmt = $pdo->prepare("SELECT capacity, (SELECT COUNT(*) FROM hostel_room_allocations WHERE room_id = hostel_rooms.id AND status = 'active') AS occupied FROM hostel_rooms WHERE id = ?");
+        $capStmt = $pdo->prepare("SELECT hostel_id, capacity, (SELECT COUNT(*) FROM hostel_room_allocations WHERE room_id = hostel_rooms.id AND status = 'active') AS occupied FROM hostel_rooms WHERE id = ?");
         $capStmt->execute([$roomId]);
         $room = $capStmt->fetch();
+        // विद्यार्थी व Room एकाच Hostel चे, व विद्यार्थी Active असावा
+        $studHostelStmt = $pdo->prepare("SELECT hostel_id FROM hostel_students WHERE id = ? AND is_active = 1");
+        $studHostelStmt->execute([$studentId]);
+        $studHostelId = $studHostelStmt->fetchColumn();
 
-        if ($room && $room['occupied'] >= $room['capacity']) {
+        if (!$room || !$studHostelId || (int)$studHostelId !== (int)$room['hostel_id']) {
+            $_SESSION['form_error'] = 'विद्यार्थी व Room एकाच वसतिगृहाचे असले पाहिजेत.';
+        } elseif ($room['occupied'] >= $room['capacity']) {
             $_SESSION['form_error'] = 'ही Room आधीच पूर्ण भरलेली आहे.';
         } elseif ($roomId && $studentId) {
             $pdo->prepare("UPDATE hostel_room_allocations SET status = 'vacated', vacated_date = CURDATE() WHERE student_id = ? AND status = 'active'")->execute([$studentId]);

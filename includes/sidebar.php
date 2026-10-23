@@ -274,9 +274,17 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
     <?php
       $resDeptCheck = $pdo->prepare("SELECT code FROM departments WHERE id = ?");
       $resDeptCheck->execute([$user['department_id'] ?? 0]);
-      $userIsResDept = ($resDeptCheck->fetch()['code'] ?? null) === 'RES';
+      $userDeptCodeNav = $resDeptCheck->fetch()['code'] ?? null;
+      $userIsResDept = $userDeptCodeNav === 'RES';
       $showHostel = hasPermission('manage_hostels');
-      $showResidency = $userIsResDept || isManagementOrAbove() || hasRole('super_admin');
+      // वसतिगृह विभागाचे (HOS) कर्मचारी — hostels/index.php उघडत नाही, पण Dashboard/हजेरी वापरतात
+      $hosDeptHostels = [];
+      if (!$showHostel && $userDeptCodeNav === 'HOS') {
+          $hosStmt = $pdo->prepare("SELECT id, name FROM hostels WHERE organization_id = ? AND is_active = 1 ORDER BY name");
+          $hosStmt->execute([$activeOrgId]);
+          $hosDeptHostels = $hosStmt->fetchAll();
+      }
+      $showResidency = $userIsResDept || hasPermission('manage_residency_all_depts'); // residency/index.php ची परवानगी तीच
     ?>
     <div class="nav-group-header" data-bs-toggle="collapse" data-bs-target="#navGroupHostel" aria-expanded="<?= navGroupExpanded('hostel', $activeGroup) ?>">
       <span class="label"><i class="fa-solid fa-house-user fa-fw"></i> वसतिगृह व रहिवासी</span>
@@ -291,6 +299,11 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
           <i class="fa-solid fa-house-user fa-fw"></i><span><?= h(t('nav_hostel_management')) ?></span>
         </a>
       <?php endif; ?>
+      <?php foreach ($hosDeptHostels as $hosNav): ?>
+        <a href="<?= $rp ?>hostels/dashboard.php?id=<?= (int)$hosNav['id'] ?>" class="tree-node <?= $currentDir === 'hostels' && (int)($_GET['id'] ?? $_GET['hostel_id'] ?? 0) === (int)$hosNav['id'] ? 'active' : '' ?>">
+          <i class="fa-solid fa-house-user fa-fw"></i><span><?= h($hosNav['name']) ?></span>
+        </a>
+      <?php endforeach; ?>
       <?php if ($showResidency): ?>
         <a href="<?= $rp ?>residency/index.php" class="tree-node <?= $currentDir === 'residency' && $currentPage !== 'my-residency.php' ? 'active' : '' ?>">
           <i class="fa-solid fa-house-chimney-user fa-fw"></i><span>रहिवासी विभाग</span>

@@ -22,7 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($action === 'record_payment') {
         $feeId = (int)($_POST['fee_id'] ?? 0);
         $amountPaid = (float)($_POST['amount_paid'] ?? 0);
-        $paymentMode = $_POST['payment_mode'] ?? 'cash';
+        $paymentMode = in_array($_POST['payment_mode'] ?? '', ['cash', 'online', 'cheque', 'other'], true) ? $_POST['payment_mode'] : 'cash';
         $remarks = trim($_POST['remarks'] ?? '');
 
         if ($feeId && $amountPaid > 0) {
