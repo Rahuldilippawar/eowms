@@ -2309,7 +2309,9 @@ CREATE TABLE event_attendance (
   FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
-  FOREIGN KEY (marked_by) REFERENCES users(id) ON DELETE CASCADE
+  FOREIGN KEY (marked_by) REFERENCES users(id) ON DELETE CASCADE,
+  UNIQUE KEY uniq_event_staff (event_id, user_id),
+  UNIQUE KEY uniq_event_student (event_id, student_id)
 ) ENGINE=InnoDB;
 
 CREATE TABLE teacher_feedback (

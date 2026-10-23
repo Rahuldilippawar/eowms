@@ -12,3 +12,7 @@ UPDATE maintenance_locations SET is_residential = 1 WHERE (id IN (SELECT locatio
 -- संगीत: वाद्य कोणाकडे आहे — Staff असेल तर current_holder_id, इतर (विद्यार्थी इ.) नाव इथे; आधी हे remarks मध्ये लिहिलं जायचं
 ALTER TABLE music_instruments ADD COLUMN current_holder_name VARCHAR(255) NULL AFTER current_holder_id;
 UPDATE music_instruments SET current_holder_name = TRIM(REPLACE(REPLACE(remarks, 'सध्या: ', ''), ' कडे', '')), remarks = NULL WHERE remarks LIKE 'सध्या: % कडे' AND current_holder_name IS NULL;
+
+-- कार्यक्रम उपस्थिती — एकाच कर्मचाऱ्याची/विद्यार्थ्याची दुहेरी नोंद नको (Guest साठी user_id/student_id NULL — लागू होत नाही)
+ALTER TABLE event_attendance ADD UNIQUE KEY uniq_event_staff (event_id, user_id);
+ALTER TABLE event_attendance ADD UNIQUE KEY uniq_event_student (event_id, student_id);
