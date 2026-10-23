@@ -30,7 +30,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $studentId = (int)($_POST['student_id'] ?? 0);
         $subject = trim($_POST['subject'] ?? '');
         $teacherId = ($_POST['teacher_id'] ?? '') !== '' ? (int)$_POST['teacher_id'] : null;
-        if ($studentId && $subject) {
+        // विद्यार्थी व शिक्षक याच संस्थेचे असावेत
+        $stuChk = $pdo->prepare("SELECT COUNT(*) FROM music_students WHERE id = ? AND organization_id = ?");
+        $stuChk->execute([$studentId, $orgId]);
+        if ($teacherId) {
+            $tChk = $pdo->prepare("SELECT COUNT(*) FROM users WHERE id = ? AND organization_id = ?");
+            $tChk->execute([$teacherId, $orgId]);
+            if (!(int)$tChk->fetchColumn()) { $teacherId = null; }
+        }
+        if ($studentId && $subject && (int)$stuChk->fetchColumn() > 0) {
             $pdo->prepare("INSERT INTO music_enrollments (student_id, subject, teacher_id, start_date) VALUES (?, ?, ?, CURDATE())")
                 ->execute([$studentId, $subject, $teacherId]);
             $_SESSION['flash'] = 'नोंदणी झाली.';
@@ -38,7 +46,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($action === 'mark_attendance') {
         $enrollmentId = (int)($_POST['enrollment_id'] ?? 0);
         $attDate = ($_POST['attendance_date'] ?? '') ?: date('Y-m-d');
-        $status = $_POST['status'] ?? 'present';
+        $status = in_array($_POST['status'] ?? '', ['present', 'absent'], true) ? $_POST['status'] : 'present';
+        $enChk = $pdo->prepare("SELECT COUNT(*) FROM music_enrollments me JOIN music_students ms ON ms.id = me.student_id WHERE me.id = ? AND ms.organization_id = ?");
+        $enChk->execute([$enrollmentId, $orgId]);
+        if (!(int)$enChk->fetchColumn()) { header('Location: students.php'); exit; }
         $pdo->prepare("INSERT INTO music_attendance (enrollment_id, attendance_date, status, marked_by) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE status = VALUES(status)")
             ->execute([$enrollmentId, $attDate, $status, $user['id']]);
         $_SESSION['flash'] = 'हजेरी नोंदवली गेली.';

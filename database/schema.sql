@@ -1523,6 +1523,7 @@ CREATE TABLE music_instruments (
   condition_status ENUM('excellent','good','needs_tuning','under_repair','damaged') DEFAULT 'good',
   last_tuned_date DATE NULL,
   current_holder_id INT NULL,
+  current_holder_name VARCHAR(255) NULL,
   remarks TEXT NULL,
   is_active TINYINT(1) DEFAULT 1,
   created_by INT NULL,
