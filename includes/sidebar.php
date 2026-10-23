@@ -163,14 +163,14 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
       <i class="fa-regular fa-square-check fa-fw"></i><span><?= h(t('nav_my_work')) ?></span>
     </a>
     <?php if (hasPermission('assign_tasks') || hasPermission('view_task_tracker')): ?>
-      <a href="<?= $rp ?>tasks/index.php" class="tree-node <?= $currentDir === 'tasks' && in_array($currentPage, ['index.php','assign.php']) ? 'active' : '' ?>">
+      <a href="<?= $rp ?>tasks/index.php" class="tree-node <?= $currentDir === 'tasks' && in_array($currentPage, ['index.php','assign.php','report.php']) ? 'active' : '' ?>">
         <i class="fa-solid fa-list-check fa-fw"></i><span><?= h(t('nav_task_assignment')) ?></span>
       </a>
-    <?php else: ?>
-      <a href="<?= $rp ?>tasks/my-tasks.php" class="tree-node <?= $currentDir === 'tasks' && $currentPage === 'my-tasks.php' ? 'active' : '' ?>">
-        <i class="fa-solid fa-list-check fa-fw"></i><span><?= h(t('nav_my_tasks')) ?></span>
-      </a>
     <?php endif; ?>
+    <?php // टास्क कोणालाही (HOD/Management सुद्धा) मिळू शकतो — म्हणून "माझे टास्क" नेहमी दिसतो ?>
+    <a href="<?= $rp ?>tasks/my-tasks.php" class="tree-node <?= $currentDir === 'tasks' && $currentPage === 'my-tasks.php' ? 'active' : '' ?>">
+      <i class="fa-solid fa-user-check fa-fw"></i><span><?= h(t('nav_my_tasks')) ?></span>
+    </a>
     <a href="<?= $rp ?>renewals/index.php" class="tree-node <?= $currentDir === 'renewals' ? 'active' : '' ?>">
       <i class="fa-solid fa-shield-halved fa-fw"></i><span><?= h(t('nav_renewals')) ?></span>
     </a>

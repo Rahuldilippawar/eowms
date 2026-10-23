@@ -74,8 +74,8 @@ $stmt = $pdo->prepare("SELECT wr.*, (SELECT GROUP_CONCAT(u2.name SEPARATOR ', ')
 $stmt->execute([$deptId]);
 $recentWork = $stmt->fetchAll();
 
-$statusLabels = ['pending' => 'प्रलंबित', 'in_progress' => 'सुरू आहे', 'completed' => 'पूर्ण झाले'];
-$statusChip = ['pending' => 'pending', 'in_progress' => 'pending', 'completed' => 'done'];
+$statusLabels = ['pending' => 'प्रलंबित', 'in_progress' => 'सुरू आहे', 'completed' => 'पूर्ण झाले', 'cancelled' => 'रद्द केले'];
+$statusChip = ['pending' => 'pending', 'in_progress' => 'pending', 'completed' => 'done', 'cancelled' => 'overdue'];
 
 // This month's status + priority breakdown — for the pie/bar charts
 $statusCounts = [];

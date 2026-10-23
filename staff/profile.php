@@ -115,13 +115,13 @@ if (!empty($emp['date_of_birth'])) {
 $stmt = $pdo->prepare("SELECT * FROM tasks WHERE assigned_to = ? ORDER BY target_date DESC LIMIT 10");
 $stmt->execute([$empId]);
 $recentTasks = $stmt->fetchAll();
-$stmt = $pdo->prepare("SELECT COUNT(*) c FROM tasks WHERE assigned_to = ? AND status != 'completed'");
+$stmt = $pdo->prepare("SELECT COUNT(*) c FROM tasks WHERE assigned_to = ? AND status NOT IN ('completed', 'cancelled')");
 $stmt->execute([$empId]);
 $pendingTasks = $stmt->fetch()['c'];
 
 $roleLabels = ['super_admin' => 'Super Admin', 'president' => 'President', 'executive_president' => 'Executive President', 'general_manager' => 'General Manager', 'hod' => 'HOD', 'staff' => 'Staff'];
-$statusLabels = ['pending' => 'प्रलंबित', 'in_progress' => 'सुरू आहे', 'completed' => 'पूर्ण झाले'];
-$statusChip = ['pending' => 'pending', 'in_progress' => 'pending', 'completed' => 'done'];
+$statusLabels = ['pending' => 'प्रलंबित', 'in_progress' => 'सुरू आहे', 'completed' => 'पूर्ण झाले', 'cancelled' => 'रद्द केले'];
+$statusChip = ['pending' => 'pending', 'in_progress' => 'pending', 'completed' => 'done', 'cancelled' => 'overdue'];
 ?>
 
 <div class="page-eyebrow"><?= h($emp['dept_name'] ?? '') ?></div>
