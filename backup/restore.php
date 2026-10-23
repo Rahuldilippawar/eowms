@@ -1148,84 +1148,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                 }
             } catch (PDOException $e) { /* table not migrated yet */ }
 
-            // ---------------- Teaching Module (Timetable, Substitute, Syllabus, इ.) ----------------
+            // ---------------- Student → शिक्षक Feedback (Teaching Module काढलं; फक्त हा Data राहतो) ----------------
             try {
-                $timetableMap = [];
-                foreach ($data['teacher_timetable'] ?? [] as $tt) {
-                    $newTeacherId1 = $userMap[$tt['teacher_id']] ?? null;
-                    $newCampusIdTt = $campusMap[$tt['campus_id']] ?? null;
-                    if (!$newTeacherId1 || !$newCampusIdTt) continue;
-                    $ins = $pdo->prepare("
-                        INSERT INTO teacher_timetable (organization_id, campus_id, teacher_id, day_of_week, period_no, start_time, end_time, subject_name, class_section, academic_year, created_at)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    ");
-                    $ins->execute([$orgId, $newCampusIdTt, $newTeacherId1, $tt['day_of_week'], $tt['period_no'], $tt['start_time'], $tt['end_time'], $tt['subject_name'], $tt['class_section'], $tt['academic_year'], $tt['created_at']]);
-                    $timetableMap[$tt['id']] = $pdo->lastInsertId();
-                }
-
-                foreach ($data['substitute_assignments'] ?? [] as $sa) {
-                    $newOrigTeacher = $userMap[$sa['original_teacher_id']] ?? null;
-                    $newSubTeacher = $userMap[$sa['substitute_teacher_id']] ?? null;
-                    $newAssignedBy = $userMap[$sa['assigned_by']] ?? null;
-                    if (!$newOrigTeacher || !$newSubTeacher || !$newAssignedBy) continue;
-                    $newOrigTtId = !empty($sa['original_timetable_id']) ? ($timetableMap[$sa['original_timetable_id']] ?? null) : null;
-                    $pdo->prepare("
-                        INSERT INTO substitute_assignments (organization_id, original_timetable_id, original_teacher_id, substitute_teacher_id, substitute_date, period_no, subject_name, class_section, reason, assigned_by, created_at)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    ")->execute([$orgId, $newOrigTtId, $newOrigTeacher, $newSubTeacher, $sa['substitute_date'], $sa['period_no'], $sa['subject_name'], $sa['class_section'], $sa['reason'], $newAssignedBy, $sa['created_at']]);
-                }
-
-                foreach ($data['syllabus_trackers'] ?? [] as $st) {
-                    $newTeacherId2 = $userMap[$st['teacher_id']] ?? null;
-                    $newCampusIdSt = $campusMap[$st['campus_id']] ?? null;
-                    if (!$newTeacherId2 || !$newCampusIdSt) continue;
-                    try {
-                        $pdo->prepare("
-                            INSERT INTO syllabus_trackers (organization_id, campus_id, teacher_id, subject_name, class_section, academic_year, total_chapters, chapters_completed, last_updated_at)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                        ")->execute([$orgId, $newCampusIdSt, $newTeacherId2, $st['subject_name'], $st['class_section'], $st['academic_year'], $st['total_chapters'], $st['chapters_completed'], $st['last_updated_at']]);
-                    } catch (PDOException $e) { /* Duplicate Unique Key — वगळतो */ }
-                }
-
-                foreach ($data['teacher_qualifications'] ?? [] as $tq) {
-                    $newTeacherId3 = $userMap[$tq['teacher_id']] ?? null;
-                    if (!$newTeacherId3) continue;
-                    $pdo->prepare("
-                        INSERT INTO teacher_qualifications (teacher_id, qualification_type, specialization, institution, year_completed, net_set_status, research_papers_count, remarks, created_at)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    ")->execute([$newTeacherId3, $tq['qualification_type'], $tq['specialization'], $tq['institution'], $tq['year_completed'], $tq['net_set_status'], $tq['research_papers_count'], $tq['remarks'], $tq['created_at']]);
-                }
-
-                foreach ($data['class_teacher_assignments'] ?? [] as $cta) {
-                    $newTeacherId4 = $userMap[$cta['teacher_id']] ?? null;
-                    $newCampusIdCta = $campusMap[$cta['campus_id']] ?? null;
-                    if (!$newTeacherId4 || !$newCampusIdCta) continue;
-                    try {
-                        $pdo->prepare("
-                            INSERT INTO class_teacher_assignments (organization_id, campus_id, class_section, teacher_id, academic_year, created_at)
-                            VALUES (?, ?, ?, ?, ?, ?)
-                        ")->execute([$orgId, $newCampusIdCta, $cta['class_section'], $newTeacherId4, $cta['academic_year'], $cta['created_at']]);
-                    } catch (PDOException $e) { /* Duplicate Unique Key — वगळतो */ }
-                }
-
-                foreach ($data['exam_duty_allocations'] ?? [] as $eda) {
-                    $newTeacherId5 = $userMap[$eda['teacher_id']] ?? null;
-                    $newCampusIdEda = $campusMap[$eda['campus_id']] ?? null;
-                    $newCreatedByEda = $userMap[$eda['created_by']] ?? null;
-                    if (!$newTeacherId5 || !$newCampusIdEda || !$newCreatedByEda) continue;
-                    $pdo->prepare("
-                        INSERT INTO exam_duty_allocations (organization_id, campus_id, exam_name, duty_date, shift, teacher_id, room_hall, created_by, created_at)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    ")->execute([$orgId, $newCampusIdEda, $eda['exam_name'], $eda['duty_date'], $eda['shift'], $newTeacherId5, $eda['room_hall'], $newCreatedByEda, $eda['created_at']]);
-                }
-
                 foreach ($data['teacher_feedback'] ?? [] as $tf) {
                     $newTeacherId6 = $userMap[$tf['teacher_id']] ?? null;
                     if (!$newTeacherId6) continue;
+                    $newFbStudentId = !empty($tf['student_id']) ? ($studentMap[$tf['student_id']] ?? null) : null;
                     $pdo->prepare("
-                        INSERT INTO teacher_feedback (teacher_id, academic_year, rating, comment, submitted_by_type, submitted_at)
-                        VALUES (?, ?, ?, ?, ?, ?)
-                    ")->execute([$newTeacherId6, $tf['academic_year'], $tf['rating'], $tf['comment'], $tf['submitted_by_type'], $tf['submitted_at']]);
+                        INSERT INTO teacher_feedback (teacher_id, student_id, academic_year, rating, comment, submitted_by_type, submitted_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                    ")->execute([$newTeacherId6, $newFbStudentId, $tf['academic_year'], $tf['rating'], $tf['comment'], $tf['submitted_by_type'], $tf['submitted_at']]);
                 }
             } catch (PDOException $e) { /* table not migrated yet */ }
 

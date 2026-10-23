@@ -91,7 +91,6 @@ $dirToGroup = [
     'staff' => 'staff',
     'hostels' => 'hostel', 'residency' => 'hostel',
     'meditation' => 'activities', 'music' => 'activities', 'academics' => 'activities', 'sop' => 'activities',
-    'teaching' => 'activities',
     'events' => 'activities', 'guests' => 'activities',
     'checkout' => 'facilities', 'allocations' => 'facilities', 'room-booking' => 'facilities',
     'messages' => 'communication', 'grievances' => 'communication',
@@ -322,11 +321,6 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
       <?php if (hasCategory('hod') || isManagementOrAbove() || hasRole('super_admin') || hasPermission('manage_academics')): ?>
         <a href="<?= $rp ?>academics/students.php" class="tree-node <?= $currentDir === 'academics' ? 'active' : '' ?>">
           <i class="fa-solid fa-chalkboard-user fa-fw"></i><span>🎓 Virtual Classroom</span>
-        </a>
-      <?php endif; ?>
-      <?php if (($user['teaching_mode'] ?? '') === 'Teaching' || isManagementOrAbove() || hasRole('super_admin') || hasPermission('manage_teaching_academics')): ?>
-        <a href="<?= $rp ?>teaching/index.php" class="tree-node <?= $currentDir === 'teaching' ? 'active' : '' ?>">
-          <i class="fa-solid fa-person-chalkboard fa-fw"></i><span>👨‍🏫 Teaching Module</span>
         </a>
       <?php endif; ?>
       <?php if (!empty($user['department_id']) || isManagementOrAbove() || hasRole('super_admin')): ?>

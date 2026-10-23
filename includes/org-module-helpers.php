@@ -23,7 +23,7 @@ function getToggleableModules() {
         ],
         'activities' => [
             'label' => 'उपक्रम व अनुपालन', 'icon' => 'fa-solid fa-om',
-            'dirs' => ['meditation', 'music', 'academics', 'sop', 'teaching', 'events', 'guests'],
+            'dirs' => ['meditation', 'music', 'academics', 'sop', 'events', 'guests'],
         ],
         'facilities' => [
             'label' => 'सुविधा व्यवस्थापन', 'icon' => 'fa-solid fa-building',
