@@ -1,9 +1,16 @@
 <?php
 require_once __DIR__ . '/../includes/auth.php';
 requireLogin('../');
-requirePermission('manage_residency_all_depts', '../');
 $user = currentUser();
 $orgId = activeOrgId();
+// सर्व-विभाग परवानगी, किंवा रहिवासी विभागाचे (RES) HOD — विनंती-फॉर्म "HOD/Management" मंजुरी सांगतो
+$resDeptStmt = $pdo->prepare("SELECT code FROM departments WHERE id = ?");
+$resDeptStmt->execute([$user['department_id'] ?? 0]);
+$isResHod = hasCategory('hod') && ($resDeptStmt->fetch()['code'] ?? null) === 'RES';
+if (!hasPermission('manage_residency_all_depts') && !$isResHod) {
+    http_response_code(403);
+    die('तुम्हाला ही माहिती पाहण्याची परवानगी नाही.');
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $reqId = (int)($_POST['request_id'] ?? 0);
@@ -12,33 +19,62 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $reqStmt = $pdo->prepare("SELECT * FROM residency_allotment_requests WHERE id = ? AND organization_id = ?");
     $reqStmt->execute([$reqId, $orgId]);
     $req = $reqStmt->fetch();
+    // आधीच निर्णय झालेल्या (मंजूर/नामंजूर) विनंतीवर पुन्हा कृती नाही
+    if ($req && !in_array($req['status'], ['pending', 'waitlisted'], true)) {
+        $_SESSION['flash'] = 'या विनंतीवर आधीच निर्णय झाला आहे.';
+        header('Location: manage-requests.php');
+        exit;
+    }
 
     if ($req && $action === 'approve') {
         $locationId = (int)($_POST['location_id'] ?? 0);
+        try {
+            $pdo->beginTransaction();
+            // Room याच संस्थेची, Active व निवासी — आणि Lock करून शेवटच्या क्षणी क्षमता तपासतो
+            $capCheckStmt = $pdo->prepare("
+                SELECT id, capacity FROM maintenance_locations
+                WHERE id = ? AND organization_id = ? AND is_active = 1 AND is_residential = 1 FOR UPDATE
+            ");
+            $capCheckStmt->execute([$locationId, $orgId]);
+            $capInfo = $capCheckStmt->fetch();
+            $occCountStmt = $pdo->prepare("SELECT COUNT(*) FROM residency_occupants WHERE location_id = ? AND status = 'active'");
+            $occCountStmt->execute([$locationId]);
+            $occupied = (int)$occCountStmt->fetchColumn();
+            $needed = max(1, (int)$req['family_size']);
+            $alreadyHousedStmt = $pdo->prepare("SELECT COUNT(*) FROM residency_occupants WHERE user_id = ? AND status = 'active'");
+            $alreadyHousedStmt->execute([$req['requested_by']]);
+            $reqStatusStmt = $pdo->prepare("SELECT status FROM residency_allotment_requests WHERE id = ? FOR UPDATE");
+            $reqStatusStmt->execute([$reqId]);
+            $currentStatus = $reqStatusStmt->fetchColumn();
 
-        // शेवटच्या क्षणी पुन्हा एकदा क्षमता तपासतो (Page Load आणि Submit
-        // दरम्यान दुसऱ्या कोणी ती Room आधीच भरली असण्याची शक्यता टाळण्यासाठी)
-        $capCheckStmt = $pdo->prepare("
-            SELECT capacity, (SELECT COUNT(*) FROM residency_occupants WHERE location_id = maintenance_locations.id AND status = 'active') AS occupied
-            FROM maintenance_locations WHERE id = ?
-        ");
-        $capCheckStmt->execute([$locationId]);
-        $capInfo = $capCheckStmt->fetch();
-        $isFull = $capInfo && $capInfo['capacity'] !== null && $capInfo['occupied'] >= $capInfo['capacity'];
-
-        if ($isFull) {
-            $_SESSION['flash'] = 'ही Room आत्ताच पूर्ण भरली गेली आहे — कृपया दुसरी Room निवडा.';
-        } elseif ($locationId) {
-            $pdo->prepare("UPDATE residency_allotment_requests SET status = 'approved', allotted_location_id = ?, approved_by = ?, approved_at = NOW() WHERE id = ?")
-                ->execute([$locationId, $user['id'], $reqId]);
-            // प्रत्यक्ष Occupant Record तयार करतो
-            $requesterStmt = $pdo->prepare("SELECT name FROM users WHERE id = ?");
-            $requesterStmt->execute([$req['requested_by']]);
-            $requesterName = $requesterStmt->fetch()['name'] ?? '';
-            $pdo->prepare("INSERT INTO residency_occupants (organization_id, location_id, occupant_type, user_id, name, moved_in_date, status, created_by) VALUES (?, ?, 'staff', ?, ?, CURDATE(), 'active', ?)")
-                ->execute([$orgId, $locationId, $req['requested_by'], $requesterName, $user['id']]);
-            notifyUser($req['requested_by'], $orgId, 'निवास मंजूर झाला', 'तुमची निवास-विनंती मंजूर झाली आहे', 'residency/my-requests.php');
-            $_SESSION['flash'] = 'विनंती मंजूर करून, Room वाटप झालं.';
+            if (!$capInfo) {
+                $_SESSION['flash'] = 'अवैध Room — कृपया यादीतली निवासी Room निवडा.';
+                $pdo->rollBack();
+            } elseif (!in_array($currentStatus, ['pending', 'waitlisted'], true)) {
+                $_SESSION['flash'] = 'या विनंतीवर आधीच निर्णय झाला आहे.';
+                $pdo->rollBack();
+            } elseif ((int)$alreadyHousedStmt->fetchColumn() > 0) {
+                $_SESSION['flash'] = 'हा कर्मचारी आधीच एका खोलीत राहतो — आधी खोली-बदल (Transfer) वापरा.';
+                $pdo->rollBack();
+            } elseif ($capInfo['capacity'] !== null && $occupied + $needed > (int)$capInfo['capacity']) {
+                $_SESSION['flash'] = "या Room मध्ये पुरेशी जागा नाही (क्षमता {$capInfo['capacity']}, भरलेल्या $occupied, कुटुंब $needed) — कृपया दुसरी Room निवडा.";
+                $pdo->rollBack();
+            } else {
+                $pdo->prepare("UPDATE residency_allotment_requests SET status = 'approved', allotted_location_id = ?, approved_by = ?, approved_at = NOW() WHERE id = ?")
+                    ->execute([$locationId, $user['id'], $reqId]);
+                // प्रत्यक्ष Occupant Record तयार करतो
+                $requesterStmt = $pdo->prepare("SELECT name FROM users WHERE id = ?");
+                $requesterStmt->execute([$req['requested_by']]);
+                $requesterName = $requesterStmt->fetch()['name'] ?? '';
+                $pdo->prepare("INSERT INTO residency_occupants (organization_id, location_id, occupant_type, user_id, name, moved_in_date, status, created_by) VALUES (?, ?, 'staff', ?, ?, CURDATE(), 'active', ?)")
+                    ->execute([$orgId, $locationId, $req['requested_by'], $requesterName, $user['id']]);
+                $pdo->commit();
+                notifyUser($req['requested_by'], $orgId, 'निवास मंजूर झाला', 'तुमची निवास-विनंती मंजूर झाली आहे', 'residency/my-requests.php');
+                $_SESSION['flash'] = 'विनंती मंजूर करून, Room वाटप झालं.';
+            }
+        } catch (PDOException $e) {
+            if ($pdo->inTransaction()) { $pdo->rollBack(); }
+            $_SESSION['flash'] = 'त्रुटी आली — पुन्हा प्रयत्न करा.';
         }
     } elseif ($req && $action === 'reject') {
         $remarks = trim($_POST['remarks'] ?? '');
@@ -78,7 +114,7 @@ $vacantStmt = $pdo->prepare("
     SELECT ml.id, ml.name, ml.capacity, b.name AS building_name,
       (SELECT COUNT(*) FROM residency_occupants WHERE location_id = ml.id AND status = 'active') AS occupant_count
     FROM maintenance_locations ml LEFT JOIN buildings b ON b.id = ml.building_id
-    WHERE ml.organization_id = ? AND ml.is_active = 1
+    WHERE ml.organization_id = ? AND ml.is_active = 1 AND ml.is_residential = 1
       AND (ml.capacity IS NULL OR (SELECT COUNT(*) FROM residency_occupants WHERE location_id = ml.id AND status = 'active') < ml.capacity)
     ORDER BY b.name, ml.name
 ");

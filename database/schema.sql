@@ -932,6 +932,7 @@ CREATE TABLE maintenance_locations (
   name VARCHAR(255) NOT NULL,
   location_code VARCHAR(50) NOT NULL,
   capacity INT NULL,
+  is_residential TINYINT(1) NOT NULL DEFAULT 0,
   is_active TINYINT(1) DEFAULT 1,
   created_by INT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

@@ -25,7 +25,7 @@ $pageTitle = 'खोली-तपासणी अहवाल';
 $rootPath = '../';
 require_once __DIR__ . '/../includes/header.php';
 
-$locStmt = $pdo->prepare("SELECT ml.*, b.name AS building_name FROM maintenance_locations ml LEFT JOIN buildings b ON b.id = ml.building_id WHERE ml.organization_id = ? AND ml.is_active = 1 ORDER BY b.name, ml.name");
+$locStmt = $pdo->prepare("SELECT ml.*, b.name AS building_name FROM maintenance_locations ml LEFT JOIN buildings b ON b.id = ml.building_id WHERE ml.organization_id = ? AND ml.is_active = 1 AND ml.is_residential = 1 ORDER BY b.name, ml.name");
 $locStmt->execute([$orgId]);
 $locations = $locStmt->fetchAll();
 

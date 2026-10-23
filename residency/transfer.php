@@ -14,17 +14,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $occStmt->execute([$occupantId, $orgId]);
     $occupant = $occStmt->fetch();
 
-    $toLocStmt = $pdo->prepare("SELECT id FROM maintenance_locations WHERE id = ? AND organization_id = ?");
+    $toLocStmt = $pdo->prepare("SELECT id, capacity FROM maintenance_locations WHERE id = ? AND organization_id = ? AND is_active = 1 AND is_residential = 1");
     $toLocStmt->execute([$toLocationId, $orgId]);
+    $toLoc = $toLocStmt->fetch();
 
-    if ($occupant && $toLocationId && $toLocationId != $occupant['location_id'] && $toLocStmt->fetch()) {
-        $pdo->prepare("INSERT INTO residency_room_transfers (occupant_id, from_location_id, to_location_id, transfer_date, reason, transferred_by) VALUES (?, ?, ?, CURDATE(), ?, ?)")
-            ->execute([$occupantId, $occupant['location_id'], $toLocationId, $reason, $user['id']]);
-        $pdo->prepare("UPDATE residency_occupants SET location_id = ? WHERE id = ?")->execute([$toLocationId, $occupantId]);
-        logActivity('निवास-खोली बदलली', 'residency_occupant', $occupantId);
-        $_SESSION['flash'] = 'खोली यशस्वीरित्या बदलली गेली.';
+    if ($occupant && $toLoc && $toLocationId != $occupant['location_id']) {
+        // Staff एकटाच त्या खोलीत असेल तर — त्याचे कुटुंबीयही (त्याच खोलीतले Family) सोबत हलवतो
+        $movingIds = [$occupantId];
+        if ($occupant['occupant_type'] === 'staff') {
+            $staffCntStmt = $pdo->prepare("SELECT COUNT(*) FROM residency_occupants WHERE location_id = ? AND status = 'active' AND occupant_type = 'staff'");
+            $staffCntStmt->execute([$occupant['location_id']]);
+            if ((int)$staffCntStmt->fetchColumn() === 1) {
+                $famStmt = $pdo->prepare("SELECT id FROM residency_occupants WHERE location_id = ? AND status = 'active' AND occupant_type = 'family'");
+                $famStmt->execute([$occupant['location_id']]);
+                $movingIds = array_merge($movingIds, array_map('intval', $famStmt->fetchAll(PDO::FETCH_COLUMN)));
+            }
+        }
+        $occCntStmt = $pdo->prepare("SELECT COUNT(*) FROM residency_occupants WHERE location_id = ? AND status = 'active'");
+        $occCntStmt->execute([$toLocationId]);
+        $targetOccupied = (int)$occCntStmt->fetchColumn();
+
+        if ($toLoc['capacity'] !== null && $targetOccupied + count($movingIds) > (int)$toLoc['capacity']) {
+            $_SESSION['form_error'] = "नवीन खोलीत पुरेशी जागा नाही (क्षमता {$toLoc['capacity']}, भरलेल्या $targetOccupied, हलवायचे " . count($movingIds) . ").";
+        } else {
+            $pdo->beginTransaction();
+            $insT = $pdo->prepare("INSERT INTO residency_room_transfers (occupant_id, from_location_id, to_location_id, transfer_date, reason, transferred_by) VALUES (?, ?, ?, CURDATE(), ?, ?)");
+            $updO = $pdo->prepare("UPDATE residency_occupants SET location_id = ? WHERE id = ?");
+            foreach ($movingIds as $mid) {
+                $insT->execute([$mid, $occupant['location_id'], $toLocationId, $reason, $user['id']]);
+                $updO->execute([$toLocationId, $mid]);
+            }
+            $pdo->commit();
+            logActivity('निवास-खोली बदलली', 'residency_occupant', $occupantId);
+            $_SESSION['flash'] = 'खोली यशस्वीरित्या बदलली गेली' . (count($movingIds) > 1 ? ' — ' . (count($movingIds) - 1) . ' कुटुंबीयही सोबत हलवले.' : '.');
+        }
     } else {
-        $_SESSION['form_error'] = 'कृपया वेगळी Room निवडा.';
+        $_SESSION['form_error'] = 'कृपया वेगळी (निवासी) Room निवडा.';
     }
     header('Location: transfer.php');
     exit;
@@ -42,7 +67,7 @@ $occStmt = $pdo->prepare("
 $occStmt->execute([$orgId]);
 $occupants = $occStmt->fetchAll();
 
-$locStmt = $pdo->prepare("SELECT ml.*, b.name AS building_name FROM maintenance_locations ml LEFT JOIN buildings b ON b.id = ml.building_id WHERE ml.organization_id = ? AND ml.is_active = 1 ORDER BY b.name, ml.name");
+$locStmt = $pdo->prepare("SELECT ml.*, b.name AS building_name FROM maintenance_locations ml LEFT JOIN buildings b ON b.id = ml.building_id WHERE ml.organization_id = ? AND ml.is_active = 1 AND ml.is_residential = 1 ORDER BY b.name, ml.name");
 $locStmt->execute([$orgId]);
 $locations = $locStmt->fetchAll();
 
