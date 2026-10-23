@@ -2,6 +2,7 @@
 $pageTitle = 'नूतनीकरण Calendar';
 $rootPath = '../';
 require_once __DIR__ . '/../includes/header.php';
+require_once __DIR__ . '/../includes/renewal-helpers.php';
 
 $orgId = activeOrgId();
 $month = (int)($_GET['month'] ?? date('n'));
@@ -14,7 +15,7 @@ $monthEnd = date('Y-m-t', strtotime($monthStart));
 $filterDeptId = isDeptScoped() ? $user['department_id'] : ($_GET['department_id'] ?? '');
 
 $sql = "SELECT r.*, d.name_local AS dept_name FROM renewal_items r JOIN departments d ON d.id = r.department_id
-        WHERE r.organization_id = ? AND r.expiry_date BETWEEN ? AND ?";
+        WHERE r.organization_id = ? AND r.status <> 'inactive' AND r.expiry_date BETWEEN ? AND ?";
 $params = [$orgId, $monthStart, $monthEnd];
 if ($filterDeptId) { $sql .= " AND r.department_id = ?"; $params[] = $filterDeptId; }
 $stmt = $pdo->prepare($sql);
@@ -114,9 +115,11 @@ $today = date('Y-m-d');
               <td style="border:1px solid var(--line);height:90px;vertical-align:top;padding:4px;<?= $isToday ? 'background:var(--rail-soft);' : '' ?>">
                 <div style="font-size:11px;font-weight:<?= $isToday ? '700' : '500' ?>;color:<?= $isToday ? 'var(--rail)' : 'var(--text-dim)' ?>;margin-bottom:3px;"><?= $dayCounter ?></div>
                 <?php foreach (array_slice($dayItems, 0, 2) as $item):
-                  $isExpired = strtotime($item['expiry_date']) < strtotime($today);
+                  // स्थिती expiry_date वरून: संपलेली = लाल, 30 दिवसांत = पिवळी, नंतरची = हिरवी
+                  $calStatus = renewalStatusInfo(renewalDaysLeft($item['expiry_date'], $today))['key'];
+                  $calColor = $calStatus === 'expired' ? 'var(--rose)' : ($calStatus === 'due_soon' ? 'var(--amber)' : 'var(--rail)');
                 ?>
-                  <a href="index.php" title="<?= h($item['item_name']) ?>" style="display:block;font-size:9.5px;background:<?= $isExpired ? 'var(--rose)' : 'var(--amber)' ?>;color:#fff;border-radius:4px;padding:2px 4px;margin-bottom:2px;text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><?= h($item['item_name']) ?></a>
+                  <a href="index.php?item=<?= $item['id'] ?>" title="<?= h($item['item_name']) ?>" style="display:block;font-size:9.5px;background:<?= $calColor ?>;color:#fff;border-radius:4px;padding:2px 4px;margin-bottom:2px;text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><?= h($item['item_name']) ?></a>
                 <?php endforeach; ?>
                 <?php if (count($dayItems) > 2): ?><div style="font-size:9px;color:var(--text-dim);">+<?= count($dayItems) - 2 ?> अजून</div><?php endif; ?>
               </td>

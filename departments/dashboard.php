@@ -49,7 +49,7 @@ $stmt->execute([$deptId]);
 $todayPending = $stmt->fetch()['c'];
 
 // Department renewals (due soon / expired)
-$stmt = $pdo->prepare("SELECT *, DATEDIFF(expiry_date, CURDATE()) AS days_left FROM renewal_items WHERE department_id = ? AND expiry_date <= DATE_ADD(CURDATE(), INTERVAL 30 DAY) ORDER BY expiry_date LIMIT 6");
+$stmt = $pdo->prepare("SELECT *, DATEDIFF(expiry_date, CURDATE()) AS days_left FROM renewal_items WHERE department_id = ? AND status <> 'inactive' AND expiry_date <= DATE_ADD(CURDATE(), INTERVAL 30 DAY) ORDER BY expiry_date LIMIT 6");
 $stmt->execute([$deptId]);
 $renewals = $stmt->fetchAll();
 

@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../includes/auth.php';
 requireLogin('../');
+require_once __DIR__ . '/../includes/renewal-helpers.php';
 $user = currentUser();
 $orgId = activeOrgId();
 
@@ -9,27 +10,18 @@ $filterDeptId = isDeptScoped() ? $user['department_id'] : ($_GET['department_id'
 $sql = "
     SELECT r.*, d.name_local AS dept_name, c.name AS campus_name
     FROM renewal_items r JOIN departments d ON d.id = r.department_id LEFT JOIN campuses c ON c.id = d.campus_id
-    WHERE r.organization_id = ?
+    WHERE r.organization_id = ? AND " . renewalActiveSql('r') . "
 ";
 $params = [$orgId];
 if ($filterDeptId) { $sql .= " AND r.department_id = ?"; $params[] = $filterDeptId; }
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $items = $stmt->fetchAll();
+// स्थिती expiry_date वरूनच
+foreach ($items as &$it) { $it['_status'] = renewalStatusInfo(renewalDaysLeft($it['expiry_date'])); }
+unset($it);
 
-function renewalTypeIcon($type) {
-    $type = mb_strtolower($type);
-    if (str_contains($type, 'insurance') || str_contains($type, 'विमा')) return '🛡️';
-    if (str_contains($type, 'puc')) return '🌫️';
-    if (str_contains($type, 'license') || str_contains($type, 'परवाना')) return '📜';
-    if (str_contains($type, 'permit')) return '📋';
-    if (str_contains($type, 'fitness')) return '✅';
-    if (str_contains($type, 'tax') || str_contains($type, 'कर')) return '💰';
-    if (str_contains($type, 'amc') || str_contains($type, 'contract') || str_contains($type, 'करार')) return '🔧';
-    if (str_contains($type, 'warranty')) return '🛠️';
-    if (str_contains($type, 'domain') || str_contains($type, 'hosting') || str_contains($type, 'software')) return '💻';
-    return '📄';
-}
+function renewalTypeIcon($type) { return renewalTypeIconFor($type); }
 
 // प्रकार-निहाय Summary (किती नोंदी, एकूण खर्च, किती Expired/Due Soon)
 $byType = [];
@@ -38,9 +30,8 @@ foreach ($items as $it) {
     if (!isset($byType[$t])) { $byType[$t] = ['count' => 0, 'cost' => 0, 'expired' => 0, 'due_soon' => 0]; }
     $byType[$t]['count']++;
     $byType[$t]['cost'] += (float)($it['renewal_cost'] ?? 0);
-    $daysLeft = (strtotime($it['expiry_date']) - time()) / 86400;
-    if ($daysLeft < 0) { $byType[$t]['expired']++; }
-    elseif ($daysLeft <= 30) { $byType[$t]['due_soon']++; }
+    if ($it['_status']['key'] === 'expired') { $byType[$t]['expired']++; }
+    elseif ($it['_status']['key'] === 'due_soon') { $byType[$t]['due_soon']++; }
 }
 uasort($byType, fn($a, $b) => $b['count'] <=> $a['count']);
 
@@ -54,8 +45,8 @@ foreach ($items as $it) {
 }
 
 $totalCost = array_sum(array_column($items, 'renewal_cost'));
-$totalExpired = count(array_filter($items, fn($i) => strtotime($i['expiry_date']) < time()));
-$totalDueSoon = count(array_filter($items, fn($i) => (strtotime($i['expiry_date']) - time()) / 86400 <= 30 && strtotime($i['expiry_date']) >= time()));
+$totalExpired = count(array_filter($items, fn($i) => $i['_status']['key'] === 'expired'));
+$totalDueSoon = count(array_filter($items, fn($i) => $i['_status']['key'] === 'due_soon'));
 
 $org = $pdo->query("SELECT * FROM organizations WHERE id = " . (int)$orgId)->fetch();
 $deptName = null;
@@ -168,7 +159,7 @@ if ($filterDeptId) {
 
   <h3>📋 संपूर्ण तपशीलवार यादी</h3>
   <table>
-    <thead><tr><th>वस्तू</th><th>प्रकार</th><?php if (!$filterDeptId): ?><th>विभाग</th><th>College/School</th><?php endif; ?><th>मुदत दिनांक</th><th>खर्च (₹)</th></tr></thead>
+    <thead><tr><th>वस्तू</th><th>प्रकार</th><?php if (!$filterDeptId): ?><th>विभाग</th><th>College/School</th><?php endif; ?><th>मुदत दिनांक</th><th>स्थिती</th><th>खर्च (₹)</th></tr></thead>
     <tbody>
       <?php foreach ($items as $it): ?>
         <tr>
@@ -176,6 +167,7 @@ if ($filterDeptId) {
           <td><?= renewalTypeIcon($it['item_type']) ?> <?= h($it['item_type']) ?></td>
           <?php if (!$filterDeptId): ?><td><?= h($it['dept_name']) ?></td><td style="font-size:11px;color:#666B7D;"><?= h($it['campus_name'] ?: '🏛️') ?></td><?php endif; ?>
           <td><?= date('d M Y', strtotime($it['expiry_date'])) ?></td>
+          <td style="color:var(--<?= $it['_status']['color'] ?>);font-weight:600;"><?= h($it['_status']['label']) ?></td>
           <td><?= $it['renewal_cost'] ? number_format($it['renewal_cost'], 0) : '—' ?></td>
         </tr>
       <?php endforeach; ?>

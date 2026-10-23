@@ -26,7 +26,7 @@ if ($q !== '') {
     $results['departments'] = $stmt->fetchAll();
 
     // Renewals
-    $stmt = $pdo->prepare("SELECT r.*, d.name_local AS dept_name FROM renewal_items r JOIN departments d ON d.id = r.department_id WHERE r.organization_id = ? AND r.item_name LIKE ? LIMIT 10");
+    $stmt = $pdo->prepare("SELECT r.*, d.name_local AS dept_name FROM renewal_items r JOIN departments d ON d.id = r.department_id WHERE r.organization_id = ? AND r.status <> 'inactive' AND r.item_name LIKE ? LIMIT 10");
     $stmt->execute([$orgId, $like]);
     $results['renewals'] = $stmt->fetchAll();
 

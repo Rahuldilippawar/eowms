@@ -29,9 +29,27 @@ if (!$departmentId || !$itemType || !$itemName || !$expiryDate) {
     exit;
 }
 
-$deptStmt = $pdo->prepare("SELECT * FROM departments WHERE id = ?");
-$deptStmt->execute([$departmentId]);
+if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $expiryDate)) {
+    $_SESSION['form_error'] = 'मुदत-दिनांक चुकीचा आहे.';
+    header('Location: create.php');
+    exit;
+}
+
+// विभाग याच संस्थेचा असायला हवा — अवैध ID असेल तर स्पष्ट त्रुटी (Crash नाही)
+$deptStmt = $pdo->prepare("SELECT * FROM departments WHERE id = ? AND organization_id = ?");
+$deptStmt->execute([$departmentId, activeOrgId()]);
 $department = $deptStmt->fetch();
+if (!$department) {
+    $_SESSION['form_error'] = 'निवडलेला विभाग अवैध आहे.';
+    header('Location: create.php');
+    exit;
+}
+
+if ($responsibleUserId) {
+    $ruStmt = $pdo->prepare("SELECT id FROM users WHERE id = ? AND organization_id = ?");
+    $ruStmt->execute([$responsibleUserId, activeOrgId()]);
+    if (!$ruStmt->fetch()) { $responsibleUserId = null; }
+}
 
 if (isDeptScoped() && (int)$user['department_id'] !== $departmentId) {
     http_response_code(403);
@@ -47,6 +65,7 @@ $insert->execute([
     $department['organization_id'], $department['campus_id'], $departmentId, $responsibleUserId,
     $itemType, $regulatoryBody, $itemName, $referenceNo, $issuedDate, $expiryDate, $renewalCost, $isRecurringMonthly, $monthlyAmount, $recurringStartMonth, $vendorName, $vendorContact,
 ]);
+logActivity('नूतनीकरण नोंद जोडली', 'renewal_item', $pdo->lastInsertId(), $itemName);
 
 $_SESSION['flash'] = t('s458');
 header('Location: index.php');
