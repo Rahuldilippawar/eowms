@@ -14,15 +14,26 @@ if (!$classroom) { die('Classroom सापडलं नाही.'); }
 
 $isHodOfDept = hasCategory('hod') && (int)($user['department_id'] ?? 0) === (int)$classroom['department_id'];
 $canManage = $isMgmt || $isHodOfDept;
-if (!$canManage) { http_response_code(403); die('परवानगी नाही — फक्त HOD/Management Time Table बदलू शकतात.'); }
+// नेमलेले शिक्षक — Time Table फक्त पाहू शकतात (बदल HOD/Management)
+$isAssignedTeacherStmt = $pdo->prepare("SELECT COUNT(*) FROM classroom_staff WHERE classroom_id = ? AND user_id = ?");
+$isAssignedTeacherStmt->execute([$classroomId, $user['id']]);
+$isAssignedTeacher = (int)$isAssignedTeacherStmt->fetchColumn() > 0;
+if (!$canManage && !$isAssignedTeacher) { http_response_code(403); die('परवानगी नाही.'); }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!$canManage) { http_response_code(403); die('परवानगी नाही — फक्त HOD/Management Time Table बदलू शकतात.'); }
     $day = (int)($_POST['day_of_week'] ?? 0);
     $period = (int)($_POST['period_no'] ?? 0);
     $startTime = ($_POST['start_time'] ?? '') ?: null;
     $endTime = ($_POST['end_time'] ?? '') ?: null;
     $subjectName = trim($_POST['subject_name'] ?? '');
     $teacherId = ($_POST['teacher_id'] ?? '') !== '' ? (int)$_POST['teacher_id'] : null;
+    if ($day < 1 || $day > 7 || $period < 1 || $period > 12) { header('Location: classroom-timetable.php?id=' . $classroomId); exit; }
+    if ($teacherId) {
+        $tChk = $pdo->prepare("SELECT COUNT(*) FROM classroom_staff WHERE classroom_id = ? AND user_id = ?");
+        $tChk->execute([$classroomId, $teacherId]);
+        if (!(int)$tChk->fetchColumn()) { $teacherId = null; }
+    }
 
     if ($subjectName) {
         $pdo->prepare("
@@ -62,7 +73,7 @@ $periods = range(1, 7);
   <div class="page-title mb-0">🗓️ Time Table</div>
   <a href="classroom-view.php?id=<?= $classroomId ?>" style="font-size:12.5px;color:var(--rail);font-weight:600;text-decoration:none;align-self:center;"><i class="fa-solid fa-arrow-left me-1"></i>Classroom</a>
 </div>
-<p style="font-size:12px;color:var(--text-dim);margin-bottom:16px;">प्रत्येक Slot वर क्लिक करून विषय/शिक्षक भरा — रिकामं ठेवलं तर Slot मोकळा राहील.</p>
+<?php if ($canManage): ?><p style="font-size:12px;color:var(--text-dim);margin-bottom:16px;">प्रत्येक Slot वर क्लिक करून विषय/शिक्षक भरा — रिकामं ठेवलं तर Slot मोकळा राहील.</p><?php endif; ?>
 
 <?php if (!empty($_SESSION['flash'])): ?>
   <div class="alert alert-success" style="border-radius:10px;font-size:13px;"><?= h($_SESSION['flash']) ?></div>
@@ -84,19 +95,19 @@ $periods = range(1, 7);
           <?php foreach ($workDays as $d):
             $slot = $slots[$d][$p] ?? null;
           ?>
-            <td style="padding:0;border:1px solid var(--line);cursor:pointer;" data-bs-toggle="modal" data-bs-target="#slotModal<?= $d ?>_<?= $p ?>">
+            <td style="padding:0;border:1px solid var(--line);<?= $canManage ? 'cursor:pointer;' : '' ?>" <?php if ($canManage): ?>data-bs-toggle="modal" data-bs-target="#slotModal<?= $d ?>_<?= $p ?>"<?php endif; ?>>
               <div style="padding:8px;<?= $slot ? 'background:var(--rail-soft);' : '' ?>">
                 <?php if ($slot): ?>
                   <div style="font-weight:600;"><?= h($slot['subject_name']) ?></div>
                   <div style="font-size:10px;color:var(--text-dim);"><?= h($slot['teacher_name'] ?: '') ?></div>
                 <?php else: ?>
-                  <span style="color:var(--text-dim);">+ रिकामा</span>
+                  <span style="color:var(--text-dim);"><?= $canManage ? '+ रिकामा' : '—' ?></span>
                 <?php endif; ?>
               </div>
             </td>
           <?php endforeach; ?>
         </tr>
-        <?php foreach ($workDays as $d):
+        <?php if ($canManage) foreach ($workDays as $d):
           $slot = $slots[$d][$p] ?? null;
         ?>
             <div class="modal fade" id="slotModal<?= $d ?>_<?= $p ?>" tabindex="-1">

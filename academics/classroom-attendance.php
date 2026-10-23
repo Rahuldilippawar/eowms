@@ -21,15 +21,30 @@ if (!$canMark) { http_response_code(403); die('परवानगी नाह�
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $date = $_POST['attendance_date'] ?? date('Y-m-d');
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || !strtotime($date)) { $date = date('Y-m-d'); }
     $subjectName = trim($_POST['subject_name'] ?? '') ?: null;
-    $statuses = $_POST['status'] ?? [];
+    $statuses = is_array($_POST['status'] ?? null) ? $_POST['status'] : [];
+    // फक्त याच Classroom मधले विद्यार्थी
+    $rosterIdStmt = $pdo->prepare("SELECT student_id FROM classroom_students WHERE classroom_id = ?");
+    $rosterIdStmt->execute([$classroomId]);
+    $validIds = array_map('intval', $rosterIdStmt->fetchAll(PDO::FETCH_COLUMN));
+    // विषय रिकामा असेल तर NULL — Unique Key NULL ला पकडत नाही, म्हणून आधी असलेली नोंद (<=>) शोधून Update करतो
+    $findStmt = $pdo->prepare("SELECT id FROM classroom_attendance WHERE classroom_id = ? AND student_id = ? AND attendance_date = ? AND subject_name <=> ? LIMIT 1");
+    $updStmt = $pdo->prepare("UPDATE classroom_attendance SET status = ?, marked_by = ? WHERE id = ?");
+    $insStmt = $pdo->prepare("INSERT INTO classroom_attendance (classroom_id, student_id, attendance_date, subject_name, status, marked_by) VALUES (?, ?, ?, ?, ?, ?)");
     $count = 0;
     foreach ($statuses as $studentId => $status) {
-        $pdo->prepare("
-            INSERT INTO classroom_attendance (classroom_id, student_id, attendance_date, subject_name, status, marked_by)
-            VALUES (?, ?, ?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE status = VALUES(status), marked_by = VALUES(marked_by)
-        ")->execute([$classroomId, (int)$studentId, $date, $subjectName, $status, $user['id']]);
+        $studentId = (int)$studentId;
+        if (!in_array($studentId, $validIds, true) || !in_array($status, ['present', 'absent'], true)) { continue; }
+        $findStmt->execute([$classroomId, $studentId, $date, $subjectName]);
+        $existingId = $findStmt->fetchColumn();
+        if ($existingId) {
+            $updStmt->execute([$status, $user['id'], $existingId]);
+        } else {
+            try {
+                $insStmt->execute([$classroomId, $studentId, $date, $subjectName, $status, $user['id']]);
+            } catch (PDOException $e) { continue; } // दुसऱ्या Classroom मध्ये याच विषयाची नोंद — वगळतो
+        }
         $count++;
     }
     $_SESSION['flash'] = "$count विद्यार्थ्यांची हजेरी जतन झाली.";

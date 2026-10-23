@@ -3,23 +3,60 @@ require_once __DIR__ . '/../includes/student-auth.php';
 
 if (!empty($_SESSION['student'])) { header('Location: dashboard.php'); exit; }
 
-$error = null;
+$error = !empty($_GET['inactive']) ? 'तुमचं खातं बंद (Inactive) केलं आहे — कृपया College शी संपर्क करा.' : null;
+
+// संस्था ओळखायची — login.php?org=<slug> (एकाच Admission No चे विद्यार्थी दोन संस्थांत असू शकतात)
+$orgSlug = trim($_POST['org'] ?? $_GET['org'] ?? '');
+$loginOrg = null;
+if ($orgSlug !== '') {
+    $orgStmt = $pdo->prepare("SELECT id, name, slug FROM organizations WHERE slug = ? AND is_active = 1");
+    $orgStmt->execute([$orgSlug]);
+    $loginOrg = $orgStmt->fetch() ?: null;
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $admissionNo = trim($_POST['admission_no'] ?? '');
     $password = $_POST['password'] ?? '';
+    $pickedOrgId = (int)($_POST['organization_id'] ?? 0);
 
-    $stmt = $pdo->prepare("SELECT * FROM students WHERE admission_no = ? AND is_active = 1");
-    $stmt->execute([$admissionNo]);
-    $student = $stmt->fetch();
+    $sql = "SELECT s.*, o.name AS org_name FROM students s JOIN organizations o ON o.id = s.organization_id WHERE s.admission_no = ? AND s.is_active = 1";
+    $params = [$admissionNo];
+    if ($loginOrg) { $sql .= " AND s.organization_id = ?"; $params[] = $loginOrg['id']; }
+    elseif ($pickedOrgId) { $sql .= " AND s.organization_id = ?"; $params[] = $pickedOrgId; }
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    $matches = $stmt->fetchAll();
+    $student = count($matches) === 1 ? $matches[0] : null;
 
-    if ($student && $student['locked_until'] && strtotime($student['locked_until']) > time()) {
+    if (count($matches) > 1) {
+        // एकापेक्षा जास्त संस्थांमध्ये हाच Admission No — Password ज्याच्याशी जुळतो तोच विद्यार्थी
+        $pwMatches = array_values(array_filter($matches, fn($m) => password_verify($password, $m['password_hash'])
+            && !($m['locked_until'] && strtotime($m['locked_until']) > time())));
+        if (count($pwMatches) === 1) {
+            $student = $pwMatches[0];
+        } elseif (count($pwMatches) > 1) {
+            $ambiguousOrgs = array_map(fn($m) => ['id' => $m['organization_id'], 'name' => $m['org_name']], $pwMatches);
+            $error = 'हा Admission No एकापेक्षा जास्त संस्थांमध्ये आहे — कृपया तुमची संस्था निवडा.';
+        } else {
+            foreach ($matches as $m) {
+                if ($m['locked_until'] && strtotime($m['locked_until']) > time()) { continue; }
+                $att = (int)$m['failed_login_attempts'] + 1;
+                $pdo->prepare("UPDATE students SET failed_login_attempts = ?, locked_until = " . ($att >= 5 ? "DATE_ADD(NOW(), INTERVAL 15 MINUTE)" : "NULL") . " WHERE id = ?")->execute([$att, $m['id']]);
+            }
+            $error = 'Roll No किंवा Password चुकीचा आहे.';
+        }
+    }
+
+    if ($error) {
+        // वर ठरलं — काही करायचं नाही
+    } elseif ($student && $student['locked_until'] && strtotime($student['locked_until']) > time()) {
         $error = 'खूप चुकीचे Attempts झाले — 15 मिनिटांनी पुन्हा प्रयत्न करा.';
     } elseif ($student && password_verify($password, $student['password_hash'])) {
         $pdo->prepare("UPDATE students SET failed_login_attempts = 0, locked_until = NULL WHERE id = ?")->execute([$student['id']]);
         session_regenerate_id(true);
-        unset($student['password_hash']);
+        unset($student['password_hash'], $student['org_name']);
         $_SESSION['student'] = $student;
+        $_SESSION['student_checked_at'] = time();
         header('Location: dashboard.php');
         exit;
     } else {
@@ -95,9 +132,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <h1>विद्यार्थी Login</h1>
     <p class="sub">Virtual Classroom — Study Material व Assignments</p>
     <?php if ($error): ?><div class="error">⚠️ <?= htmlspecialchars($error) ?></div><?php endif; ?>
+    <?php if ($loginOrg): ?><p class="sub" style="margin-top:-18px;"><?= htmlspecialchars($loginOrg['name']) ?></p><?php endif; ?>
     <form method="POST">
+      <?php if ($loginOrg): ?><input type="hidden" name="org" value="<?= htmlspecialchars($loginOrg['slug']) ?>"><?php endif; ?>
       <label>Admission No / Login ID</label>
-      <input type="text" name="admission_no" required autofocus>
+      <input type="text" name="admission_no" required autofocus value="<?= htmlspecialchars($_POST['admission_no'] ?? '') ?>">
+      <?php if (!empty($ambiguousOrgs)): ?>
+        <label>संस्था</label>
+        <select name="organization_id" required style="width:100%;padding:11px 14px;border:1.5px solid #D7DAE0;border-radius:10px;font-size:14px;margin-bottom:16px;font-family:inherit;">
+          <option value="">-- निवडा --</option>
+          <?php foreach ($ambiguousOrgs as $ao): ?><option value="<?= (int)$ao['id'] ?>"><?= htmlspecialchars($ao['name']) ?></option><?php endforeach; ?>
+        </select>
+      <?php endif; ?>
       <label>Password</label>
       <input type="password" name="password" required>
       <button type="submit">Login करा</button>
