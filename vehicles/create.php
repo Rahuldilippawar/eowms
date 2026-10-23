@@ -1,8 +1,8 @@
 <?php
 require_once __DIR__ . '/../includes/auth.php';
 requireLogin('../');
-requireRole(['super_admin'], '../');
 require_once __DIR__ . '/../includes/vehicle-helpers.php';
+if (!canManageVehicles()) { requireRole(['super_admin'], '../'); } // वाहन यादीप्रमाणेच — Super Admin किंवा manage_vehicles
 $user = currentUser();
 
 $orgId = activeOrgId();
@@ -27,8 +27,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $renewalDates = [];
     foreach ($renewalFields as $f) {
         $shortKey = str_replace('_validity', '', $f);
-        $renewalDates[$shortKey] = $_POST[$f] ?: null;
+        $renewalDates[$shortKey] = ($_POST[$f] ?? '') ?: null;
     }
+    $inputError = vehicleValidateInput($pdo, $orgId, $driverId, $campusId, $fuelType, array_merge(array_values($renewalDates), [$dateOfRegistration]));
 
     // Link under the "वाहतूक" (Transport) department if it exists
     $deptStmt = $pdo->prepare("SELECT id FROM departments WHERE organization_id = ? AND code = 'TRP' LIMIT 1");
@@ -38,6 +39,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (!$vehicleNumber) {
         $error = 'कृपया वाहन क्रमांक भरा.';
+    } elseif ($inputError) {
+        $error = $inputError;
     } else {
         $insert = $pdo->prepare("
             INSERT INTO vehicles (organization_id, campus_id, department_id, vehicle_number, vehicle_type, model, date_of_registration, chassis_no, engine_no, vehicle_class, passenger_capacity, permit_validity, puc_validity, insurance_validity, fitness_validity, road_tax_validity, green_tax_validity, mv_tax_validity, driver_id, fuel_type, current_odometer)

@@ -2,9 +2,20 @@
 $pageTitle = 'वाहन व्यवस्थापन';
 $rootPath = '../';
 require_once __DIR__ . '/../includes/header.php';
-requireRole(['super_admin'], '../');
+require_once __DIR__ . '/../includes/vehicle-helpers.php';
 
 $orgId = activeOrgId();
+
+// कोणती वाहनं दिसतील — dashboard.php चाच नियम:
+//   Super Admin / manage_vehicles / Management / वाहतूक (TRP) विभाग — संस्थेची सगळी वाहनं
+//   चालक — फक्त स्वतःला नेमलेली वाहनं
+$canManageVeh = canManageVehicles();
+$vehDeptCodeStmt = $pdo->prepare("SELECT code FROM departments WHERE id = ? AND organization_id = ?");
+$vehDeptCodeStmt->execute([$user['department_id'] ?? 0, $orgId]);
+$isTransportStaff = ($vehDeptCodeStmt->fetch()['code'] ?? null) === 'TRP';
+$seesAllVehicles = $canManageVeh || $isTransportStaff || isManagementOrAbove();
+$driverFilterSql = $seesAllVehicles ? '' : ' AND v.driver_id = ?';
+
 $stmt = $pdo->prepare("
     SELECT v.*, u.name AS driver_name, c.name AS campus_name,
       (SELECT COALESCE(SUM(distance_km),0) FROM vehicle_trips WHERE vehicle_id = v.id) AS total_km,
@@ -12,11 +23,16 @@ $stmt = $pdo->prepare("
     FROM vehicles v
     LEFT JOIN users u ON u.id = v.driver_id
     LEFT JOIN campuses c ON c.id = v.campus_id
-    WHERE v.organization_id = ?
+    WHERE v.organization_id = ?" . $driverFilterSql . "
     ORDER BY v.vehicle_number
 ");
-$stmt->execute([$orgId]);
+$stmt->execute($seesAllVehicles ? [$orgId] : [$orgId, $user['id']]);
 $vehicles = $stmt->fetchAll();
+
+if (!$seesAllVehicles && empty($vehicles)) {
+    http_response_code(403);
+    die('<div style="font-family:sans-serif;padding:40px;">तुम्हाला कोणतेही वाहन नेमलेले नाही. <a href="../index.php">Dashboard</a></div>');
+}
 
 $fuelTypeLabels = ['petrol' => 'पेट्रोल', 'diesel' => 'डिझेल', 'cng' => 'सीएनजी', 'electric' => 'इलेक्ट्रिक', 'other' => 'इतर'];
 
@@ -32,12 +48,16 @@ try {
 <div class="d-flex justify-content-between align-items-start mb-1">
   <div class="page-title mb-0">🚐 वाहन व्यवस्थापन</div>
   <div class="d-flex gap-2">
+    <?php if (hasRole('super_admin')): ?>
     <a href="requests.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13.5px;padding:9px 18px;position:relative;">
       <i class="fa-solid fa-flag me-1"></i>सुधारणा विनंत्या
       <?php if ($pendingReqCount > 0): ?><span style="background:var(--rose);color:#fff;border-radius:20px;font-size:10.5px;padding:1px 7px;margin-left:4px;"><?= $pendingReqCount ?></span><?php endif; ?>
     </a>
+    <?php endif; ?>
+    <?php if ($canManageVeh): ?>
     <a href="import.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13px;padding:9px 16px;"><i class="fa-solid fa-file-import me-1"></i>Import</a>
     <a href="create.php" class="btn" style="background:var(--rail);color:#fff;border-radius:9px;font-size:13.5px;padding:9px 20px;font-weight:600;"><i class="fa-solid fa-plus me-1"></i>नवीन वाहन जोडा</a>
+    <?php endif; ?>
   </div>
 </div>
 
@@ -86,9 +106,11 @@ try {
             <?php endif; ?>
           </td>
           <td onclick="event.stopPropagation()">
+            <?php if (hasRole('super_admin')): ?>
             <a href="edit.php?id=<?= $v['id'] ?>" class="btn btn-sm" style="border:1px solid var(--line);border-radius:7px;font-size:12px;padding:5px 12px;"><i class="fa-solid fa-pen me-1"></i>Edit</a>
             <button type="button" class="btn btn-sm" style="border:1px solid var(--rose);color:var(--rose);border-radius:7px;font-size:12px;padding:5px 12px;"
               data-bs-toggle="modal" data-bs-target="#deleteModal<?= $v['id'] ?>"><i class="fa-solid fa-trash me-1"></i>Delete</button>
+            <?php endif; ?>
           </td>
         </tr>
 

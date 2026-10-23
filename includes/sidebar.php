@@ -387,15 +387,17 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
       $vehDeptCheck->execute([$user['department_id'] ?? 0]);
       $vehUserDeptCode = $vehDeptCheck->fetch()['code'] ?? null;
 
+      // वाहन यादी (vehicles/index.php) — तिथेच प्रत्येकाला परवानगी असलेली वाहनं दिसतात:
+      // Super Admin/manage_vehicles/Management/वाहतूक विभाग — सगळी; चालक — स्वतःला नेमलेली
       $myVeh = null;
-      if (!hasRole('super_admin') && $vehUserDeptCode === 'TRP') {
+      if (!hasRole('super_admin') && !hasPermission('manage_vehicles') && !isManagementOrAbove() && $vehUserDeptCode !== 'TRP') {
           try {
-              $myVehStmt = $pdo->prepare("SELECT id FROM vehicles WHERE organization_id = ? AND (driver_id = ? OR department_id = (SELECT id FROM departments WHERE organization_id = ? AND code = 'TRP')) ORDER BY id LIMIT 1");
-              $myVehStmt->execute([activeOrgId(), $user['id'], activeOrgId()]);
+              $myVehStmt = $pdo->prepare("SELECT id FROM vehicles WHERE organization_id = ? AND driver_id = ? LIMIT 1");
+              $myVehStmt->execute([activeOrgId(), $user['id']]);
               $myVeh = $myVehStmt->fetch();
           } catch (PDOException $e) { /* vehicles table not migrated yet */ }
       }
-      $showVehicles = hasRole('super_admin') || $myVeh;
+      $showVehicles = hasRole('super_admin') || hasPermission('manage_vehicles') || isManagementOrAbove() || $vehUserDeptCode === 'TRP' || $myVeh;
 
       $mtnDeptCheck = $pdo->prepare("SELECT has_issue_register FROM departments WHERE id = ?");
       $mtnDeptCheck->execute([$user['department_id'] ?? 0]);
@@ -426,12 +428,8 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
         <i class="fa-solid fa-chevron-right chevron"></i>
       </div>
       <div class="collapse nav-group-body <?= navGroupOpen('assets', $activeGroup) ?>" id="navGroupAssets">
-        <?php if (hasRole('super_admin')): ?>
+        <?php if ($showVehicles): ?>
           <a href="<?= $rp ?>vehicles/index.php" class="tree-node <?= $currentDir === 'vehicles' ? 'active' : '' ?>">
-            <i class="fa-solid fa-truck-fast fa-fw"></i><span>वाहन व्यवस्थापन</span>
-          </a>
-        <?php elseif ($myVeh): ?>
-          <a href="<?= $rp ?>vehicles/dashboard.php?id=<?= $myVeh['id'] ?>" class="tree-node <?= $currentDir === 'vehicles' ? 'active' : '' ?>">
             <i class="fa-solid fa-truck-fast fa-fw"></i><span>वाहन व्यवस्थापन</span>
           </a>
         <?php endif; ?>
