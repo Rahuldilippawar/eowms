@@ -16,7 +16,7 @@ class Employee extends Model
     use BelongsToOrganization, HasFactory;
 
     protected $fillable = [
-        'organization_id', 'user_id', 'employee_code', 'name', 'designation', 'phone', 'email',
+        'organization_id', 'user_id', 'employee_code', 'biometric_pin', 'name', 'designation', 'phone', 'email',
         'institution_id', 'department_id', 'reporting_officer_id', 'joining_date', 'is_active',
         'secondary_designation', 'employment_type', 'staff_group', 'teaching_mode', 'father_name', 'mother_name',
         'gender', 'date_of_birth', 'marital_status', 'blood_group', 'whatsapp', 'local_address', 'permanent_address',
@@ -70,6 +70,11 @@ class Employee extends Model
     public function reportingOfficer(): BelongsTo
     {
         return $this->belongsTo(self::class, 'reporting_officer_id');
+    }
+
+    public function shift(): HasOne
+    {
+        return $this->hasOne(EmployeeShift::class);
     }
 
     public function private(): HasOne

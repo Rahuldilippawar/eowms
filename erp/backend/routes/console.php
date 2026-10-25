@@ -10,3 +10,7 @@ Artisan::command('inspire', function () {
 
 // Hostinger cron runs `php artisan schedule:run` every minute (see erp/docs/WORK-AND-TASKS.md).
 Schedule::command('erp:task-reminders')->hourly()->withoutOverlapping();
+// Daily attendance jobs; each is idempotent, so the hourly runs only fill gaps.
+Schedule::command('erp:mark-absent')->hourly()->withoutOverlapping();
+Schedule::command('erp:attendance-alerts')->dailyAt('03:30')->withoutOverlapping();
+Schedule::command('erp:celebrations')->hourly()->withoutOverlapping();

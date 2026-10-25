@@ -1,7 +1,10 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AttendanceController;
+use App\Http\Controllers\Api\V1\AttendanceReportController;
+use App\Http\Controllers\Api\V1\AttendanceSettingsController;
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\BiometricDeviceController;
 use App\Http\Controllers\Api\V1\CustomFieldController;
 use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\DepartmentController;
@@ -9,7 +12,9 @@ use App\Http\Controllers\Api\V1\EmployeeController;
 use App\Http\Controllers\Api\V1\EmployeeProfileController;
 use App\Http\Controllers\Api\V1\EmployeeToolsController;
 use App\Http\Controllers\Api\V1\HealthController;
+use App\Http\Controllers\Api\V1\HolidayController;
 use App\Http\Controllers\Api\V1\InstitutionController;
+use App\Http\Controllers\Api\V1\LeaveBalanceController;
 use App\Http\Controllers\Api\V1\LeaveController;
 use App\Http\Controllers\Api\V1\MeController;
 use App\Http\Controllers\Api\V1\NotificationController;
@@ -182,4 +187,30 @@ Route::middleware(['auth:sanctum', SetAccessContext::class, EnsurePasswordChange
     Route::put('/custom-fields/{field}', [CustomFieldController::class, 'update']);
     Route::get('/organization/modules', [OrganizationModulesController::class, 'show']);
     Route::put('/organization/modules', [OrganizationModulesController::class, 'update']);
+
+    Route::get('/holidays', [HolidayController::class, 'index']);
+    Route::get('/holidays/import/template', [HolidayController::class, 'template'])->middleware('permission:attendance.manage');
+    Route::post('/holidays/import', [HolidayController::class, 'import'])->middleware('permission:attendance.manage');
+    Route::post('/holidays', [HolidayController::class, 'store'])->middleware('permission:attendance.manage');
+    Route::put('/holidays/{holiday}', [HolidayController::class, 'update'])->middleware('permission:attendance.manage');
+    Route::delete('/holidays/{holiday}', [HolidayController::class, 'destroy'])->middleware('permission:attendance.manage');
+    Route::get('/organization/attendance-rules', [AttendanceSettingsController::class, 'organization']);
+    Route::put('/organization/attendance-rules', [AttendanceSettingsController::class, 'updateOrganization']);
+    Route::get('/employees/{employee}/attendance-settings', [AttendanceSettingsController::class, 'employee']);
+    Route::put('/employees/{employee}/attendance-settings', [AttendanceSettingsController::class, 'updateEmployee'])->middleware('module:attendance');
+
+    Route::get('/me/leave/balances', [MeController::class, 'leaveBalances'])->middleware('module:leave');
+    Route::get('/leave-balances', [LeaveBalanceController::class, 'index'])->middleware('permission:leave.view');
+    Route::put('/leave-balances', [LeaveBalanceController::class, 'allocate'])->middleware('permission:leave.balances');
+
+    Route::get('/attendance/grid', [AttendanceReportController::class, 'grid'])->middleware('permission:attendance.view');
+    Route::get('/attendance/movement', [AttendanceReportController::class, 'movement'])->middleware('permission:attendance.view');
+    Route::get('/attendance/certificate/{employee}', [AttendanceReportController::class, 'certificate'])->middleware('module:attendance');
+    Route::get('/me/attendance/certificate', [AttendanceReportController::class, 'myCertificate'])->middleware('module:attendance');
+    Route::get('/reports/salary', [AttendanceReportController::class, 'salary'])->middleware(['permission:employees.sensitive', 'permission:attendance.view']);
+
+    Route::get('/biometric-devices', [BiometricDeviceController::class, 'index'])->middleware('permission:attendance.manage');
+    Route::post('/biometric-devices', [BiometricDeviceController::class, 'store'])->middleware('permission:attendance.manage');
+    Route::put('/biometric-devices/{device}', [BiometricDeviceController::class, 'update'])->middleware('permission:attendance.manage');
+    Route::get('/biometric-punches', [BiometricDeviceController::class, 'punches'])->middleware('permission:attendance.manage');
 });

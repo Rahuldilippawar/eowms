@@ -17,6 +17,7 @@ import { parseApiError } from '@/lib/api'
 import { actionErrorMessage } from '@/lib/forms'
 import { formatDate } from '@/lib/format'
 import { cn } from '@/lib/utils'
+import { AttendanceTab } from './AttendanceTab'
 import { CustomFieldInputs } from './CustomFieldInputs'
 import {
   addAchievement,
@@ -40,7 +41,7 @@ import {
   type ProfileField,
 } from './profileApi'
 
-type Tab = 'personal' | 'private' | 'documents' | 'family' | 'achievements'
+type Tab = 'personal' | 'private' | 'attendance' | 'documents' | 'family' | 'achievements'
 
 /** Options for the profile fields that are fixed lists (values match the API). */
 const CHOICES: Partial<Record<ProfileField, readonly string[]>> = {
@@ -541,7 +542,7 @@ export function EmployeeProfilePage({ mine = false }: { mine?: boolean }) {
     return <ErrorState onRetry={() => void q.refetch()} />
   }
   const p = q.data
-  const tabs: Tab[] = ['personal', ...(p.private ? (['private'] as Tab[]) : []), 'documents', 'family', 'achievements']
+  const tabs: Tab[] = ['personal', ...(p.private ? (['private'] as Tab[]) : []), 'attendance', 'documents', 'family', 'achievements']
 
   const onPhoto = async () => {
     const file = photoRef.current?.files?.[0]
@@ -615,6 +616,7 @@ export function EmployeeProfilePage({ mine = false }: { mine?: boolean }) {
       </div>
       {tab === 'personal' ? <PersonalTab key={p.id} p={p} mine={mine} /> : null}
       {tab === 'private' && p.private ? <PrivateTab key={p.id} p={p} mine={mine} /> : null}
+      {tab === 'attendance' ? <AttendanceTab employeeId={p.id} mine={mine} /> : null}
       {tab === 'documents' ? <DocumentsTab p={p} mine={mine} /> : null}
       {tab === 'family' ? <FamilyTab p={p} mine={mine} /> : null}
       {tab === 'achievements' ? <AchievementsTab p={p} mine={mine} /> : null}

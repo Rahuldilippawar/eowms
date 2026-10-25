@@ -10,4 +10,5 @@ return [
     'officer_not_found' => 'No employee with this reporting officer code.',
     'duplicate_in_file' => 'This code appears more than once in the file.',
     'bad_date' => 'Use a date like 2026-06-30 or 30/06/2026.',
+    'institution_not_found' => 'No institution with this code.',
 ];

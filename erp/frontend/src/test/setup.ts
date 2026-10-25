@@ -12,6 +12,11 @@ vi.mock('@/features/people/profileApi', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/features/people/profileApi')>()),
   fetchActiveFields: vi.fn(() => Promise.resolve([])),
 }))
+// The leave page shows balances; none unless a test says so.
+vi.mock('@/features/attendance/parityApi', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/features/attendance/parityApi')>()),
+  fetchMyBalances: vi.fn(() => Promise.resolve([])),
+}))
 // The header bell polls the unread count on every page.
 vi.mock('@/features/notifications/api', () => ({
   fetchUnreadCount: vi.fn(() => Promise.resolve(0)),

@@ -37,17 +37,17 @@ Legend: ✅ in the ERP · 🟡 partly (gaps listed) · ⏳ scheduled (phase) · 
 | ID card (single + bulk print), ID verification by QR | ✅ 5A-1 | Public verify page shows only name, photo, designation, status |
 | Directory (= staff list) | ✅ | Employees list |
 | Attendance: self check-in/out, manual entry, regularization | ✅ | |
-| Monthly attendance grid, attendance calendar, monthly summary | 🟡 | Summary ✅; grid + calendar → ⏳ 5A |
-| Attendance certificate (print) | ⏳ 5A | |
-| Movement report | ⏳ 5A | In / out times per day per employee |
-| Shift settings per employee (start, end, grace, half day, weekly offs) | ⏳ 5A | Overrides the organization rule |
-| Holidays calendar + bulk import | ⏳ 5A | Leave day count then skips holidays and weekly offs |
+| Monthly attendance grid, attendance calendar, monthly summary | ✅ 5A-2a | Month grid (codes per day), summary |
+| Attendance certificate (print) | ✅ 5A-2a | |
+| Movement report | ✅ 5A-2a | In / out register |
+| Shift settings per employee (start, end, grace, half day, weekly offs) | ✅ 5A-2a | Overrides the organization rule |
+| Holidays calendar + bulk import | ✅ 5A-2a | Leave day count skips holidays and weekly offs |
 | Leave types, apply, approvals, my leaves | ✅ | |
-| Leave balances (allocate per year, used, remaining) | ⏳ 5A | Checked on apply, deducted on approval |
-| Salary report (print) | ⏳ 5A | From salary + attendance; no payroll engine |
-| Biometric devices, PIN mapping, ZKTeco push (`iclock/cdata`, `getrequest`, `devicecmd`) | ⏳ 5A | Device approval, punch log → attendance |
-| Cron: mark absent daily, attendance pattern alert, biometric processing | ⏳ 5A | Scheduler commands |
-| Cron: birthday / work-anniversary wishes, wish post | ⏳ 5A | In-app notification + wishes |
+| Leave balances (allocate per year, used, remaining) | ✅ 5A-2a | Checked on apply |
+| Salary report (print) | ✅ 5A-2a | Pay days × salary; no statutory deductions |
+| Biometric devices, PIN mapping, ZKTeco push (`iclock/cdata`, `getrequest`, `devicecmd`) | ✅ 5A-2a | Registered serials only; punch log → attendance |
+| Cron: mark absent daily, attendance pattern alert, biometric processing | ✅ 5A-2a | Scheduler commands; punches applied on arrival |
+| Cron: birthday / work-anniversary wishes, wish post | 🟡 5A-2a | In-app wishes ✅; colleagues' wish posts → ⏳ 12 (with announcements) |
 | Students master + bulk import | 🟡 | Bulk import → ⏳ 5A. Roll no, admission no, year of study, academic year, parent mobile → ⏳ 5A |
 
 ## Work (phase 5 → gaps in 5A)

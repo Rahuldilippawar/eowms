@@ -124,9 +124,16 @@ Dev accounts (password `password`): `admin@example.com` (super admin), `orgadmin
 - Rules: [`docs/PEOPLE.md`](docs/PEOPLE.md). Old-app coverage: [`../docs/erp/PARITY.md`](../docs/erp/PARITY.md).
 - Tests: 114 backend, 44 frontend, 29 end-to-end.
 
+### Phase 5A-2a — done (old-app parity, attendance and leave)
+- Holiday calendar (+ CSV import), organization attendance rules with weekly offs, per-employee shifts.
+- Leave counts working days only and is checked against yearly balances (with allocations per person).
+- Month grid, in / out register, printable attendance certificate, salary (pay-days) report.
+- ZKTeco machines over the push (ADMS) protocol, machine PINs, unknown-PIN list.
+- Daily jobs: mark absent, late / absence pattern alerts, birthday and work-anniversary wishes.
+- Tests: 120 backend, 48 frontend, 31 end-to-end.
+
 ### Not yet (later phases)
-- Phase 5A-2 (holidays, shifts, leave balances, attendance grid / certificate / movement / salary
-  reports, biometric devices, daily crons, student fields + import, daily-work team / photos / import),
-  then correspondence, approvals and PDF/QR (Phase 6) and the other business modules; holiday calendar;
+- Phase 5A-2b (student fields + import, daily-work team / photos / cost / import, task cost), then
+  correspondence, approvals and PDF/QR (Phase 6) and the other business modules; holiday calendar;
   email / push delivery of notifications; organization-defined extra fields on work entries.
 - Reports, deployment to Hostinger.

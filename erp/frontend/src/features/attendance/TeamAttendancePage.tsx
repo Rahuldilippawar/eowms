@@ -17,6 +17,7 @@ import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { formatTime, todayYmd } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { fetchDay, fetchSummary, markAttendance, summaryCsvUrl, type AttendanceStatus, type DayRow } from './api'
+import { GridView, MovementView } from './GridViews'
 import { StatusBadge } from './StatusBadge'
 
 const STATUSES: AttendanceStatus[] = ['present', 'late', 'half_day', 'absent', 'leave']
@@ -232,12 +233,12 @@ function ReportView() {
 
 export function TeamAttendancePage() {
   const { t } = useTranslation()
-  const [tab, setTab] = useState<'day' | 'report'>('day')
+  const [tab, setTab] = useState<'day' | 'grid' | 'movement' | 'report'>('day')
   return (
-    <div className="mx-auto max-w-5xl space-y-4">
+    <div className="mx-auto max-w-6xl space-y-4">
       <h1 className="text-2xl font-semibold">{t('nav.teamAttendance')}</h1>
-      <div role="tablist" className="inline-flex rounded-lg border border-slate-200 bg-white p-1 dark:border-slate-800 dark:bg-slate-900">
-        {(['day', 'report'] as const).map((k) => (
+      <div role="tablist" className="inline-flex flex-wrap rounded-lg border border-slate-200 bg-white p-1 dark:border-slate-800 dark:bg-slate-900">
+        {(['day', 'grid', 'movement', 'report'] as const).map((k) => (
           <button
             key={k}
             role="tab"
@@ -249,7 +250,10 @@ export function TeamAttendancePage() {
           </button>
         ))}
       </div>
-      {tab === 'day' ? <DayView /> : <ReportView />}
+      {tab === 'day' ? <DayView /> : null}
+      {tab === 'grid' ? <GridView /> : null}
+      {tab === 'movement' ? <MovementView /> : null}
+      {tab === 'report' ? <ReportView /> : null}
     </div>
   )
 }

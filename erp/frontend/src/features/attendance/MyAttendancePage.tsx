@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { LogIn, LogOut } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router-dom'
 import { EmptyState, ErrorState, LoadingState } from '@/components/data/ListStates'
 import { Button } from '@/components/ui/Button'
 import { Field } from '@/components/ui/Field'
@@ -164,6 +165,9 @@ export function MyAttendancePage() {
       <section className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
         <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="font-semibold">{t('attendance.history')}</h2>
+          <Link to="/my/attendance/certificate" className="text-sm font-medium text-brand-700 hover:underline">
+            {t('certificate.title')}
+          </Link>
           <div className="flex gap-2">
             <Input type="month" aria-label={t('attendance.month')} className="w-44" value={month} max={monthYm()} onChange={(e) => e.target.value && setMonth(e.target.value)} />
             <Button variant="secondary" onClick={() => setCorrectionOpen(true)}>

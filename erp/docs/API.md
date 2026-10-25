@@ -143,3 +143,27 @@ Rules: [`PEOPLE.md`](PEOPLE.md).
 
 `/auth/me` now includes `disabled_modules` and `must_change_password`. Student and work-entry forms
 accept `custom` (their organization-defined fields).
+
+## Phase 5A-2a — holidays, shifts, leave balances, attendance reports, biometric
+
+Rules: [`ATTENDANCE.md`](ATTENDANCE.md).
+
+| Method | Path | Permission | Notes |
+|---|---|---|---|
+| GET | `/holidays?year&institution_id?` | signed in | |
+| POST / PUT / DELETE | `/holidays[/{id}]` | `attendance.manage` (organization-wide: organization scope) | `holiday_date, name, institution_id?` |
+| GET / POST | `/holidays/import/template`, `/holidays/import` | `attendance.manage` | CSV; all rows or none |
+| GET / PUT | `/organization/attendance-rules` | PUT: `organizations.edit` (organization scope) | `timezone, work_start, work_end, late_grace_minutes, half_day_below_hours, max_shift_hours, weekly_offs[], daily_work_edit_days` |
+| GET / PUT | `/employees/{id}/attendance-settings` | view: in scope or self · PUT: `attendance.manage` in scope | shift fields (empty = organization rule) + `biometric_pin`; response has `effective` |
+| GET | `/me/leave/balances?year` | own employee record | |
+| GET | `/leave-balances?year&search&page` | `leave.view` | One row per employee with a balance per type; `can_allocate` |
+| PUT | `/leave-balances` | `leave.balances` in scope | `employee_id, leave_type_id, year, days` |
+| GET | `/attendance/grid?month&search&page&format=csv?` | `attendance.view` (+ export for CSV) | |
+| GET | `/attendance/movement?from&to&employee_id?&page&format=csv?` | `attendance.view` (+ export) | ≤ 92 days |
+| GET | `/attendance/certificate/{employee}?from&to`, `/me/attendance/certificate` | in scope or self | ≤ 1 year; audited |
+| GET | `/reports/salary?month&format=csv?` | `employees.sensitive` + `attendance.view` | Audited |
+| GET / POST / PUT | `/biometric-devices[/{id}]` | `attendance.manage` (organization scope) | `name, serial_number, institution_id?, is_active` |
+| GET | `/biometric-punches?result=unknown_pin` | `attendance.manage` (organization scope) | Latest 200 |
+| GET, POST | `/iclock/cdata`, `/iclock/getrequest`, `/iclock/devicecmd` (no `/api/v1`) | registered machine serial | ZKTeco ADMS; plain-text replies |
+
+Leave applications now count working days and are checked against the balance.
