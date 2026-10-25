@@ -1,6 +1,22 @@
 {
-  "app": { "name": "E-Admin ERP", "tagline": "Smart Administration" },
-  "common": { "loading": "Loading…", "retry": "Try again", "language": "Language", "openMenu": "Open menu", "closeMenu": "Close menu" },
+  "app": {
+    "name": "E-Admin ERP",
+    "tagline": "Smart Administration"
+  },
+  "common": {
+    "loading": "Loading…",
+    "retry": "Try again",
+    "language": "Language",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "search": "Search",
+    "loadFailed": "Could not load the data.",
+    "noResults": "Nothing matches your search.",
+    "pagination": "Pages",
+    "previous": "Previous",
+    "next": "Next",
+    "showing": "{{from}}–{{to}} of {{total}}"
+  },
   "auth": {
     "title": "Sign in",
     "subtitle": "Access your account",
@@ -16,16 +32,65 @@
       "passwordRequired": "Password is required",
       "throttled": "Too many attempts. Please wait a moment and try again.",
       "network": "Could not reach the server. Check your connection and try again.",
-      "generic": "Could not sign in. Please try again."
-    }
+      "generic": "Could not sign in. Please try again.",
+      "passwordWeak": "At least 8 characters, with letters and numbers",
+      "passwordMismatch": "The passwords do not match",
+      "linkInvalid": "This link is incomplete. Open the full link from the email or request a new one."
+    },
+    "forgotLink": "Forgot password?",
+    "forgotTitle": "Forgot password",
+    "forgotSubtitle": "Enter your email and we will send a reset link.",
+    "sendLink": "Send link",
+    "sending": "Sending…",
+    "backToLogin": "Back to sign in",
+    "resetTitle": "Choose a new password",
+    "newPassword": "New password",
+    "confirmPassword": "Repeat password",
+    "resetSubmit": "Change password",
+    "saving": "Saving…",
+    "requestNewLink": "Request a new link"
   },
-  "nav": { "dashboard": "Dashboard", "main": "Main" },
+  "nav": {
+    "dashboard": "Dashboard",
+    "main": "Main",
+    "structure": "Organization structure",
+    "institutions": "Institutions",
+    "departments": "Departments"
+  },
   "dashboard": {
     "welcome": "Hello, {{name}}",
     "lastLogin": "Last sign-in: {{when}}",
     "firstLogin": "This is your first sign-in.",
     "emptyTitle": "Modules coming soon",
-    "emptyBody": "Organizations, departments, employees, attendance and the other modules arrive here in the next phases. Right now only sign-in and the basic layout are ready."
+    "emptyBody": "Institution and department lists are in the left menu (as your permissions allow). Employees, attendance and the other modules arrive in the next phases.",
+    "organization": "Organization: {{name}}",
+    "noOrganization": "You have not been given a role in any active organization yet. Please contact the administrator."
   },
-  "notFound": { "title": "Page not found", "back": "Go to dashboard" }
+  "notFound": {
+    "title": "Page not found",
+    "back": "Go to dashboard"
+  },
+  "org": {
+    "switch": "Switch organization",
+    "switchFailed": "Could not switch organization. Please try again.",
+    "name": "Name",
+    "code": "Code",
+    "type": "Type",
+    "status": "Status",
+    "institution": "Institution",
+    "central": "Central",
+    "active": "Active",
+    "inactive": "Inactive",
+    "noInstitutions": "No institutions yet.",
+    "noDepartments": "No departments yet.",
+    "types": {
+      "college": "College",
+      "school": "School",
+      "other": "Other"
+    }
+  },
+  "errors": {
+    "forbiddenTitle": "Not allowed",
+    "forbiddenBody": "You do not have permission to view this page. Please contact the administrator."
+  }
 }

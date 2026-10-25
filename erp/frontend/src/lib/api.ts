@@ -1,4 +1,5 @@
 import axios, { AxiosError } from 'axios'
+import i18n from '@/i18n'
 
 /**
  * One HTTP client for the whole app. Same-origin session cookies
@@ -10,6 +11,12 @@ export const api = axios.create({
   withCredentials: true,
   withXSRFToken: true,
   headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+})
+
+// Server messages (validation, auth) come back in the language shown in the UI.
+api.interceptors.request.use((config) => {
+  config.headers.set('Accept-Language', i18n.language || 'mr')
+  return config
 })
 
 /** Sets the CSRF cookie; call before the first state-changing request. */

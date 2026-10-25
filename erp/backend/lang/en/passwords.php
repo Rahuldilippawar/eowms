@@ -14,6 +14,7 @@ return [
     */
 
     'reset' => 'Your password has been reset.',
+    'sent_generic' => 'If an active account exists for this email, a password reset link has been sent.',
     'sent' => 'We have emailed your password reset link.',
     'throttled' => 'Please wait before retrying.',
     'token' => 'This password reset token is invalid.',

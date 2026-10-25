@@ -4,16 +4,20 @@ import { AxiosError, AxiosHeaders } from 'axios'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { setLanguage } from '@/i18n'
 import { renderApp } from '@/test/renderApp'
+import { makeUser } from '@/test/fixtures'
 import * as authApi from './api'
 
 vi.mock('./api', () => ({
   fetchCurrentUser: vi.fn(),
   login: vi.fn(),
   logout: vi.fn(),
+  switchOrganization: vi.fn(),
+  requestPasswordReset: vi.fn(),
+  resetPassword: vi.fn(),
 }))
 
 const api = vi.mocked(authApi)
-const user = { id: 1, name: 'Dev Admin', email: 'admin@example.com', last_login_at: null }
+const user = makeUser()
 
 function httpError(status: number, data: unknown) {
   return new AxiosError('fail', String(status), undefined, undefined, {

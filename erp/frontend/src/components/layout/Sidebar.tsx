@@ -1,13 +1,20 @@
 import { NavLink } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { useAuth } from '@/features/auth/AuthProvider'
 import { cn } from '@/lib/utils'
 import { NAVIGATION } from './navigation'
 
 export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const { t } = useTranslation()
+  const { can } = useAuth()
+  const sections = NAVIGATION.map((section) => ({
+    ...section,
+    items: section.items.filter((item) => !item.permission || can(item.permission)),
+  })).filter((section) => section.items.length > 0)
+
   return (
     <nav aria-label={t('nav.main')} className="space-y-6 px-3 py-4">
-      {NAVIGATION.map((section) => (
+      {sections.map((section) => (
         <div key={section.titleKey}>
           <p className="px-3 pb-2 text-xs font-semibold tracking-wide text-slate-400 uppercase">{t(section.titleKey)}</p>
           <ul className="space-y-1">
@@ -15,7 +22,7 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
               <li key={item.to}>
                 <NavLink
                   to={item.to}
-                  end
+                  end={item.to === '/'}
                   onClick={onNavigate}
                   className={({ isActive }) =>
                     cn(

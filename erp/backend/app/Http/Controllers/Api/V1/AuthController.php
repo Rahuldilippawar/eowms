@@ -3,9 +3,13 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Middleware\SetAccessContext;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Resources\CurrentUserResource;
+use App\Models\Organization;
 use App\Models\User;
+use App\Support\Access\AccessContext;
+use App\Support\Audit\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -22,6 +26,9 @@ class AuthController extends Controller
         // Same message for unknown email, wrong password and inactive account,
         // so the response never reveals which accounts exist.
         if (! $user || ! $user->is_active || ! Hash::check($credentials['password'], $user->password)) {
+            if ($user) {
+                AuditLogger::record('auth', 'login_failed', $user, userId: $user->id);
+            }
             throw ValidationException::withMessages([
                 'email' => [__('auth.failed')],
             ]);
@@ -31,8 +38,9 @@ class AuthController extends Controller
         $request->session()->regenerate();
 
         $user->forceFill(['last_login_at' => now()])->save();
+        AuditLogger::record('auth', 'login', $user, userId: $user->id);
 
-        return (new CurrentUserResource($user))->response();
+        return $this->currentUser($request, $user);
     }
 
     public function me(Request $request): CurrentUserResource
@@ -40,12 +48,45 @@ class AuthController extends Controller
         return new CurrentUserResource($request->user());
     }
 
+    public function switchOrganization(Request $request): JsonResponse
+    {
+        $data = $request->validate(['organization_id' => ['required', 'integer']]);
+        $user = $request->user();
+
+        // Only organizations the user belongs to (any active one for a super admin).
+        $organization = AccessContext::organizationsFor($user)->firstWhere('id', (int) $data['organization_id']);
+        if ($organization === null) {
+            abort(403, __('auth.forbidden'));
+        }
+
+        $request->session()->put(SetAccessContext::SESSION_KEY, $organization->id);
+        AccessContext::set(new AccessContext($user, $organization));
+        AuditLogger::record('auth', 'switch_organization', $organization);
+
+        return (new CurrentUserResource($user))->response();
+    }
+
     public function logout(Request $request): JsonResponse
     {
+        AuditLogger::record('auth', 'logout', $request->user());
+
         Auth::guard('web')->logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
         return response()->json(null, 204);
+    }
+
+    /** After login the context middleware has not run yet, so build it here. */
+    private function currentUser(Request $request, User $user): JsonResponse
+    {
+        $organizations = AccessContext::organizationsFor($user);
+        $organization = $organizations->first();
+        $organization instanceof Organization
+            ? $request->session()->put(SetAccessContext::SESSION_KEY, $organization->id)
+            : $request->session()->forget(SetAccessContext::SESSION_KEY);
+        AccessContext::set(new AccessContext($user, $organization));
+
+        return (new CurrentUserResource($user))->response();
     }
 }

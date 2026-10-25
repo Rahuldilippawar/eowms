@@ -21,9 +21,9 @@ class CurrentUserResourceTest extends TestCase
             'is_active' => true,
         ]);
 
-        $data = (new CurrentUserResource($user))->toArray(Request::create('/'));
+        $data = (new CurrentUserResource($user))->resolve(Request::create('/'));
 
-        $this->assertSame(['id', 'name', 'email', 'last_login_at'], array_keys($data));
+        $this->assertSame(['id', 'name', 'email', 'is_super_admin', 'last_login_at'], array_keys($data));
         $this->assertNull($data['last_login_at']);
     }
 }

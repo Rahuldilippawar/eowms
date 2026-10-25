@@ -18,7 +18,16 @@ export function DashboardPage() {
       <div>
         <h1 className="text-2xl font-semibold">{t('dashboard.welcome', { name: user.name })}</h1>
         <p className="text-sm text-slate-500">{lastLogin ? t('dashboard.lastLogin', { when: lastLogin }) : t('dashboard.firstLogin')}</p>
+        {user.current_organization ? (
+          <p className="mt-1 text-sm font-medium text-brand-700">{t('dashboard.organization', { name: user.current_organization.name })}</p>
+        ) : null}
       </div>
+
+      {user.current_organization ? null : (
+        <div role="status" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          {t('dashboard.noOrganization')}
+        </div>
+      )}
 
       <section className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center dark:border-slate-700 dark:bg-slate-900">
         <LayoutGrid aria-hidden className="mx-auto mb-3 size-8 text-slate-400" />

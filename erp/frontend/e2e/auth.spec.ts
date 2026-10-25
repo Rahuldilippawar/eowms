@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { apiGet } from './helpers'
 
 // Seeded by DatabaseSeeder (development/test data only).
 const ADMIN = { email: 'admin@example.com', password: 'password' }
@@ -23,13 +24,15 @@ test('guest is redirected to sign in, signs in, reloads, and signs out', async (
   const stored = await page.evaluate(() => JSON.stringify(localStorage))
   expect(stored).not.toMatch(/token/i)
 
+  // While signed in, the session cookie authenticates API calls…
+  expect((await apiGet(page, '/api/v1/auth/me')).status()).toBe(200)
+
   await page.getByRole('button', { name: /Dev Admin/ }).click()
   await page.getByRole('menuitem', { name: 'Sign out' }).click()
   await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible()
 
-  // After sign-out the API no longer accepts the old session.
-  const me = await page.request.get('/api/v1/auth/me', { headers: { Accept: 'application/json' } })
-  expect(me.status()).toBe(401)
+  // …and after sign-out the same cookie jar is no longer accepted.
+  expect((await apiGet(page, '/api/v1/auth/me')).status()).toBe(401)
 })
 
 test('wrong password shows an error and stays on the sign-in page', async ({ page }) => {
