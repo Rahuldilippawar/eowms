@@ -1473,7 +1473,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     if (!$newEventId5 || !$newMarkedBy) continue;
                     $newAttUserId = !empty($ea['user_id']) ? ($userMap[$ea['user_id']] ?? null) : null;
                     $newAttStudentId = !empty($ea['student_id']) ? ($studentMap[$ea['student_id']] ?? null) : null;
-                    $pdo->prepare("INSERT INTO event_attendance (event_id, attendee_type, user_id, student_id, guest_name, marked_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)")
+                    $pdo->prepare("INSERT IGNORE INTO event_attendance (event_id, attendee_type, user_id, student_id, guest_name, marked_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)")
                         ->execute([$newEventId5, $ea['attendee_type'], $newAttUserId, $newAttStudentId, $ea['guest_name'], $newMarkedBy, $ea['created_at']]);
                 }
             } catch (PDOException $e) { /* table not migrated yet */ }
