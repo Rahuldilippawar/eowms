@@ -1,0 +1,25 @@
+import i18n from '@/i18n'
+
+const locale = () => (i18n.language === 'mr' ? 'mr-IN' : 'en-IN')
+
+export function formatTime(iso: string | null | undefined): string {
+  if (!iso) return '—'
+  return new Intl.DateTimeFormat(locale(), { hour: '2-digit', minute: '2-digit' }).format(new Date(iso))
+}
+
+/** "YYYY-MM-DD" shown as a local date (no timezone shift). */
+export function formatDate(ymd: string | null | undefined): string {
+  if (!ymd) return '—'
+  const [y, m, d] = ymd.split('-').map(Number)
+  return new Intl.DateTimeFormat(locale(), { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(y, m - 1, d))
+}
+
+/** Today's date in the browser's timezone as YYYY-MM-DD (the server re-checks). */
+export function todayYmd(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+export function monthYm(d = new Date()): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}

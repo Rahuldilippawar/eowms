@@ -19,3 +19,20 @@ html, body, #root {
 body {
   @apply bg-slate-50 text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100;
 }
+
+/* Chart roles (see erp/docs/ATTENDANCE.md): status hues are fixed; only surface/ink follow the theme. */
+:root {
+  --viz-surface: #ffffff;
+  --viz-grid: #e2e8f0;
+  --viz-ink: #475569;
+  --viz-good: #0ca30c;
+  --viz-warning: #fab219;
+  --viz-critical: #d03b3b;
+  --viz-neutral: #2a78d6;
+}
+.dark {
+  --viz-surface: #0f172a;
+  --viz-grid: #1e293b;
+  --viz-ink: #cbd5e1;
+  --viz-neutral: #3987e5;
+}

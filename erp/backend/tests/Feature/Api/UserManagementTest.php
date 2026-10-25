@@ -103,7 +103,10 @@ class UserManagementTest extends TestCase
             ->assertStatus(422)->assertJsonValidationErrors('role_id');
         $this->spa()->postJson('/api/v1/users', ['name' => 'B', 'email' => 'b@example.com', 'role_id' => $this->roleId('principal'), 'institution_ids' => [$this->school->id]])
             ->assertStatus(422);
+        // HOD includes attendance permissions the principal does not hold → refused too.
         $this->spa()->postJson('/api/v1/users', ['name' => 'C', 'email' => 'c@example.com', 'role_id' => $this->roleId('hod'), 'department_ids' => [$this->physics->id]])
+            ->assertStatus(422)->assertJsonValidationErrors('role_id');
+        $this->spa()->postJson('/api/v1/users', ['name' => 'D', 'email' => 'd@example.com', 'role_id' => $this->roleId('staff'), 'department_ids' => [$this->physics->id]])
             ->assertCreated();
     }
 

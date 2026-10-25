@@ -7,14 +7,21 @@ import { RoleEditorPage } from '@/features/admin/RoleEditorPage'
 import { RolesPage } from '@/features/admin/RolesPage'
 import { UserDetailPage } from '@/features/admin/UserDetailPage'
 import { UsersPage } from '@/features/admin/UsersPage'
+import { MyAttendancePage } from '@/features/attendance/MyAttendancePage'
+import { TeamAttendancePage } from '@/features/attendance/TeamAttendancePage'
 import { ForgotPasswordPage } from '@/features/auth/ForgotPasswordPage'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { RequirePermission } from '@/features/auth/RequirePermission'
 import { ResetPasswordPage } from '@/features/auth/ResetPasswordPage'
 import { GuestOnly, RequireAuth } from '@/features/auth/RouteGuards'
+import { DashboardPage } from '@/features/dashboard/DashboardPage'
+import { ApprovalsPage } from '@/features/leave/ApprovalsPage'
+import { LeaveTypesPage } from '@/features/leave/LeaveTypesPage'
+import { MyLeavePage } from '@/features/leave/MyLeavePage'
 import { DepartmentsPage } from '@/features/org/DepartmentsPage'
 import { InstitutionsPage } from '@/features/org/InstitutionsPage'
-import { DashboardPage } from '@/pages/DashboardPage'
+import { EmployeesPage } from '@/features/people/EmployeesPage'
+import { StudentsPage } from '@/features/people/StudentsPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 
 const guard = (permission: string, page: ReactNode) => <RequirePermission permission={permission}>{page}</RequirePermission>
@@ -30,6 +37,13 @@ export function AppRoutes() {
       <Route element={<RequireAuth />}>
         <Route element={<AppLayout />}>
           <Route index element={<DashboardPage />} />
+          <Route path="my/attendance" element={<MyAttendancePage />} />
+          <Route path="my/leave" element={<MyLeavePage />} />
+          <Route path="approvals" element={<ApprovalsPage />} />
+          <Route path="attendance" element={guard('attendance.view', <TeamAttendancePage />)} />
+          <Route path="employees" element={guard('employees.view', <EmployeesPage />)} />
+          <Route path="students" element={guard('students.view', <StudentsPage />)} />
+          <Route path="leave-types" element={guard('leave.manage_types', <LeaveTypesPage />)} />
           <Route path="institutions" element={guard('institutions.view', <InstitutionsPage />)} />
           <Route path="departments" element={guard('departments.view', <DepartmentsPage />)} />
           <Route path="users" element={guard('users.view', <UsersPage />)} />
