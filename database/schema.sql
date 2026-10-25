@@ -732,7 +732,13 @@ CREATE TABLE work_requests (
   id INT AUTO_INCREMENT PRIMARY KEY,
   request_code VARCHAR(50) NOT NULL UNIQUE,
   organization_id INT NOT NULL,
-  department_id INT NOT NULL,
+  department_id INT NULL COMMENT 'स्वीकारणारा विभाग (IT विनंती आणि IT विभाग नसेल तर NULL)',
+  category VARCHAR(30) NOT NULL DEFAULT 'general' COMMENT 'general / it / maintenance / housekeeping / other',
+  sub_category VARCHAR(50) NULL,
+  title VARCHAR(255) NULL,
+  location VARCHAR(255) NULL,
+  priority ENUM('low','normal','high','urgent') NOT NULL DEFAULT 'normal',
+  due_at DATETIME NULL COMMENT 'SLA मुदत',
   requester_name VARCHAR(255) NOT NULL,
   requester_contact VARCHAR(100) NULL,
   requested_by_user_id INT NULL,
@@ -741,10 +747,21 @@ CREATE TABLE work_requests (
   work_description TEXT NOT NULL,
   cost_incurred DECIMAL(10,2) NULL,
   completion_remarks TEXT NULL,
-  status ENUM('pending','in_progress','completed') DEFAULT 'pending',
+  status ENUM('pending','in_progress','completed','closed','cancelled') DEFAULT 'pending',
   completed_by INT NULL,
   completed_at TIMESTAMP NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  escalation_level TINYINT NOT NULL DEFAULT 0,
+  escalated_at DATETIME NULL,
+  rating TINYINT NULL,
+  feedback TEXT NULL,
+  closed_at DATETIME NULL,
+  cancelled_at DATETIME NULL,
+  reopened_count INT NOT NULL DEFAULT 0,
+  legacy_it_request_id INT NULL COMMENT 'जुन्या it_general_requests.id',
+  UNIQUE KEY uniq_legacy_it (legacy_it_request_id),
+  INDEX idx_org_category_status (organization_id, category, status),
+  INDEX idx_status_due (status, due_at),
   FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
   FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE CASCADE,
   FOREIGN KEY (completed_by) REFERENCES users(id) ON DELETE SET NULL,
@@ -757,7 +774,7 @@ CREATE TABLE work_requests (
 CREATE TABLE work_request_actions (
   id INT AUTO_INCREMENT PRIMARY KEY,
   request_id INT NOT NULL,
-  action_type ENUM('created','status_changed') NOT NULL,
+  action_type ENUM('created','status_changed','assigned','comment','reopened','closed','cancelled','escalated') NOT NULL,
   old_status VARCHAR(20) NULL,
   new_status VARCHAR(20) NULL,
   remark TEXT NULL,
@@ -765,6 +782,19 @@ CREATE TABLE work_request_actions (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (request_id) REFERENCES work_requests(id) ON DELETE CASCADE,
   FOREIGN KEY (changed_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB;
+
+CREATE TABLE work_request_comments (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  request_id INT NOT NULL,
+  user_id INT NULL,
+  comment TEXT NOT NULL,
+  legacy_it_comment_id INT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_legacy_it_comment (legacy_it_comment_id),
+  INDEX idx_request (request_id),
+  FOREIGN KEY (request_id) REFERENCES work_requests(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
 CREATE TABLE work_request_views (
@@ -789,7 +819,28 @@ CREATE TABLE notifications (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-  INDEX idx_user_read (user_id, is_read)
+  INDEX idx_user_read (user_id, is_read),
+  INDEX idx_read_created (is_read, created_at)
+) ENGINE=InnoDB;
+
+-- Push (Web Push / FCM) — notifyUser() इथे टाकतो, cron/send-push-queue.php पाठवतो
+CREATE TABLE notification_push_queue (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  organization_id INT NOT NULL,
+  user_id INT NOT NULL,
+  notification_id INT NULL,
+  title VARCHAR(255) NOT NULL,
+  message TEXT NULL,
+  link VARCHAR(255) NULL,
+  is_urgent TINYINT(1) NOT NULL DEFAULT 0,
+  status ENUM('pending','sending','sent','failed') NOT NULL DEFAULT 'pending',
+  attempts TINYINT NOT NULL DEFAULT 0,
+  locked_at DATETIME NULL,
+  sent_at DATETIME NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_queue_status (status, is_urgent, id),
+  FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 CREATE TABLE activity_logs (
@@ -1433,6 +1484,11 @@ CREATE TABLE announcements (
   target_scope ENUM('all','specific') DEFAULT 'all',
   created_by INT NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  is_pinned TINYINT(1) NOT NULL DEFAULT 0,
+  expires_at DATE NULL,
+  withdrawn_at DATETIME NULL,
+  withdrawn_by INT NULL,
+  updated_at DATETIME NULL,
   FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
   FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
@@ -1475,6 +1531,7 @@ CREATE TABLE emergency_alerts (
   id INT AUTO_INCREMENT PRIMARY KEY,
   organization_id INT NOT NULL,
   triggered_by INT NOT NULL,
+  campus_id INT NULL,
   alert_type ENUM('fire','medical','security','other') NOT NULL,
   location VARCHAR(255) NULL,
   message TEXT NULL,
@@ -1482,9 +1539,34 @@ CREATE TABLE emergency_alerts (
   resolved_by INT NULL,
   resolved_at TIMESTAMP NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  latitude DECIMAL(10,7) NULL,
+  longitude DECIMAL(10,7) NULL,
+  first_ack_at DATETIME NULL,
+  escalated_at DATETIME NULL,
+  resolution_remark TEXT NULL,
+  INDEX idx_user_created (triggered_by, created_at),
   FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
   FOREIGN KEY (triggered_by) REFERENCES users(id) ON DELETE CASCADE,
   FOREIGN KEY (resolved_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB;
+
+CREATE TABLE emergency_alert_recipients (
+  alert_id INT NOT NULL,
+  user_id INT NOT NULL,
+  notified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (alert_id, user_id),
+  FOREIGN KEY (alert_id) REFERENCES emergency_alerts(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE emergency_alert_responses (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  alert_id INT NOT NULL,
+  user_id INT NOT NULL,
+  responded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_alert_user (alert_id, user_id),
+  FOREIGN KEY (alert_id) REFERENCES emergency_alerts(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 CREATE TABLE push_subscriptions (
@@ -2583,7 +2665,8 @@ CREATE TABLE staff_messages (
 CREATE TABLE grievances (
   id INT AUTO_INCREMENT PRIMARY KEY,
   organization_id INT NOT NULL,
-  submitted_by INT NOT NULL,
+  submitted_by INT NULL COMMENT 'गुप्त तक्रारीसाठी NULL',
+  submitter_hash CHAR(64) NULL COMMENT 'गुप्त तक्रार — व्यक्तीचा ID न ठेवता HMAC',
   category VARCHAR(100) NULL,
   description TEXT NOT NULL,
   is_anonymous TINYINT(1) DEFAULT 0,
@@ -2593,9 +2676,24 @@ CREATE TABLE grievances (
   sla_deadline DATE NULL,
   resolved_at DATETIME NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  escalated_at DATETIME NULL,
+  reopened_count INT NOT NULL DEFAULT 0,
+  INDEX idx_submitter_hash (submitter_hash),
   FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
   FOREIGN KEY (submitted_by) REFERENCES users(id) ON DELETE CASCADE,
   FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB;
+
+CREATE TABLE grievance_comments (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  grievance_id INT NOT NULL,
+  user_id INT NULL,
+  author_role ENUM('submitter','handler') NOT NULL,
+  comment TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_grievance (grievance_id),
+  FOREIGN KEY (grievance_id) REFERENCES grievances(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
 

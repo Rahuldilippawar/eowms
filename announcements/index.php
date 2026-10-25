@@ -5,18 +5,23 @@ require_once __DIR__ . '/../includes/header.php';
 
 $orgId = activeOrgId();
 
+$canManageAnn = hasPermission('manage_announcements');
+$hasNewCols = true;
+try { $pdo->query("SELECT is_pinned, expires_at, withdrawn_at FROM announcements LIMIT 1"); } catch (PDOException $e) { $hasNewCols = false; }
+
 // या व्यक्तीला लागू असलेली परिपत्रकं — "सगळ्यांसाठी" किंवा तिच्याच
-// विभागासाठी खास पाठवलेली.
+// विभागासाठी खास पाठवलेली. मागे घेतलेली / मुदत संपलेली — फक्त व्यवस्थापकांना.
 $sql = "
     SELECT a.*, u.name AS created_by_name,
       (SELECT COUNT(*) FROM announcement_reads WHERE announcement_id = a.id AND user_id = ?) AS is_read
     FROM announcements a
     LEFT JOIN users u ON u.id = a.created_by
     WHERE a.organization_id = ?
-      AND (a.target_scope = 'all' OR EXISTS (
+      AND (" . ($canManageAnn ? "1=1 OR " : "") . "a.target_scope = 'all' OR EXISTS (
         SELECT 1 FROM announcement_departments ad WHERE ad.announcement_id = a.id AND ad.department_id = ?
-      ))
-    ORDER BY a.created_at DESC
+      ))"
+    . ($hasNewCols && !$canManageAnn ? " AND a.withdrawn_at IS NULL AND (a.expires_at IS NULL OR a.expires_at >= CURDATE())" : "")
+    . " ORDER BY " . ($hasNewCols ? "(a.is_pinned = 1 AND a.withdrawn_at IS NULL AND (a.expires_at IS NULL OR a.expires_at >= CURDATE())) DESC, " : "") . "a.created_at DESC
 ";
 $stmt = $pdo->prepare($sql);
 $stmt->execute([$user['id'], $orgId, $user['department_id'] ?? 0]);
@@ -29,7 +34,7 @@ $priorityLabels = ['normal' => 'सर्वसाधारण', 'important' => 
 <div class="page-eyebrow"><?= h(activeOrgName()) ?></div>
 <div class="d-flex justify-content-between align-items-start mb-1">
   <div class="page-title mb-0">📢 परिपत्रक/सूचना</div>
-  <?php if (hasPermission('view_org_wide_dashboards') || hasRole('super_admin')): ?>
+  <?php if ($canManageAnn): ?>
     <a href="create.php" class="btn" style="background:var(--rail);color:#fff;border-radius:9px;font-size:13px;padding:9px 18px;font-weight:600;">
       <i class="fa-solid fa-bullhorn me-1"></i>नवीन सूचना पाठवा
     </a>
@@ -54,6 +59,9 @@ $priorityLabels = ['normal' => 'सर्वसाधारण', 'important' => 
             <?php if (!$a['is_read']): ?><span style="width:8px;height:8px;border-radius:50%;background:var(--rail);display:inline-block;"></span><?php endif; ?>
             <span style="font-size:15px;font-weight:700;color:var(--ink);"><?= h($a['title']) ?></span>
             <span class="status-chip <?= $priorityChips[$a['priority']] ?>" style="font-size:10px;"><?= $priorityLabels[$a['priority']] ?></span>
+            <?php if (!empty($a['is_pinned'])): ?><span style="font-size:12px;" title="Pinned">📌</span><?php endif; ?>
+            <?php if (!empty($a['withdrawn_at'])): ?><span class="status-chip overdue" style="font-size:10px;">🚫 मागे घेतली</span>
+            <?php elseif (!empty($a['expires_at']) && $a['expires_at'] < date('Y-m-d')): ?><span class="status-chip pending" style="font-size:10px;">⌛ मुदत संपली</span><?php endif; ?>
           </div>
           <div style="font-size:12.5px;color:var(--text-dim);margin-top:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:700px;"><?= h(mb_substr(strip_tags($a['content']), 0, 120)) ?></div>
           <div style="font-size:10.5px;color:var(--text-dim);margin-top:8px;"><?= h($a['created_by_name']) ?> · <?= date('d M Y, h:i A', strtotime($a['created_at'])) ?></div>
