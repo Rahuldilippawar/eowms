@@ -103,6 +103,18 @@ Dev accounts (password `password`): `admin@example.com` (super admin), `orgadmin
   (reports to `hod@`, who reports to `principal@`).
 - Tests: 86 backend, 33 frontend, 25 end-to-end.
 
+### Phase 5 — done
+- Daily work log with an edit window, 24-hour cap, task link, scoped review and CSV export.
+- Tasks with assign → start → mark done → verify / send back / cancel, a timeline, comments,
+  reassignment, overdue flags and per-task permissions (reporting officer, scoped roles).
+- In-app notifications (bell + list, in the reader's language) for tasks, leave, corrections and work
+  reviews; hourly due-tomorrow / overdue reminders (`erp:task-reminders`, needs the scheduler cron).
+- Performance report per employee (attendance + work log + tasks) with CSV, and "my figures".
+- Dashboard tiles for my open tasks, tasks waiting for my check and overdue tasks.
+- Rules: [`docs/WORK-AND-TASKS.md`](docs/WORK-AND-TASKS.md). Seed: a sample task from `hod@` to `teacher@`.
+- Tests: 102 backend, 39 frontend, 27 end-to-end.
+
 ### Not yet (later phases)
-- Daily work, tasks, notifications (Phase 5) and the other business modules; holiday calendar.
+- Correspondence, approvals and PDF/QR (Phase 6) and the other business modules; holiday calendar;
+  email / push delivery of notifications; organization-defined extra fields on work entries.
 - Reports, deployment to Hostinger.

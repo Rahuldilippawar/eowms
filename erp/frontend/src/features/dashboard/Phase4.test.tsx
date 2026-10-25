@@ -44,7 +44,7 @@ const leave = vi.mocked(leaveApi)
 const dash = vi.mocked(dashboardApi)
 const employee = { id: 5, name: 'Teacher', employee_code: 'EMP-005', department: { id: 1, name: 'Science' }, institution: { id: 1, name: 'College' } }
 
-const kpis = { employees: 12, present_today: 9, on_leave_today: 1, absent_today: 2, students: null, pending_leave_approvals: 3, pending_corrections: null }
+const kpis = { employees: 12, present_today: 9, on_leave_today: 1, absent_today: 2, students: null, pending_leave_approvals: 3, pending_corrections: null, my_open_tasks: 2, tasks_to_verify: null, overdue_tasks: null }
 
 describe('phase 4 screens', () => {
   beforeEach(() => {
@@ -101,7 +101,8 @@ describe('phase 4 screens', () => {
     leave.fetchActiveLeaveTypes.mockResolvedValue([{ id: 1, code: 'CL', name: 'Casual leave', days_per_year: 12, is_paid: true }])
     leave.fetchMyLeave.mockResolvedValue([])
     renderApp('/my/leave')
-    await userEvent.selectOptions(await screen.findByLabelText('Leave type'), '1')
+    await screen.findByRole('option', { name: 'Casual leave' })
+    await userEvent.selectOptions(screen.getByLabelText('Leave type'), '1')
     fireEvent.change(screen.getByLabelText('From'), { target: { value: '2026-10-28' } })
     fireEvent.change(screen.getByLabelText('To'), { target: { value: '2026-10-27' } })
     await userEvent.type(screen.getByLabelText('Reason'), 'Family function')

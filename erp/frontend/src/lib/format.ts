@@ -23,3 +23,10 @@ export function todayYmd(): string {
 export function monthYm(d = new Date()): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
 }
+
+/** "YYYY-MM-DD" shifted by whole days (calendar arithmetic, no timezone involved). */
+export function addDays(ymd: string, days: number): string {
+  const [y, m, d] = ymd.split('-').map(Number)
+  const date = new Date(Date.UTC(y, m - 1, d + days))
+  return date.toISOString().slice(0, 10)
+}

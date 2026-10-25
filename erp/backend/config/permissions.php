@@ -18,5 +18,8 @@ return [
         'students' => ['view', 'create', 'edit', 'activate', 'export'],
         'attendance' => ['view', 'create', 'edit', 'approve', 'export'],
         'leave' => ['view', 'approve', 'manage_types'],
+        'daily_work' => ['view', 'review', 'export'],
+        'tasks' => ['view', 'create', 'edit'],
+        'performance' => ['view', 'export'],
     ],
 ];

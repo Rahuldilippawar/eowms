@@ -9,12 +9,16 @@ use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\InstitutionController;
 use App\Http\Controllers\Api\V1\LeaveController;
 use App\Http\Controllers\Api\V1\MeController;
+use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\OrganizationController;
 use App\Http\Controllers\Api\V1\PasswordResetController;
+use App\Http\Controllers\Api\V1\PerformanceController;
 use App\Http\Controllers\Api\V1\PermissionController;
 use App\Http\Controllers\Api\V1\RoleController;
 use App\Http\Controllers\Api\V1\StudentController;
+use App\Http\Controllers\Api\V1\TaskController;
 use App\Http\Controllers\Api\V1\UserController;
+use App\Http\Controllers\Api\V1\WorkController;
 use App\Http\Middleware\SetAccessContext;
 use Illuminate\Support\Facades\Route;
 
@@ -110,4 +114,30 @@ Route::middleware(['auth:sanctum', SetAccessContext::class])->group(function () 
     Route::get('/leave-types', [LeaveController::class, 'types'])->middleware('permission:leave.manage_types');
     Route::post('/leave-types', [LeaveController::class, 'storeType'])->middleware('permission:leave.manage_types');
     Route::put('/leave-types/{leaveType}', [LeaveController::class, 'updateType'])->middleware('permission:leave.manage_types');
+
+    Route::get('/me/work', [WorkController::class, 'mine']);
+    Route::post('/me/work', [WorkController::class, 'store']);
+    Route::put('/me/work/{entry}', [WorkController::class, 'update']);
+    Route::delete('/me/work/{entry}', [WorkController::class, 'destroy']);
+    Route::get('/me/tasks/open', [WorkController::class, 'myTasks']);
+    Route::get('/me/performance', [PerformanceController::class, 'me']);
+    Route::get('/work', [WorkController::class, 'index'])->middleware('permission:daily_work.view');
+    Route::get('/work/export', [WorkController::class, 'export'])->middleware('permission:daily_work.export');
+    Route::post('/work/{entry}/review', [WorkController::class, 'review'])->middleware('permission:daily_work.review');
+
+    // Tasks: visibility and who may act are decided per task (TaskService), not by a single permission.
+    Route::get('/tasks', [TaskController::class, 'index']);
+    Route::get('/tasks/assignable', [TaskController::class, 'assignable']);
+    Route::post('/tasks', [TaskController::class, 'store']);
+    Route::get('/tasks/{task}', [TaskController::class, 'show']);
+    Route::put('/tasks/{task}', [TaskController::class, 'update']);
+    Route::post('/tasks/{task}/comments', [TaskController::class, 'comment']);
+    Route::post('/tasks/{task}/{action}', [TaskController::class, 'transition'])->whereIn('action', ['start', 'submit', 'complete', 'reopen', 'cancel']);
+
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
+    Route::post('/notifications/read-all', [NotificationController::class, 'readAll']);
+    Route::post('/notifications/{id}/read', [NotificationController::class, 'read'])->whereNumber('id');
+
+    Route::get('/performance', [PerformanceController::class, 'index'])->middleware('permission:performance.view');
 });

@@ -10,6 +10,7 @@ use App\Models\LeaveRequest;
 use App\Models\LeaveType;
 use App\Models\Organization;
 use App\Models\User;
+use App\Models\UserNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -81,6 +82,11 @@ class LeaveTest extends TestCase
 
         $statuses = AttendanceRecord::where('employee_id', $this->employee->id)->orderBy('work_date')->pluck('status', 'work_date')->map->value->all();
         $this->assertSame(['2026-04-06' => 'leave', '2026-04-07' => 'present', '2026-04-08' => 'leave'], $statuses);
+
+        // The officer heard about the request, the applicant about the decision.
+        $this->assertSame(['leave.requested'], UserNotification::withoutGlobalScopes()->where('user_id', $this->officerUser->id)->pluck('type')->all());
+        $decided = UserNotification::withoutGlobalScopes()->where('user_id', $this->applicant->id)->sole();
+        $this->assertSame(['leave.decided', 'approved', 'Enjoy'], [$decided->type, $decided->data['status'], $decided->data['note']]);
     }
 
     public function test_approvers_outside_scope_cannot_decide(): void

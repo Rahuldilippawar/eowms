@@ -1,4 +1,4 @@
-import { Building, Building2, CalendarClock, CalendarDays, ClipboardCheck, ClipboardList, GraduationCap, IdCard, KeyRound, LayoutDashboard, Network, Plane, Settings, Users, type LucideIcon } from 'lucide-react'
+import { BarChart3, Building, ClipboardPen, ListChecks, NotebookPen, Building2, CalendarClock, CalendarDays, ClipboardCheck, ClipboardList, GraduationCap, IdCard, KeyRound, LayoutDashboard, Network, Plane, Settings, Users, type LucideIcon } from 'lucide-react'
 
 export interface NavItem {
   to: string
@@ -22,8 +22,11 @@ export const NAVIGATION: NavSection[] = [
       { to: '/', labelKey: 'nav.dashboard', icon: LayoutDashboard },
       { to: '/my/attendance', labelKey: 'nav.myAttendance', icon: CalendarClock },
       { to: '/my/leave', labelKey: 'nav.myLeave', icon: Plane },
+      { to: '/my/work', labelKey: 'nav.myWork', icon: NotebookPen },
+      { to: '/tasks', labelKey: 'nav.tasks', icon: ListChecks },
       // Reporting officers approve without holding leave.approve, so this entry is shown to everyone.
       { to: '/approvals', labelKey: 'nav.approvals', icon: ClipboardCheck },
+      { to: '/performance', labelKey: 'nav.performance', icon: BarChart3 },
     ],
   },
   {
@@ -32,6 +35,7 @@ export const NAVIGATION: NavSection[] = [
       { to: '/employees', labelKey: 'nav.employees', icon: IdCard, permission: 'employees.view' },
       { to: '/students', labelKey: 'nav.students', icon: GraduationCap, permission: 'students.view' },
       { to: '/attendance', labelKey: 'nav.teamAttendance', icon: CalendarDays, permission: 'attendance.view' },
+      { to: '/work', labelKey: 'nav.teamWork', icon: ClipboardPen, permission: 'daily_work.view' },
       { to: '/leave-types', labelKey: 'nav.leaveTypes', icon: ClipboardList, permission: 'leave.manage_types' },
     ],
   },

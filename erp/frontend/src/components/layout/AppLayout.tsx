@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next'
 import { Outlet, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { useAuth } from '@/features/auth/AuthProvider'
+import { NotificationBell } from '@/features/notifications/NotificationBell'
 import { LanguageSwitcher } from './LanguageSwitcher'
 import { OrganizationSwitcher } from './OrganizationSwitcher'
 import { SidebarNav } from './Sidebar'
@@ -71,6 +72,7 @@ export function AppLayout() {
             <OrganizationSwitcher />
           </div>
           <LanguageSwitcher />
+          <NotificationBell />
           <Dropdown.Root>
             <Dropdown.Trigger asChild>
               <Button variant="ghost" className="max-w-[12rem] px-2">

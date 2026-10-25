@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Http\Controllers\Concerns\ResolvesMyEmployee;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\AttendanceRecordResource;
 use App\Http\Resources\EmployeeResource;
@@ -14,6 +15,7 @@ use App\Models\LeaveType;
 use App\Services\AttendanceRules;
 use App\Services\AttendanceService;
 use App\Services\LeaveService;
+use App\Services\Notifier;
 use App\Support\Access\LeaveAccess;
 use App\Support\Audit\AuditLogger;
 use App\Support\Queries\PeopleQueries;
@@ -32,6 +34,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 class MeController extends Controller
 {
+    use ResolvesMyEmployee;
+
     public function employee(): JsonResponse
     {
         $employee = PeopleQueries::myEmployee();
@@ -147,6 +151,11 @@ class MeController extends Controller
             'requested_by' => $request->user()->id,
         ]);
         AuditLogger::record('leave', 'request', $leave, null, collect($leave->getAttributes())->only(['leave_type_id', 'start_date', 'end_date', 'days'])->all());
+        $leave->load(['leaveType', 'reviewer']);
+        Notifier::employee($leave->reviewer, 'leave.requested', [
+            'leave_id' => $leave->id, 'employee' => $employee->name, 'type' => $leave->leaveType->name,
+            'start_date' => $data['start_date'], 'end_date' => $data['end_date'],
+        ], '/approvals');
 
         return new LeaveRequestResource($leave->load(['leaveType', 'reviewer']));
     }
@@ -176,21 +185,5 @@ class MeController extends Controller
         abort_if($leave->attachment_path === null || ! Storage::disk('local')->exists($leave->attachment_path), 404);
 
         return Storage::disk('local')->download($leave->attachment_path, $leave->attachment_name ?? 'attachment');
-    }
-
-    private function employeeOrFail(): Employee
-    {
-        $employee = PeopleQueries::myEmployee();
-        abort_if($employee === null, 404, __('attendance.no_employee'));
-
-        return $employee;
-    }
-
-    private function activeEmployeeOrFail(): Employee
-    {
-        $employee = $this->employeeOrFail();
-        abort_unless($employee->is_active, 403, __('auth.inactive'));
-
-        return $employee;
     }
 }

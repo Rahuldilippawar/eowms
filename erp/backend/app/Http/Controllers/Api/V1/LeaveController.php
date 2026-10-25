@@ -8,6 +8,7 @@ use App\Models\Employee;
 use App\Models\LeaveRequest;
 use App\Models\LeaveType;
 use App\Services\LeaveService;
+use App\Services\Notifier;
 use App\Support\Access\AccessContext;
 use App\Support\Audit\AuditLogger;
 use App\Support\Queries\PeopleQueries;
@@ -70,6 +71,12 @@ class LeaveController extends Controller
         abort_unless(LeaveService::mayDecide($request->user(), $leave), 404);
 
         $decided = $service->decide($leave, (bool) $data['approve'], $data['remarks'] ?? null, $request->user());
+        $decided->load(['employee', 'leaveType']);
+        Notifier::employee($decided->employee, 'leave.decided', [
+            'leave_id' => $decided->id, 'status' => $decided->status, 'type' => $decided->leaveType->name,
+            'start_date' => $decided->start_date->toDateString(), 'end_date' => $decided->end_date->toDateString(),
+            'by' => $request->user()->name, 'note' => $decided->decision_remarks,
+        ], '/my/leave');
 
         return new LeaveRequestResource($decided->load(['employee', 'leaveType', 'reviewer']));
     }

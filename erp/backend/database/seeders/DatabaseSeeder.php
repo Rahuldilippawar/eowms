@@ -10,6 +10,8 @@ use App\Models\Organization;
 use App\Models\Role;
 use App\Models\RoleAssignment;
 use App\Models\Student;
+use App\Models\Task;
+use App\Models\TaskUpdate;
 use App\Models\User;
 use App\Support\Access\DefaultRoles;
 use App\Support\Access\PermissionCatalog;
@@ -52,9 +54,19 @@ class DatabaseSeeder extends Seeder
         // People records (linked to the accounts above where they log in).
         $ePrincipal = $this->employee($trust, $principal, 'EMP-001', 'Principal (SAC)', 'Principal', $college->departments()->where('code', 'LIB')->first() ?? $physics);
         $eHod = $this->employee($trust, $hod, 'EMP-002', 'HOD Physics', 'Head of Department', $physics, $ePrincipal);
-        $this->employee($trust, $teacher, 'EMP-003', 'Physics Teacher', 'Assistant Professor', $physics, $eHod);
+        $eTeacher = $this->employee($trust, $teacher, 'EMP-003', 'Physics Teacher', 'Assistant Professor', $physics, $eHod);
         $this->employee($trust, $staff, 'EMP-004', 'IT Staff', 'System Administrator', $it);
         $this->employee($trust, $admin, 'EMP-005', 'Org Admin (SET)', 'Administrator', $it);
+        // A sample task from the HOD to the teacher.
+        $task = Task::firstOrCreate(['organization_id' => $trust->id, 'title' => 'Prepare the physics lab inventory'], [
+            'description' => 'List equipment that needs repair before the practical exams.', 'priority' => 'high',
+            'due_date' => now('Asia/Kolkata')->addDays(3)->toDateString(), 'assignee_employee_id' => $eTeacher->id,
+            'institution_id' => $physics->institution_id, 'department_id' => $physics->id, 'assigned_by' => $hod->id, 'status' => 'open',
+        ]);
+        if ($task->code === null) {
+            $task->forceFill(['code' => sprintf('TSK-%05d', $task->id)])->save();
+            TaskUpdate::create(['task_id' => $task->id, 'user_id' => $hod->id, 'type' => 'created', 'to_status' => 'open']);
+        }
         foreach ([['STU-001', 'Asha Patil', '11'], ['STU-002', 'Rohan Jadhav', '12']] as [$code, $name, $class]) {
             Student::firstOrCreate(['organization_id' => $trust->id, 'student_code' => $code], ['institution_id' => $college->id, 'department_id' => $physics->id, 'name' => $name, 'class_name' => $class]);
         }

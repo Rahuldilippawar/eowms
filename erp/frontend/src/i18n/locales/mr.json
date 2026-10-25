@@ -85,7 +85,11 @@
     "teamAttendance": "टीम हजेरी",
     "employees": "कर्मचारी",
     "students": "विद्यार्थी",
-    "leaveTypes": "रजेचे प्रकार"
+    "leaveTypes": "रजेचे प्रकार",
+    "myWork": "माझे काम",
+    "tasks": "कामे (टास्क)",
+    "performance": "कामगिरी",
+    "teamWork": "टीमचे दैनंदिन काम"
   },
   "dashboard": {
     "welcome": "नमस्कार, {{name}}",
@@ -117,7 +121,10 @@
       "absent_today": "आज अनुपस्थित / नोंद नाही",
       "students": "सक्रिय विद्यार्थी",
       "pending_leave_approvals": "मंजुरीसाठी प्रलंबित रजा",
-      "pending_corrections": "मंजुरीसाठी प्रलंबित दुरुस्त्या"
+      "pending_corrections": "मंजुरीसाठी प्रलंबित दुरुस्त्या",
+      "my_open_tasks": "माझी चालू कामे",
+      "tasks_to_verify": "माझ्या तपासणीसाठी प्रलंबित कामे",
+      "overdue_tasks": "मुदत संपलेली कामे"
     }
   },
   "notFound": {
@@ -221,7 +228,8 @@
     "assign": "भूमिका देणे / काढणे",
     "export": "Export करणे",
     "approve": "मंजूर करणे",
-    "manage_types": "प्रकार व्यवस्थापन"
+    "manage_types": "प्रकार व्यवस्थापन",
+    "review": "आढावा घेणे"
   },
   "modules": {
     "organizations": "संस्था",
@@ -233,7 +241,10 @@
     "employees": "कर्मचारी",
     "students": "विद्यार्थी",
     "attendance": "हजेरी",
-    "leave": "रजा"
+    "leave": "रजा",
+    "daily_work": "दैनंदिन काम",
+    "tasks": "कामे (टास्क)",
+    "performance": "कामगिरी अहवाल"
   },
   "attendance": {
     "notMarked": "नोंद नाही",
@@ -356,5 +367,163 @@
     "reportingOfficer": "वरिष्ठ अधिकारी",
     "section": "तुकडी",
     "studentCode": "विद्यार्थी कोड"
+  },
+  "notifications": {
+    "title": "सूचना",
+    "bell": "सूचना",
+    "bellUnread_one": "सूचना, {{count}} न वाचलेली",
+    "bellUnread_other": "सूचना, {{count}} न वाचलेल्या",
+    "none": "सूचना नाहीत.",
+    "seeAll": "सर्व पहा",
+    "markAll": "सर्व वाचल्या म्हणून खूण करा",
+    "unreadOnly": "फक्त न वाचलेल्या",
+    "unread": "न वाचलेली",
+    "generic": "तुमच्यासाठी नवीन माहिती आहे.",
+    "types": {
+      "task_assigned": "{{by}} यांनी तुम्हाला {{code}} “{{title}}” हे काम दिले (मुदत {{due_date}}).",
+      "task_unassigned": "{{by}} यांनी {{code}} “{{title}}” हे काम दुसऱ्याला दिले.",
+      "task_start": "{{by}} यांनी {{code}} “{{title}}” सुरू केले.",
+      "task_submit": "{{by}} यांनी {{code}} “{{title}}” पूर्ण केले — कृपया तपासा.",
+      "task_complete": "{{by}} यांनी {{code}} “{{title}}” पूर्ण झाल्याचे तपासले.",
+      "task_reopen": "{{by}} यांनी {{code}} “{{title}}” परत पाठवले: {{note}}",
+      "task_cancel": "{{by}} यांनी {{code}} “{{title}}” रद्द केले: {{note}}",
+      "task_comment": "{{by}} यांनी {{code}} वर लिहिले: {{note}}",
+      "task_due_soon": "{{code}} “{{title}}” ची मुदत उद्या आहे.",
+      "task_overdue": "{{code}} “{{title}}” ची मुदत संपली ({{due_date}}).",
+      "leave_requested": "{{employee}} यांनी {{type}} साठी अर्ज केला, {{start_date}} – {{end_date}}.",
+      "leave_decided_approved": "{{by}} यांनी तुमची {{type}} मंजूर केली, {{start_date}} – {{end_date}}.",
+      "leave_decided_rejected": "{{by}} यांनी तुमची {{type}} नामंजूर केली, {{start_date}} – {{end_date}}.",
+      "correction_decided_approved": "{{by}} यांनी {{work_date}} ची हजेरी दुरुस्ती मंजूर केली.",
+      "correction_decided_rejected": "{{by}} यांनी {{work_date}} ची हजेरी दुरुस्ती नामंजूर केली.",
+      "work_reviewed": "{{by}} यांनी तुमच्या “{{title}}” ({{work_date}}) कामाचा आढावा घेतला."
+    }
+  },
+  "work": {
+    "status": {
+      "completed": "पूर्ण",
+      "in_progress": "चालू",
+      "pending": "प्रलंबित"
+    },
+    "addEntry": "आजचे काम नोंदवा",
+    "editEntry": "नोंद बदला",
+    "whatDidYouDo": "काय काम केले?",
+    "hours": "तास (ऐच्छिक)",
+    "hoursRule": "0.25 ते 24, 0.25 च्या टप्प्यात द्या.",
+    "linkedTask": "संबंधित काम (ऐच्छिक)",
+    "noTask": "काही नाही",
+    "details": "तपशील (ऐच्छिक)",
+    "history": "माझ्या नोंदी",
+    "none": "या तारखांची कामाची नोंद नाही.",
+    "hoursCount_one": "{{count}} तास",
+    "hoursCount_other": "{{count}} तास",
+    "editWindow_one": "आजची आणि मागील {{count}} दिवसाची नोंद, आढावा होईपर्यंत, जोडता किंवा बदलता येते.",
+    "editWindow_other": "आजची आणि मागील {{count}} दिवसांची नोंद, आढावा होईपर्यंत, जोडता किंवा बदलता येते.",
+    "deleteTitle": "ही नोंद काढायची?",
+    "deleteNamed": "{{name}} काढा",
+    "deleted": "नोंद काढली.",
+    "reviewedBy": "{{name}} यांनी आढावा घेतला",
+    "review": "आढावा",
+    "reviewTitle": "या कामाचा आढावा झाला म्हणून खूण करायची?",
+    "markReviewed": "आढावा झाला",
+    "reviewedToast": "आढावा नोंदवला.",
+    "reviewState": "आढावा",
+    "reviewed": "आढावा झाला",
+    "notReviewed": "आढावा बाकी"
+  },
+  "tasks": {
+    "status": {
+      "open": "सुरू नाही",
+      "in_progress": "चालू",
+      "submitted": "तपासणी बाकी",
+      "completed": "पूर्ण",
+      "cancelled": "रद्द",
+      "active": "चालू (बंद नसलेली)"
+    },
+    "priority": {
+      "low": "कमी",
+      "normal": "साधारण",
+      "high": "जास्त",
+      "urgent": "तातडीचे"
+    },
+    "view": {
+      "mine": "मला दिलेली",
+      "assigned": "मी दिलेली",
+      "all": "मला दिसणारी सर्व"
+    },
+    "views": "कोणती कामे",
+    "action": {
+      "start": "सुरू करा",
+      "submit": "पूर्ण झाले",
+      "complete": "तपासून बंद करा",
+      "reopen": "परत पाठवा",
+      "cancel": "काम रद्द करा"
+    },
+    "confirm": {
+      "start": "हे काम सुरू करायचे?",
+      "submit": "हे काम पूर्ण झाले म्हणून कळवायचे?",
+      "complete": "हे काम तपासून बंद करायचे?",
+      "reopen": "हे काम परत पाठवायचे?",
+      "cancel": "हे काम रद्द करायचे?"
+    },
+    "done": {
+      "start": "काम सुरू झाले.",
+      "submit": "तपासणीसाठी पाठवले.",
+      "complete": "काम बंद केले.",
+      "reopen": "कर्मचाऱ्याकडे परत पाठवले.",
+      "cancel": "काम रद्द केले."
+    },
+    "event": {
+      "created": "यांनी काम दिले",
+      "comment": "यांनी लिहिले",
+      "started": "यांनी सुरू केले",
+      "submitted": "यांनी पूर्ण झाल्याचे कळवले",
+      "completed": "यांनी तपासून बंद केले",
+      "reopened": "यांनी परत पाठवले",
+      "cancelled": "यांनी रद्द केले",
+      "edited": "यांनी तपशील बदलले"
+    },
+    "newTask": "नवीन काम द्या",
+    "editTask": "काम बदला",
+    "assign": "काम द्या",
+    "taskTitle": "काम",
+    "assignee": "कोणाला",
+    "assignedBy": "कोणी दिले",
+    "chooseAssignee": "व्यक्ती निवडा",
+    "nobodyToAssign": "तुम्ही कोणालाही काम देऊ शकत नाही.",
+    "dueDate": "अंतिम तारीख",
+    "priorityLabel": "प्राधान्य",
+    "dueInPast": "अंतिम तारीख मागील असू शकत नाही.",
+    "assignedToast": "{{name}} यांना काम दिले.",
+    "dueOn": "मुदत {{date}}",
+    "overdue": "मुदत संपली",
+    "overdueOnly": "फक्त मुदत संपलेली",
+    "fromName": "{{name}} यांच्याकडून",
+    "toName": "{{name}} यांना",
+    "none": "येथे कामे नाहीत.",
+    "notFound": "हे काम उपलब्ध नाही किंवा तुम्हाला दिसू शकत नाही.",
+    "timeline": "इतिहास",
+    "addComment": "टिप्पणी लिहा",
+    "sendComment": "पाठवा",
+    "reason": "कारण",
+    "noteOptional": "टीप (ऐच्छिक)",
+    "noteRequired": "कृपया थोडक्यात कारण लिहा."
+  },
+  "performance": {
+    "mine": "माझी आकडेवारी",
+    "team": "टीम",
+    "employee": "कर्मचारी",
+    "daysPresent": "उपस्थित दिवस",
+    "leaveDays": "रजेचे दिवस",
+    "workHours": "नोंदवलेले तास",
+    "tasksAssigned": "मुदतीतील कामे",
+    "tasksCompleted": "पूर्ण",
+    "onTimeRate": "वेळेत",
+    "lateHint_one": "{{count}} वेळा उशिरा",
+    "lateHint_other": "{{count}} वेळा उशिरा",
+    "daysLogged_one": "{{count}} दिवस",
+    "daysLogged_other": "{{count}} दिवस",
+    "overdueHint_one": "{{count}} मुदत संपलेले",
+    "overdueHint_other": "{{count}} मुदत संपलेली",
+    "note": "ज्यांची मुदत या कालावधीत आहे ती कामे मोजली जातात; रद्द कामे वगळली आहेत. \"वेळेत\" म्हणजे मुदतीपर्यंत बंद झालेली कामे, एकूण मुदतीतील कामांपैकी."
   }
 }

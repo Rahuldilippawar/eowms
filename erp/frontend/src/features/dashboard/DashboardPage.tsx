@@ -1,5 +1,5 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import { CalendarCheck, CalendarX, ClipboardCheck, GraduationCap, Plane, UserCheck, Users, type LucideIcon } from 'lucide-react'
+import { AlarmClock, CalendarCheck, CalendarX, ClipboardCheck, GraduationCap, ListChecks, ListTodo, Plane, UserCheck, Users, type LucideIcon } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
@@ -22,6 +22,9 @@ const KPIS: { key: KpiKey; icon: LucideIcon; to?: string }[] = [
   { key: 'students', icon: GraduationCap, to: '/students' },
   { key: 'pending_leave_approvals', icon: ClipboardCheck, to: '/approvals' },
   { key: 'pending_corrections', icon: CalendarCheck, to: '/approvals' },
+  { key: 'my_open_tasks', icon: ListChecks, to: '/tasks' },
+  { key: 'tasks_to_verify', icon: ListTodo, to: '/tasks' },
+  { key: 'overdue_tasks', icon: AlarmClock, to: '/tasks' },
 ]
 
 /** Attendance states use the fixed status hues; each also has its label in legend, tooltip and table. */
