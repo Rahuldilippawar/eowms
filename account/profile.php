@@ -53,6 +53,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 }
                 $newPhotoPath = 'assets/uploads/profile-photos/' . $safeFilename;
                 $pdo->prepare("UPDATE users SET photo_path = ? WHERE id = ?")->execute([$newPhotoPath, $user['id']]);
+                // Session मधली प्रतही अद्ययावत — नवीन फोटो लगेच सगळीकडे दिसावा
+                $_SESSION['user']['photo_path'] = $newPhotoPath;
+                $user['photo_path'] = $newPhotoPath;
                 logActivity('स्वतःचा Profile फोटो बदलला');
                 $success = 'फोटो यशस्वीरित्या अपडेट झाला.';
             } else {

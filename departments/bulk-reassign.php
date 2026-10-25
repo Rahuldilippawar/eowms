@@ -13,8 +13,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['form_error'] = 'कृपया किमान एक विभाग निवडा.';
     } else {
         $placeholders = implode(',', array_fill(0, count($deptIds), '?'));
-        $stmt = $pdo->prepare("UPDATE departments SET campus_id = ? WHERE id IN ($placeholders) AND organization_id = ?");
-        $stmt->execute(array_merge([$targetCampusId], $deptIds, [$orgId]));
+        if ($targetCampusId) {
+            $cChk = $pdo->prepare("SELECT id FROM campuses WHERE id = ? AND organization_id = ?");
+            $cChk->execute([$targetCampusId, $orgId]);
+            if (!$cChk->fetch()) {
+                $_SESSION['form_error'] = 'निवडलेला कॅम्पस सापडला नाही.';
+                header('Location: bulk-reassign.php');
+                exit;
+            }
+        }
+        $pdo->beginTransaction();
+        try {
+            $stmt = $pdo->prepare("UPDATE departments SET campus_id = ? WHERE id IN ($placeholders) AND organization_id = ?");
+            $stmt->execute(array_merge([$targetCampusId], $deptIds, [$orgId]));
+            // हलवलेल्या विभागांच्या कर्मचाऱ्यांचा कॅम्पसही बदलतो (Trust-स्तरावर हलवल्यास आधीचाच राहतो)
+            if ($targetCampusId) {
+                $pdo->prepare("UPDATE users SET campus_id = ? WHERE department_id IN ($placeholders) AND organization_id = ?")
+                    ->execute(array_merge([$targetCampusId], $deptIds, [$orgId]));
+            }
+            $pdo->commit();
+        } catch (PDOException $e) {
+            $pdo->rollBack();
+            if ((int)($e->errorInfo[1] ?? 0) !== 1062) { throw $e; }
+            $_SESSION['form_error'] = 'निवडलेल्या कॅम्पसमध्ये यांपैकी एखाद्या विभागाचा कोड आधीच वापरात आहे — काहीही बदललं नाही. आधी तो कोड बदला.';
+            header('Location: bulk-reassign.php');
+            exit;
+        }
 
         $targetLabel = $targetCampusId ? null : 'Trust-स्तरीय';
         if ($targetCampusId) {

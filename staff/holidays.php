@@ -11,7 +11,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $date = $_POST['holiday_date'] ?? '';
         $name = trim($_POST['name'] ?? '');
         $campusId = ($_POST['campus_id'] ?? '') !== '' ? (int)$_POST['campus_id'] : null;
-        if ($date && $name) {
+        // Campus NULL (संपूर्ण संस्थेची सुट्टी) असताना Unique Key Duplicate पकडत नाही — म्हणून स्पष्ट तपासणी
+        $dupStmt = $pdo->prepare("SELECT id FROM holidays WHERE organization_id = ? AND campus_id <=> ? AND holiday_date = ? LIMIT 1");
+        $dupStmt->execute([$orgId, $campusId, $date]);
+        if ($date && $name && $dupStmt->fetch()) {
+            $_SESSION['form_error'] = 'ही सुट्टी आधीच नोंदवलेली आहे.';
+        } elseif ($date && $name) {
             try {
                 $pdo->prepare("INSERT INTO holidays (organization_id, campus_id, holiday_date, name, created_by) VALUES (?, ?, ?, ?, ?)")
                     ->execute([$orgId, $campusId, $date, $name, $user['id']]);

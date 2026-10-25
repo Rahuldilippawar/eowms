@@ -8,33 +8,56 @@ $campusesStmt = $pdo->prepare("SELECT id, name FROM campuses WHERE organization_
 $campusesStmt->execute([$orgId]);
 $campuses = $campusesStmt->fetchAll();
 
-$staffStmt = $pdo->prepare("SELECT id, name, designation FROM users WHERE organization_id = ? AND is_active = 1 ORDER BY name");
-$staffStmt->execute([$orgId]);
-$allStaff = $staffStmt->fetchAll();
+// सुरक्षा: सार्वजनिक पानावर सगळ्या कर्मचाऱ्यांची नावं/पदं यादी म्हणून दाखवत नाही —
+// पाहुणा ज्यांना भेटायचंय त्यांचं नाव स्वतः टाईप करतो.
 
 $success = null;
 $regCode = null;
+$error = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $name = trim($_POST['name'] ?? '');
     $mobile = trim($_POST['mobile'] ?? '');
     $guestOrg = trim($_POST['guest_organization'] ?? '') ?: null;
     $purpose = trim($_POST['purpose'] ?? '') ?: null;
-    $meetingWith = ($_POST['meeting_with'] ?? '') !== '' ? (int)$_POST['meeting_with'] : null;
+    $hostName = mb_substr(trim($_POST['meeting_with_name'] ?? ''), 0, 100);
     $campusId = ($_POST['campus_id'] ?? '') !== '' ? (int)$_POST['campus_id'] : null;
+    if ($campusId && !in_array($campusId, array_map('intval', array_column($campuses, 'id')), true)) { $campusId = null; }
     $expectedDate = $_POST['expected_date'] ?? '';
+    $dObj = is_string($expectedDate) ? DateTime::createFromFormat('Y-m-d', $expectedDate) : false;
+    if (!$dObj || $dObj->format('Y-m-d') !== $expectedDate) { $expectedDate = ''; }
 
-    if ($name && $mobile && $expectedDate) {
-        $regCode = 'PR' . date('md') . rand(1000, 9999);
+    // टाईप केलेलं नाव संस्थेतल्या नेमक्या एकाच सक्रिय कर्मचाऱ्याशी जुळलं तरच त्याला कळवतो
+    $meetingWith = null;
+    if ($hostName !== '') {
+        $hostStmt = $pdo->prepare("SELECT id FROM users WHERE organization_id = ? AND is_active = 1 AND LOWER(name) = LOWER(?) LIMIT 2");
+        $hostStmt->execute([$orgId, $hostName]);
+        $hostMatches = $hostStmt->fetchAll(PDO::FETCH_COLUMN);
+        if (count($hostMatches) === 1) { $meetingWith = (int)$hostMatches[0]; }
+        $purpose = mb_substr(($purpose ? $purpose . ' — ' : '') . 'भेट: ' . $hostName, 0, 255);
+    }
+
+    if (honeypotTripped()) {
+        // Bot — काहीही जतन न करता
+        $success = true;
+        $regCode = 'PR' . date('md') . random_int(1000, 9999);
+    } elseif (publicFormRateLimited('guest_pre_register')) {
+        $error = 'या ठिकाणावरून गेल्या तासाभरात खूप नोंदण्या झाल्या आहेत — कृपया थोड्या वेळाने पुन्हा प्रयत्न करा.';
+    } elseif ($name && $mobile && $expectedDate) {
+        // registration_code UNIQUE — आधीच वापरलेला असेल तर पुढचा मोकळा क्रमांक
+        $regCode = generateUniqueCode($pdo, 'guest_pre_registrations', 'registration_code', 'PR%s%d', random_int(1000, 9999), date('md'));
         $pdo->prepare("
             INSERT INTO guest_pre_registrations (organization_id, campus_id, name, mobile, guest_organization, purpose, meeting_with, expected_date, registration_code)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ")->execute([$orgId, $campusId, $name, $mobile, $guestOrg, $purpose, $meetingWith, $expectedDate, $regCode]);
+        ")->execute([$orgId, $campusId, mb_substr($name, 0, 255), mb_substr($mobile, 0, 15), $guestOrg, $purpose, $meetingWith, $expectedDate, $regCode]);
+        publicFormRecordSubmission('guest_pre_register');
 
         if ($meetingWith) {
             try { notifyUser($meetingWith, $orgId, '📱 पाहुण्याने Pre-Register केलं', "$name — " . date('d M Y', strtotime($expectedDate)), 'guests/index.php'); } catch (Exception $e) {}
         }
         $success = true;
+    } else {
+        $error = 'कृपया नाव, Mobile आणि योग्य दिनांक भरा.';
     }
 }
 ?>
@@ -101,7 +124,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <?php else: ?>
       <h1>🎫 पाहुणे Pre-Registration</h1>
       <p class="sub">आधीच माहिती भरा — भेटीच्या वेळी वेळ वाचेल</p>
+      <?php if ($error): ?><p style="background:#F7E2E3;color:#8A1F2B;border-radius:9px;padding:10px 12px;font-size:12.5px;"><?= htmlspecialchars($error) ?></p><?php endif; ?>
       <form method="POST">
+        <?= honeypotField() ?>
         <label>तुमचं नाव</label>
         <input type="text" name="name" required>
         <label>Mobile Number</label>
@@ -111,10 +136,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <label>भेटीचं कारण</label>
         <input type="text" name="purpose">
         <label>कोणाला भेटायचंय</label>
-        <select name="meeting_with">
-          <option value="">-- निवडा --</option>
-          <?php foreach ($allStaff as $s): ?><option value="<?= $s['id'] ?>"><?= htmlspecialchars($s['name']) ?><?= $s['designation'] ? ' — ' . htmlspecialchars($s['designation']) : '' ?></option><?php endforeach; ?>
-        </select>
+        <input type="text" name="meeting_with_name" maxlength="100" placeholder="व्यक्तीचं नाव (ऐच्छिक)">
         <?php if (count($campuses) > 1): ?>
           <label>College/School</label>
           <select name="campus_id">

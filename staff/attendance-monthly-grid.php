@@ -13,21 +13,29 @@ if (!$canManage) {
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'update_data') {
     $month = $_POST['month'] ?? date('Y-m');
-    $cells = $_POST['cell'] ?? []; // ['userId_day' => 'status']
+    if (!is_string($month) || !preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $month)) { $month = date('Y-m'); }
+    $daysInPostedMonth = (int)date('t', strtotime($month . '-01'));
+    $allowedStatuses = ['present', 'absent', 'half_day', 'holiday', 'on_leave'];
+    $cells = is_array($_POST['cell'] ?? null) ? $_POST['cell'] : []; // ['userId_day' => 'status']
     $updated = 0;
+    $checkStmt = $pdo->prepare("SELECT department_id FROM users WHERE id = ? AND organization_id = ?");
 
     foreach ($cells as $key => $status) {
         if ($status === '') continue; // रिकामी सोडलेली Cell — काही बदलायचं नाही
-        [$targetUserId, $day] = explode('_', $key);
-        $targetUserId = (int)$targetUserId;
-        $day = str_pad($day, 2, '0', STR_PAD_LEFT);
-        $date = $month . '-' . $day;
+        // Key, दिवस (त्या महिन्यातला) आणि Status — फक्त वैध असतील तरच
+        if (!preg_match('/^(\d+)_(\d{1,2})$/', (string)$key, $km)) continue;
+        if (!in_array($status, $allowedStatuses, true)) continue;
+        $targetUserId = (int)$km[1];
+        $dayNum = (int)$km[2];
+        if ($dayNum < 1 || $dayNum > $daysInPostedMonth) continue;
+        $date = $month . '-' . str_pad((string)$dayNum, 2, '0', STR_PAD_LEFT);
 
-        // HOD ला फक्त स्वतःच्याच विभागातल्या Staff साठी परवानगी
+        // कर्मचारी याच संस्थेतला असायलाच हवा; HOD ला फक्त स्वतःच्याच विभागातल्या Staff साठी परवानगी
+        $checkStmt->execute([$targetUserId, $orgId]);
+        $targetRow = $checkStmt->fetch();
+        if (!$targetRow) continue;
         if (!$isMgmt) {
-            $checkStmt = $pdo->prepare("SELECT department_id FROM users WHERE id = ?");
-            $checkStmt->execute([$targetUserId]);
-            $targetDept = $checkStmt->fetch()['department_id'] ?? null;
+            $targetDept = $targetRow['department_id'] ?? null;
             if ((int)$targetDept !== (int)($user['department_id'] ?? 0)) continue;
         }
 

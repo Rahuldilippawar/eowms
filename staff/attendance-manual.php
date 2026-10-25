@@ -15,13 +15,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $userId = (int)($_POST['user_id'] ?? 0);
     $date = $_POST['attendance_date'] ?? date('Y-m-d');
     $status = $_POST['status'] ?? 'present';
-    $remarks = trim($_POST['remarks'] ?? '');
+    $remarks = mb_substr(trim($_POST['remarks'] ?? ''), 0, 255);
+
+    // Status व दिनांक — फक्त वैध Values स्वीकारतो
+    $dateObj = DateTime::createFromFormat('Y-m-d', $date);
+    if (!in_array($status, ['present', 'absent', 'half_day', 'holiday', 'on_leave'], true) || !$dateObj || $dateObj->format('Y-m-d') !== $date) {
+        http_response_code(400);
+        die('अवैध दिनांक किंवा Status.');
+    }
+
+    // कर्मचारी याच संस्थेतला असायलाच हवा
+    $checkStmt = $pdo->prepare("SELECT department_id FROM users WHERE id = ? AND organization_id = ?");
+    $checkStmt->execute([$userId, $orgId]);
+    $targetRow = $checkStmt->fetch();
+    if (!$targetRow) {
+        http_response_code(403);
+        die('हा कर्मचारी सापडला नाही.');
+    }
 
     // HOD ला फक्त स्वतःच्याच विभागातल्या Staff साठी परवानगी
     if (!$isMgmt) {
-        $checkStmt = $pdo->prepare("SELECT department_id FROM users WHERE id = ?");
-        $checkStmt->execute([$userId]);
-        $targetDept = $checkStmt->fetch()['department_id'] ?? null;
+        $targetDept = $targetRow['department_id'] ?? null;
         if ((int)$targetDept !== (int)($user['department_id'] ?? 0)) {
             http_response_code(403);
             die('तुम्ही फक्त स्वतःच्या विभागातल्या Staff ची Attendance नोंदवू शकता.');

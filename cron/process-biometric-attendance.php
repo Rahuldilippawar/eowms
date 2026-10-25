@@ -18,11 +18,14 @@ try {
     die("biometric_punch_logs table not found — Migration अजून चालवलेली नाही.\n");
 }
 
-// अजून Process न झालेले सगळे Punches — कोणत्या (PIN + Date) Combination
-// साठी आहेत ते शोधतो
+// अजून Process न झालेले सगळे Punches — कोणत्या (संस्था + PIN + Date) Combination
+// साठी आहेत ते शोधतो. फक्त मंजूर व सक्रिय Devices चे Punches, आणि PIN फक्त
+// त्या Device च्याच संस्थेतल्या Staff शी जुळवायचा (दुसऱ्या संस्थेतल्या याच PIN शी नाही).
 $unprocessedStmt = $pdo->query("
-    SELECT DISTINCT biometric_pin, DATE(punch_time) AS punch_date
-    FROM biometric_punch_logs WHERE processed = 0
+    SELECT DISTINCT d.organization_id, l.biometric_pin, DATE(l.punch_time) AS punch_date
+    FROM biometric_punch_logs l
+    JOIN biometric_devices d ON d.serial_number = l.device_serial AND d.is_active = 1 AND d.is_approved = 1
+    WHERE l.processed = 0
 ");
 $groups = $unprocessedStmt->fetchAll();
 
@@ -32,10 +35,11 @@ $unmatchedCount = 0;
 foreach ($groups as $g) {
     $pin = $g['biometric_pin'];
     $date = $g['punch_date'];
+    $deviceOrgId = (int)$g['organization_id'];
 
-    // हा PIN कोणत्या Staff चा आहे ते शोधतो
-    $userStmt = $pdo->prepare("SELECT id, organization_id FROM users WHERE biometric_pin = ? AND is_active = 1 LIMIT 1");
-    $userStmt->execute([$pin]);
+    // हा PIN त्याच संस्थेतल्या कोणत्या Staff चा आहे ते शोधतो
+    $userStmt = $pdo->prepare("SELECT id, organization_id FROM users WHERE biometric_pin = ? AND organization_id = ? AND is_active = 1 LIMIT 1");
+    $userStmt->execute([$pin, $deviceOrgId]);
     $userRow = $userStmt->fetch();
 
     if (!$userRow) {
@@ -45,12 +49,14 @@ foreach ($groups as $g) {
         continue;
     }
 
-    // त्या दिवसाचे सगळे Punches — पहिली आणि शेवटची वेळ काढतो
+    // त्या दिवसाचे (याच संस्थेच्या Devices वरचे) सगळे Punches — पहिली आणि शेवटची वेळ काढतो
     $punchesStmt = $pdo->prepare("
-        SELECT MIN(punch_time) AS first_p, MAX(punch_time) AS last_p, COUNT(*) AS cnt
-        FROM biometric_punch_logs WHERE biometric_pin = ? AND DATE(punch_time) = ?
+        SELECT MIN(l.punch_time) AS first_p, MAX(l.punch_time) AS last_p, COUNT(*) AS cnt
+        FROM biometric_punch_logs l
+        JOIN biometric_devices d ON d.serial_number = l.device_serial AND d.organization_id = ? AND d.is_active = 1 AND d.is_approved = 1
+        WHERE l.biometric_pin = ? AND DATE(l.punch_time) = ?
     ");
-    $punchesStmt->execute([$pin, $date]);
+    $punchesStmt->execute([$deviceOrgId, $pin, $date]);
     $agg = $punchesStmt->fetch();
 
     $firstTime = date('H:i:s', strtotime($agg['first_p']));
@@ -75,8 +81,11 @@ foreach ($groups as $g) {
     ")->execute([$userRow['organization_id'], $userRow['id'], $date, $firstTime, $lastTime, $agg['cnt'], $status, $isLate, $isEarlyLeave]);
 
     // हे Punches Process झाले म्हणून चिन्हांकित करतो
-    $pdo->prepare("UPDATE biometric_punch_logs SET processed = 1 WHERE biometric_pin = ? AND DATE(punch_time) = ?")
-        ->execute([$pin, $date]);
+    $pdo->prepare("
+        UPDATE biometric_punch_logs l
+        JOIN biometric_devices d ON d.serial_number = l.device_serial AND d.organization_id = ?
+        SET l.processed = 1 WHERE l.biometric_pin = ? AND DATE(l.punch_time) = ?
+    ")->execute([$deviceOrgId, $pin, $date]);
 
     $processedCount++;
 }

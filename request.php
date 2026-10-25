@@ -29,7 +29,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // विभाग याच संस्थेचा, सक्रिय आहे ना — तपासतो
     $deptValid = in_array($deptId, array_map('intval', array_column($departments, 'id')), true);
 
-    if (!$name || !$deptId || !$description || !$deptValid) {
+    if (honeypotTripped()) {
+        // Bot — काहीही जतन न करता सर्वसाधारण संदेश
+        $success = 'तुमची विनंती नोंदवली गेली.';
+    } elseif (publicFormRateLimited('work_request')) {
+        $error = 'या ठिकाणावरून गेल्या तासाभरात खूप विनंत्या आल्या आहेत — कृपया थोड्या वेळाने पुन्हा प्रयत्न करा.';
+    } elseif (!$name || !$deptId || !$description || !$deptValid) {
         $error = t('s453');
     } else {
         $countStmt = $pdo->prepare("SELECT COUNT(*) c FROM work_requests WHERE organization_id = ?");
@@ -52,6 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // work_request_actions table not migrated yet — the core request
             // was already saved successfully above, so don't block the user.
         }
+        publicFormRecordSubmission('work_request');
         notifyDepartment($deptId, $orgId, 'नवीन कामाची विनंती आली', "$name कडून: " . mb_substr($description, 0, 80), 'requests/index.php');
         $success = "तुमची विनंती यशस्वीरित्या नोंदवली गेली — Request ID: $requestCode. संबंधित विभाग लवकरच त्यावर काम करेल.";
     }
@@ -184,6 +190,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <?php else: ?>
     <?php if ($error): ?><div class="msg err" style="margin-top:20px;"><i class="fa-solid fa-triangle-exclamation" style="margin-top:2px;"></i><span><?= htmlspecialchars($error) ?></span></div><?php endif; ?>
     <form method="POST">
+      <?= honeypotField() ?>
 
       <div class="step-label"><span class="step-num">1</span> तुमची माहिती</div>
       <label class="field-label"><?= h(t('s139')) ?></label>

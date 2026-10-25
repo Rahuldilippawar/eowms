@@ -21,8 +21,16 @@ try {
 
 // पत्रे (Letters)
 try {
-    $stmt = $pdo->prepare("SELECT id, subject, file_number FROM letters WHERE organization_id = ? AND (subject LIKE ? OR file_number LIKE ?) ORDER BY created_at DESC LIMIT 5");
-    $stmt->execute([$orgId, $like, $like]);
+    // फक्त तीच पत्रं जी या व्यक्तीला प्रत्यक्ष दिसू शकतात — search.php प्रमाणेच अट
+    $me = (int)currentUser()['id'];
+    $stmt = $pdo->prepare("
+        SELECT l.id, l.subject, l.file_number FROM letters l
+        WHERE l.organization_id = ? AND (l.subject LIKE ? OR l.file_number LIKE ?)
+          AND (l.created_by = ? OR l.current_holder_id = ? OR ? = 1
+               OR l.id IN (SELECT letter_id FROM letter_actions WHERE from_user_id = ? OR to_user_id = ?))
+        ORDER BY l.created_at DESC LIMIT 5
+    ");
+    $stmt->execute([$orgId, $like, $like, $me, $me, isManagementOrAbove() ? 1 : 0, $me, $me]);
     foreach ($stmt->fetchAll() as $r) {
         $results[] = ['type' => 'पत्र', 'icon' => '📄', 'title' => $r['subject'], 'subtitle' => $r['file_number'], 'url' => 'letters/view.php?id=' . $r['id']];
     }

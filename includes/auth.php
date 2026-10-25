@@ -187,6 +187,42 @@ function clientIp() {
     return $remote;
 }
 
+/**
+ * सार्वजनिक (Login-शिवाय) फॉर्मसाठी साधी Rate-Limit — एका IP वरून ठराविक
+ * वेळेत जास्तीत जास्त $max Submissions. Table नसेल तर अडवत नाही.
+ */
+function publicFormRateLimited($formKey, $max = 5, $windowSeconds = 3600) {
+    global $pdo;
+    try {
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM public_form_submissions WHERE form_key = ? AND ip_address = ? AND created_at > ?");
+        $stmt->execute([$formKey, clientIp(), date('Y-m-d H:i:s', time() - $windowSeconds)]);
+        return (int)$stmt->fetchColumn() >= $max;
+    } catch (PDOException $e) {
+        return false;
+    }
+}
+
+function publicFormRecordSubmission($formKey) {
+    global $pdo;
+    try {
+        $pdo->prepare("INSERT INTO public_form_submissions (form_key, ip_address, created_at) VALUES (?, ?, ?)")
+            ->execute([$formKey, mb_substr(clientIp(), 0, 45), date('Y-m-d H:i:s')]);
+        // जुन्या (एक दिवसापेक्षा जुन्या) नोंदी अधूनमधून साफ करतो
+        if (random_int(1, 50) === 1) {
+            $pdo->prepare("DELETE FROM public_form_submissions WHERE created_at < ?")->execute([date('Y-m-d H:i:s', time() - 86400)]);
+        }
+    } catch (PDOException $e) {}
+}
+
+/** Bots साठी लपवलेलं Honeypot Field — माणसाला दिसत नाही, भरलं असेल तर Bot */
+function honeypotField() {
+    return '<div style="position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden;" aria-hidden="true"><label>Website<input type="text" name="website" tabindex="-1" autocomplete="off" value=""></label></div>';
+}
+
+function honeypotTripped() {
+    return trim((string)($_POST['website'] ?? '')) !== '';
+}
+
 // Escapes output for safe HTML display
 function h($str) {
     return htmlspecialchars($str ?? '', ENT_QUOTES, 'UTF-8');

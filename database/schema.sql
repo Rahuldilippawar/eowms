@@ -1854,6 +1854,7 @@ CREATE TABLE biometric_devices (
   device_name VARCHAR(150) NULL,
   last_seen_at TIMESTAMP NULL,
   is_active TINYINT(1) DEFAULT 1,
+  is_approved TINYINT(1) NOT NULL DEFAULT 1,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
   FOREIGN KEY (campus_id) REFERENCES campuses(id) ON DELETE SET NULL,
@@ -1869,7 +1870,17 @@ CREATE TABLE biometric_punch_logs (
   processed TINYINT(1) DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_pin_time (biometric_pin, punch_time),
-  INDEX idx_processed (processed)
+  INDEX idx_processed (processed),
+  UNIQUE KEY uniq_device_pin_time (device_serial, biometric_pin, punch_time)
+) ENGINE=InnoDB;
+
+-- Public फॉर्म (request.php, guests/pre-register.php) साठी साधी Rate-Limit नोंद
+CREATE TABLE public_form_submissions (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  form_key VARCHAR(40) NOT NULL,
+  ip_address VARCHAR(45) NOT NULL,
+  created_at DATETIME NOT NULL,
+  INDEX idx_form_ip_time (form_key, ip_address, created_at)
 ) ENGINE=InnoDB;
 
 CREATE TABLE staff_attendance (

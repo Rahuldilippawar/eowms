@@ -11,32 +11,12 @@ $notFound = false;
 $mobileResults = [];
 $mobileSearched = false;
 
+// सुरक्षा: फक्त Mobile नंबरवरून (जो इतरांनाही माहीत असू शकतो) त्या नंबरच्या
+// सगळ्या विनंत्यांची यादी कधीही दाखवत नाही — Mobile + Request ID दोन्ही जुळले तरच तपशील.
+$mobileLast10 = '';
 if ($mobile) {
     $mobileSearched = true;
-    // मोबाईल नंबरचे फक्त अंक घेऊन (मोकळी जागा/डॅश/+91 वगैरे दुर्लक्षित करून),
-    // शेवटच्या 10 अंकांशी जुळणाऱ्या सगळ्या विनंत्या शोधतो.
-    $digitsOnly = preg_replace('/\D/', '', $mobile);
-    $last10 = substr($digitsOnly, -10);
-    if (strlen($last10) === 10) {
-        $stmt = $pdo->prepare("
-            SELECT r.*, d.name_local AS dept_name
-            FROM work_requests r JOIN departments d ON d.id = r.department_id
-            WHERE REGEXP_REPLACE(r.requester_contact, '[^0-9]', '') LIKE CONCAT('%', ?)
-            ORDER BY r.created_at DESC
-        ");
-        try {
-            $stmt->execute([$last10]);
-            $mobileResults = $stmt->fetchAll();
-        } catch (PDOException $e) {
-            // जुन्या MySQL Version मध्ये REGEXP_REPLACE नसेल तर साधी पद्धत वापरा
-            $stmt = $pdo->prepare("
-                SELECT r.*, d.name_local AS dept_name FROM work_requests r JOIN departments d ON d.id = r.department_id
-                WHERE r.requester_contact LIKE ? ORDER BY r.created_at DESC
-            ");
-            $stmt->execute(['%' . $last10]);
-            $mobileResults = $stmt->fetchAll();
-        }
-    }
+    $mobileLast10 = substr(preg_replace('/\D/', '', $mobile), -10);
 }
 
 if ($code) {
@@ -49,6 +29,11 @@ if ($code) {
     ");
     $stmt->execute([$code]);
     $request = $stmt->fetch();
+    // Mobile ने शोध — Request ID सोबत Mobile ही जुळायलाच हवा
+    if ($request && $searchMode === 'mobile') {
+        $reqDigits = substr(preg_replace('/\D/', '', (string)$request['requester_contact']), -10);
+        if (strlen($mobileLast10) !== 10 || $reqDigits !== $mobileLast10) { $request = null; }
+    }
 
     if (!$request) {
         $notFound = true;
@@ -161,9 +146,10 @@ $actionLabels = ['created' => 'विनंती नोंदवली गे�
       <a href="?mode=mobile" class="<?= $searchMode === 'mobile' ? 'active' : '' ?>">📱 Mobile Number ने</a>
     </div>
     <?php if ($searchMode === 'mobile'): ?>
-      <form method="GET">
+      <form method="GET" style="flex-wrap:wrap;">
         <input type="hidden" name="mode" value="mobile">
-        <input type="tel" name="mobile" placeholder="उदा. 9876543210" value="<?= htmlspecialchars($mobile) ?>" required autofocus>
+        <input type="tel" name="mobile" placeholder="Mobile, उदा. 9876543210" value="<?= htmlspecialchars($mobile) ?>" required autofocus>
+        <input type="text" name="code" placeholder="Request ID, उदा. REQ-260012" value="<?= htmlspecialchars($code) ?>" required>
         <button type="submit">शोधा</button>
       </form>
     <?php else: ?>
@@ -175,28 +161,14 @@ $actionLabels = ['created' => 'विनंती नोंदवली गे�
     <?php endif; ?>
   </div>
 
-  <?php if ($mobileSearched && !$request): ?>
+  <?php if ($mobileSearched && !$code): ?>
     <div class="card">
-      <h3>📱 <?= htmlspecialchars($mobile) ?> — या नंबरवरून झालेल्या विनंत्या</h3>
-      <?php if (empty($mobileResults)): ?>
-        <p style="font-size:13px;color:#666B7D;">या Mobile Number वरून कुठलीही विनंती सापडली नाही. कृपया नंबर तपासून पुन्हा प्रयत्न करा.</p>
-      <?php else: ?>
-        <?php foreach ($mobileResults as $mr): ?>
-          <a class="result-row" href="?mode=code&code=<?= urlencode($mr['request_code']) ?>">
-            <div>
-              <div style="font-family:'JetBrains Mono',monospace;font-weight:700;font-size:13.5px;color:#10162B;"><?= htmlspecialchars($mr['request_code']) ?></div>
-              <div style="font-size:12.5px;color:#1A1D29;margin-top:3px;max-width:380px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><?= htmlspecialchars($mr['work_description']) ?></div>
-              <div class="meta"><?= htmlspecialchars($mr['dept_name']) ?> · <?= date('d M Y', strtotime($mr['created_at'])) ?></div>
-            </div>
-            <span class="status-badge" style="background:<?= $statusColors[$mr['status']] ?>;font-size:11px;padding:5px 12px;"><?= $statusLabels[$mr['status']] ?></span>
-          </a>
-        <?php endforeach; ?>
-      <?php endif; ?>
+      <p style="font-size:13px;color:#666B7D;">सुरक्षिततेसाठी — Mobile Number सोबत तुमचा Request ID (विनंती केल्यावर मिळालेला क्रमांक) सुद्धा टाका.</p>
     </div>
   <?php endif; ?>
 
   <?php if ($notFound): ?>
-    <div class="card"><div class="err">"<?= htmlspecialchars($code) ?>" या क्रमांकाची कोणतीही विनंती सापडली नाही. कृपया Request ID तपासा.</div></div>
+    <div class="card"><div class="err">"<?= htmlspecialchars($code) ?>" या क्रमांकाची कोणतीही विनंती सापडली नाही<?= $searchMode === 'mobile' ? ' (किंवा Mobile Number जुळत नाही)' : '' ?>. कृपया Request ID तपासा.</div></div>
   <?php elseif ($request): ?>
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:start;flex-wrap:wrap;gap:10px;">

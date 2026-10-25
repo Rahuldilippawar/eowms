@@ -31,7 +31,7 @@ if ($targetUserId && $wishText) {
             $pdo->prepare("INSERT INTO birthday_wishes (organization_id, target_user_id, wish_date, wish_type, wish_text, posted_by) VALUES (?, ?, ?, ?, ?, ?)")
                 ->execute([$target['organization_id'], $targetUserId, $wishDate, $wishType, $wishText, $user['id']]);
             if ((int)$targetUserId !== (int)$user['id']) {
-                notifyUser($targetUserId, $target['organization_id'], "🎉 {$user['name']} यांनी तुम्हाला शुभेच्छा दिल्या", $wishText, '../welcome.php');
+                notifyUser($targetUserId, $target['organization_id'], "🎉 {$user['name']} यांनी तुम्हाला शुभेच्छा दिल्या", $wishText, 'welcome.php#wishes');
             }
             $_SESSION['flash'] = 'तुमची शुभेच्छा जोडली गेली! 🎉';
         } catch (PDOException $e) {

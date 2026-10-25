@@ -33,6 +33,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     foreach ($rows as $r) {
         if (!$r['date'] || !$r['name']) { $skipped++; continue; }
+        // Campus NULL असताना Unique Key Duplicate पकडत नाही — स्पष्ट तपासणी
+        $dupStmt = $pdo->prepare("SELECT id FROM holidays WHERE organization_id = ? AND campus_id <=> ? AND holiday_date = ? LIMIT 1");
+        $dupStmt->execute([$orgId, $campusId, $r['date']]);
+        if ($dupStmt->fetch()) { $skipped++; continue; }
         try {
             $pdo->prepare("INSERT INTO holidays (organization_id, campus_id, holiday_date, name, created_by) VALUES (?, ?, ?, ?, ?)")
                 ->execute([$orgId, $campusId, $r['date'], $r['name'], $user['id']]);

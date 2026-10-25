@@ -256,7 +256,7 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
         <a href="<?= $rp ?>staff/my-leaves.php" class="tree-node <?= $currentDir === 'staff' && in_array($currentPage, ['my-leaves.php','leave-apply.php']) ? 'active' : '' ?>">
           <i class="fa-solid fa-umbrella-beach fa-fw"></i><span>🏖️ रजा व्यवस्थापन</span>
         </a>
-        <?php if (hasCategory('hod') || isManagementOrAbove() || hasRole('super_admin')): ?>
+        <?php /* staff/leave-approvals.php मधलीच अट — दोन्ही ठिकाणी सारखीच */ if (hasCategory('hod') || hasPermission('view_org_wide_dashboards') || hasRole('super_admin')): ?>
           <a href="<?= $rp ?>staff/leave-approvals.php" class="tree-node <?= $currentDir === 'staff' && $currentPage === 'leave-approvals.php' ? 'active' : '' ?>">
             <i class="fa-solid fa-clipboard-check fa-fw"></i><span>✅ रजा-अर्ज मंजुरी</span>
           </a>
