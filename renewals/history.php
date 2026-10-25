@@ -1,19 +1,18 @@
 <?php
 require_once __DIR__ . '/../includes/auth.php';
 requireLogin('../');
+require_once __DIR__ . '/../includes/renewal-helpers.php';
 $user = currentUser();
 $orgId = activeOrgId();
 
 $id = (int)($_GET['id'] ?? 0);
-$stmt = $pdo->prepare("SELECT r.*, d.name_local AS dept_name FROM renewal_items r JOIN departments d ON d.id = r.department_id WHERE r.id = ? AND r.organization_id = ?");
-$stmt->execute([$id, $orgId]);
-$item = $stmt->fetch();
-if (!$item) { die('नोंद सापडली नाही.'); }
-
-if (isDeptScoped() && (int)$item['department_id'] !== (int)$user['department_id']) {
+$item = renewalFetchAccessibleItem($pdo, $id, true);
+if (!$item) {
     http_response_code(403);
-    die('तुम्हाला ही नोंद बघण्याची परवानगी नाही.');
+    die('नोंद सापडली नाही किंवा तुम्हाला ती बघण्याची परवानगी नाही.');
 }
+$attachmentsByCycle = renewalAttachmentsByCycle($pdo, $id);
+$statusInfo = renewalStatusInfo(renewalDaysLeft($item['expiry_date']));
 
 $pageTitle = 'नूतनीकरण इतिहास';
 $rootPath = '../';
@@ -40,7 +39,8 @@ try {
   <div class="panel-head"><div class="title">सध्याची स्थिती</div></div>
   <div style="padding:16px 20px;font-size:13px;line-height:2;">
     <strong>प्रकार:</strong> <?= h($item['item_type']) ?><br>
-    <strong>सध्याची मुदत:</strong> <?= date('d M Y', strtotime($item['expiry_date'])) ?><br>
+    <strong>सध्याची मुदत:</strong> <?= date('d M Y', strtotime($item['expiry_date'])) ?>
+      <span class="status-chip <?= $item['status'] === 'inactive' ? '' : $statusInfo['chip'] ?>" style="margin-left:6px;"><?= $item['status'] === 'inactive' ? 'निष्क्रिय' : h($statusInfo['label']) ?></span><br>
     <strong>सध्याचा खर्च:</strong> <?= $item['renewal_cost'] ? '₹' . number_format($item['renewal_cost'], 0) : '—' ?><br>
     <strong>सध्याचा Vendor:</strong> <?= h($item['vendor_name'] ?: '—') ?>
   </div>
@@ -65,6 +65,20 @@ try {
       <?php endforeach; ?>
     </tbody>
   </table>
+</div>
+
+<div class="panel mt-3">
+  <div class="panel-head"><div class="title">📎 प्रमाणपत्रे (Cycle-निहाय)</div><?php if ($item['status'] !== 'inactive'): ?><div class="sub"><a href="edit.php?id=<?= $id ?>" style="color:var(--rail);">नवीन जोडा →</a></div><?php endif; ?></div>
+  <div style="padding:14px 20px;font-size:12.5px;">
+    <?php if (empty($attachmentsByCycle)): ?><div style="color:var(--text-dim);">अजून कोणतंही प्रमाणपत्र जोडलेलं नाही.</div><?php endif; ?>
+    <?php foreach ($attachmentsByCycle as $cycle => $files): ?>
+      <div style="font-weight:700;margin:8px 0 4px;">मुदत <?= $cycle ? date('d M Y', strtotime($cycle)) : '—' ?> पर्यंतचं Cycle</div>
+      <?php foreach ($files as $a): ?>
+        <div style="padding:3px 0;"><a href="attachment.php?id=<?= $a['id'] ?>" style="color:var(--rail);"><i class="fa-solid fa-paperclip me-1"></i><?= h($a['title'] ?: $a['original_filename']) ?></a>
+          <span style="color:var(--text-dim);font-size:11px;"> · <?= h($a['uploaded_by_name'] ?? '') ?> · <?= date('d M Y', strtotime($a['uploaded_at'])) ?></span></div>
+      <?php endforeach; ?>
+    <?php endforeach; ?>
+  </div>
 </div>
 
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

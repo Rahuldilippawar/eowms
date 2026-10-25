@@ -13,7 +13,7 @@ $handle = fopen($_FILES['csv_file']['tmp_name'], 'r');
 $bom = fread($handle, 3);
 if ($bom !== "\xEF\xBB\xBF") { rewind($handle); }
 
-$header = array_map(fn($h) => strtolower(trim($h)), fgetcsv($handle));
+$header = array_map(fn($h) => strtolower(trim((string)$h)), fgetcsv($handle) ?: []);
 $required = ['department_name', 'item_type', 'item_name', 'expiry_date'];
 foreach ($required as $col) {
     if (!in_array($col, $header, true)) {
@@ -38,6 +38,7 @@ $insert = $pdo->prepare("
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')
 ");
 
+$validRegBodies = ['CBSE','State Board','AICTE','DTE Maharashtra','MSBTE','University','UGC','NAAC','RTE','RTO/Transport','Other Government','Not Applicable'];
 $created = 0;
 $errors = [];
 $rowNum = 1;
@@ -55,6 +56,8 @@ while (($row = fgetcsv($handle)) !== false) {
     if (!$deptName || !$itemType || !$itemName || !$expiryDate) { $errors[] = "ओळ {$rowNum}: आवश्यक माहिती रिकामी आहे — वगळले"; continue; }
     $dept = $deptByName[mb_strtolower($deptName)] ?? null;
     if (!$dept) { $errors[] = "ओळ {$rowNum}: \"$deptName\" हा विभाग सापडला नाही — वगळले"; continue; }
+    // create.php प्रमाणेच — Department-Scoped (Staff/HOD) व्यक्ती फक्त स्वतःच्या विभागासाठीच नोंदी जोडू शकते
+    if (isDeptScoped() && (int)$dept['id'] !== (int)($user['department_id'] ?? 0)) { $errors[] = "ओळ {$rowNum}: \"$deptName\" हा तुमचा विभाग नाही — वगळले"; continue; }
     $expiryDate = strtotime($expiryDate) ? date('Y-m-d', strtotime($expiryDate)) : null;
     if (!$expiryDate) { $errors[] = "ओळ {$rowNum}: expiry_date चुकीच्या Format मध्ये आहे — वगळले"; continue; }
 
@@ -62,7 +65,9 @@ while (($row = fgetcsv($handle)) !== false) {
     $issuedDate = ($issuedDate && strtotime($issuedDate)) ? date('Y-m-d', strtotime($issuedDate)) : null;
     $renewalCost = is_numeric($get('renewal_cost')) ? (float)$get('renewal_cost') : null;
 
-    $insert->execute([$orgId, $dept['campus_id'], $dept['id'], $itemType, $get('regulatory_body') ?: null, $itemName, $get('reference_no'), $issuedDate, $expiryDate, $renewalCost, $get('vendor_name'), $get('vendor_contact')]);
+    $regBody = $get('regulatory_body') ?: null;
+    if ($regBody && !in_array($regBody, $validRegBodies, true)) { $regBody = null; }
+    $insert->execute([$orgId, $dept['campus_id'], $dept['id'], $itemType, $regBody, $itemName, $get('reference_no'), $issuedDate, $expiryDate, $renewalCost, $get('vendor_name'), $get('vendor_contact')]);
     $created++;
 }
 fclose($handle);
