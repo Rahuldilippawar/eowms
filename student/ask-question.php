@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../includes/student-auth.php';
+require_once __DIR__ . '/../includes/notify.php'; // notifyUser — Session शिवाय चालतं
 requireStudentLogin('');
 $student = currentStudent();
 
@@ -26,8 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $notifyLink = 'academics/classroom-questions.php?id=' . $classroomId;
         foreach ($teachersStmt->fetchAll(PDO::FETCH_COLUMN) as $teacherId) {
             try {
-                $pdo->prepare("INSERT INTO notifications (organization_id, user_id, title, message, link) VALUES (?, ?, ?, ?, ?)")
-                    ->execute([$student['organization_id'], $teacherId, '💬 नवीन प्रश्न — ' . $student['name'], $notifyMessage, $notifyLink]);
+                notifyUser($teacherId, $student['organization_id'], '💬 नवीन प्रश्न — ' . $student['name'], $notifyMessage, $notifyLink);
             } catch (PDOException $e) { /* notifications table not migrated */ }
         }
     }

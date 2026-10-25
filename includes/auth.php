@@ -401,73 +401,9 @@ function requirePermission($permissionKey, $rootPath = '') {
     }
 }
 
-/** Create an in-app notification for a specific user. Fails silently if not migrated yet. */
-function notifyUser($userId, $orgId, $title, $message = null, $link = null) {
-    global $pdo;
-    try {
-        $stmt = $pdo->prepare("INSERT INTO notifications (organization_id, user_id, title, message, link) VALUES (?, ?, ?, ?, ?)");
-        $stmt->execute([$orgId, $userId, $title, $message, $link]);
-    } catch (PDOException $e) {
-        // notifications table not migrated yet — skip silently
-    }
-
-    // App बंद असतानाही सूचना जावी म्हणून — Push सुद्धा पाठवायचा प्रयत्न
-    // करतो (Setup झालेलं नसेल, किंवा Subscription नसेल — तर शांतपणे वगळतो).
-    sendPushNotification($userId, $orgId, $title, $message, $link);
-
-    // Android App (Firebase FCM) — config/firebase-service-account.json नसेल तर वगळतो.
-    require_once __DIR__ . '/fcm.php';
-    sendFcmToUser($userId, $title, $message ?? '', $link);
-}
-
-/** App बंद असतानाही Mobile वर थेट सूचना पाठवण्यासाठी (Web Push). */
-function sendPushNotification($userId, $orgId, $title, $message = null, $link = null) {
-    global $pdo;
-    try {
-        $orgStmt = $pdo->prepare("SELECT vapid_public_key, vapid_private_key FROM organizations WHERE id = ?");
-        $orgStmt->execute([$orgId]);
-        $org = $orgStmt->fetch();
-        if (empty($org['vapid_public_key']) || empty($org['vapid_private_key'])) {
-            return; // Super Admin ने अजून Push Setup केलेलं नाही
-        }
-
-        $subStmt = $pdo->prepare("SELECT * FROM push_subscriptions WHERE user_id = ?");
-        $subStmt->execute([$userId]);
-        $subscriptions = $subStmt->fetchAll();
-        if (empty($subscriptions)) { return; }
-
-        require_once __DIR__ . '/webpush/WebPush.php';
-        $webPush = new WebPush($org['vapid_public_key'], $org['vapid_private_key'], 'mailto:admin@eowms.local');
-
-        foreach ($subscriptions as $sub) {
-            $result = $webPush->send($sub['endpoint'], $sub['p256dh'], $sub['auth'], [
-                'title' => $title,
-                'body' => $message ?: '',
-                'url' => $link ? (defined('APP_ROOT_URL') ? APP_ROOT_URL . $link : $link) : '/',
-            ]);
-            if ($result['should_delete']) {
-                $pdo->prepare("DELETE FROM push_subscriptions WHERE id = ?")->execute([$sub['id']]);
-            }
-        }
-    } catch (Exception $e) {
-        // Push कधीही अपयशी झाला तरी — मुख्य In-App Notification आधीच Save
-        // झालेली असते, त्यामुळे इथे शांतपणे वगळणं सुरक्षित आहे.
-    }
-}
-
-/** Notify every active staff member (and HOD) of a department. */
-function notifyDepartment($departmentId, $orgId, $title, $message = null, $link = null) {
-    global $pdo;
-    try {
-        $stmt = $pdo->prepare("SELECT id FROM users WHERE department_id = ? AND is_active = 1");
-        $stmt->execute([$departmentId]);
-        foreach ($stmt->fetchAll(PDO::FETCH_COLUMN) as $uid) {
-            notifyUser($uid, $orgId, $title, $message, $link);
-        }
-    } catch (PDOException $e) {
-        // ignore
-    }
-}
+// सूचना (In-App + Push Queue) — notifyUser / notifyUsers / notifyDepartment /
+// sendPushNotification आता includes/notify.php मध्ये (Cron मधूनही वापरता यावेत म्हणून).
+require_once __DIR__ . '/notify.php';
 
 /**
  * COUNT(*)+1 वरून बनवलेला क्रमांक (TSK-/WRK-/REQ- इ.) — एखादी नोंद Delete

@@ -16,6 +16,7 @@
 
 if (PHP_SAPI !== 'cli') { http_response_code(403); exit('CLI only'); }
 require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../includes/notify.php'; // notifyUser — In-App + Push Queue
 require_once __DIR__ . '/../includes/mailer.php';
 
 $milestones = [90, 60, 30, 15, 7, 3, 1, 0];
@@ -97,8 +98,7 @@ foreach ($items as $item) {
         $emailLink = rtrim(SITE_BASE_URL, '/') . '/renewals/index.php?item=' . $item['id'];
 
         foreach ($notifyIds as $uid) {
-            $pdo->prepare("INSERT INTO notifications (organization_id, user_id, title, message, link) VALUES (?, ?, ?, ?, ?)")
-                ->execute([$item['organization_id'], $uid, $title, $message, $link]);
+            notifyUser($uid, $item['organization_id'], $title, $message, $link);
             $sent++;
 
             // In-App Notification बरोबरच — त्याच व्यक्तीला Email सुद्धा पाठवतो
