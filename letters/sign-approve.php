@@ -56,7 +56,7 @@ try {
         if ($approvedAmount > 0) {
             recordBudgetTransaction(
                 $pdo, $orgId, $letter['department_id'], $approvedAmount, $letter['budget_category'] ?: 'इतर',
-                'letter_approval', $letterId, $letter['subject'] . ' (' . $letter['file_number'] . ')', $user['id']
+                'letter_approval', $letterId, $letter['subject'] . ' (' . $letter['file_number'] . ')', $user['id'], date('Y-m-d')
             );
         }
     } else {

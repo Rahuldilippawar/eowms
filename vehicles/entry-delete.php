@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../includes/auth.php';
 requireLogin('../');
 requireRole(['super_admin'], '../');
+require_once __DIR__ . '/../includes/budget-helpers.php';
 $user = currentUser();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -21,6 +22,11 @@ if (!isset($tableMap[$entryType])) {
 }
 
 $pdo->prepare("DELETE FROM {$tableMap[$entryType]} WHERE id = ?")->execute([$entryId]);
+// इंधन/देखभाल नोंद काढली — तिचा खर्च Budget मधून परत
+$budgetSourceMap = ['fuel' => 'vehicle_fuel_log', 'maintenance' => 'vehicle_maintenance_log'];
+if (isset($budgetSourceMap[$entryType])) {
+    reverseBudgetTransaction($pdo, $budgetSourceMap[$entryType], $entryId);
+}
 $pdo->prepare("UPDATE vehicle_correction_requests SET status='approved', reviewed_by=?, reviewed_at=NOW() WHERE id=?")->execute([$user['id'], $requestId]);
 
 logActivity('वाहन नोंद विनंतीप्रमाणे डिलीट केली', 'vehicle', $vehicleId, "$entryType #$entryId");

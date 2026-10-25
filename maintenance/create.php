@@ -42,7 +42,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $insert->execute([$orgId, $locationId, $departmentId, $itemDescription, $workType, $workDate, $cost, $remarks, $user['id']]);
         $newLogId = $pdo->lastInsertId();
 
-        recordBudgetTransaction($pdo, $orgId, $departmentId, $cost, 'देखभाल', 'maintenance', $newLogId, $itemDescription, $user['id']);
+        // खर्च फक्त इथेच एकदा Budget मध्ये — नंतरचे Payments फक्त Paid/Due साठी (Budget मध्ये पुन्हा नाहीत)
+        recordBudgetTransaction($pdo, $orgId, $departmentId, $cost, 'देखभाल', 'maintenance', $newLogId, $itemDescription, $user['id'], $workDate);
 
         logActivity('देखभाल नोंद जोडली', 'maintenance_log', $newLogId, "$itemDescription — $workType");
         $_SESSION['flash'] = 'देखभाल नोंद जतन झाली.';

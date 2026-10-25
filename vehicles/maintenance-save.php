@@ -44,7 +44,8 @@ $insert = $pdo->prepare("
 ");
 $insert->execute([$vehicleId, $maintenanceDate, $type, $description, $cost, $vehicle['current_odometer'], $nextDue, $user['id']]);
 
-recordBudgetTransaction($pdo, $orgId, $vehicle['department_id'], $cost, 'इतर', 'vehicle_maintenance', $vehicleId, $vehicle['vehicle_number'] . ' — ' . $type, $user['id']);
+$vehMaintId = (int)$pdo->lastInsertId();
+recordBudgetTransaction($pdo, $orgId, $vehicle['department_id'], $cost, 'इतर', 'vehicle_maintenance_log', $vehMaintId, $vehicle['vehicle_number'] . ' — ' . $type, $user['id'], $maintenanceDate);
 
 logActivity('वाहन देखभाल नोंदवली', 'vehicle', $vehicleId, $type);
 $_SESSION['flash'] = 'देखभाल नोंद जतन झाली.';

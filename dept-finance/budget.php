@@ -18,7 +18,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $fy = (int)($_POST['financial_year'] ?? getCurrentFinancialYear());
     $amount = (float)($_POST['allocated_amount'] ?? 0);
 
-    if ($departmentId && $amount >= 0) {
+    // विभाग याच (सध्याच्या) संस्थेचा आहे का — नाहीतर दुसऱ्या संस्थेचं Budget बदलता आलं असतं
+    $deptOrgCheck = $pdo->prepare("SELECT id FROM departments WHERE id = ? AND organization_id = ?");
+    $deptOrgCheck->execute([$departmentId, $orgId]);
+    if (!$deptOrgCheck->fetch()) { $departmentId = 0; }
+
+    if ($departmentId && $amount >= 0 && $fy >= 2000 && $fy <= 2100) {
         $pdo->prepare("
             INSERT INTO department_budgets (organization_id, department_id, financial_year, allocated_amount, allocated_by)
             VALUES (?, ?, ?, ?, ?)
@@ -27,11 +32,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         logActivity('विभाग Budget सेट केलं', 'department_budget', $departmentId, "FY $fy — ₹" . number_format($amount, 0));
         $_SESSION['flash'] = 'Budget जतन झालं.';
     }
-    header('Location: index.php?fy=' . $fy);
+    header('Location: budget.php?fy=' . $fy);
     exit;
 }
 
-$pageTitle = 'विभाग Budget व्यवस्थापन';
+$pageTitle = 'विभाग Finance — Budget वाटप';
 $rootPath = '../';
 require_once __DIR__ . '/../includes/header.php';
 
@@ -56,7 +61,7 @@ $totalSpent = array_sum(array_column($budgetRows, 'spent'));
 <div class="page-eyebrow"><?= h(activeOrgName()) ?></div>
 <div class="d-flex justify-content-between align-items-start mb-1">
   <div>
-    <div class="page-title mb-1">💰 विभाग Budget व्यवस्थापन</div>
+    <div class="page-title mb-1">💰 विभाग Finance — Budget वाटप</div>
     <div style="font-size:12.5px;color:var(--text-dim);margin-bottom:16px;">आर्थिक वर्ष <?= h(formatFinancialYearLabel($selectedFy)) ?> — प्रत्येक विभागाला Budget द्या, खर्च आपोआप वजा होतो</div>
   </div>
   <div class="d-flex gap-2">
@@ -67,7 +72,8 @@ $totalSpent = array_sum(array_column($budgetRows, 'spent'));
         <?php endfor; ?>
       </select>
     </form>
-    <a href="report.php?department_id=all&fy=<?= $selectedFy ?>" target="_blank" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13.5px;padding:9px 18px;"><i class="fa-solid fa-file-pdf me-1"></i>सर्व विभाग — PDF अहवाल</a>
+    <a href="dashboard.php?fy=<?= $selectedFy ?>" class="btn" style="border:1px solid var(--rail);color:var(--rail);border-radius:9px;font-size:13.5px;padding:9px 18px;">📊 Budget vs Actual</a>
+    <a href="budget-report.php?department_id=all&fy=<?= $selectedFy ?>" target="_blank" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13.5px;padding:9px 18px;"><i class="fa-solid fa-file-pdf me-1"></i>सर्व विभाग — PDF अहवाल</a>
   </div>
 </div>
 
@@ -173,7 +179,7 @@ document.addEventListener('DOMContentLoaded', function () {
             <span style="font-size:11px;color:var(--text-dim);margin-left:6px;"><?= $b['percent_used'] ?>%</span>
           </td>
           <td class="d-flex gap-2">
-            <a href="report.php?department_id=<?= $d['id'] ?>&fy=<?= $selectedFy ?>" target="_blank" class="btn btn-sm" style="border:1px solid var(--rail);color:var(--rail);border-radius:7px;font-size:12px;padding:5px 12px;">तपशील पहा</a>
+            <a href="budget-report.php?department_id=<?= $d['id'] ?>&fy=<?= $selectedFy ?>" target="_blank" class="btn btn-sm" style="border:1px solid var(--rail);color:var(--rail);border-radius:7px;font-size:12px;padding:5px 12px;">तपशील पहा</a>
             <button type="button" class="btn btn-sm" style="border:1px solid var(--line);border-radius:7px;font-size:12px;padding:5px 12px;" data-bs-toggle="modal" data-bs-target="#budgetModal<?= $d['id'] ?>">Budget सेट करा</button>
           </td>
         </tr>

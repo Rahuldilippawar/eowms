@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../includes/auth.php';
 requireLogin('../');
 requirePermission('manage_dead_stock_master', '../');
+require_once __DIR__ . '/../includes/budget-helpers.php';
 $user = currentUser();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -22,6 +23,18 @@ $condition = $_POST['condition'] ?? 'चांगली';
 $location = trim($_POST['location'] ?? '') ?: null;
 $remarks = trim($_POST['remarks'] ?? '') ?: null;
 
+// विभाग याच संस्थेचा आहे का — आणि मूळ नोंद याच संस्थेची आहे का
+$deptOkStmt = $pdo->prepare("SELECT id FROM departments WHERE id = ? AND organization_id = ?");
+$deptOkStmt->execute([$departmentId, $orgId]);
+$existingStmt = $pdo->prepare("SELECT * FROM dead_stock_items WHERE id = ? AND organization_id = ?");
+$existingStmt->execute([$id, $orgId]);
+$existingItem = $existingStmt->fetch();
+if (!$deptOkStmt->fetch() || !$existingItem) {
+    $_SESSION['flash'] = 'नोंद/विभाग सापडला नाही.';
+    header('Location: index.php');
+    exit;
+}
+
 $masterStmt = $pdo->prepare("SELECT * FROM dead_stock_item_master WHERE id = ? AND organization_id = ?");
 $masterStmt->execute([$itemMasterId, $orgId]);
 $masterItem = $masterStmt->fetch();
@@ -33,6 +46,11 @@ $update = $pdo->prepare("
     WHERE id=? AND organization_id=?
 ");
 $update->execute([$departmentId, $itemMasterId, $itemName, $category, $quantity, $unit, $purchaseDate, $purchaseCost, $condition, $location, $remarks, $id, $orgId]);
+
+// किंमत/विभाग/दिनांक बदलला — Budget मधला खर्च-Row सुद्धा जुळवतो (फक्त "नवीन खरेदी" असेल तर)
+if (!empty($existingItem['is_new_purchase'])) {
+    syncBudgetTransaction($pdo, $orgId, $departmentId, $purchaseCost, 'नवीन खरेदी', 'dead_stock', $id, $itemName . ' (' . $existingItem['item_code'] . ')', $user['id'], $purchaseDate ?: date('Y-m-d', strtotime($existingItem['created_at'])));
+}
 
 logActivity('Dead Stock नोंद संपादित केली', 'dead_stock_item', $id, $itemName);
 $_SESSION['flash'] = 'नोंद अद्ययावत केली.';

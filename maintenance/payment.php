@@ -16,8 +16,8 @@ $logStmt->execute([$logId, $orgId]);
 $log = $logStmt->fetch();
 if (!$log) { die('नोंद सापडली नाही.'); }
 
-$accessibleDeptId = deptFinanceAccessibleDeptId($user);
-$canManage = !$accessibleDeptId || $accessibleDeptId == $log['department_id'];
+// Payment फक्त Paid/Due Tracking साठी — खर्च Budget मध्ये आधीच (देखभाल-नोंद करतानाच) एकदा वजा झालेला असतो
+$canManage = deptFinanceCanAccessDept($user, $log['department_id']);
 if (!$canManage) { http_response_code(403); die('परवानगी नाही.'); }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {

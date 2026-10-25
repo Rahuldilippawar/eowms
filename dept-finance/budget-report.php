@@ -25,7 +25,7 @@ $campusesForCascade = $pdo->prepare("SELECT id, name FROM campuses WHERE organiz
 $campusesForCascade->execute([$orgId]);
 $campusesForCascade = $campusesForCascade->fetchAll();
 
-$categoryColor = ['नवीन खरेदी' => '#1B8A83', 'देखभाल' => '#C97F1D', 'इंधन' => '#2255AA', 'इतर' => '#8A90AC'];
+$categoryColor = ['नवीन खरेदी' => '#1B8A83', 'देखभाल' => '#C97F1D', 'इंधन' => '#2255AA', 'नूतनीकरण' => '#8A5CD6', 'इतर' => '#8A90AC'];
 
 // Year-over-Year Comparison — मागच्या 3 आर्थिक वर्षांचा खर्च
 $yoySpent = [];
@@ -54,7 +54,7 @@ if (!$isAllView) {
     $txnStmt = $pdo->prepare("
         SELECT bt.*, u.name AS created_by_name FROM budget_transactions bt
         LEFT JOIN users u ON u.id = bt.created_by
-        WHERE bt.department_id = ? AND bt.financial_year = ? ORDER BY bt.created_at DESC
+        WHERE bt.department_id = ? AND bt.financial_year = ? ORDER BY bt.spend_date DESC, bt.created_at DESC
     ");
     $txnStmt->execute([$deptId, $fy]);
     $transactions = $txnStmt->fetchAll();
@@ -131,7 +131,7 @@ if (!$isAllView) {
 
 
 <div class="toolbar">
-  <a href="index.php">← मागे</a>
+  <a href="dashboard.php">← विभाग Finance</a>
   <form method="GET">
     <?php if ($isMgmt): ?>
       <?php if (count($campusesForCascade) > 1): ?>
@@ -190,7 +190,7 @@ if (!$isAllView) {
 
     <h3>विभाग-निहाय तुलना</h3>
     <table>
-      <thead><tr><th>विभाग</th><th>दिलेलं</th><th>नवीन खरेदी</th><th>देखभाल</th><th>इंधन</th><th>इतर</th><th>एकूण खर्च</th><th>शिल्लक</th></tr></thead>
+      <thead><tr><th>विभाग</th><th>दिलेलं</th><th>नवीन खरेदी</th><th>देखभाल</th><th>इंधन</th><th>नूतनीकरण</th><th>इतर</th><th>एकूण खर्च</th><th>शिल्लक</th></tr></thead>
       <tbody>
         <?php foreach ($allDepts as $d): $b = $allBudgets[$d['id']]; ?>
           <tr>
@@ -199,6 +199,7 @@ if (!$isAllView) {
             <td>₹<?= number_format($b['by_category']['नवीन खरेदी'] ?? 0, 0) ?></td>
             <td>₹<?= number_format($b['by_category']['देखभाल'] ?? 0, 0) ?></td>
             <td>₹<?= number_format($b['by_category']['इंधन'] ?? 0, 0) ?></td>
+            <td>₹<?= number_format($b['by_category']['नूतनीकरण'] ?? 0, 0) ?></td>
             <td>₹<?= number_format($b['by_category']['इतर'] ?? 0, 0) ?></td>
             <td style="font-weight:700;">₹<?= number_format($b['spent'], 0) ?></td>
             <td style="font-weight:700;color:<?= $b['remaining'] < 0 ? '#B23A48' : '#1A1D29' ?>;">₹<?= number_format($b['remaining'], 0) ?><?= $b['remaining'] < 0 ? ' ⚠️' : '' ?></td>
@@ -233,7 +234,7 @@ if (!$isAllView) {
     <table>
       <thead><tr><th>श्रेणी</th><th>एकूण खर्च</th></tr></thead>
       <tbody>
-        <?php foreach (['नवीन खरेदी', 'देखभाल', 'इंधन', 'इतर'] as $cat): ?>
+        <?php foreach (['नवीन खरेदी', 'देखभाल', 'इंधन', 'नूतनीकरण', 'इतर'] as $cat): ?>
           <tr><td><span class="chip" style="background:<?= $categoryColor[$cat] ?>;"><?= $cat ?></span></td><td>₹<?= number_format($budget['by_category'][$cat] ?? 0, 0) ?></td></tr>
         <?php endforeach; ?>
       </tbody>
@@ -248,7 +249,7 @@ if (!$isAllView) {
         <?php endif; ?>
         <?php foreach ($transactions as $t): ?>
           <tr>
-            <td><?= date('d M Y', strtotime($t['created_at'])) ?></td>
+            <td><?= date('d M Y', strtotime($t['spend_date'] ?? $t['created_at'])) ?></td>
             <td><span class="chip" style="background:<?= $categoryColor[$t['category']] ?? '#666' ?>;"><?= h($t['category']) ?></span></td>
             <td><?= h($t['description'] ?? '—') ?></td>
             <td><?= h($t['created_by_name'] ?? '—') ?></td>
