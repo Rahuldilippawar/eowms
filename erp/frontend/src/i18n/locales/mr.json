@@ -15,7 +15,24 @@
     "pagination": "पानं",
     "previous": "मागे",
     "next": "पुढे",
-    "showing": "{{total}} पैकी {{from}}–{{to}}"
+    "showing": "{{total}} पैकी {{from}}–{{to}}",
+    "close": "बंद करा",
+    "cancel": "रद्द करा",
+    "save": "जतन करा",
+    "saving": "जतन होत आहे…",
+    "edit": "बदला",
+    "view": "पाहा",
+    "delete": "काढा",
+    "editNamed": "{{name}} बदला",
+    "actions": "कृती",
+    "activate": "सक्रिय करा",
+    "deactivate": "निष्क्रिय करा",
+    "activateTitle": "{{name}} सक्रिय करायचं?",
+    "deactivateTitle": "{{name}} निष्क्रिय करायचं?",
+    "activateBody": "हे पुन्हा वापरात येईल.",
+    "deactivateBody": "हे यादीत राहील, पण वापरात राहणार नाही. नंतर पुन्हा सक्रिय करता येईल.",
+    "reasonOptional": "कारण (ऐच्छिक — audit नोंदीत जाईल)",
+    "actionFailed": "हे करता आलं नाही. पुन्हा प्रयत्न करा."
   },
   "auth": {
     "title": "लॉगिन करा",
@@ -55,7 +72,12 @@
     "main": "मुख्य",
     "structure": "संस्था रचना",
     "institutions": "संस्था / कॉलेज",
-    "departments": "विभाग"
+    "departments": "विभाग",
+    "administration": "प्रशासन",
+    "users": "Users",
+    "roles": "भूमिका (Roles)",
+    "organizationSettings": "संस्था सेटिंग्ज",
+    "allOrganizations": "सर्व संस्था"
   },
   "dashboard": {
     "welcome": "नमस्कार, {{name}}",
@@ -87,10 +109,92 @@
       "college": "कॉलेज",
       "school": "शाळा",
       "other": "इतर"
-    }
+    },
+    "newInstitution": "नवीन संस्था",
+    "editInstitution": "संस्था बदला",
+    "newDepartment": "नवीन विभाग",
+    "editDepartment": "विभाग बदला",
+    "phone": "फोन",
+    "address": "पत्ता",
+    "category": "वर्ग",
+    "centralOption": "केंद्रीय (कुठल्याही संस्थेखाली नाही)",
+    "shortName": "लघु नाव",
+    "website": "वेबसाइट",
+    "fyStart": "आर्थिक वर्ष सुरू होण्याचा महिना"
   },
   "errors": {
     "forbiddenTitle": "परवानगी नाही",
     "forbiddenBody": "हे पान पाहण्याची तुम्हाला परवानगी नाही. प्रशासकाशी संपर्क साधा."
+  },
+  "form": {
+    "required": "हे आवश्यक आहे",
+    "codeFormat": "फक्त अक्षरं, अंक, - आणि _",
+    "saved": "जतन झालं"
+  },
+  "admin": {
+    "role": "भूमिका",
+    "roles": "भूमिका",
+    "chooseRole": "भूमिका निवडा",
+    "limitInstitutions": "कोणत्या संस्थांसाठी",
+    "limitDepartments": "कोणत्या विभागांसाठी",
+    "newUser": "नवीन User",
+    "newUserHint": "खातं तयार झाल्यावर त्या व्यक्तीला पासवर्ड ठेवण्याची लिंक ईमेलवर जाईल. पासवर्ड तुम्ही ठरवत नाही.",
+    "createUser": "खातं तयार करा",
+    "userCreated": "खातं तयार झालं; पासवर्ड लिंक पाठवली",
+    "noUsers": "अजून कोणी user नाही.",
+    "superAdmin": "Super Admin",
+    "sendReset": "पासवर्ड लिंक पाठवा",
+    "sendResetBody": "{{email}} वर पासवर्ड बदलण्याची लिंक पाठवायची?",
+    "send": "पाठवा",
+    "resetSent": "लिंक पाठवली",
+    "account": "खातं",
+    "rolesHere": "या संस्थेतल्या भूमिका",
+    "noRolesHere": "या संस्थेत कुठलीही भूमिका नाही.",
+    "wholeOrganization": "संपूर्ण संस्था",
+    "removeRole": "भूमिका काढा",
+    "removeRoleTitle": "\"{{role}}\" भूमिका काढायची?",
+    "removeRoleBody": "या व्यक्तीला त्या भूमिकेच्या परवानग्या लगेच मिळणं बंद होईल.",
+    "addRole": "भूमिका द्या",
+    "selfNote": "स्वतःच्या भूमिका तुम्हाला बदलता येत नाहीत.",
+    "newRole": "नवीन भूमिका",
+    "noRoles": "अजून कुठलीही भूमिका नाही.",
+    "builtIn": "मूळ",
+    "assignedTo": "{{count}} जणांना दिलेली",
+    "deleteRoleTitle": "\"{{role}}\" भूमिका काढायची?",
+    "deleteRoleBody": "ही भूमिका कायमची काढली जाईल.",
+    "roleDeleted": "भूमिका काढली",
+    "description": "वर्णन",
+    "permissions": "परवानग्या",
+    "permissionsHint": "प्रत्येक परवानगी कोणत्या व्याप्तीत लागू होईल ते निवडा. तुमच्याकडे नसलेली किंवा तुमच्यापेक्षा जास्त व्याप्ती देता येत नाही.",
+    "scopeFor": "{{permission}} ची व्याप्ती",
+    "newOrganization": "नवीन संस्था",
+    "newOrganizationHint": "नवीन संस्थेला मूळ भूमिका (Org Admin, Principal, HOD, Staff) आपोआप मिळतात.",
+    "organizationCreated": "संस्था तयार झाली",
+    "noOrganizations": "अजून कुठलीही संस्था नाही."
+  },
+  "scopes": {
+    "organization": "संपूर्ण संस्था",
+    "institutions": "नेमलेल्या संस्था",
+    "departments": "नेमलेले विभाग",
+    "own": "स्वतःच्या नोंदी",
+    "assigned": "नेमलेल्या नोंदी"
+  },
+  "actions": {
+    "view": "पाहणे",
+    "create": "तयार करणे",
+    "edit": "बदलणे",
+    "delete": "काढणे",
+    "activate": "सक्रिय / निष्क्रिय करणे",
+    "reset_password": "पासवर्ड लिंक पाठवणे",
+    "assign": "भूमिका देणे / काढणे",
+    "export": "Export करणे"
+  },
+  "modules": {
+    "organizations": "संस्था",
+    "institutions": "संस्था / कॉलेज",
+    "departments": "विभाग",
+    "users": "Users",
+    "roles": "भूमिका",
+    "audit": "Audit log"
   }
 }

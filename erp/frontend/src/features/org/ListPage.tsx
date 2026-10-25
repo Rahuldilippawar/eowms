@@ -24,10 +24,14 @@ interface ListPageProps<T extends { id: number }> {
   emptyMessage: string
   /** Heading of each card on small screens. */
   cardTitle: (row: T) => ReactNode
+  /** Buttons next to the title (e.g. "New"). */
+  toolbar?: ReactNode
+  /** Per-row action buttons; omitted when the user can do nothing with rows. */
+  actions?: (row: T) => ReactNode
 }
 
 /** Read-only, searchable, paginated list: a table on wide screens, cards on phones. */
-export function ListPage<T extends { id: number }>({ title, queryKey, fetcher, columns, emptyMessage, cardTitle }: ListPageProps<T>) {
+export function ListPage<T extends { id: number }>({ title, queryKey, fetcher, columns, emptyMessage, cardTitle, toolbar, actions }: ListPageProps<T>) {
   const { t } = useTranslation()
   const { user } = useAuth()
   const [search, setSearch] = useState('')
@@ -44,6 +48,8 @@ export function ListPage<T extends { id: number }>({ title, queryKey, fetcher, c
     <div className="mx-auto max-w-6xl space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-semibold">{title}</h1>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        {toolbar}
         <div className="relative sm:w-72">
           <Search aria-hidden className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-slate-400" />
           <Input
@@ -57,6 +63,7 @@ export function ListPage<T extends { id: number }>({ title, queryKey, fetcher, c
               setPage(1)
             }}
           />
+        </div>
         </div>
       </div>
 
@@ -78,6 +85,11 @@ export function ListPage<T extends { id: number }>({ title, queryKey, fetcher, c
                         {c.header}
                       </th>
                     ))}
+                    {actions ? (
+                      <th scope="col" className="px-3 py-2">
+                        <span className="sr-only">{t('common.actions')}</span>
+                      </th>
+                    ) : null}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -88,6 +100,7 @@ export function ListPage<T extends { id: number }>({ title, queryKey, fetcher, c
                           {c.cell(row)}
                         </td>
                       ))}
+                      {actions ? <td className="px-3 py-2 text-right whitespace-nowrap">{actions(row)}</td> : null}
                     </tr>
                   ))}
                 </tbody>
@@ -106,6 +119,7 @@ export function ListPage<T extends { id: number }>({ title, queryKey, fetcher, c
                       </div>
                     ))}
                   </dl>
+                  {actions ? <div className="mt-3 flex flex-wrap gap-2">{actions(row)}</div> : null}
                 </li>
               ))}
             </ul>

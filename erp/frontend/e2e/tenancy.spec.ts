@@ -20,8 +20,11 @@ test('principal sees only their college’s departments, and the API refuses oth
   // Manipulated id: a department of the same organization outside the principal's college.
   const all = await apiGet(page, '/api/v1/departments?per_page=100')
   expect(all.status()).toBe(200)
-  const visibleIds: number[] = (await all.json()).data.map((d: { id: number }) => d.id)
-  expect(visibleIds.length).toBe(2)
+  const visible: { id: number; institution: { code: string } | null }[] = (await all.json()).data
+  // Every department the principal can see belongs to their college (SAC).
+  expect(visible.length).toBeGreaterThanOrEqual(2)
+  expect(visible.every((d) => d.institution?.code === 'SAC')).toBe(true)
+  const visibleIds = visible.map((d) => d.id)
   for (let id = 1; id <= 10; id++) {
     if (visibleIds.includes(id)) continue
     const res = await apiGet(page, `/api/v1/departments/${id}`)

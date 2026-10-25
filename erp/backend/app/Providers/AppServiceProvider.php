@@ -28,13 +28,13 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(120)->by($request->user()?->id ?: $request->ip());
         });
 
-        // Password-reset requests: 3 per minute per email+IP, 10 per IP.
+        // Password-reset requests per minute per email+IP and per IP (config/auth.php).
         RateLimiter::for('password-reset', function (Request $request) {
             $email = mb_strtolower((string) $request->input('email'));
 
             return [
-                Limit::perMinute(3)->by('pr|'.$email.'|'.$request->ip()),
-                Limit::perMinute(10)->by('pr|'.$request->ip()),
+                Limit::perMinute(config('auth.password_reset_throttle.per_email'))->by('pr|'.$email.'|'.$request->ip()),
+                Limit::perMinute(config('auth.password_reset_throttle.per_ip'))->by('pr|'.$request->ip()),
             ];
         });
 
