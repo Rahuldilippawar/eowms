@@ -6,8 +6,10 @@
 #   FTP_USERNAME  — FTP Username
 #   FTP_PASSWORD  — FTP Password
 # ऐच्छिक Variables (त्याच पानावर "Variables" tab):
-#   FTP_SERVER_DIR — FTP Login नंतर App च्या Files कुठे आहेत (default: ./ —
-#                    म्हणजे FTP Account ची Directory थेट public_html असेल तर)
+#   FTP_SERVER_DIR — FTP वर App च्या Files कुठे आहेत (default: /public_html/).
+#                    पूर्ण (/ ने सुरू होणारा) मार्ग द्या — "./" दिल्यास Upload
+#                    Action काढलेले Folders चुकीच्या (/folder) मार्गाने काढायला
+#                    जातो आणि Deploy 550 Error ने थांबतो.
 #   FTP_PROTOCOL   — ftps (default) किंवा ftp
 
 name: Deploy to Hostinger
@@ -28,7 +30,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     env:
-      SERVER_DIR: ${{ vars.FTP_SERVER_DIR || './' }}
+      SERVER_DIR: ${{ vars.FTP_SERVER_DIR || '/public_html/' }}
       PROTOCOL: ${{ vars.FTP_PROTOCOL || 'ftps' }}
     steps:
       - uses: actions/checkout@v4
