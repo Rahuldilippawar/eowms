@@ -93,13 +93,17 @@ if (hasRole('super_admin')) {
       <div class="dropdown-menu dropdown-menu-end" style="width:320px;max-height:400px;overflow-y:auto;padding:8px;">
         <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;">
           <strong style="font-size:13px;"><?= h(t('s93')) ?></strong>
-          <?php if ($unreadCount > 0): ?><a href="<?= $rootPath ?? '' ?>notifications/mark-all-read.php" style="font-size:11px;color:var(--rail);"><?= h(t('s293')) ?></a><?php endif; ?>
+          <?php if ($unreadCount > 0): ?>
+            <form method="POST" action="<?= $rootPath ?? '' ?>notifications/mark-all-read.php" style="margin:0;">
+              <button type="submit" style="border:none;background:none;padding:0;font-size:11px;color:var(--rail);cursor:pointer;"><?= h(t('s293')) ?></button>
+            </form>
+          <?php endif; ?>
         </div>
         <?php if (empty($recentNotifs)): ?>
           <div style="padding:16px;text-align:center;color:var(--text-dim);font-size:12.5px;"><?= h(t('s94')) ?></div>
         <?php endif; ?>
         <?php foreach ($recentNotifs as $n): ?>
-          <a href="<?= $rootPath ?? '' ?><?= h($n['link'] ?: 'notifications/index.php') ?>" style="display:block;padding:9px 10px;border-radius:8px;text-decoration:none;color:inherit;<?= $n['is_read'] ? '' : 'background:var(--rail-soft);' ?>">
+          <a href="<?= $rootPath ?? '' ?>notifications/open.php?id=<?= (int)$n['id'] ?>" style="display:block;padding:9px 10px;border-radius:8px;text-decoration:none;color:inherit;<?= $n['is_read'] ? '' : 'background:var(--rail-soft);' ?>">
             <div style="font-size:12.5px;font-weight:600;color:var(--ink);"><?= h($n['title']) ?></div>
             <?php if ($n['message']): ?><div style="font-size:11.5px;color:var(--text-dim);"><?= h($n['message']) ?></div><?php endif; ?>
             <div style="font-size:10px;color:var(--text-dim);margin-top:2px;"><?= date('d M, h:i A', strtotime($n['created_at'])) ?></div>

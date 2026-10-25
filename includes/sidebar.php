@@ -181,7 +181,7 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
     <?php
       $pendingReqCount = 0;
       try {
-          $reqCountStmt = $pdo->prepare("SELECT COUNT(*) c FROM work_requests WHERE organization_id = ? AND status != 'completed'" . (isDeptScoped() ? " AND department_id = ?" : ""));
+          $reqCountStmt = $pdo->prepare("SELECT COUNT(*) c FROM work_requests WHERE organization_id = ? AND status IN ('pending','in_progress')" . (isDeptScoped() ? " AND department_id = ?" : ""));
           $reqCountStmt->execute(isDeptScoped() ? [$activeOrgId, $user['department_id']] : [$activeOrgId]);
           $pendingReqCount = $reqCountStmt->fetch()['c'];
       } catch (PDOException $e) { /* work_requests table not migrated yet */ }
@@ -205,17 +205,17 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
         <i class="fa-solid fa-paper-plane fa-fw"></i><span>पत्र व्यवहार</span>
         <?php if ($pendingLettersCount > 0): ?><span class="count" style="color:var(--amber);"><?= $pendingLettersCount ?></span><?php endif; ?>
       </a>
-      <a href="<?= $rp ?>requests/index.php" class="tree-node <?= $currentDir === 'requests' && $currentPage === 'index.php' ? 'active' : '' ?>">
+      <a href="<?= $rp ?>requests/index.php" class="tree-node <?= $currentDir === 'requests' && in_array($currentPage, ['index.php', 'view.php']) && ($_GET['category'] ?? '') !== 'it' ? 'active' : '' ?>">
         <i class="fa-solid fa-clipboard-question fa-fw"></i><span><?= h(t('nav_requests')) ?></span>
         <?php if ($pendingReqCount > 0): ?><span class="count" style="color:var(--amber);"><?= $pendingReqCount ?></span><?php endif; ?>
       </a>
-      <a href="<?= $rp ?>requests/create.php" class="tree-node <?= $currentDir === 'requests' && $currentPage === 'create.php' ? 'active' : '' ?>">
+      <a href="<?= $rp ?>requests/create.php" class="tree-node <?= $currentDir === 'requests' && $currentPage === 'create.php' && ($_GET['category'] ?? '') !== 'it' ? 'active' : '' ?>">
         <i class="fa-solid fa-paper-plane fa-fw"></i><span>दुसऱ्या विभागाला विनंती पाठवा</span>
       </a>
       <a href="<?= $rp ?>requests/my-requests.php" class="tree-node <?= $currentDir === 'requests' && $currentPage === 'my-requests.php' ? 'active' : '' ?>">
         <i class="fa-solid fa-list-check fa-fw"></i><span>माझ्या पाठवलेल्या विनंत्या</span>
       </a>
-      <a href="<?= $rp ?>it/general-request.php" class="tree-node <?= $currentDir === 'it' && in_array($currentPage, ['general-request.php','my-general-requests.php']) ? 'active' : '' ?>">
+      <a href="<?= $rp ?>requests/create.php?category=it" class="tree-node <?= $currentDir === 'requests' && $currentPage === 'create.php' && ($_GET['category'] ?? '') === 'it' ? 'active' : '' ?>">
         <i class="fa-solid fa-headset fa-fw"></i><span>🖥️ IT तक्रार/विनंती नोंदवा</span>
       </a>
       <a href="<?= $rp ?>staff/index.php?view=tree" class="tree-node <?= $currentDir === 'staff' && $currentPage === 'index.php' && ($_GET['view'] ?? '') === 'tree' ? 'active' : '' ?>">
@@ -230,7 +230,7 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
       <a href="<?= $rp ?>documents/index.php" class="tree-node <?= $currentDir === 'documents' ? 'active' : '' ?>">
         <i class="fa-solid fa-book fa-fw"></i><span>📚 दस्तऐवज Repository</span>
       </a>
-      <?php if (hasPermission('view_org_wide_dashboards') || hasRole('super_admin')): ?>
+      <?php if (hasPermission('view_emergency_alerts')): ?>
         <a href="<?= $rp ?>emergency/index.php" class="tree-node <?= $currentDir === 'emergency' ? 'active' : '' ?>">
           <i class="fa-solid fa-triangle-exclamation fa-fw"></i><span>🆘 आणीबाणी सूचना</span>
         </a>
@@ -482,7 +482,7 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
           </a>
         <?php endif; ?>
         <?php if ($showItRequestsManage): ?>
-          <a href="<?= $rp ?>it/general-requests-manage.php" class="tree-node <?= $currentDir === 'it' && $currentPage === 'general-requests-manage.php' ? 'active' : '' ?>">
+          <a href="<?= $rp ?>requests/index.php?category=it" class="tree-node <?= ($currentDir === 'requests' && ($_GET['category'] ?? '') === 'it' && $currentPage === 'index.php') || ($currentDir === 'it' && $currentPage === 'general-requests-manage.php') ? 'active' : '' ?>">
             <i class="fa-solid fa-headset fa-fw"></i><span>🖥️ IT Requests व्यवस्थापन</span>
           </a>
         <?php endif; ?>

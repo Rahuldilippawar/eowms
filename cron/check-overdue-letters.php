@@ -14,6 +14,7 @@
 
 if (PHP_SAPI !== 'cli') { http_response_code(403); exit('CLI only'); }
 require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../includes/notify.php'; // notifyUser — In-App + Push Queue
 
 const REMINDER_DAYS = 3;
 const ESCALATE_DAYS = 7;
@@ -48,16 +49,14 @@ foreach ($letters as $letter) {
 
     // Remind the current holder
     try {
-        $pdo->prepare("INSERT INTO notifications (organization_id, user_id, title, message, link) VALUES (?, ?, ?, ?, ?)")
-            ->execute([$letter['organization_id'], $letter['current_holder_id'], $title, $message, $link]);
+        notifyUser($letter['current_holder_id'], $letter['organization_id'], $title, $message, $link);
         $sent++;
     } catch (PDOException $e) {}
 
     // Also let the creator know (if different from the holder)
     if ((int)$letter['created_by'] !== (int)$letter['current_holder_id']) {
         try {
-            $pdo->prepare("INSERT INTO notifications (organization_id, user_id, title, message, link) VALUES (?, ?, ?, ?, ?)")
-                ->execute([$letter['organization_id'], $letter['created_by'], $title, $message, $link]);
+            notifyUser($letter['created_by'], $letter['organization_id'], $title, $message, $link);
             $sent++;
         } catch (PDOException $e) {}
     }
@@ -69,8 +68,7 @@ foreach ($letters as $letter) {
         foreach ($mgmtStmt->fetchAll(PDO::FETCH_COLUMN) as $mgmtId) {
             if ((int)$mgmtId === (int)$letter['current_holder_id']) continue; // already notified above
             try {
-                $pdo->prepare("INSERT INTO notifications (organization_id, user_id, title, message, link) VALUES (?, ?, ?, ?, ?)")
-                    ->execute([$letter['organization_id'], $mgmtId, "🔴 " . $title . " (Escalated)", $message, $link]);
+                notifyUser($mgmtId, $letter['organization_id'], "🔴 " . $title . " (Escalated)", $message, $link);
                 $sent++;
             } catch (PDOException $e) {}
         }

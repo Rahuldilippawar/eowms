@@ -1327,8 +1327,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
             // ---------------- Grievances ----------------
             try {
                 foreach ($data['grievances'] ?? [] as $gr) {
-                    $newSubmittedBy2 = $userMap[$gr['submitted_by']] ?? null;
-                    if (!$newSubmittedBy2) continue;
+                    $newSubmittedBy2 = !empty($gr['submitted_by']) ? ($userMap[$gr['submitted_by']] ?? null) : null;
+                    if (!$newSubmittedBy2 && empty($gr['is_anonymous'])) continue; // गुप्त तक्रारीत ओळख नसतेच
                     $newAssignedTo2 = !empty($gr['assigned_to']) ? ($userMap[$gr['assigned_to']] ?? null) : null;
                     $pdo->prepare("
                         INSERT INTO grievances (organization_id, submitted_by, category, description, is_anonymous, status, assigned_to, resolution, sla_deadline, resolved_at, created_at)

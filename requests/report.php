@@ -4,6 +4,12 @@ requireLogin('../');
 $user = currentUser();
 $orgId = activeOrgId();
 
+// रांगेइतकीच परवानगी — Management ला manage_requests_org_wide हवी
+if (!isDeptScoped() && !hasPermission('manage_requests_org_wide')) {
+    http_response_code(403);
+    die('<div style="font-family:sans-serif;padding:40px;">' . h(t('s300')) . ' <a href="../index.php">' . h(t('s16')) . '</a></div>');
+}
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     // ---------------- फॉर्म दाखवणे ----------------
     $pageTitle = 'कामाची विनंती — Advance Report';
@@ -102,12 +108,14 @@ $filterDeptId = isDeptScoped() ? $user['department_id'] : ($_POST['department_id
 $fromDate = ($_POST['from_date'] ?? '') ?: date('Y-m-01');
 $toDate = ($_POST['to_date'] ?? '') ?: date('Y-m-d');
 $filterStatus = $_POST['status'] ?? 'all';
+$statusLabels = ['pending' => 'प्रलंबित', 'in_progress' => 'सुरू आहे', 'completed' => 'पूर्ण', 'closed' => 'बंद', 'cancelled' => 'रद्द'];
+if ($filterStatus !== 'all' && !isset($statusLabels[$filterStatus])) { $filterStatus = 'all'; }
 $cols = $_POST['cols'] ?? ['heading', 'details', 'remarks', 'cost', 'dept', 'person', 'dates', 'status'];
 $colSet = array_flip($cols);
 
 $sql = "
     SELECT r.*, d.name_local AS dept_name, u.name AS completed_by_name
-    FROM work_requests r JOIN departments d ON d.id = r.department_id LEFT JOIN users u ON u.id = r.completed_by
+    FROM work_requests r LEFT JOIN departments d ON d.id = r.department_id LEFT JOIN users u ON u.id = r.completed_by
     WHERE r.organization_id = ? AND DATE(r.created_at) BETWEEN ? AND ?
 ";
 $params = [$orgId, $fromDate, $toDate];
@@ -118,7 +126,6 @@ $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $requestsData = $stmt->fetchAll();
 
-$statusLabels = ['pending' => 'प्रलंबित', 'in_progress' => 'सुरू आहे', 'completed' => 'पूर्ण'];
 $org = $pdo->query("SELECT * FROM organizations WHERE id = " . (int)$orgId)->fetch();
 $totalCost = array_sum(array_map(fn($r) => (float)($r['cost_incurred'] ?? 0), $requestsData));
 ?>

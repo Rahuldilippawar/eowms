@@ -7,86 +7,47 @@ $user = currentUser();
 if (!canManageItRequests($pdo, $user)) { requirePermission('manage_it', '../'); }
 $orgId = activeOrgId();
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $requestId = (int)($_POST['request_id'] ?? 0);
-    $action = $_POST['action'] ?? '';
-    $source = $_POST['source'] ?? 'general'; // 'general' (it_general_requests) किंवा 'asset' (it_repair_tickets)
-
-    if ($source === 'asset') {
-        // ---------------- Asset-विशिष्ट दुरुस्ती तक्रार ----------------
-        if ($action === 'start') {
-            $pdo->prepare("UPDATE it_repair_tickets SET status = 'in_progress' WHERE id = ? AND organization_id = ?")->execute([$requestId, $orgId]);
-            $_SESSION['flash'] = 'दुरुस्ती सुरू केली म्हणून नोंदवलं.';
-        } elseif ($action === 'resolve_asset') {
-            $resolutionNotes = trim($_POST['resolution_notes'] ?? '');
-            $pdo->prepare("UPDATE it_repair_tickets SET status = 'resolved', resolution_notes = ?, resolved_by = ?, resolved_at = NOW() WHERE id = ? AND organization_id = ?")
-                ->execute([$resolutionNotes, $user['id'], $requestId, $orgId]);
-            $tStmt = $pdo->prepare("SELECT asset_id FROM it_repair_tickets WHERE id = ? AND organization_id = ?");
-            $tStmt->execute([$requestId, $orgId]);
-            $assetId = $tStmt->fetch()['asset_id'] ?? null;
-            if ($assetId) {
-                $otherPending = $pdo->prepare("SELECT COUNT(*) c FROM it_repair_tickets WHERE asset_id = ? AND status != 'resolved'");
-                $otherPending->execute([$assetId]);
-                if ((int)$otherPending->fetch()['c'] === 0) {
-                    // बाद (scrapped) केलेलं Asset पुन्हा "चालू" होऊ नये
-                    $pdo->prepare("UPDATE it_assets SET status = 'working' WHERE id = ? AND organization_id = ? AND status != 'scrapped'")->execute([$assetId, $orgId]);
-                }
-            }
-            logActivity('IT तक्रार पूर्ण केली', 'it_repair_ticket', $requestId, '');
-            $_SESSION['flash'] = 'तक्रार पूर्ण झाली म्हणून नोंदवली.';
-        }
-        header('Location: general-requests-manage.php');
-        exit;
-    }
-
-    if ($action === 'assign') {
-        $assignedTo = (int)($_POST['assigned_to'] ?? 0);
-        $pdo->prepare("UPDATE it_general_requests SET assigned_to = ?, status = 'assigned' WHERE id = ? AND organization_id = ?")->execute([$assignedTo, $requestId, $orgId]);
-        $reqStmt = $pdo->prepare("SELECT requested_by, title, request_code FROM it_general_requests WHERE id = ?");
-        $reqStmt->execute([$requestId]);
-        $req = $reqStmt->fetch();
-        notifyUser($assignedTo, $orgId, "IT Request नेमली — {$req['request_code']}", $req['title'], 'it/general-requests-manage.php');
-        $_SESSION['flash'] = 'Request नेमली गेली.';
-    } elseif ($action === 'update_status') {
-        $status = $_POST['status'] ?? 'open';
-        $resolutionNotes = trim($_POST['resolution_notes'] ?? '') ?: null;
-        $resolvedBy = in_array($status, ['resolved', 'closed'], true) ? $user['id'] : null;
-        $resolvedAt = in_array($status, ['resolved', 'closed'], true) ? date('Y-m-d H:i:s') : null;
-        $pdo->prepare("UPDATE it_general_requests SET status = ?, resolution_notes = COALESCE(?, resolution_notes), resolved_by = COALESCE(?, resolved_by), resolved_at = COALESCE(?, resolved_at) WHERE id = ? AND organization_id = ?")
-            ->execute([$status, $resolutionNotes, $resolvedBy, $resolvedAt, $requestId, $orgId]);
-
-        $reqStmt = $pdo->prepare("SELECT requested_by, title, request_code FROM it_general_requests WHERE id = ?");
-        $reqStmt->execute([$requestId]);
-        $req = $reqStmt->fetch();
-        if (in_array($status, ['resolved', 'closed'], true)) {
-            notifyUser($req['requested_by'], $orgId, "✅ तुमची IT Request सुटली — {$req['request_code']}", $req['title'], 'it/my-general-requests.php');
-        }
-        $_SESSION['flash'] = 'स्थिती अद्ययावत केली.';
-    }
-    header('Location: general-requests-manage.php');
+// सर्वसाधारण IT Requests आता एकत्रित विनंती-रांगेत (requests/?category=it).
+// हे पान फक्त Asset-विशिष्ट दुरुस्ती तक्रारींसाठी (?assets=1) उरलं आहे.
+if ($_SERVER['REQUEST_METHOD'] !== 'POST' && empty($_GET['assets'])) {
+    header('Location: ../requests/index.php?category=it');
     exit;
 }
 
-$pageTitle = 'IT Requests व्यवस्थापन';
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $requestId = (int)($_POST['request_id'] ?? 0);
+    $action = $_POST['action'] ?? '';
+    // ---------------- Asset-विशिष्ट दुरुस्ती तक्रार ----------------
+    if ($action === 'start') {
+        $pdo->prepare("UPDATE it_repair_tickets SET status = 'in_progress' WHERE id = ? AND organization_id = ?")->execute([$requestId, $orgId]);
+        $_SESSION['flash'] = 'दुरुस्ती सुरू केली म्हणून नोंदवलं.';
+    } elseif ($action === 'resolve_asset') {
+        $resolutionNotes = trim($_POST['resolution_notes'] ?? '');
+        $pdo->prepare("UPDATE it_repair_tickets SET status = 'resolved', resolution_notes = ?, resolved_by = ?, resolved_at = NOW() WHERE id = ? AND organization_id = ?")
+            ->execute([$resolutionNotes, $user['id'], $requestId, $orgId]);
+        $tStmt = $pdo->prepare("SELECT asset_id FROM it_repair_tickets WHERE id = ? AND organization_id = ?");
+        $tStmt->execute([$requestId, $orgId]);
+        $assetId = $tStmt->fetch()['asset_id'] ?? null;
+        if ($assetId) {
+            $otherPending = $pdo->prepare("SELECT COUNT(*) c FROM it_repair_tickets WHERE asset_id = ? AND status != 'resolved'");
+            $otherPending->execute([$assetId]);
+            if ((int)$otherPending->fetch()['c'] === 0) {
+                // बाद (scrapped) केलेलं Asset पुन्हा "चालू" होऊ नये
+                $pdo->prepare("UPDATE it_assets SET status = 'working' WHERE id = ? AND organization_id = ? AND status != 'scrapped'")->execute([$assetId, $orgId]);
+            }
+        }
+        logActivity('IT तक्रार पूर्ण केली', 'it_repair_ticket', $requestId, '');
+        $_SESSION['flash'] = 'तक्रार पूर्ण झाली म्हणून नोंदवली.';
+    }
+    header('Location: general-requests-manage.php?assets=1');
+    exit;
+}
+
+$pageTitle = 'IT Asset तक्रारी';
 $rootPath = '../';
 require_once __DIR__ . '/../includes/header.php';
 
 $filterStatus = $_GET['status'] ?? 'active';
-
-// ---------------- सर्वसाधारण IT Requests ----------------
-$sql = "
-    SELECT r.*, d.name_local AS dept_name, u.name AS requester_name, au.name AS assigned_to_name,
-      'general' AS source, r.created_at AS sort_date
-    FROM it_general_requests r JOIN departments d ON d.id = r.department_id JOIN users u ON u.id = r.requested_by LEFT JOIN users au ON au.id = r.assigned_to
-    WHERE r.organization_id = ?
-";
-$params = [$orgId];
-if ($filterStatus === 'active') { $sql .= " AND r.status NOT IN ('resolved','closed')"; }
-elseif ($filterStatus !== 'all') { $sql .= " AND r.status = ?"; $params[] = $filterStatus; }
-$sql .= " ORDER BY FIELD(r.priority,'urgent','high','normal','low'), r.created_at";
-$stmt = $pdo->prepare($sql);
-$stmt->execute($params);
-$generalRequests = $stmt->fetchAll();
 
 // ---------------- Asset-विशिष्ट दुरुस्ती तक्रारी (QR/Asset-पानावरून) ----------------
 $aSql = "
@@ -103,7 +64,7 @@ $aStmt->execute([$orgId]);
 $assetTickets = $aStmt->fetchAll();
 
 // ---------------- दोन्ही एकत्र, प्राधान्य+दिनांकानुसार ----------------
-$requests = array_merge($generalRequests, $assetTickets);
+$requests = $assetTickets;
 usort($requests, fn($a, $b) => strtotime($b['sort_date']) <=> strtotime($a['sort_date']));
 
 $itStaffStmt = $pdo->prepare("
@@ -120,7 +81,10 @@ $priorityColors = ['low' => 'var(--text-dim)', 'normal' => 'var(--ink)', 'high' 
 ?>
 
 <div class="page-eyebrow"><?= h(activeOrgName()) ?></div>
-<div class="page-title mb-1">🖥️ IT Requests व्यवस्थापन</div>
+<div class="d-flex justify-content-between align-items-start mb-1">
+  <div class="page-title mb-0">🛠️ IT Asset दुरुस्ती तक्रारी</div>
+  <a href="../requests/index.php?category=it" style="font-size:12.5px;color:var(--rail);font-weight:600;text-decoration:none;align-self:center;"><i class="fa-solid fa-arrow-left me-1"></i>IT Requests रांग</a>
+</div>
 
 <?php if (!empty($_SESSION['flash'])): ?>
   <div class="alert alert-success" style="border-radius:10px;font-size:13px;"><?= h($_SESSION['flash']) ?></div>
@@ -128,9 +92,9 @@ $priorityColors = ['low' => 'var(--text-dim)', 'normal' => 'var(--ink)', 'high' 
 <?php endif; ?>
 
 <div class="d-flex gap-2 mb-3">
-  <a href="?status=active" class="period-btn <?= $filterStatus === 'active' ? 'active' : '' ?>">सक्रिय</a>
-  <a href="?status=resolved" class="period-btn <?= $filterStatus === 'resolved' ? 'active' : '' ?>">सुटलेल्या</a>
-  <a href="?status=all" class="period-btn <?= $filterStatus === 'all' ? 'active' : '' ?>">सगळ्या</a>
+  <a href="?assets=1&status=active" class="period-btn <?= $filterStatus === 'active' ? 'active' : '' ?>">सक्रिय</a>
+  <a href="?assets=1&status=resolved" class="period-btn <?= $filterStatus === 'resolved' ? 'active' : '' ?>">सुटलेल्या</a>
+  <a href="?assets=1&status=all" class="period-btn <?= $filterStatus === 'all' ? 'active' : '' ?>">सगळ्या</a>
 </div>
 
 <div class="panel">

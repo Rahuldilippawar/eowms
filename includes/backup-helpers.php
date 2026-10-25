@@ -167,7 +167,8 @@ function buildOrgBackup($pdo, $orgId) {
             SELECT rb.* FROM room_bookings rb JOIN bookable_rooms br ON br.id = rb.room_id WHERE br.organization_id = ?", [$orgId]),
         'staff_messages' => safeFetchAll($pdo, "
             SELECT sm.* FROM staff_messages sm JOIN users u ON u.id = sm.sender_id WHERE u.organization_id = ?", [$orgId]),
-        'grievances' => safeFetchAll($pdo, "SELECT * FROM grievances WHERE organization_id = ?", [$orgId]),
+        // गुप्त तक्रार — तक्रारदाराची ओळख (submitted_by / submitter_hash) Backup मध्ये कधीही नाही
+        'grievances' => safeFetchAll($pdo, "SELECT id, organization_id, IF(is_anonymous = 1, NULL, submitted_by) AS submitted_by, category, description, is_anonymous, status, assigned_to, resolution, sla_deadline, resolved_at, created_at FROM grievances WHERE organization_id = ?", [$orgId]),
         'dept_material_purchases' => safeFetchAll($pdo, "SELECT * FROM dept_material_purchases WHERE organization_id = ?", [$orgId]),
         'dept_payment_ledger' => safeFetchAll($pdo, "SELECT * FROM dept_payment_ledger WHERE organization_id = ?", [$orgId]),
         'gaushala_cattle' => safeFetchAll($pdo, "SELECT * FROM gaushala_cattle WHERE organization_id = ?", [$orgId]),
