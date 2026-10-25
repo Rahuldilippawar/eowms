@@ -2,14 +2,14 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { z } from 'zod'
 import { Button } from '@/components/ui/Button'
 import { Field } from '@/components/ui/Field'
 import { Input } from '@/components/ui/Input'
 import { Spinner } from '@/components/ui/Spinner'
-import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher'
 import { parseApiError } from '@/lib/api'
+import { AuthCard } from './AuthCard'
 import { useAuth } from './AuthProvider'
 
 const schema = z.object({
@@ -49,19 +49,7 @@ export function LoginPage() {
   })
 
   return (
-    <div className="flex min-h-full flex-col items-center justify-center px-4 py-10">
-      <div className="mb-6 flex w-full max-w-sm items-center justify-between">
-        <div>
-          <p className="text-xl font-bold text-brand-700">{t('app.name')}</p>
-          <p className="text-sm text-slate-500">{t('app.tagline')}</p>
-        </div>
-        <LanguageSwitcher />
-      </div>
-
-      <main className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-        <h1 className="text-lg font-semibold">{t('auth.title')}</h1>
-        <p className="mb-5 text-sm text-slate-500">{t('auth.subtitle')}</p>
-
+    <AuthCard title={t('auth.title')} subtitle={t('auth.subtitle')}>
         {formError ? (
           <div role="alert" className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
             {formError}
@@ -90,15 +78,19 @@ export function LoginPage() {
               {...register('password')}
             />
           </Field>
-          <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
-            <input type="checkbox" className="size-4 rounded border-slate-300" {...register('remember')} />
-            {t('auth.remember')}
-          </label>
+          <div className="flex items-center justify-between gap-2">
+            <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+              <input type="checkbox" className="size-4 rounded border-slate-300" {...register('remember')} />
+              {t('auth.remember')}
+            </label>
+            <Link to="/forgot-password" className="text-sm font-medium text-brand-700 hover:underline">
+              {t('auth.forgotLink')}
+            </Link>
+          </div>
           <Button type="submit" className="w-full" disabled={isSubmitting}>
             {isSubmitting ? <Spinner label={t('auth.submitting')} /> : t('auth.submit')}
           </Button>
         </form>
-      </main>
-    </div>
+    </AuthCard>
   )
 }

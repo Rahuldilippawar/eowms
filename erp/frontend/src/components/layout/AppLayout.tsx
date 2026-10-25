@@ -7,6 +7,7 @@ import { Outlet, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { useAuth } from '@/features/auth/AuthProvider'
 import { LanguageSwitcher } from './LanguageSwitcher'
+import { OrganizationSwitcher } from './OrganizationSwitcher'
 import { SidebarNav } from './Sidebar'
 
 function Brand() {
@@ -66,7 +67,9 @@ export function AppLayout() {
           <Button variant="ghost" className="px-2 lg:hidden" aria-label={t('common.openMenu')} onClick={() => setDrawerOpen(true)}>
             <Menu aria-hidden className="size-5" />
           </Button>
-          <div className="flex-1" />
+          <div className="min-w-0 flex-1">
+            <OrganizationSwitcher />
+          </div>
           <LanguageSwitcher />
           <Dropdown.Root>
             <Dropdown.Trigger asChild>

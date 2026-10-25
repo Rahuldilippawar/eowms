@@ -1,6 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createContext, useContext, type ReactNode } from 'react'
-import { fetchCurrentUser, login as loginRequest, logout as logoutRequest, type CurrentUser, type LoginInput } from './api'
+import {
+  fetchCurrentUser,
+  login as loginRequest,
+  logout as logoutRequest,
+  switchOrganization as switchRequest,
+  type CurrentUser,
+  type LoginInput,
+} from './api'
 
 interface AuthContextValue {
   user: CurrentUser | null
@@ -9,6 +16,9 @@ interface AuthContextValue {
   refetch: () => void
   login: (input: LoginInput) => Promise<CurrentUser>
   logout: () => Promise<void>
+  switchOrganization: (organizationId: number) => Promise<void>
+  /** UI hint only — the API checks every permission itself. */
+  can: (permission: string) => boolean
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -33,13 +43,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
   })
 
+  const switchMutation = useMutation({
+    mutationFn: switchRequest,
+    onSuccess: async (user) => {
+      // Everything cached belongs to the previous organization.
+      queryClient.removeQueries({ predicate: (q) => q.queryKey[0] !== CURRENT_USER_KEY[0] })
+      queryClient.setQueryData(CURRENT_USER_KEY, user)
+    },
+  })
+
+  const user = me.data ?? null
+
   const value: AuthContextValue = {
-    user: me.data ?? null,
+    user,
     isLoading: me.isPending,
     isError: me.isError,
     refetch: () => void me.refetch(),
     login: (input) => loginMutation.mutateAsync(input),
     logout: () => logoutMutation.mutateAsync(),
+    switchOrganization: async (organizationId) => {
+      await switchMutation.mutateAsync(organizationId)
+    },
+    can: (permission) => !!user && (user.is_super_admin || user.permissions.includes(permission)),
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

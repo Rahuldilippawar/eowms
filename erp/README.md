@@ -19,7 +19,7 @@ cd erp/backend
 composer install
 cp .env.example .env          # set DB_* for your local database
 php artisan key:generate
-php artisan migrate --seed    # dev seed: admin@example.com / password
+php artisan migrate --seed    # dev seed — accounts listed under Status below
 php artisan serve             # http://127.0.0.1:8000
 
 # frontend (second terminal)
@@ -65,6 +65,21 @@ CI runs all of these on every pull request touching `erp/` (`.github/workflows/e
 - Tests: 10 backend feature tests, 7 frontend component tests, end-to-end tests on desktop and
   mobile viewports; CI workflow.
 
+### Phase 2 — done
+- Schema: organizations, institutions, departments (central or per institution), permissions,
+  per-organization roles with scoped permissions, role assignments limited to institutions /
+  departments, append-only audit log. Dev seed with two organizations and sample users.
+- Tenant isolation and scoped access enforced in the backend — see
+  [`docs/ACCESS-CONTROL.md`](docs/ACCESS-CONTROL.md); endpoints in [`docs/API.md`](docs/API.md).
+- Password reset (generic answers, rate limited, sessions ended on reset), organization switch,
+  server messages in the UI's language.
+- SPA: organization switcher, forgot / reset password pages, permission-aware menu and pages,
+  read-only institution and department lists (table on desktop, cards on phones).
+- Tests: 35 backend (incl. cross-tenant attempts with manipulated ids), 18 frontend, 15 end-to-end.
+
+Dev accounts (password `password`): `admin@example.com` (super admin), `orgadmin@`,
+`principal@`, `hod@`, `staff@`, `hospital.admin@` — all `@example.com`.
+
 ### Not yet (later phases)
-- Organizations, institutions, departments, roles/permissions and tenant scoping (Phase 2–3).
-- Password reset e-mail, all business modules, reports, deployment to Hostinger.
+- Create / edit screens for organizations, institutions, departments, users and roles (Phase 3).
+- All business modules, reports, deployment to Hostinger.

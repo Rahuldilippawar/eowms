@@ -15,6 +15,7 @@ return [
 
     'failed' => 'These credentials do not match our records.',
     'password' => 'The provided password is incorrect.',
+    'forbidden' => 'You do not have permission to do this.',
     'inactive' => 'Your account has been deactivated. Please contact the administrator.',
     'throttle' => 'Too many login attempts. Please try again in :seconds seconds.',
 
