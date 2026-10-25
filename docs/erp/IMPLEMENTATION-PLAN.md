@@ -1,6 +1,6 @@
 # Dynamic Multi-Organization ERP — Phase 1 Plan
 
-Status: **draft, waiting for owner approval** (nothing outside `docs/` has been created yet).
+Status: **approved**. Phase 1 (setup & architecture) is in `erp/` — see `erp/README.md`.
 
 ## 1. What exists today (inspection result)
 
@@ -29,7 +29,7 @@ untouched. Existing data will be **migrated** into the new database by an import
 | Concern | Choice | Why |
 |---|---|---|
 | Backend | Laravel 12 (PHP 8.2+), REST JSON API under `/api/v1` | Supported LTS-style release; runs on Hostinger PHP 8.2/8.3 |
-| Frontend | React 18 + Vite + TypeScript, Tailwind CSS, Radix-based components (shadcn/ui pattern), React Router, TanStack Query, React Hook Form + Zod, Recharts, react-i18next (Marathi + English) | Static build — no Node server needed on Hostinger |
+| Frontend | React 19 + Vite + TypeScript, Tailwind CSS, Radix-based components (shadcn/ui pattern), React Router, TanStack Query, React Hook Form + Zod, Recharts, react-i18next (Marathi + English) | Static build — no Node server needed on Hostinger |
 | Auth | Laravel Sanctum **SPA cookie auth**, same origin | HttpOnly session cookie + CSRF; no tokens in JS; no CORS needed |
 | Database | MySQL/MariaDB, InnoDB, utf8mb4 | Same server as today |
 | IDs | `BIGINT UNSIGNED` auto-increment PKs everywhere; separate random 26-char ULID `public_token` only where a record is exposed publicly (QR verification) | One identifier type internally; unguessable public references |
