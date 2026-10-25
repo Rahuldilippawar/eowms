@@ -59,5 +59,6 @@ test('forgot password gives the same answer for any email', async ({ page }) => 
   await page.getByRole('link', { name: 'Forgot password?' }).click()
   await page.getByLabel('Email').fill('nobody-here@example.com')
   await page.getByRole('button', { name: 'Send link' }).click()
-  await expect(page.getByRole('status')).toContainText('If an active account exists')
+  // An error (e.g. rate limit) would show as an alert; fail with its text rather than a missing status.
+  await expect(page.getByRole('status').or(page.getByRole('alert'))).toContainText('If an active account exists')
 })
