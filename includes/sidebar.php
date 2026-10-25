@@ -45,7 +45,7 @@ if ($restrictedModulesForSidebar !== null) {
 
         <div style="margin:14px 0;border-top:1px solid rgba(255,255,255,.08);"></div>
 
-        <a href="<?= $rp ?>account/profile.php" class="tree-node">
+        <a href="<?= $rp ?>staff/profile.php" class="tree-node">
           <i class="fa-solid fa-user fa-fw"></i><span>प्रोफाइल / पासवर्ड</span>
         </a>
         <a href="<?= $rp ?>logout.php" class="tree-node">
@@ -86,14 +86,14 @@ $currentDir = basename(dirname($_SERVER['SCRIPT_NAME']));
 // Link दिसतो, त्याच्याशी जुळलेली असावी — नाहीतर त्या पानावर असताना Group
 // आपोआप उघडणार नाही.)
 $dirToGroup = [
-    'letters' => 'letters', 'requests' => 'letters', 'directory' => 'letters', 'announcements' => 'letters',
+    'letters' => 'letters', 'requests' => 'letters', 'announcements' => 'letters',
     'suggestions' => 'letters', 'documents' => 'letters', 'emergency' => 'letters',
     'staff' => 'staff',
     'hostels' => 'hostel', 'residency' => 'hostel',
     'meditation' => 'activities', 'music' => 'activities', 'academics' => 'activities', 'sop' => 'activities',
     'teaching' => 'activities',
     'events' => 'activities', 'guests' => 'activities',
-    'checkout' => 'facilities', 'allocations' => 'facilities', 'room-booking' => 'facilities',
+    'allocations' => 'facilities', 'room-booking' => 'facilities',
     'messages' => 'communication', 'grievances' => 'communication',
     'vehicles' => 'assets', 'deadstock' => 'assets', 'maintenance' => 'assets',
     'cctv' => 'techdept', 'it' => 'techdept',
@@ -174,7 +174,7 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
     <a href="<?= $rp ?>renewals/index.php" class="tree-node <?= $currentDir === 'renewals' ? 'active' : '' ?>">
       <i class="fa-solid fa-shield-halved fa-fw"></i><span><?= h(t('nav_renewals')) ?></span>
     </a>
-    <a href="<?= $rp ?>reports/index.php" class="tree-node <?= $currentDir === 'reports' ? 'active' : '' ?>">
+    <a href="<?= $rp ?>daily-work/report.php" class="tree-node <?= $currentDir === 'daily-work' && in_array($currentPage, ['report.php', 'report-print.php'], true) ? 'active' : '' ?>">
       <i class="fa-solid fa-file-pdf fa-fw"></i><span><?= h(t('nav_reports')) ?></span>
     </a>
 
@@ -219,8 +219,8 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
       <a href="<?= $rp ?>it/general-request.php" class="tree-node <?= $currentDir === 'it' && in_array($currentPage, ['general-request.php','my-general-requests.php']) ? 'active' : '' ?>">
         <i class="fa-solid fa-headset fa-fw"></i><span>🖥️ IT तक्रार/विनंती नोंदवा</span>
       </a>
-      <a href="<?= $rp ?>directory/index.php" class="tree-node <?= $currentDir === 'directory' ? 'active' : '' ?>">
-        <i class="fa-solid fa-address-book fa-fw"></i><span>📇 Trust Directory</span>
+      <a href="<?= $rp ?>staff/index.php?view=tree" class="tree-node <?= $currentDir === 'staff' && $currentPage === 'index.php' && ($_GET['view'] ?? '') === 'tree' ? 'active' : '' ?>">
+        <i class="fa-solid fa-address-book fa-fw"></i><span>📇 कर्मचारी Directory</span>
       </a>
       <a href="<?= $rp ?>announcements/index.php" class="tree-node <?= $currentDir === 'announcements' ? 'active' : '' ?>">
         <i class="fa-solid fa-bullhorn fa-fw"></i><span>📢 परिपत्रक/सूचना</span>
@@ -350,11 +350,8 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
       <a href="<?= $rp ?>room-booking/index.php" class="tree-node <?= $currentDir === 'room-booking' ? 'active' : '' ?>">
         <i class="fa-solid fa-door-open fa-fw"></i><span>📐 Room/Hall Booking</span>
       </a>
-      <a href="<?= $rp ?>checkout/index.php" class="tree-node <?= $currentDir === 'checkout' ? 'active' : '' ?>">
-        <i class="fa-solid fa-key fa-fw"></i><span>🔑 Asset Checkout</span>
-      </a>
       <a href="<?= $rp ?>allocations/index.php" class="tree-node <?= $currentDir === 'allocations' ? 'active' : '' ?>">
-        <i class="fa-solid fa-boxes-packing fa-fw"></i><span>📦 Asset Allocation</span>
+        <i class="fa-solid fa-boxes-packing fa-fw"></i><span>📦 Issue / Return Register</span>
       </a>
     </div>
 
@@ -464,14 +461,10 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
     <?php endif; ?>
 
     <!-- ==================== आर्थिक ==================== -->
-    <?php if (hasPermission('manage_budget')): ?>
-      <a href="<?= $rp ?>budget/index.php" class="tree-node <?= $currentDir === 'budget' ? 'active' : '' ?>">
-        <i class="fa-solid fa-sack-dollar fa-fw"></i><span>विभाग Budget</span>
-      </a>
-    <?php endif; ?>
-    <?php if (hasPermission('manage_dept_finance') || hasCategory('hod') || isManagementOrAbove() || hasRole('super_admin')): ?>
-      <a href="<?= $rp ?>dept-finance/index.php" class="tree-node <?= $currentDir === 'dept-finance' ? 'active' : '' ?>">
-        <i class="fa-solid fa-coins fa-fw"></i><span>🛒 Material Purchase व Payment</span>
+    <?php // पूर्वीचे "विभाग Budget" + "Material Purchase व Payment" — आता एकच; दोन्हीपैकी कुठलीही परवानगी पुरेशी ?>
+    <?php if (hasPermission('manage_budget') || hasPermission('manage_dept_finance') || hasCategory('hod') || isManagementOrAbove() || hasRole('super_admin')): ?>
+      <a href="<?= $rp ?>dept-finance/dashboard.php" class="tree-node <?= $currentDir === 'dept-finance' ? 'active' : '' ?>">
+        <i class="fa-solid fa-sack-dollar fa-fw"></i><span>💰 विभाग Finance</span>
       </a>
     <?php endif; ?>
 
@@ -583,7 +576,7 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
   </div>
 
   <div class="rail-foot">
-    <a href="<?= $rp ?>account/profile.php" style="text-decoration:none;">
+    <a href="<?= $rp ?>staff/profile.php" style="text-decoration:none;">
       <div class="user-chip">
         <div class="avatar"><?= h(mb_substr($user['name'], 0, 2)) ?></div>
         <div>
@@ -592,7 +585,7 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
         </div>
       </div>
     </a>
-    <a href="<?= $rp ?>account/profile.php" style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:12px;color:#B7BBD6;text-decoration:none;">
+    <a href="<?= $rp ?>staff/profile.php" style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:12px;color:#B7BBD6;text-decoration:none;">
       <i class="fa-solid fa-user fa-fw"></i><span><?= h(t('nav_profile')) ?></span>
     </a>
     <div style="display:flex;align-items:center;gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.08);">

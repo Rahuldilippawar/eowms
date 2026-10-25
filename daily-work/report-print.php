@@ -1,47 +1,20 @@
 <?php
+// छापील (Print/PDF) कामाचा अहवाल — पूर्वीचं reports/view.php
 require_once __DIR__ . '/../includes/auth.php';
 requireLogin('../');
+require_once __DIR__ . '/report-common.php';
 $user = currentUser();
 
-$scope = $_GET['scope'] ?? 'personal';
-$period = $_GET['period'] ?? 'weekly';
-$requestedDeptId = (int)($_GET['department_id'] ?? 0);
-$cols = $_GET['cols'] ?? ['heading', 'details', 'requester', 'priority', 'cost', 'materials', 'dates', 'status'];
+$cols = (array)($_GET['cols'] ?? ['heading', 'details', 'requester', 'priority', 'cost', 'materials', 'dates', 'status']);
 $colSet = array_flip($cols);
 
-$isManagement = hasPermission('view_org_wide_dashboards');
-$canViewOrgReport = hasPermission('view_org_wide_reports');
-$isHod = hasCategory('hod');
-
-// ---------------- Access control ----------------
-if ($scope === 'organization' && !$canViewOrgReport) {
-    http_response_code(403);
-    die(t('s552'));
-}
-if ($scope === 'department') {
-    if (!$isManagement && !$isHod) {
-        http_response_code(403);
-        die(t('s553'));
-    }
-    if ($isHod && !$isManagement && $requestedDeptId !== (int)$user['department_id']) {
-        http_response_code(403);
-        die(t('s554'));
-    }
-}
-
-// ---------------- Period range ----------------
-$periodLabels = [
-    'daily' => 'दैनिक', 'weekly' => 'साप्ताहिक', 'monthly' => 'मासिक',
-    'six_monthly' => 'सहामाही', 'yearly' => 'वार्षिक', 'all' => 'सर्व कालावधी',
-];
-switch ($period) {
-    case 'daily': $start = date('Y-m-d'); $end = date('Y-m-d'); break;
-    case 'monthly': $start = date('Y-m-01'); $end = date('Y-m-t'); break;
-    case 'six_monthly': $start = date('Y-m-d', strtotime('-6 months')); $end = date('Y-m-d'); break;
-    case 'yearly': $start = date('Y-01-01'); $end = date('Y-12-31'); break;
-    case 'all': $start = '2000-01-01'; $end = date('Y-m-d'); break;
-    default: $start = date('Y-m-d', strtotime('monday this week')); $end = date('Y-m-d', strtotime('sunday this week'));
-}
+// ---------------- Access control + कालावधी (सामायिक) ----------------
+$ctx = dwReportContext($pdo, $user);
+$scope = $ctx['scope'];
+$period = $ctx['period'];
+$start = $ctx['start'];
+$end = $ctx['end'];
+$periodLabels = dwReportPeriodLabels();
 
 // ---------------- Organization / campus header info ----------------
 $stmt = $pdo->prepare("SELECT * FROM organizations WHERE id = ?");
@@ -56,80 +29,35 @@ $addressParts = array_filter([$campus['address'] ?? null, $campus['city'] ?? nul
 $addressLine = implode(', ', $addressParts);
 
 $scopeDept = null;
-if ($scope === 'department') {
-    $deptId = $isHod && !$isManagement ? $user['department_id'] : $requestedDeptId;
+$headerDeptId = $scope === 'personal' ? (int)($user['department_id'] ?? 0) : (int)$ctx['department_id'];
+if ($headerDeptId) {
     $stmt = $pdo->prepare("SELECT d.*, u.name AS hod_name FROM departments d LEFT JOIN users u ON u.id = d.hod_id WHERE d.id = ? AND d.organization_id = ?");
-    $stmt->execute([$deptId, activeOrgId()]);
-    $scopeDept = $stmt->fetch();
-    if (!$scopeDept) {
-        http_response_code(404);
-        die(t('s553'));
-    }
+    $stmt->execute([$headerDeptId, activeOrgId()]);
+    $scopeDept = $stmt->fetch() ?: null;
 }
-if ($scope === 'personal' && $user['department_id']) {
-    $stmt = $pdo->prepare("SELECT d.*, u.name AS hod_name FROM departments d LEFT JOIN users u ON u.id = d.hod_id WHERE d.id = ?");
-    $stmt->execute([$user['department_id']]);
-    $scopeDept = $stmt->fetch();
+if ($scope === 'department' && !$scopeDept) {
+    http_response_code(404);
+    die(t('s553'));
 }
 
-$scopeLabels = ['personal' => 'व्यक्तिगत अहवाल', 'department' => 'विभागनिहाय अहवाल', 'organization' => 'संपूर्ण संस्था अहवाल'];
+$scopeLabels = dwReportScopeLabels();
 $statusLabels = ['pending' => 'प्रलंबित', 'in_progress' => 'सुरू आहे', 'completed' => 'पूर्ण झाले'];
 $statusChip = ['pending' => 'pending', 'in_progress' => 'pending', 'completed' => 'done'];
 
-// ---------------- Data ----------------
+// ---------------- Data (नेहमी याच संस्थेचा) ----------------
 $personalRecords = [];
 $deptRecords = [];
 $deptSummary = null;
 $orgSummary = [];
 
 if ($scope === 'personal') {
-    try {
-        $stmt = $pdo->prepare("
-            SELECT wr.*, d.name_local AS dept_name,
-              (SELECT GROUP_CONCAT(CONCAT(si.item_name, ' (', wrm.quantity_used, ' ', si.unit, ')') SEPARATOR ', ') FROM work_record_materials wrm JOIN store_items si ON si.id = wrm.item_id WHERE wrm.work_record_id = wr.id) AS materials_used
-            FROM work_records wr
-            LEFT JOIN departments d ON d.id = wr.department_id
-            WHERE EXISTS (SELECT 1 FROM work_record_team wt WHERE wt.work_record_id = wr.id AND wt.user_id = ?) AND wr.work_date BETWEEN ? AND ?
-            ORDER BY wr.work_date DESC
-        ");
-        $stmt->execute([$user['id'], $start, $end]);
-    } catch (PDOException $e) {
-        // work_record_materials अजून Migrate झालेलं नाही — साहित्य-Column शिवाय दाखवतो
-        $stmt = $pdo->prepare("
-            SELECT wr.*, d.name_local AS dept_name, NULL AS materials_used FROM work_records wr
-            LEFT JOIN departments d ON d.id = wr.department_id
-            WHERE EXISTS (SELECT 1 FROM work_record_team wt WHERE wt.work_record_id = wr.id AND wt.user_id = ?) AND wr.work_date BETWEEN ? AND ?
-            ORDER BY wr.work_date DESC
-        ");
-        $stmt->execute([$user['id'], $start, $end]);
-    }
-    $personalRecords = $stmt->fetchAll();
-
+    $personalRecords = dwReportRecords($pdo, $ctx, $user);
     $pStatusCounts = ['pending' => 0, 'in_progress' => 0, 'completed' => 0];
     foreach ($personalRecords as $r) { $pStatusCounts[$r['status']] = ($pStatusCounts[$r['status']] ?? 0) + 1; }
 }
 
 if ($scope === 'department' && $scopeDept) {
-    try {
-        $stmt = $pdo->prepare("
-            SELECT wr.*, (SELECT GROUP_CONCAT(u2.name SEPARATOR ', ') FROM work_record_team wt2 JOIN users u2 ON u2.id = wt2.user_id WHERE wt2.work_record_id = wr.id) AS emp_name,
-              (SELECT GROUP_CONCAT(CONCAT(si.item_name, ' (', wrm.quantity_used, ' ', si.unit, ')') SEPARATOR ', ') FROM work_record_materials wrm JOIN store_items si ON si.id = wrm.item_id WHERE wrm.work_record_id = wr.id) AS materials_used
-            FROM work_records wr
-            WHERE wr.department_id = ? AND wr.work_date BETWEEN ? AND ?
-            ORDER BY wr.work_date DESC
-        ");
-        $stmt->execute([$scopeDept['id'], $start, $end]);
-    } catch (PDOException $e) {
-        $stmt = $pdo->prepare("
-            SELECT wr.*, (SELECT GROUP_CONCAT(u2.name SEPARATOR ', ') FROM work_record_team wt2 JOIN users u2 ON u2.id = wt2.user_id WHERE wt2.work_record_id = wr.id) AS emp_name, NULL AS materials_used
-            FROM work_records wr
-            WHERE wr.department_id = ? AND wr.work_date BETWEEN ? AND ?
-            ORDER BY wr.work_date DESC
-        ");
-        $stmt->execute([$scopeDept['id'], $start, $end]);
-    }
-    $deptRecords = $stmt->fetchAll();
-
+    $deptRecords = dwReportRecords($pdo, $ctx, $user);
     $total = count($deptRecords);
     $done = count(array_filter($deptRecords, fn($r) => $r['status'] === 'completed'));
     $requested = count(array_filter($deptRecords, fn($r) => !empty($r['requested_by'])));
@@ -140,31 +68,7 @@ if ($scope === 'department' && $scopeDept) {
 }
 
 if ($scope === 'organization') {
-    $stmt = $pdo->prepare("
-        SELECT d.*, u.name AS hod_name, c.name AS campus_name FROM departments d
-        LEFT JOIN users u ON u.id = d.hod_id LEFT JOIN campuses c ON c.id = d.campus_id
-        WHERE d.organization_id = ? AND d.is_active = 1 ORDER BY c.name, d.name_local
-    ");
-    $stmt->execute([activeOrgId()]);
-    $allDepts = $stmt->fetchAll();
-
-    foreach ($allDepts as $d) {
-        $totalStmt = $pdo->prepare("SELECT COUNT(*) c FROM work_records WHERE department_id=? AND work_date BETWEEN ? AND ?");
-        $totalStmt->execute([$d['id'], $start, $end]);
-        $total = $totalStmt->fetch()['c'];
-
-        $doneStmt = $pdo->prepare("SELECT COUNT(*) c FROM work_records WHERE department_id=? AND work_date BETWEEN ? AND ? AND status='completed'");
-        $doneStmt->execute([$d['id'], $start, $end]);
-        $done = $doneStmt->fetch()['c'];
-
-        $orgSummary[] = [
-            'name' => $d['name_local'] ?: $d['name'],
-            'hod_name' => $d['hod_name'] ?: '—',
-            'campus_name' => $d['campus_name'],
-            'total' => $total, 'done' => $done,
-            'pct' => $total > 0 ? round(($done / $total) * 100) : 0,
-        ];
-    }
+    $orgSummary = dwReportOrgSummary($pdo, $ctx);
 }
 ?>
 <!DOCTYPE html>
@@ -253,7 +157,7 @@ if ($scope === 'organization') {
 
 
 <div class="toolbar">
-  <a href="index.php" class="btn secondary" style="text-decoration:none;display:inline-block;"><?= h(t('s398')) ?></a>
+  <a href="report.php?<?= h(http_build_query(['scope' => $scope, 'period' => $period, 'department_id' => $ctx['department_id'] ?: null])) ?>" class="btn secondary" style="text-decoration:none;display:inline-block;"><?= h(t('s398')) ?></a>
   <div style="display:flex;gap:8px;">
     <a href="export-csv.php?<?= h($_SERVER['QUERY_STRING'] ?? '') ?>" class="btn secondary" style="text-decoration:none;display:inline-block;"><i class="fa-solid fa-file-excel"></i> Excel (CSV)</a>
     <button class="btn" onclick="window.print()"><i class="fa-solid fa-download"></i> <?= h(t('s399')) ?></button>
@@ -281,7 +185,7 @@ if ($scope === 'organization') {
   <div class="report-title"><?= h(t('s401')) ?> <?= h($scopeLabels[$scope]) ?></div>
   <div class="report-sub">
     कालावधी: <b><?= h($periodLabels[$period]) ?></b> (<?= date('d M Y', strtotime($start)) ?> — <?= date('d M Y', strtotime($end)) ?>)
-    <?php if ($scopeDept): ?> <?= t('s402') ?> <b><?= h($scopeDept['name_local'] ?: $scopeDept['name']) ?></b><?php endif; ?>
+    <?php if ($scopeDept && $scope !== 'organization'): ?> <?= t('s402') ?> <b><?= h($scopeDept['name_local'] ?: $scopeDept['name']) ?></b><?php endif; ?>
     <?php if ($scopeDept && !empty($scopeDept['hod_name'])): ?> <?= t('s403') ?> <b><?= h($scopeDept['hod_name']) ?></b><?php endif; ?>
     <?php if ($scope === 'personal'): ?> <?= t('s404') ?> <b><?= h($user['name']) ?></b><?php endif; ?>
   </div>
