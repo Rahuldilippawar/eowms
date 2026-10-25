@@ -6,12 +6,110 @@ require_once __DIR__ . '/../includes/header.php';
 // 5-Tier Access: स्वतःचा विभाग → अनेक विभाग → एक कॉलेज → अनेक कॉलेज →
 // संपूर्ण संस्था
 $visibleDeptIds = getVisibleDepartmentIdsForStaffTracking();
-if ($visibleDeptIds !== null && empty($visibleDeptIds)) {
-    http_response_code(403);
-    die('<div style="font-family:sans-serif;padding:40px;">' . h(t('s251')) . ' <a href="../index.php">' . h(t('s16')) . '</a></div>');
-}
-
+$canSeeList = !($visibleDeptIds !== null && empty($visibleDeptIds));
 $orgId = activeOrgId();
+
+// 🌳 Tree View (College/School → विभाग → कर्मचारी) — पूर्वीची "Trust Directory".
+// हे सगळ्या Login असलेल्या कर्मचाऱ्यांसाठी आहे — पण फक्त नाव, हुद्दा, विभाग, फोन
+// एवढीच माहिती; पूर्ण यादी (Email/Role/Status/Edit) वरच्या Tiered नियमांनुसारच.
+$staffView = (($_GET['view'] ?? '') === 'tree' || !$canSeeList) ? 'tree' : 'list';
+$viewTabs = function ($active) use ($canSeeList) {
+    $html = '<div class="period-toggle mb-3" style="width:fit-content;">';
+    if ($canSeeList) { $html .= '<a href="index.php" class="period-btn ' . ($active === 'list' ? 'active' : '') . '">📋 यादी</a>'; }
+    $html .= '<a href="index.php?view=tree" class="period-btn ' . ($active === 'tree' ? 'active' : '') . '">🌳 Tree View</a></div>';
+    return $html;
+};
+
+if ($staffView === 'tree') {
+    $campusStmt = $pdo->prepare("SELECT * FROM campuses WHERE organization_id = ? AND is_active = 1 ORDER BY (college_type = 'Trust HQ') DESC, name");
+    $campusStmt->execute([$orgId]);
+    $treeCampuses = $campusStmt->fetchAll();
+
+    $deptStmt = $pdo->prepare("SELECT d.id, d.campus_id, d.name, d.name_local, c.college_type FROM departments d LEFT JOIN campuses c ON c.id = d.campus_id WHERE d.organization_id = ? AND d.is_active = 1 ORDER BY d.name_local");
+    $deptStmt->execute([$orgId]);
+    $treeDepts = $deptStmt->fetchAll();
+
+    $staffStmt = $pdo->prepare("SELECT id, name, designation, mobile, department_id FROM users WHERE organization_id = ? AND is_active = 1 ORDER BY name");
+    $staffStmt->execute([$orgId]);
+    $staffByDept = [];
+    foreach ($staffStmt->fetchAll() as $s) { $staffByDept[(int)$s['department_id']][] = $s; }
+
+    // Trust-स्तरीय विभाग (campus_id NULL, किंवा Trust HQ Campus खालचे) — वेगळा गट
+    $groups = [];
+    $trustDepts = array_filter($treeDepts, fn($d) => $d['campus_id'] === null || $d['college_type'] === 'Trust HQ');
+    if ($trustDepts) { $groups[] = ['key' => 'trust', 'title' => '🏛️ Trust-स्तरीय विभाग', 'depts' => $trustDepts]; }
+    foreach ($treeCampuses as $c) {
+        if ($c['college_type'] === 'Trust HQ') continue;
+        $groups[] = ['key' => 'campus-' . $c['id'], 'title' => '🏫 ' . $c['name'], 'depts' => array_filter($treeDepts, fn($d) => (int)$d['campus_id'] === (int)$c['id'])];
+    }
+    $noDeptStaff = $staffByDept[0] ?? [];
+    ?>
+    <div class="page-eyebrow"><?= h(activeOrgName()) ?></div>
+    <div class="page-title mb-1">📇 कर्मचारी — Tree View</div>
+    <p style="font-size:12.5px;color:var(--text-dim);margin-bottom:14px;">🏛️ <?= h(activeOrgName()) ?> अंतर्गत सर्व School/College → विभाग → कर्मचारी</p>
+    <?= $viewTabs('tree') ?>
+
+    <div class="panel mb-3"><div style="padding:14px 20px;"><input type="text" id="treeSearch" class="form-control-custom" placeholder="🔍 नाव, हुद्दा किंवा विभाग टाइप करा..."></div></div>
+
+    <div id="staffTree">
+      <?php foreach ($groups as $g): $count = 0; foreach ($g['depts'] as $d) { $count += count($staffByDept[(int)$d['id']] ?? []); } ?>
+        <div class="panel mb-3 tree-group">
+          <div class="panel-head" style="cursor:pointer;" onclick="toggleTreeNode('<?= $g['key'] ?>')">
+            <div class="title"><?= h($g['title']) ?> <span style="font-size:11px;color:var(--text-dim);font-weight:400;">(<?= count($g['depts']) ?> विभाग · <?= $count ?> कर्मचारी)</span></div>
+          </div>
+          <div id="<?= $g['key'] ?>" class="tree-body" style="display:none;">
+            <?php if (empty($g['depts'])): ?><div style="padding:14px 20px;color:var(--text-dim);font-size:12.5px;">या College/School मध्ये अजून कोणताही विभाग नाही</div><?php endif; ?>
+            <?php foreach ($g['depts'] as $d): $members = $staffByDept[(int)$d['id']] ?? []; $deptName = $d['name_local'] ?: $d['name']; ?>
+              <div class="tree-dept" style="padding:12px 20px;border-top:1px solid var(--line);">
+                <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="var l=this.nextElementSibling;l.style.display=l.style.display==='none'?'block':'none';">
+                  <span style="font-weight:600;font-size:13.5px;"><?= h($deptName) ?></span>
+                  <span style="font-size:11px;color:var(--text-dim);"><?= count($members) ?> कर्मचारी ▾</span>
+                </div>
+                <div class="tree-staff" style="display:none;margin-top:8px;">
+                  <?php if (empty($members)): ?><div style="font-size:12px;color:#999;">या विभागात कोणीही कर्मचारी नाही</div><?php endif; ?>
+                  <?php foreach ($members as $s): ?>
+                    <div class="tree-person" data-search="<?= h(mb_strtolower($s['name'] . ' ' . $s['designation'] . ' ' . $deptName)) ?>" style="display:flex;align-items:center;gap:10px;padding:6px 0;font-size:12.5px;">
+                      <span style="width:26px;height:26px;border-radius:50%;background:var(--rail);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;"><?= h(mb_substr($s['name'], 0, 2)) ?></span>
+                      <span><?= h($s['name']) ?><?php if ($s['designation']): ?> <span style="color:#999;">— <?= h($s['designation']) ?></span><?php endif; ?>
+                        <span style="color:#999;font-size:11px;"> · <?= h($deptName) ?></span>
+                        <?php if (!empty($s['mobile'])): ?> <a href="tel:<?= h($s['mobile']) ?>" style="color:var(--rail);font-size:11.5px;text-decoration:none;">📞 <?= h($s['mobile']) ?></a><?php endif; ?>
+                      </span>
+                    </div>
+                  <?php endforeach; ?>
+                </div>
+              </div>
+            <?php endforeach; ?>
+          </div>
+        </div>
+      <?php endforeach; ?>
+    </div>
+
+    <script>
+    function toggleTreeNode(id) { var el = document.getElementById(id); el.style.display = el.style.display === 'none' ? 'block' : 'none'; }
+    document.getElementById('treeSearch').addEventListener('input', function () {
+      var q = this.value.trim().toLowerCase();
+      document.querySelectorAll('#staffTree .tree-group').forEach(function (g) {
+        var groupHit = false;
+        g.querySelectorAll('.tree-dept').forEach(function (d) {
+          var deptHit = false;
+          d.querySelectorAll('.tree-person').forEach(function (p) {
+            var hit = q.length < 2 || p.dataset.search.indexOf(q) !== -1;
+            p.style.display = hit ? 'flex' : 'none';
+            if (hit) deptHit = true;
+          });
+          d.style.display = (q.length < 2 || deptHit) ? '' : 'none';
+          d.querySelector('.tree-staff').style.display = (q.length >= 2 && deptHit) ? 'block' : 'none';
+          if (deptHit) groupHit = true;
+        });
+        g.style.display = (q.length < 2 || groupHit) ? '' : 'none';
+        g.querySelector('.tree-body').style.display = (q.length >= 2 && groupHit) ? 'block' : 'none';
+      });
+    });
+    </script>
+    <?php
+    require_once __DIR__ . '/../includes/footer.php';
+    exit;
+}
 $requestedDeptId = $_GET['department_id'] ?? '';
 $status = $_GET['status'] ?? 'all';
 
@@ -95,6 +193,7 @@ try {
   <div class="alert alert-danger" style="border-radius:10px;font-size:13px;"><?= h($_SESSION['form_error']) ?></div>
   <?php unset($_SESSION['form_error']); ?>
 <?php endif; ?>
+<?= $viewTabs('list') ?>
 
 <div class="row g-3 mb-3">
   <div class="col-6 col-lg-3"><div class="kpi-mini"><div class="lbl"><?= h(t('s95')) ?></div><div class="val"><?= $countAll ?></div></div></div>
