@@ -90,6 +90,19 @@ Dev accounts (password `password`): `admin@example.com` (super admin), `orgadmin
   success toasts, phone-friendly layouts.
 - Tests: 62 backend, 27 frontend, 21 end-to-end.
 
+### Phase 4 — done
+- Dashboard with real, scoped KPIs (employees, present / on leave / absent today, students, pending
+  approvals) and charts (attendance by day, employees by department and institution) with period,
+  custom-range, institution and department filters; each tile appears only with its permission.
+- Employees (primary + additional departments, reporting officer, optional login link) and students.
+- Attendance: server-time check-in / check-out, late and half-day rules, overnight shifts, marking by
+  others within scope, correction requests and approval, summary report with CSV export.
+- Leave: types per organization, apply with private attachment, overlap check, approval by the
+  reporting officer or a scoped approver, approved days written into attendance, cancel.
+- Rules: [`docs/ATTENDANCE.md`](docs/ATTENDANCE.md). New seed account: `teacher@example.com`
+  (reports to `hod@`, who reports to `principal@`).
+- Tests: 86 backend, 33 frontend, 25 end-to-end.
+
 ### Not yet (later phases)
-- Dashboard KPIs, employees, students, attendance, leave (Phase 4) and the other business modules.
+- Daily work, tasks, notifications (Phase 5) and the other business modules; holiday calendar.
 - Reports, deployment to Hostinger.

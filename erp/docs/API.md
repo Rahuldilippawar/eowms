@@ -57,3 +57,34 @@ Every security-relevant action is written to `audit_logs` (append-only): login, 
 logout, organization switch, password-reset request, password reset, and every create / update /
 activate / deactivate / role change, with old and new values of the changed fields and the optional
 reason.
+
+## Phase 4 — dashboard, people, attendance, leave
+
+Rules behind these endpoints: [`ATTENDANCE.md`](ATTENDANCE.md).
+
+| Method | Path | Permission | Notes |
+|---|---|---|---|
+| GET | `/dashboard` | any signed-in user | Query `period (today/week/month/year/custom), from?, to? (custom, ≤ 1 year), institution_id?, department_id?`. Each KPI / chart is `null` without its permission; counts are scoped. |
+| GET | `/me/employee` | — | The caller's employee record in the current organization, or `null` |
+| GET | `/me/attendance` | — | Query `month=YYYY-MM` |
+| POST | `/me/attendance/check-in`, `/check-out` | — | Server time; 10 per minute |
+| GET / POST | `/me/attendance/corrections` | — | `work_date, requested_status, requested_check_in?, requested_check_out?, reason` |
+| GET / POST | `/me/leave` | — | multipart `leave_type_id, start_date, end_date, reason, attachment?` |
+| POST | `/me/leave/{id}/cancel` | — | Own request, while still pending |
+| GET | `/leave-types/active` | — | Active types for the apply form |
+| GET | `/leave-requests/{id}/attachment` | owner, decider or `leave.view` in scope | Private file download |
+| GET / POST | `/employees` | `employees.view` / `employees.create` | `employee_code, name, designation?, phone?, email?, department_id, additional_department_ids?, reporting_officer_id?, user_id?, joining_date?`. Institution follows the department; department must be in the caller's scope; `user_id` must hold a role here. |
+| GET / PUT | `/employees/{id}` | `employees.view` / `employees.edit` | |
+| POST | `/employees/{id}/active` | `employees.activate` | `is_active, reason?` |
+| GET / POST | `/students` | `students.view` / `students.create` | `student_code, name, institution_id, department_id? (same institution), class_name?, section?, gender?, date_of_birth?, admission_date?, guardian_name?, guardian_phone?` |
+| GET / PUT | `/students/{id}` | `students.view` / `students.edit` | |
+| POST | `/students/{id}/active` | `students.activate` | |
+| GET | `/attendance` | `attendance.view` | Query `date, search?, page`: employees in scope with that day's record |
+| PUT | `/attendance` | `attendance.create` or `attendance.edit` | `employee_id, date (not future), status, check_in?, check_out?, remarks?` |
+| GET | `/attendance/summary` | `attendance.view` (+ `attendance.export` for CSV) | Query `from, to, group_by (employee/department/institution), format=csv?`. CSV is UTF-8 with BOM, formula-escaped, and the export is audited. |
+| GET | `/attendance/corrections` | `attendance.approve` | Pending corrections in scope, excluding the caller's own |
+| POST | `/attendance/corrections/{id}/decide` | `attendance.approve` | `approve, remarks?` |
+| GET | `/leave-approvals` | — | Requests the caller may decide (reporting officer or `leave.approve` scope) |
+| POST | `/leave-requests/{id}/decide` | as above | `approve, remarks?`; 404 if the caller may not decide it |
+| GET | `/leave-requests` | `leave.view` | Query `status?, employee_id?, from?, to?` |
+| GET / POST / PUT | `/leave-types`, `/leave-types/{id}` | `leave.manage_types` (organization scope) | `code, name, days_per_year, is_paid, is_active` |

@@ -1,13 +1,19 @@
 <?php
 
+use App\Http\Controllers\Api\V1\AttendanceController;
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\DepartmentController;
+use App\Http\Controllers\Api\V1\EmployeeController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\InstitutionController;
+use App\Http\Controllers\Api\V1\LeaveController;
+use App\Http\Controllers\Api\V1\MeController;
 use App\Http\Controllers\Api\V1\OrganizationController;
 use App\Http\Controllers\Api\V1\PasswordResetController;
 use App\Http\Controllers\Api\V1\PermissionController;
 use App\Http\Controllers\Api\V1\RoleController;
+use App\Http\Controllers\Api\V1\StudentController;
 use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Middleware\SetAccessContext;
 use Illuminate\Support\Facades\Route;
@@ -64,4 +70,44 @@ Route::middleware(['auth:sanctum', SetAccessContext::class])->group(function () 
     Route::get('/roles/{role}', [RoleController::class, 'show'])->middleware('permission:roles.view');
     Route::put('/roles/{role}', [RoleController::class, 'update'])->middleware('permission:roles.edit');
     Route::delete('/roles/{role}', [RoleController::class, 'destroy'])->middleware('permission:roles.delete');
+
+    Route::get('/dashboard', DashboardController::class);
+
+    // Self-service: the signed-in user's own employee record.
+    Route::get('/me/employee', [MeController::class, 'employee']);
+    Route::get('/me/attendance', [MeController::class, 'attendance']);
+    Route::post('/me/attendance/check-in', [MeController::class, 'checkIn'])->middleware('throttle:10,1');
+    Route::post('/me/attendance/check-out', [MeController::class, 'checkOut'])->middleware('throttle:10,1');
+    Route::get('/me/attendance/corrections', [MeController::class, 'corrections']);
+    Route::post('/me/attendance/corrections', [MeController::class, 'requestCorrection']);
+    Route::get('/me/leave', [MeController::class, 'leave']);
+    Route::post('/me/leave', [MeController::class, 'applyLeave']);
+    Route::post('/me/leave/{leave}/cancel', [MeController::class, 'cancelLeave']);
+    Route::get('/leave-types/active', [MeController::class, 'leaveTypes']);
+    Route::get('/leave-requests/{leave}/attachment', [MeController::class, 'attachment']);
+
+    Route::get('/employees', [EmployeeController::class, 'index'])->middleware('permission:employees.view');
+    Route::post('/employees', [EmployeeController::class, 'store'])->middleware('permission:employees.create');
+    Route::get('/employees/{employee}', [EmployeeController::class, 'show'])->middleware('permission:employees.view');
+    Route::put('/employees/{employee}', [EmployeeController::class, 'update'])->middleware('permission:employees.edit');
+    Route::post('/employees/{employee}/active', [EmployeeController::class, 'setActive'])->middleware('permission:employees.activate');
+
+    Route::get('/students', [StudentController::class, 'index'])->middleware('permission:students.view');
+    Route::post('/students', [StudentController::class, 'store'])->middleware('permission:students.create');
+    Route::get('/students/{student}', [StudentController::class, 'show'])->middleware('permission:students.view');
+    Route::put('/students/{student}', [StudentController::class, 'update'])->middleware('permission:students.edit');
+    Route::post('/students/{student}/active', [StudentController::class, 'setActive'])->middleware('permission:students.activate');
+
+    Route::get('/attendance', [AttendanceController::class, 'day'])->middleware('permission:attendance.view');
+    Route::put('/attendance', [AttendanceController::class, 'mark']);
+    Route::get('/attendance/summary', [AttendanceController::class, 'summary'])->middleware('permission:attendance.view');
+    Route::get('/attendance/corrections', [AttendanceController::class, 'corrections'])->middleware('permission:attendance.approve');
+    Route::post('/attendance/corrections/{correction}/decide', [AttendanceController::class, 'decideCorrection'])->middleware('permission:attendance.approve');
+
+    Route::get('/leave-requests', [LeaveController::class, 'index'])->middleware('permission:leave.view');
+    Route::get('/leave-approvals', [LeaveController::class, 'approvals']);
+    Route::post('/leave-requests/{leave}/decide', [LeaveController::class, 'decide']);
+    Route::get('/leave-types', [LeaveController::class, 'types'])->middleware('permission:leave.manage_types');
+    Route::post('/leave-types', [LeaveController::class, 'storeType'])->middleware('permission:leave.manage_types');
+    Route::put('/leave-types/{leaveType}', [LeaveController::class, 'updateType'])->middleware('permission:leave.manage_types');
 });

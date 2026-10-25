@@ -4,10 +4,12 @@ namespace Database\Seeders;
 
 use App\Enums\InstitutionType;
 use App\Models\Department;
+use App\Models\Employee;
 use App\Models\Institution;
 use App\Models\Organization;
 use App\Models\Role;
 use App\Models\RoleAssignment;
+use App\Models\Student;
 use App\Models\User;
 use App\Support\Access\DefaultRoles;
 use App\Support\Access\PermissionCatalog;
@@ -40,11 +42,31 @@ class DatabaseSeeder extends Seeder
         $hospital = $this->organization('Sanjeevani Hospital Trust', 'SHT', 'SHT');
         $this->department($hospital, null, 'Nursing', 'NUR');
 
-        $this->user('orgadmin@example.com', 'Org Admin (SET)', $trust, 'org_admin');
-        $this->user('principal@example.com', 'Principal (SAC)', $trust, 'principal', institutions: [$college->id]);
-        $this->user('hod@example.com', 'HOD Physics', $trust, 'hod', departments: [$physics->id]);
-        $this->user('staff@example.com', 'IT Staff', $trust, 'staff', departments: [$it->id]);
+        $admin = $this->user('orgadmin@example.com', 'Org Admin (SET)', $trust, 'org_admin');
+        $principal = $this->user('principal@example.com', 'Principal (SAC)', $trust, 'principal', institutions: [$college->id]);
+        $hod = $this->user('hod@example.com', 'HOD Physics', $trust, 'hod', departments: [$physics->id]);
+        $staff = $this->user('staff@example.com', 'IT Staff', $trust, 'staff', departments: [$it->id]);
         $this->user('hospital.admin@example.com', 'Org Admin (SHT)', $hospital, 'org_admin');
+        $teacher = $this->user('teacher@example.com', 'Physics Teacher', $trust, 'staff', departments: [$physics->id]);
+
+        // People records (linked to the accounts above where they log in).
+        $ePrincipal = $this->employee($trust, $principal, 'EMP-001', 'Principal (SAC)', 'Principal', $college->departments()->where('code', 'LIB')->first() ?? $physics);
+        $eHod = $this->employee($trust, $hod, 'EMP-002', 'HOD Physics', 'Head of Department', $physics, $ePrincipal);
+        $this->employee($trust, $teacher, 'EMP-003', 'Physics Teacher', 'Assistant Professor', $physics, $eHod);
+        $this->employee($trust, $staff, 'EMP-004', 'IT Staff', 'System Administrator', $it);
+        $this->employee($trust, $admin, 'EMP-005', 'Org Admin (SET)', 'Administrator', $it);
+        foreach ([['STU-001', 'Asha Patil', '11'], ['STU-002', 'Rohan Jadhav', '12']] as [$code, $name, $class]) {
+            Student::firstOrCreate(['organization_id' => $trust->id, 'student_code' => $code], ['institution_id' => $college->id, 'department_id' => $physics->id, 'name' => $name, 'class_name' => $class]);
+        }
+    }
+
+    private function employee(Organization $org, ?User $user, string $code, string $name, string $designation, Department $department, ?Employee $officer = null): Employee
+    {
+        return Employee::firstOrCreate(['organization_id' => $org->id, 'employee_code' => $code], [
+            'user_id' => $user?->id, 'name' => $name, 'designation' => $designation,
+            'department_id' => $department->id, 'institution_id' => $department->institution_id,
+            'reporting_officer_id' => $officer?->id, 'is_active' => true,
+        ]);
     }
 
     private function organization(string $name, string $short, string $code): Organization
@@ -72,12 +94,14 @@ class DatabaseSeeder extends Seeder
      * @param  list<int>  $institutions
      * @param  list<int>  $departments
      */
-    private function user(string $email, string $name, Organization $org, string $roleKey, array $institutions = [], array $departments = []): void
+    private function user(string $email, string $name, Organization $org, string $roleKey, array $institutions = [], array $departments = []): User
     {
         $user = User::firstOrCreate(['email' => $email], ['name' => $name, 'password' => 'password', 'is_active' => true]);
         $role = Role::where(['organization_id' => $org->id, 'key' => $roleKey])->firstOrFail();
         $assignment = RoleAssignment::firstOrCreate(['user_id' => $user->id, 'role_id' => $role->id], ['organization_id' => $org->id]);
         $assignment->institutions()->sync($institutions);
         $assignment->departments()->sync($departments);
+
+        return $user;
     }
 }
