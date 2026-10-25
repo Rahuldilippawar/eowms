@@ -69,9 +69,18 @@ $insertStmt = $pdo->prepare("
 $checkStmt = $pdo->prepare("SELECT id FROM users WHERE email = ?");
 $loginUrl = (isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'] . rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'])), '/') . '/login.php';
 
+// Trust-HQ (Campus नसलेल्या) विभागातल्या कर्मचाऱ्यांसाठी — संस्थेचा पहिला Campus
+$firstCampusStmt = $pdo->prepare("SELECT id FROM campuses WHERE organization_id = ? ORDER BY id LIMIT 1");
+$firstCampusStmt->execute([$orgId]);
+$fallbackCampusId = $firstCampusStmt->fetch()['id'] ?? null;
+
 while (($row = fgetcsv($handle)) !== false) {
     $rowNum++;
-    if (count($row) < count($header)) continue;
+    // पूर्णपणे रिकामी ओळ — वगळा
+    if (count(array_filter($row, fn($c) => trim((string)$c) !== '')) === 0) continue;
+    // Excel अनेकदा शेवटी जास्तीचे रिकामे Cells (,,,) जोडतो किंवा कमी Cells ठेवतो —
+    // Header च्या लांबीइतकं Pad/Trim करतो, नाहीतर array_combine Error देतो
+    $row = array_slice(array_pad($row, count($header), ''), 0, count($header));
     $data = array_combine($header, $row);
 
     $deptKey = mb_strtolower(trim($data['department']));
@@ -103,11 +112,19 @@ while (($row = fgetcsv($handle)) !== false) {
     $dobRaw = trim($data['date_of_birth'] ?? '');
     $dateOfBirth = ($dobRaw && strtotime($dobRaw)) ? date('Y-m-d', strtotime($dobRaw)) : null;
 
-    $insertStmt->execute([
-        $orgId, $department['campus_id'], $department['id'],
-        trim($data['name']), $email, $mobile, trim($data['designation']), $salary, $joiningDate, $dateOfBirth,
-        password_hash($plainPassword, PASSWORD_DEFAULT),
-    ]);
+    try {
+        $insertStmt->execute([
+            $orgId, $department['campus_id'] ?: $fallbackCampusId, $department['id'],
+            trim($data['name']), $email, $mobile, trim($data['designation']), $salary, $joiningDate, $dateOfBirth,
+            password_hash($plainPassword, PASSWORD_DEFAULT),
+        ]);
+    } catch (PDOException $e) {
+        // Duplicate (उदा. याच File मध्ये तोच Email दोनदा) — Blank पान न दाखवता ती ओळ वगळतो
+        $skipped[] = (int)($e->errorInfo[1] ?? 0) === 1062
+            ? "ओळ {$rowNum}: '{$email}' हा ईमेल / कर्मचारी कोड आधीच वापरात आहे"
+            : "ओळ {$rowNum}: नोंद जतन करता आली नाही";
+        continue;
+    }
     $created++;
 
     sendWelcomeEmail($email, trim($data['name']), $email, $plainPassword, activeOrgName(), 'staff', $loginUrl);

@@ -3,7 +3,8 @@ $pageTitle = 'कर्मचारी प्रोफाइल';
 $rootPath = '../';
 require_once __DIR__ . '/../includes/header.php';
 
-$empId = (int)($_GET['id'] ?? 0);
+// id नसेल तर — स्वतःचं प्रोफाइल (Sidebar मधली "प्रोफाइल / पासवर्ड" Link)
+$empId = (int)($_GET['id'] ?? 0) ?: (int)$user['id'];
 $orgId = activeOrgId();
 
 // 5-Tier Access: स्वतःचा विभाग → अनेक विभाग → एक कॉलेज → अनेक कॉलेज →
@@ -115,13 +116,13 @@ if (!empty($emp['date_of_birth'])) {
 $stmt = $pdo->prepare("SELECT * FROM tasks WHERE assigned_to = ? ORDER BY target_date DESC LIMIT 10");
 $stmt->execute([$empId]);
 $recentTasks = $stmt->fetchAll();
-$stmt = $pdo->prepare("SELECT COUNT(*) c FROM tasks WHERE assigned_to = ? AND status != 'completed'");
+$stmt = $pdo->prepare("SELECT COUNT(*) c FROM tasks WHERE assigned_to = ? AND status NOT IN ('completed', 'cancelled')");
 $stmt->execute([$empId]);
 $pendingTasks = $stmt->fetch()['c'];
 
 $roleLabels = ['super_admin' => 'Super Admin', 'president' => 'President', 'executive_president' => 'Executive President', 'general_manager' => 'General Manager', 'hod' => 'HOD', 'staff' => 'Staff'];
-$statusLabels = ['pending' => 'प्रलंबित', 'in_progress' => 'सुरू आहे', 'completed' => 'पूर्ण झाले'];
-$statusChip = ['pending' => 'pending', 'in_progress' => 'pending', 'completed' => 'done'];
+$statusLabels = ['pending' => 'प्रलंबित', 'in_progress' => 'सुरू आहे', 'completed' => 'पूर्ण झाले', 'cancelled' => 'रद्द केले'];
+$statusChip = ['pending' => 'pending', 'in_progress' => 'pending', 'completed' => 'done', 'cancelled' => 'overdue'];
 ?>
 
 <div class="page-eyebrow"><?= h($emp['dept_name'] ?? '') ?></div>
@@ -138,6 +139,9 @@ $statusChip = ['pending' => 'pending', 'in_progress' => 'pending', 'completed' =
   <div class="d-flex gap-2">
     <a href="../letters/create.php?to_user=<?= $emp['id'] ?>" class="btn btn-sm" style="background:var(--rail);color:#fff;border-radius:9px;font-size:12.5px;padding:8px 16px;font-weight:600;"><i class="fa-solid fa-paper-plane me-1"></i>पत्र पाठवा</a>
     <a href="id-card.php?id=<?= $emp['id'] ?>" target="_blank" class="btn btn-sm" style="border:1px solid var(--line);border-radius:9px;font-size:12.5px;padding:8px 16px;"><i class="fa-solid fa-id-card me-1"></i>ID Card</a>
+    <?php if ($isOwnProfile): ?>
+      <a href="#account" class="btn btn-sm" style="border:1px solid var(--rail);color:var(--rail);border-radius:9px;font-size:12.5px;padding:8px 16px;font-weight:600;"><i class="fa-solid fa-lock me-1"></i>पासवर्ड / फोटो / Fingerprint</a>
+    <?php endif; ?>
     <?php if (hasRole('super_admin')): ?>
       <a href="edit.php?id=<?= $emp['id'] ?>" class="btn btn-sm" style="border:1px solid var(--line);border-radius:9px;font-size:12.5px;padding:8px 16px;"><i class="fa-solid fa-pen me-1"></i>Edit</a>
       <form method="POST" action="toggle-active.php" onsubmit="return confirm('<?= $emp['is_active'] ? 'हे खाते निष्क्रिय करायचे?' : 'हे खाते सक्रिय करायचे?' ?>');">
@@ -157,9 +161,13 @@ $statusChip = ['pending' => 'pending', 'in_progress' => 'pending', 'completed' =
     <div class="panel">
       <div style="padding:24px;">
         <div class="d-flex align-items-center gap-3 mb-4">
+          <?php if (!empty($emp['photo_path'])): ?>
+            <img src="../<?= h($emp['photo_path']) ?>" alt="" style="width:60px;height:60px;border-radius:14px;object-fit:cover;border:1px solid var(--line);">
+          <?php else: ?>
           <div style="width:60px;height:60px;border-radius:14px;background:var(--ink-soft);color:#fff;font-family:'Space Grotesk';font-weight:700;font-size:22px;display:flex;align-items:center;justify-content:center;">
             <?= h(mb_substr($emp['name'], 0, 2)) ?>
           </div>
+          <?php endif; ?>
           <div>
             <div style="font-family:'Space Grotesk';font-weight:700;font-size:17px;color:var(--ink);"><?= h($emp['name']) ?></div>
             <div style="font-size:12.5px;color:var(--text-dim);"><?= h($roleLabels[$emp['role']] ?? $emp['role']) ?></div>
@@ -346,6 +354,75 @@ $statusChip = ['pending' => 'pending', 'in_progress' => 'pending', 'completed' =
   </div>
   <?php endif; ?>
 </div>
+
+<?php if ($isOwnProfile):
+  // 🔐 खाते — पूर्वीचं account/profile.php इथेच (Form अजूनही ../account/profile.php ला Submit होतात)
+  try {
+      $wcStmt = $pdo->prepare("SELECT * FROM webauthn_credentials WHERE user_id = ? ORDER BY created_at DESC");
+      $wcStmt->execute([$user['id']]);
+      $webauthnDevices = $wcStmt->fetchAll();
+  } catch (PDOException $e) { $webauthnDevices = []; }
+?>
+<div id="account" class="row g-3 mt-1" style="scroll-margin-top:80px;">
+  <div class="col-12"><div style="font-family:'Space Grotesk';font-weight:700;font-size:16px;color:var(--ink);margin-top:8px;">🔐 माझं खाते — पासवर्ड, फोटो, Fingerprint</div></div>
+  <div class="col-lg-4">
+    <div class="panel h-100">
+      <div class="panel-head"><div class="title">📷 Profile फोटो</div></div>
+      <div style="padding:20px 24px;">
+        <?php if (!empty($emp['photo_path'])): ?>
+          <img src="../<?= h($emp['photo_path']) ?>?v=<?= time() ?>" alt="" style="width:84px;height:84px;border-radius:50%;object-fit:cover;border:2px solid var(--line);margin-bottom:12px;">
+        <?php endif; ?>
+        <form method="POST" action="../account/profile.php" enctype="multipart/form-data">
+          <input type="hidden" name="action" value="update_photo">
+          <input type="file" name="photo" accept="image/jpeg,image/png,image/webp" class="form-control-custom mb-2" required>
+          <button type="submit" class="btn" style="background:var(--rail);color:#fff;border-radius:9px;font-size:12.5px;padding:8px 18px;font-weight:600;">फोटो अपडेट करा</button>
+          <div style="font-size:11px;color:var(--text-dim);margin-top:6px;">jpg/png/webp — जास्तीत जास्त 3 MB</div>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="panel h-100">
+      <div class="panel-head"><div class="title"><?= h(t('s246')) ?></div><div class="sub"><?= h(t('s247')) ?></div></div>
+      <form method="POST" action="../account/profile.php" style="padding:20px 24px;">
+        <input type="hidden" name="action" value="change_password">
+        <label class="form-label-custom"><?= h(t('s248')) ?></label>
+        <input type="password" name="current_password" class="form-control-custom mb-2" required autocomplete="current-password">
+        <label class="form-label-custom"><?= h(t('s49')) ?></label>
+        <input type="password" name="new_password" class="form-control-custom mb-2" minlength="6" required autocomplete="new-password">
+        <label class="form-label-custom"><?= h(t('s249')) ?></label>
+        <input type="password" name="confirm_password" class="form-control-custom mb-3" minlength="6" required autocomplete="new-password">
+        <button type="submit" class="btn" style="background:var(--rail);color:#fff;border-radius:9px;font-weight:600;padding:8px 20px;font-size:13px;"><?= h(t('s250')) ?></button>
+      </form>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="panel h-100">
+      <div class="panel-head"><div class="title">👆 Fingerprint / Face ID Login</div><div class="sub">पासवर्ड न टाकता, फक्त बोटाच्या ठशाने/चेहऱ्याने Login</div></div>
+      <div style="padding:16px 22px;">
+        <?php if (empty($webauthnDevices)): ?>
+          <p style="font-size:12.5px;color:var(--text-dim);margin-bottom:10px;">अजून कुठलंही डिव्हाइस नोंदवलेलं नाही.</p>
+        <?php endif; ?>
+        <?php foreach ($webauthnDevices as $d): ?>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);">
+            <div>
+              <div style="font-size:13px;font-weight:600;">📱 <?= h($d['device_label']) ?></div>
+              <div style="font-size:11px;color:var(--text-dim);">नोंदवलं: <?= date('d M Y', strtotime($d['created_at'])) ?><?= $d['last_used_at'] ? ' · शेवटचा वापर: ' . date('d M Y', strtotime($d['last_used_at'])) : '' ?></div>
+            </div>
+            <form method="POST" action="../account/profile.php" onsubmit="return confirm('हे डिव्हाइस काढायचं? — तिथून Fingerprint Login बंद होईल.');">
+              <input type="hidden" name="action" value="remove_webauthn">
+              <input type="hidden" name="webauthn_id" value="<?= $d['id'] ?>">
+              <button type="submit" style="border:none;background:none;color:var(--rose);font-size:12px;cursor:pointer;">काढा</button>
+            </form>
+          </div>
+        <?php endforeach; ?>
+        <button type="button" onclick="eowmsRegisterFingerprint('../')" class="btn mt-3" style="border:1.5px solid var(--rail);color:var(--rail);background:#fff;border-radius:9px;font-size:13px;padding:8px 18px;font-weight:600;">+ हे डिव्हाइस नोंदवा</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="../assets/js/webauthn.js"></script>
+<?php endif; ?>
 
 <?php if ($canEditProfile): ?>
 <div class="modal fade" id="emergencyModal" tabindex="-1">

@@ -44,7 +44,9 @@ try {
     $birthdays = $bStmt->fetchAll();
 } catch (PDOException $e) {}
 
-try {
+// सुरक्षा: वसतिगृहातील विद्यार्थी (बहुतेक अल्पवयीन) — त्यांचं नाव/फोटो/वाढदिवस
+// हे सार्वजनिक (Login न केलेल्या) पानावर कधीही दिसू नये; फक्त Login केलेल्यांनाच.
+if (currentUser()) try {
     $bStmt2 = $pdo->prepare("
         SELECT hs.name, hs.photo_path, CONCAT(h.name, COALESCE(CONCAT(' — ', hs.class_grade), '')) AS sub_label, 'student' AS kind
         FROM hostel_students hs

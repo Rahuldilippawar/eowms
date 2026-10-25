@@ -2,25 +2,43 @@
 require_once __DIR__ . '/../includes/auth.php';
 requireLogin('../');
 requireRole(['super_admin'], '../');
+require_once __DIR__ . '/../includes/vehicle-helpers.php';
+require_once __DIR__ . '/../includes/budget-helpers.php';
 $user = currentUser();
+$orgId = activeOrgId();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: requests.php');
     exit;
 }
 
-$entryType = $_POST['entry_type'] ?? '';
-$entryId = (int)($_POST['entry_id'] ?? 0);
 $requestId = (int)($_POST['request_id'] ?? 0);
-$vehicleId = (int)($_POST['vehicle_id'] ?? 0);
+
+// विनंती — याच संस्थेच्या वाहनाची व अजून प्रलंबित असलेली; नोंदीचा प्रकार/id विनंतीतूनच घेतो
+$reqStmt = $pdo->prepare("SELECT r.* FROM vehicle_correction_requests r JOIN vehicles v ON v.id = r.vehicle_id WHERE r.id = ? AND v.organization_id = ? AND r.status = 'pending'");
+$reqStmt->execute([$requestId, $orgId]);
+$req = $reqStmt->fetch();
 
 $tableMap = ['trip' => 'vehicle_trips', 'fuel' => 'vehicle_fuel_log', 'maintenance' => 'vehicle_maintenance'];
-if (!isset($tableMap[$entryType])) {
+if (!$req || !isset($tableMap[$req['entry_type']])) {
+    $_SESSION['flash'] = 'विनंती सापडली नाही (किंवा आधीच निकाली निघाली).';
     header('Location: requests.php');
     exit;
 }
+$entryType = $req['entry_type'];
+$entryId = (int)$req['entry_id'];
+$vehicleId = (int)$req['vehicle_id'];
+$oldReading = vehicleEntryReading($pdo, $req['entry_type'], (int)$req['entry_id']);
 
-$pdo->prepare("DELETE FROM {$tableMap[$entryType]} WHERE id = ?")->execute([$entryId]);
+$pdo->prepare("DELETE FROM {$tableMap[$entryType]} WHERE id = ? AND vehicle_id = ?")->execute([$entryId, $vehicleId]);
+if ($entryType !== 'maintenance') {
+    vehicleRecomputeOdometer($pdo, $vehicleId, $oldReading);
+}
+// इंधन/देखभाल नोंद काढली — तिचा खर्च Budget मधून परत
+$budgetSourceMap = ['fuel' => 'vehicle_fuel_log', 'maintenance' => 'vehicle_maintenance_log'];
+if (isset($budgetSourceMap[$entryType])) {
+    reverseBudgetTransaction($pdo, $budgetSourceMap[$entryType], $entryId);
+}
 $pdo->prepare("UPDATE vehicle_correction_requests SET status='approved', reviewed_by=?, reviewed_at=NOW() WHERE id=?")->execute([$user['id'], $requestId]);
 
 logActivity('वाहन नोंद विनंतीप्रमाणे डिलीट केली', 'vehicle', $vehicleId, "$entryType #$entryId");

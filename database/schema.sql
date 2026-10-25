@@ -274,12 +274,11 @@ INSERT INTO permissions (permission_key, label, label_local, sort_order) VALUES
 ('manage_guests', 'Log and manage visitor/guest entries', 'पाहुणे नोंदणी व्यवस्थापन', 35),
 ('view_staff_track_own_campus', 'View staff profile/track record for ALL departments within own campus', 'स्वतःच्या Campus मधल्या सगळ्या विभागांचे Staff Profile/Track Record पाहणे', 32),
 ('view_staff_track_org_wide', 'View staff profile/track record across the ENTIRE organization', 'संपूर्ण संस्थेतल्या सगळ्यांचे Staff Profile/Track Record पाहणे', 33),
-('manage_teaching_academics', 'Manage teaching staff timetable, substitutes, syllabus, exam duty', 'शिक्षक Timetable, Substitute, Syllabus, Exam Duty व्यवस्थापन', 36),
-('manage_checkout', 'Manage asset checkout/borrowing (issue, receive return)', 'Asset Checkout/Borrowing व्यवस्थापन', 37),
+('manage_checkout', 'Manage asset checkout/borrowing (issue, receive return)', 'Asset Issue/Return (उसनं) व्यवस्थापन', 37),
 ('manage_asset_allocations', 'Manage asset allocation types and records', 'Asset Allocation Registry व्यवस्थापन', 38),
 ('manage_room_booking', 'Manage bookable rooms', 'Room/Hall Booking व्यवस्थापन', 40),
 ('manage_grievances', 'View and resolve grievances', 'तक्रार निवारण व्यवस्थापन', 42),
-('manage_dept_finance', 'Record department material purchases and track payments', 'विभाग Material Purchase व Payment Tracking', 45),
+('manage_dept_finance', 'Record department material purchases and track payments', 'विभाग Finance — Material Purchase व Payment', 45),
 ('manage_gaushala', 'Manage Gaushala — cattle registry, health, milk, fodder, breeding, sponsorship', 'गौशाळा व्यवस्थापन', 44);
 
 INSERT INTO role_permissions (role_key, permission_key)
@@ -375,7 +374,8 @@ CREATE TABLE renewal_items (
   recurring_start_month DATE NULL,
   vendor_name VARCHAR(255) NULL,
   vendor_contact VARCHAR(100) NULL,
-  status ENUM('active','due_soon','expired','renewed') DEFAULT 'active',
+  -- स्थिती expiry_date वरून काढली जाते; इथे फक्त 'active' / 'inactive' (Soft-Delete) वापरतो
+  status ENUM('active','due_soon','expired','renewed','inactive') DEFAULT 'active',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
   FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE CASCADE,
@@ -397,6 +397,54 @@ CREATE TABLE renewal_history (
   FOREIGN KEY (renewed_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
+CREATE TABLE renewal_reminder_log (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  renewal_item_id INT NOT NULL,
+  milestone VARCHAR(20) NOT NULL,
+  expiry_date DATE NOT NULL,
+  recipients INT DEFAULT 0,
+  sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_item_milestone_expiry (renewal_item_id, milestone, expiry_date),
+  FOREIGN KEY (renewal_item_id) REFERENCES renewal_items(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE renewal_attachments (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  renewal_item_id INT NOT NULL,
+  organization_id INT NOT NULL,
+  cycle_expiry_date DATE NULL,
+  title VARCHAR(255) NULL,
+  file_path VARCHAR(255) NOT NULL,
+  original_filename VARCHAR(255) NULL,
+  file_size INT NULL,
+  uploaded_by INT NULL,
+  uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (renewal_item_id) REFERENCES renewal_items(id) ON DELETE CASCADE,
+  FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE SET NULL,
+  INDEX idx_item_cycle (renewal_item_id, cycle_expiry_date)
+) ENGINE=InnoDB;
+
+-- ---------------- Cron Jobs — Last-Run + दैनंदिन Digest Dedupe ----------------
+CREATE TABLE cron_job_runs (
+  job_key VARCHAR(100) NOT NULL PRIMARY KEY,
+  last_started_at DATETIME NULL,
+  last_finished_at DATETIME NULL,
+  last_status ENUM('running','success','failed') DEFAULT 'running',
+  last_duration_sec INT NULL,
+  last_output TEXT NULL
+) ENGINE=InnoDB;
+
+CREATE TABLE cron_digest_log (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  cron_key VARCHAR(50) NOT NULL,
+  user_id INT NOT NULL,
+  digest_date DATE NOT NULL,
+  item_count INT DEFAULT 0,
+  sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_cron_user_day (cron_key, user_id, digest_date),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
 -- ---------------- Task Assignment ----------------
 CREATE TABLE tasks (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -410,10 +458,13 @@ CREATE TABLE tasks (
   description TEXT NULL,
   priority ENUM('low','normal','high','urgent') DEFAULT 'normal',
   target_date DATE NOT NULL,
-  status ENUM('pending','in_progress','completed') DEFAULT 'pending',
+  status ENUM('pending','in_progress','completed','cancelled') DEFAULT 'pending',
   completed_at TIMESTAMP NULL,
   completion_remarks TEXT NULL,
   cost_incurred DECIMAL(10,2) NULL,
+  verified_at DATETIME NULL,
+  verified_by INT NULL,
+  verification_remarks TEXT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
   FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE CASCADE,
@@ -732,7 +783,13 @@ CREATE TABLE work_requests (
   id INT AUTO_INCREMENT PRIMARY KEY,
   request_code VARCHAR(50) NOT NULL UNIQUE,
   organization_id INT NOT NULL,
-  department_id INT NOT NULL,
+  department_id INT NULL COMMENT 'स्वीकारणारा विभाग (IT विनंती आणि IT विभाग नसेल तर NULL)',
+  category VARCHAR(30) NOT NULL DEFAULT 'general' COMMENT 'general / it / maintenance / housekeeping / other',
+  sub_category VARCHAR(50) NULL,
+  title VARCHAR(255) NULL,
+  location VARCHAR(255) NULL,
+  priority ENUM('low','normal','high','urgent') NOT NULL DEFAULT 'normal',
+  due_at DATETIME NULL COMMENT 'SLA मुदत',
   requester_name VARCHAR(255) NOT NULL,
   requester_contact VARCHAR(100) NULL,
   requested_by_user_id INT NULL,
@@ -741,10 +798,21 @@ CREATE TABLE work_requests (
   work_description TEXT NOT NULL,
   cost_incurred DECIMAL(10,2) NULL,
   completion_remarks TEXT NULL,
-  status ENUM('pending','in_progress','completed') DEFAULT 'pending',
+  status ENUM('pending','in_progress','completed','closed','cancelled') DEFAULT 'pending',
   completed_by INT NULL,
   completed_at TIMESTAMP NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  escalation_level TINYINT NOT NULL DEFAULT 0,
+  escalated_at DATETIME NULL,
+  rating TINYINT NULL,
+  feedback TEXT NULL,
+  closed_at DATETIME NULL,
+  cancelled_at DATETIME NULL,
+  reopened_count INT NOT NULL DEFAULT 0,
+  legacy_it_request_id INT NULL COMMENT 'जुन्या it_general_requests.id',
+  UNIQUE KEY uniq_legacy_it (legacy_it_request_id),
+  INDEX idx_org_category_status (organization_id, category, status),
+  INDEX idx_status_due (status, due_at),
   FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
   FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE CASCADE,
   FOREIGN KEY (completed_by) REFERENCES users(id) ON DELETE SET NULL,
@@ -757,7 +825,7 @@ CREATE TABLE work_requests (
 CREATE TABLE work_request_actions (
   id INT AUTO_INCREMENT PRIMARY KEY,
   request_id INT NOT NULL,
-  action_type ENUM('created','status_changed') NOT NULL,
+  action_type ENUM('created','status_changed','assigned','comment','reopened','closed','cancelled','escalated') NOT NULL,
   old_status VARCHAR(20) NULL,
   new_status VARCHAR(20) NULL,
   remark TEXT NULL,
@@ -765,6 +833,19 @@ CREATE TABLE work_request_actions (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (request_id) REFERENCES work_requests(id) ON DELETE CASCADE,
   FOREIGN KEY (changed_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB;
+
+CREATE TABLE work_request_comments (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  request_id INT NOT NULL,
+  user_id INT NULL,
+  comment TEXT NOT NULL,
+  legacy_it_comment_id INT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_legacy_it_comment (legacy_it_comment_id),
+  INDEX idx_request (request_id),
+  FOREIGN KEY (request_id) REFERENCES work_requests(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
 CREATE TABLE work_request_views (
@@ -789,7 +870,28 @@ CREATE TABLE notifications (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-  INDEX idx_user_read (user_id, is_read)
+  INDEX idx_user_read (user_id, is_read),
+  INDEX idx_read_created (is_read, created_at)
+) ENGINE=InnoDB;
+
+-- Push (Web Push / FCM) — notifyUser() इथे टाकतो, cron/send-push-queue.php पाठवतो
+CREATE TABLE notification_push_queue (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  organization_id INT NOT NULL,
+  user_id INT NOT NULL,
+  notification_id INT NULL,
+  title VARCHAR(255) NOT NULL,
+  message TEXT NULL,
+  link VARCHAR(255) NULL,
+  is_urgent TINYINT(1) NOT NULL DEFAULT 0,
+  status ENUM('pending','sending','sent','failed') NOT NULL DEFAULT 'pending',
+  attempts TINYINT NOT NULL DEFAULT 0,
+  locked_at DATETIME NULL,
+  sent_at DATETIME NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_queue_status (status, is_urgent, id),
+  FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 CREATE TABLE activity_logs (
@@ -933,6 +1035,7 @@ CREATE TABLE maintenance_locations (
   name VARCHAR(255) NOT NULL,
   location_code VARCHAR(50) NOT NULL,
   capacity INT NULL,
+  is_residential TINYINT(1) NOT NULL DEFAULT 0,
   is_active TINYINT(1) DEFAULT 1,
   created_by INT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -1137,16 +1240,18 @@ CREATE TABLE budget_transactions (
   department_id INT NOT NULL,
   financial_year INT NOT NULL,
   amount DECIMAL(12,2) NOT NULL,
-  category ENUM('नवीन खरेदी','देखभाल','इंधन','इतर') NOT NULL,
+  category ENUM('नवीन खरेदी','देखभाल','इंधन','नूतनीकरण','इतर') NOT NULL,
   source_module VARCHAR(50) NULL,
   reference_id INT NULL,
   description VARCHAR(255) NULL,
   created_by INT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  spend_date DATE NULL,
   FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
   FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE CASCADE,
   FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
-  INDEX idx_dept_fy (department_id, financial_year)
+  INDEX idx_dept_fy (department_id, financial_year),
+  INDEX idx_source_ref (source_module, reference_id)
 ) ENGINE=InnoDB;
 
 CREATE TABLE about_sections (
@@ -1433,6 +1538,11 @@ CREATE TABLE announcements (
   target_scope ENUM('all','specific') DEFAULT 'all',
   created_by INT NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  is_pinned TINYINT(1) NOT NULL DEFAULT 0,
+  expires_at DATE NULL,
+  withdrawn_at DATETIME NULL,
+  withdrawn_by INT NULL,
+  updated_at DATETIME NULL,
   FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
   FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
@@ -1475,6 +1585,7 @@ CREATE TABLE emergency_alerts (
   id INT AUTO_INCREMENT PRIMARY KEY,
   organization_id INT NOT NULL,
   triggered_by INT NOT NULL,
+  campus_id INT NULL,
   alert_type ENUM('fire','medical','security','other') NOT NULL,
   location VARCHAR(255) NULL,
   message TEXT NULL,
@@ -1482,9 +1593,34 @@ CREATE TABLE emergency_alerts (
   resolved_by INT NULL,
   resolved_at TIMESTAMP NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  latitude DECIMAL(10,7) NULL,
+  longitude DECIMAL(10,7) NULL,
+  first_ack_at DATETIME NULL,
+  escalated_at DATETIME NULL,
+  resolution_remark TEXT NULL,
+  INDEX idx_user_created (triggered_by, created_at),
   FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
   FOREIGN KEY (triggered_by) REFERENCES users(id) ON DELETE CASCADE,
   FOREIGN KEY (resolved_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB;
+
+CREATE TABLE emergency_alert_recipients (
+  alert_id INT NOT NULL,
+  user_id INT NOT NULL,
+  notified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (alert_id, user_id),
+  FOREIGN KEY (alert_id) REFERENCES emergency_alerts(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE emergency_alert_responses (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  alert_id INT NOT NULL,
+  user_id INT NOT NULL,
+  responded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_alert_user (alert_id, user_id),
+  FOREIGN KEY (alert_id) REFERENCES emergency_alerts(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 CREATE TABLE push_subscriptions (
@@ -1523,6 +1659,7 @@ CREATE TABLE music_instruments (
   condition_status ENUM('excellent','good','needs_tuning','under_repair','damaged') DEFAULT 'good',
   last_tuned_date DATE NULL,
   current_holder_id INT NULL,
+  current_holder_name VARCHAR(255) NULL,
   remarks TEXT NULL,
   is_active TINYINT(1) DEFAULT 1,
   created_by INT NULL,
@@ -1854,6 +1991,7 @@ CREATE TABLE biometric_devices (
   device_name VARCHAR(150) NULL,
   last_seen_at TIMESTAMP NULL,
   is_active TINYINT(1) DEFAULT 1,
+  is_approved TINYINT(1) NOT NULL DEFAULT 1,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
   FOREIGN KEY (campus_id) REFERENCES campuses(id) ON DELETE SET NULL,
@@ -1869,7 +2007,17 @@ CREATE TABLE biometric_punch_logs (
   processed TINYINT(1) DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_pin_time (biometric_pin, punch_time),
-  INDEX idx_processed (processed)
+  INDEX idx_processed (processed),
+  UNIQUE KEY uniq_device_pin_time (device_serial, biometric_pin, punch_time)
+) ENGINE=InnoDB;
+
+-- Public फॉर्म (request.php, guests/pre-register.php) साठी साधी Rate-Limit नोंद
+CREATE TABLE public_form_submissions (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  form_key VARCHAR(40) NOT NULL,
+  ip_address VARCHAR(45) NOT NULL,
+  created_at DATETIME NOT NULL,
+  INDEX idx_form_ip_time (form_key, ip_address, created_at)
 ) ENGINE=InnoDB;
 
 CREATE TABLE staff_attendance (
@@ -2308,118 +2456,23 @@ CREATE TABLE event_attendance (
   FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
-  FOREIGN KEY (marked_by) REFERENCES users(id) ON DELETE CASCADE
-) ENGINE=InnoDB;
-
-CREATE TABLE teacher_timetable (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  organization_id INT NOT NULL,
-  campus_id INT NOT NULL,
-  teacher_id INT NOT NULL,
-  day_of_week TINYINT NOT NULL,
-  period_no TINYINT NOT NULL,
-  start_time TIME NULL,
-  end_time TIME NULL,
-  subject_name VARCHAR(150) NOT NULL,
-  class_section VARCHAR(100) NOT NULL,
-  academic_year VARCHAR(20) NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
-  FOREIGN KEY (campus_id) REFERENCES campuses(id) ON DELETE CASCADE,
-  FOREIGN KEY (teacher_id) REFERENCES users(id) ON DELETE CASCADE
-) ENGINE=InnoDB;
-
-CREATE TABLE substitute_assignments (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  organization_id INT NOT NULL,
-  original_timetable_id INT NULL,
-  original_teacher_id INT NOT NULL,
-  substitute_teacher_id INT NOT NULL,
-  substitute_date DATE NOT NULL,
-  period_no TINYINT NOT NULL,
-  subject_name VARCHAR(150) NOT NULL,
-  class_section VARCHAR(100) NOT NULL,
-  reason VARCHAR(255) NULL,
-  assigned_by INT NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
-  FOREIGN KEY (original_timetable_id) REFERENCES teacher_timetable(id) ON DELETE SET NULL,
-  FOREIGN KEY (original_teacher_id) REFERENCES users(id) ON DELETE CASCADE,
-  FOREIGN KEY (substitute_teacher_id) REFERENCES users(id) ON DELETE CASCADE,
-  FOREIGN KEY (assigned_by) REFERENCES users(id) ON DELETE CASCADE
-) ENGINE=InnoDB;
-
-CREATE TABLE syllabus_trackers (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  organization_id INT NOT NULL,
-  campus_id INT NOT NULL,
-  teacher_id INT NOT NULL,
-  subject_name VARCHAR(150) NOT NULL,
-  class_section VARCHAR(100) NOT NULL,
-  academic_year VARCHAR(20) NOT NULL,
-  total_chapters INT NOT NULL DEFAULT 0,
-  chapters_completed INT NOT NULL DEFAULT 0,
-  last_updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
-  FOREIGN KEY (campus_id) REFERENCES campuses(id) ON DELETE CASCADE,
-  FOREIGN KEY (teacher_id) REFERENCES users(id) ON DELETE CASCADE,
-  UNIQUE KEY uniq_syllabus (teacher_id, subject_name, class_section, academic_year)
-) ENGINE=InnoDB;
-
-CREATE TABLE teacher_qualifications (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  teacher_id INT NOT NULL,
-  qualification_type VARCHAR(100) NOT NULL,
-  specialization VARCHAR(150) NULL,
-  institution VARCHAR(255) NULL,
-  year_completed YEAR NULL,
-  net_set_status ENUM('NET','SET','Both','None') DEFAULT 'None',
-  research_papers_count INT DEFAULT 0,
-  remarks TEXT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (teacher_id) REFERENCES users(id) ON DELETE CASCADE
-) ENGINE=InnoDB;
-
-CREATE TABLE class_teacher_assignments (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  organization_id INT NOT NULL,
-  campus_id INT NOT NULL,
-  class_section VARCHAR(100) NOT NULL,
-  teacher_id INT NOT NULL,
-  academic_year VARCHAR(20) NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
-  FOREIGN KEY (campus_id) REFERENCES campuses(id) ON DELETE CASCADE,
-  FOREIGN KEY (teacher_id) REFERENCES users(id) ON DELETE CASCADE,
-  UNIQUE KEY uniq_class_teacher (campus_id, class_section, academic_year)
-) ENGINE=InnoDB;
-
-CREATE TABLE exam_duty_allocations (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  organization_id INT NOT NULL,
-  campus_id INT NOT NULL,
-  exam_name VARCHAR(255) NOT NULL,
-  duty_date DATE NOT NULL,
-  shift ENUM('morning','afternoon','full_day') DEFAULT 'morning',
-  teacher_id INT NOT NULL,
-  room_hall VARCHAR(100) NULL,
-  created_by INT NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
-  FOREIGN KEY (campus_id) REFERENCES campuses(id) ON DELETE CASCADE,
-  FOREIGN KEY (teacher_id) REFERENCES users(id) ON DELETE CASCADE,
-  FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
+  FOREIGN KEY (marked_by) REFERENCES users(id) ON DELETE CASCADE,
+  UNIQUE KEY uniq_event_staff (event_id, user_id),
+  UNIQUE KEY uniq_event_student (event_id, student_id)
 ) ENGINE=InnoDB;
 
 CREATE TABLE teacher_feedback (
   id INT AUTO_INCREMENT PRIMARY KEY,
   teacher_id INT NOT NULL,
+  student_id INT NULL,
   academic_year VARCHAR(20) NOT NULL,
   rating TINYINT NOT NULL,
   comment TEXT NULL,
   submitted_by_type ENUM('student','parent','self') DEFAULT 'student',
   submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (teacher_id) REFERENCES users(id) ON DELETE CASCADE
+  FOREIGN KEY (teacher_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
+  INDEX idx_fb_student_teacher (student_id, teacher_id, submitted_at)
 ) ENGINE=InnoDB;
 
 CREATE TABLE staff_documents (
@@ -2464,6 +2517,8 @@ CREATE TABLE help_articles (
   FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
+-- जुना "Asset Checkout" Module — आता वापरात नाही (Data asset_items / asset_allocations मध्ये
+-- Migrate होतो — migration-module-merge.sql). Tables फक्त जुन्या Data साठी ठेवल्या आहेत.
 CREATE TABLE checkout_items (
   id INT AUTO_INCREMENT PRIMARY KEY,
   organization_id INT NOT NULL,
@@ -2502,6 +2557,8 @@ CREATE TABLE asset_allocation_types (
   name VARCHAR(150) NOT NULL,
   icon VARCHAR(60) DEFAULT 'fa-solid fa-box',
   is_active TINYINT(1) DEFAULT 1,
+  is_loan TINYINT(1) DEFAULT 0,
+  legacy_checkout_category VARCHAR(150) NULL,
   created_by INT NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
@@ -2520,24 +2577,55 @@ CREATE TABLE asset_allocation_fields (
   FOREIGN KEY (type_id) REFERENCES asset_allocation_types(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
+-- Issue / Return Register — प्रत्येक वस्तू (एकाच वेळी फक्त एकाकडे)
+CREATE TABLE asset_items (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  organization_id INT NOT NULL,
+  type_id INT NOT NULL,
+  campus_id INT NULL,
+  name VARCHAR(255) NOT NULL,
+  default_location VARCHAR(150) NULL,
+  is_active TINYINT(1) DEFAULT 1,
+  legacy_checkout_item_id INT NULL,
+  created_by INT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+  FOREIGN KEY (type_id) REFERENCES asset_allocation_types(id) ON DELETE CASCADE,
+  FOREIGN KEY (campus_id) REFERENCES campuses(id) ON DELETE SET NULL,
+  FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+  UNIQUE KEY uniq_legacy_checkout_item (legacy_checkout_item_id),
+  INDEX idx_org_type (organization_id, type_id)
+) ENGINE=InnoDB;
+
 CREATE TABLE asset_allocations (
   id INT AUTO_INCREMENT PRIMARY KEY,
   organization_id INT NOT NULL,
   type_id INT NOT NULL,
-  campus_id INT NOT NULL,
+  campus_id INT NULL,
   user_id INT NOT NULL,
+  item_id INT NULL,
   asset_label VARCHAR(150) NULL,
   custom_data TEXT NULL,
+  purpose VARCHAR(255) NULL,
   allocated_date DATE NOT NULL,
+  allocated_at DATETIME NULL,
+  due_at DATETIME NULL,
   unallocated_date DATE NULL,
+  returned_at DATETIME NULL,
+  returned_to INT NULL,
   unallocated_reason VARCHAR(255) NULL,
   allocated_by INT NOT NULL,
+  legacy_checkout_log_id INT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
   FOREIGN KEY (type_id) REFERENCES asset_allocation_types(id) ON DELETE CASCADE,
   FOREIGN KEY (campus_id) REFERENCES campuses(id) ON DELETE CASCADE,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-  FOREIGN KEY (allocated_by) REFERENCES users(id) ON DELETE CASCADE
+  FOREIGN KEY (allocated_by) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (item_id) REFERENCES asset_items(id) ON DELETE SET NULL,
+  FOREIGN KEY (returned_to) REFERENCES users(id) ON DELETE SET NULL,
+  UNIQUE KEY uniq_legacy_checkout_log (legacy_checkout_log_id),
+  INDEX idx_item_active (item_id, unallocated_date)
 ) ENGINE=InnoDB;
 
 CREATE TABLE bookable_rooms (
@@ -2583,7 +2671,8 @@ CREATE TABLE staff_messages (
 CREATE TABLE grievances (
   id INT AUTO_INCREMENT PRIMARY KEY,
   organization_id INT NOT NULL,
-  submitted_by INT NOT NULL,
+  submitted_by INT NULL COMMENT 'गुप्त तक्रारीसाठी NULL',
+  submitter_hash CHAR(64) NULL COMMENT 'गुप्त तक्रार — व्यक्तीचा ID न ठेवता HMAC',
   category VARCHAR(100) NULL,
   description TEXT NOT NULL,
   is_anonymous TINYINT(1) DEFAULT 0,
@@ -2593,9 +2682,24 @@ CREATE TABLE grievances (
   sla_deadline DATE NULL,
   resolved_at DATETIME NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  escalated_at DATETIME NULL,
+  reopened_count INT NOT NULL DEFAULT 0,
+  INDEX idx_submitter_hash (submitter_hash),
   FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
   FOREIGN KEY (submitted_by) REFERENCES users(id) ON DELETE CASCADE,
   FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB;
+
+CREATE TABLE grievance_comments (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  grievance_id INT NOT NULL,
+  user_id INT NULL,
+  author_role ENUM('submitter','handler') NOT NULL,
+  comment TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_grievance (grievance_id),
+  FOREIGN KEY (grievance_id) REFERENCES grievances(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
 

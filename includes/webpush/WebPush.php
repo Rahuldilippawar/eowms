@@ -17,6 +17,7 @@ class WebPush
     private $vapidPublicKey;
     private $vapidPrivateKey;
     private $vapidSubject;
+    public $timeout = 10; // seconds — SOS साठी कमी ठेवता येतो
 
     public function __construct($vapidPublicKeyB64, $vapidPrivateKeyB64, $vapidSubject)
     {
@@ -188,7 +189,8 @@ class WebPush
             CURLOPT_POSTFIELDS => $encryptedBody,
             CURLOPT_HTTPHEADER => $headers,
             CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT => 10,
+            CURLOPT_TIMEOUT => $this->timeout,
+            CURLOPT_CONNECTTIMEOUT => min(5, $this->timeout),
         ]);
         curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);

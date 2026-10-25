@@ -11,19 +11,39 @@ if (($_GET['msg'] ?? '') === 'session_expired') {
     $error = t('s456');
 }
 
+/** अयशस्वी Login ची नोंद — त्या Email ची संस्था सापडली तर तिच्याच Activity Log मध्ये */
+function logFailedLogin($pdo, $email, $reason) {
+    try {
+        $oStmt = $pdo->prepare("SELECT id, organization_id FROM users WHERE email = ? LIMIT 1");
+        $oStmt->execute([$email]);
+        $oRow = $oStmt->fetch();
+        $pdo->prepare("INSERT INTO activity_logs (organization_id, user_id, actor_name, action, entity_type, entity_id, details, created_at) VALUES (?, NULL, ?, ?, 'user', ?, ?, ?)")
+            ->execute([$oRow['organization_id'] ?? null, mb_substr($email, 0, 255), 'Login अयशस्वी', $oRow['id'] ?? null, $reason . ' — IP: ' . clientIp(), date('Y-m-d H:i:s')]);
+    } catch (PDOException $e) {
+        // activity_logs table नसेल तर शांतपणे वगळा
+    }
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
 
-    $stmt = $pdo->prepare("SELECT * FROM users WHERE email = ? AND is_active = 1");
+    $stmt = $pdo->prepare("SELECT u.*, o.is_active AS org_is_active FROM users u LEFT JOIN organizations o ON o.id = u.organization_id WHERE u.email = ? AND u.is_active = 1");
     $stmt->execute([$email]);
     $user = $stmt->fetch();
+    $orgIsActive = $user ? ((int)($user['org_is_active'] ?? 0) === 1) : false;
+    if ($user) { unset($user['org_is_active']); }
 
     if ($user && !empty($user['locked_until']) && strtotime($user['locked_until']) > time()) {
+        logFailedLogin($pdo, $email, 'खाते Lock असताना प्रयत्न');
         // Account is currently locked out — don't even check the password,
         // and don't reveal exactly why to avoid helping an attacker guess.
         $minutesLeft = (int)ceil((strtotime($user['locked_until']) - time()) / 60);
         $error = "खूप चुकीचे प्रयत्न झाल्यामुळे हे खाते तात्पुरते बंद केले आहे — कृपया $minutesLeft मिनिटांनी पुन्हा प्रयत्न करा.";
+    } elseif ($user && !$orgIsActive && password_verify($password, $user['password'])) {
+        // संस्था निष्क्रिय केलेली आहे — बरोबर पासवर्ड असला तरी प्रवेश नाही
+        logFailedLogin($pdo, $email, 'संस्था निष्क्रिय');
+        $error = 'तुमची संस्था सध्या निष्क्रिय (Inactive) आहे — Login करता येणार नाही. कृपया Super Admin शी संपर्क साधा.';
     } elseif ($user && password_verify($password, $user['password'])) {
         // Correct password — reset any prior failed-attempt counter
         $pdo->prepare("UPDATE users SET failed_login_attempts = 0, locked_until = NULL WHERE id = ?")->execute([$user['id']]);
@@ -33,8 +53,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         unset($user['password']);
         $_SESSION['user'] = $user;
         $_SESSION['last_activity'] = time();
+        $_SESSION['user_recheck_at'] = time();
         $_SESSION['play_welcome_chime'] = true;
-        $loginIp = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+        $loginIp = clientIp();
         logActivity('Login केलं (Password)', 'user', $user['id'], 'IP: ' . $loginIp);
 
         // 🛠️ Site Maintenance Mode — Super Admin सोडून बाकी कोणालाही
@@ -62,6 +83,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Location: ' . $loginRedirect);
         exit;
     } else {
+        logFailedLogin($pdo, $email, $user ? 'चुकीचा पासवर्ड' : 'अज्ञात / निष्क्रिय खाते');
         if ($user) {
             // Wrong password for a real account — count the attempt
             // आधीचा Lockout संपला असेल तर मोजणी शून्यापासून — नाहीतर पुढच्याच
@@ -143,6 +165,10 @@ $loginOrgName = $loginOrg['name'] ?? 'VJMAT';
     <?php if (!empty($_SESSION['session_expired'])): ?>
       <div class="alert alert-danger" style="border-radius:9px;font-size:13px;">⏰ ३० मिनिटे निष्क्रियतेमुळे तुम्ही आपोआप Logout झालात — सुरक्षिततेसाठी. कृपया परत Login करा.</div>
       <?php unset($_SESSION['session_expired']); ?>
+    <?php endif; ?>
+    <?php if (!empty($_SESSION['account_deactivated'])): ?>
+      <div class="alert alert-danger" style="border-radius:9px;font-size:13px;">तुमचं खातं किंवा संस्था निष्क्रिय (Inactive) केली गेली आहे — त्यामुळे तुम्हाला Logout केलं. कृपया Super Admin शी संपर्क साधा.</div>
+      <?php unset($_SESSION['account_deactivated']); ?>
     <?php endif; ?>
     <?php if (!empty($_SESSION['reset_success'])): ?>
       <div class="alert alert-success" style="border-radius:9px;font-size:13px;">तुमचा पासवर्ड यशस्वीरित्या बदलला गेला — आता नवीन पासवर्डने Login करा.</div>

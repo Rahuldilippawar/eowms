@@ -28,12 +28,31 @@ if (!$room) { die('खोली सापडली नाही.'); }
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
-    if ($action === 'set_capacity' && $canManage) {
+    if ($action === 'set_residential' && $canManage) {
+        // ही जागा निवासी खोली आहे का (Office/Kitchen रहिवासी यादीत दिसू नयेत)
+        $isRes = ($_POST['is_residential'] ?? '') === '1' ? 1 : 0;
+        if (!$isRes) {
+            $occChk = $pdo->prepare("SELECT COUNT(*) FROM residency_occupants WHERE location_id = ? AND status = 'active'");
+            $occChk->execute([$locationId]);
+            if ((int)$occChk->fetchColumn() > 0) {
+                $_SESSION['form_error'] = 'या खोलीत सध्या रहिवासी आहेत — आधी त्यांना Vacate करा, मग "निवासी नाही" करा.';
+                header('Location: room.php?id=' . $locationId);
+                exit;
+            }
+        }
+        $pdo->prepare("UPDATE maintenance_locations SET is_residential = ? WHERE id = ? AND organization_id = ?")->execute([$isRes, $locationId, $orgId]);
+        $_SESSION['flash'] = $isRes ? 'ही जागा निवासी खोली म्हणून चिन्हांकित झाली.' : 'ही जागा आता निवासी यादीत दिसणार नाही.';
+    } elseif ($action === 'set_capacity' && $canManage) {
         $capacity = ($_POST['capacity'] ?? '') !== '' ? max(1, (int)$_POST['capacity']) : null;
         $pdo->prepare("UPDATE maintenance_locations SET capacity = ? WHERE id = ? AND organization_id = ?")->execute([$capacity, $locationId, $orgId]);
         $_SESSION['flash'] = 'खोलीची क्षमता जतन झाली.';
     } elseif ($action === 'add_occupant' && $canManage) {
-        $occupantType = $_POST['occupant_type'] ?? 'staff';
+        if (empty($room['is_residential'])) {
+            $_SESSION['form_error'] = 'ही जागा निवासी खोली म्हणून चिन्हांकित नाही — आधी "निवासी खोली" करा.';
+            header('Location: room.php?id=' . $locationId);
+            exit;
+        }
+        $occupantType = ($_POST['occupant_type'] ?? 'staff') === 'family' ? 'family' : 'staff';
         $relation = trim($_POST['relation'] ?? '') ?: null;
         $age = ($_POST['age'] ?? '') !== '' ? (int)$_POST['age'] : null;
         $movedInDate = ($_POST['moved_in_date'] ?? '') ?: date('Y-m-d');
@@ -50,6 +69,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($isFull) {
             $_SESSION['form_error'] = "ही खोली आधीच पूर्ण भरलेली आहे (क्षमता: {$capInfo['capacity']}) — आधी कोणाला तरी Vacate करा, किंवा क्षमता वाढवा.";
+            header('Location: room.php?id=' . $locationId);
+            exit;
+        }
+
+        // निवडलेला कर्मचारी याच संस्थेचा, Active व सध्या कुठेही राहत नसलेला असावा
+        $validHousable = function ($uid) use ($pdo, $orgId) {
+            $chk = $pdo->prepare("SELECT COUNT(*) FROM users WHERE id = ? AND organization_id = ? AND is_active = 1
+                AND id NOT IN (SELECT user_id FROM residency_occupants WHERE status = 'active' AND user_id IS NOT NULL)");
+            $chk->execute([$uid, $orgId]);
+            return (int)$chk->fetchColumn() > 0;
+        };
+        $pickedUserId = $occupantType === 'staff' ? (int)($_POST['user_id'] ?? 0)
+            : ((($_POST['family_is_employee'] ?? '') === '1') ? (int)($_POST['family_user_id'] ?? 0) : 0);
+        if ($pickedUserId && !$validHousable($pickedUserId)) {
+            $_SESSION['form_error'] = 'हा कर्मचारी अवैध आहे किंवा आधीच दुसऱ्या खोलीत राहतो.';
             header('Location: room.php?id=' . $locationId);
             exit;
         }
@@ -177,6 +211,20 @@ $isVacant = empty($activeOccupants);
 <?php endif; ?>
 
 <?php if ($canManage): ?>
+<div class="panel mb-3" style="padding:14px 20px;<?= empty($room['is_residential']) ? 'border:1.5px solid var(--amber);' : '' ?>">
+  <form method="POST" class="d-flex align-items-center gap-2 flex-wrap">
+    <input type="hidden" name="action" value="set_residential">
+    <?php if (!empty($room['is_residential'])): ?>
+      <span style="font-size:12.5px;">🏠 ही जागा <b>निवासी खोली</b> आहे (रहिवासी यादी/रिक्त खोल्यांत मोजली जाते).</span>
+      <input type="hidden" name="is_residential" value="0">
+      <button type="submit" class="btn btn-sm" style="border:1px solid var(--line);border-radius:7px;font-size:12px;padding:6px 14px;">निवासी नाही (Office/Kitchen इ.)</button>
+    <?php else: ?>
+      <span style="font-size:12.5px;">⚠️ ही जागा <b>निवासी खोली नाही</b> — रहिवासी यादीत दिसत नाही व इथे रहिवासी जोडता येत नाहीत.</span>
+      <input type="hidden" name="is_residential" value="1">
+      <button type="submit" class="btn btn-sm" style="background:var(--rail);color:#fff;border-radius:7px;font-size:12px;padding:6px 14px;">निवासी खोली म्हणून चिन्हांकित करा</button>
+    <?php endif; ?>
+  </form>
+</div>
 <div class="panel mb-3" style="padding:14px 20px;">
   <form method="POST" class="d-flex align-items-center gap-2">
     <input type="hidden" name="action" value="set_capacity">

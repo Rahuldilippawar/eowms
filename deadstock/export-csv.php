@@ -4,9 +4,11 @@ requireLogin('../');
 $user = currentUser();
 
 $orgId = activeOrgId();
-$isMgmt = hasPermission('manage_dead_stock_master');
+$isMgmt = isManagementOrAbove() || hasPermission('manage_dead_stock_master'); // index.php प्रमाणेच
 $deptId = (int)($_GET['department_id'] ?? 0);
-if (!$isMgmt) { $deptId = (int)($user['department_id'] ?? 0); }
+// Staff/HOD — स्वतःचा + Extra दिलेले विभाग; विभाग नसेल तर काहीच नाही (संपूर्ण संस्था नाही)
+$dsVisibleDeptIds = $isMgmt ? null : (getVisibleDepartmentIds() ?: [0]);
+if (!$isMgmt && !in_array($deptId, $dsVisibleDeptIds, true)) { $deptId = 0; }
 
 $sql = "
     SELECT ds.item_code, ds.item_name, ds.category, d.name_local AS dept_name, ds.quantity, ds.unit,
@@ -15,7 +17,12 @@ $sql = "
     WHERE ds.organization_id = ?
 ";
 $params = [$orgId];
-if ($deptId) { $sql .= " AND ds.department_id = ?"; $params[] = $deptId; }
+if ($deptId) {
+    $sql .= " AND ds.department_id = ?"; $params[] = $deptId;
+} elseif (!$isMgmt) {
+    $sql .= " AND ds.department_id IN (" . implode(',', array_fill(0, count($dsVisibleDeptIds), '?')) . ")";
+    $params = array_merge($params, $dsVisibleDeptIds);
+}
 $sql .= " ORDER BY d.name_local, ds.created_at DESC";
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);

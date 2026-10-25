@@ -4,3 +4,4 @@ backups/*.sql
 backups/*.zip
 *.log
 .DS_Store
+config/app-secret.php

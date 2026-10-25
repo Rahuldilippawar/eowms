@@ -35,15 +35,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     } elseif ($action === 'save_marks') {
         $examId = (int)($_POST['exam_id'] ?? 0);
-        $marksArr = $_POST['marks'] ?? [];
+        // Exam याच Classroom चा असला पाहिजे
+        $examChk = $pdo->prepare("SELECT max_marks FROM classroom_exams WHERE id = ? AND classroom_id = ?");
+        $examChk->execute([$examId, $classroomId]);
+        $examRow = $examChk->fetch();
+        if (!$examRow) { http_response_code(403); die('अवैध Exam.'); }
+        $rosterIdStmt = $pdo->prepare("SELECT student_id FROM classroom_students WHERE classroom_id = ?");
+        $rosterIdStmt->execute([$classroomId]);
+        $validIds = array_map('intval', $rosterIdStmt->fetchAll(PDO::FETCH_COLUMN));
+        $marksArr = is_array($_POST['marks'] ?? null) ? $_POST['marks'] : [];
+        $skipped = 0;
         foreach ($marksArr as $studentId => $marks) {
+            if (!in_array((int)$studentId, $validIds, true)) { continue; }
+            $marks = trim((string)$marks);
+            if ($marks !== '' && (!is_numeric($marks) || (float)$marks < 0 || (float)$marks > (float)$examRow['max_marks'])) { $skipped++; continue; }
             $marksVal = $marks !== '' ? (float)$marks : null;
             $pdo->prepare("
                 INSERT INTO classroom_exam_marks (exam_id, student_id, marks_obtained, entered_by) VALUES (?, ?, ?, ?)
                 ON DUPLICATE KEY UPDATE marks_obtained = VALUES(marks_obtained), entered_by = VALUES(entered_by)
             ")->execute([$examId, (int)$studentId, $marksVal, $user['id']]);
         }
-        $_SESSION['flash'] = 'गुण जतन झाले.';
+        $_SESSION['flash'] = 'गुण जतन झाले.' . ($skipped ? " ($skipped नोंदी वगळल्या — गुण 0 ते {$examRow['max_marks']} दरम्यान हवेत)" : '');
         header('Location: classroom-exams.php?id=' . $classroomId . '&exam_id=' . $examId);
         exit;
     }

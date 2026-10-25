@@ -9,8 +9,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     if ($action === 'request') {
         $date = $_POST['attendance_date'] ?? '';
-        $requestedStatus = $_POST['requested_status'] ?? 'present';
+        $requestedStatus = in_array($_POST['requested_status'] ?? '', ['present', 'half_day'], true) ? $_POST['requested_status'] : 'present';
         $reason = trim($_POST['reason'] ?? '');
+        $dateObj = DateTime::createFromFormat('Y-m-d', $date);
+        if (!$dateObj || $dateObj->format('Y-m-d') !== $date) { $date = ''; }
         if ($date && $reason) {
             $pdo->prepare("INSERT INTO attendance_regularization_requests (organization_id, user_id, attendance_date, requested_status, reason) VALUES (?, ?, ?, ?, ?)")
                 ->execute([$orgId, $user['id'], $date, $requestedStatus, $reason]);
@@ -35,9 +37,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($req && !$isMgmtApprover && ((int)$req['requester_dept_id'] !== (int)($user['department_id'] ?? 0) || (int)$req['user_id'] === (int)$user['id'])) {
             $req = null;
         }
-        if ($req) {
-            $pdo->prepare("UPDATE attendance_regularization_requests SET status = ?, approved_by = ?, approved_at = NOW() WHERE id = ?")
-                ->execute([$decision, $user['id'], $reqId]);
+        // आधीच निर्णय झालेल्या विनंतीवर पुन्हा निर्णय नाही — फक्त 'pending' बदलतो
+        $decided = false;
+        if ($req && $req['status'] === 'pending') {
+            $decStmt = $pdo->prepare("UPDATE attendance_regularization_requests SET status = ?, approved_by = ?, approved_at = NOW() WHERE id = ? AND status = 'pending'");
+            $decStmt->execute([$decision, $user['id'], $reqId]);
+            $decided = $decStmt->rowCount() > 0;
+        }
+        if ($req && !$decided) {
+            $_SESSION['form_error'] = 'या विनंतीवर आधीच निर्णय झालेला आहे.';
+        }
+        if ($req && $decided) {
             if ($decision === 'approved') {
                 $pdo->prepare("
                     INSERT INTO staff_attendance (organization_id, user_id, attendance_date, status, source, remarks)

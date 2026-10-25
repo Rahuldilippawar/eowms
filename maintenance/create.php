@@ -32,8 +32,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $cost = ($_POST['cost'] ?? '') !== '' ? (float)$_POST['cost'] : null;
     $remarks = trim($_POST['remarks'] ?? '') ?: null;
 
+    // जागा व विभाग — सक्रिय संस्थेचेच असावेत; प्रकार व तारीख वैध असावी
+    $locOk = $deptOk = false;
+    if ($locationId) {
+        $locCheck = $pdo->prepare("SELECT id FROM maintenance_locations WHERE id = ? AND organization_id = ? AND is_active = 1");
+        $locCheck->execute([$locationId, $orgId]);
+        $locOk = (bool)$locCheck->fetch();
+    }
+    if ($departmentId) {
+        $deptCheck = $pdo->prepare("SELECT id FROM departments WHERE id = ? AND organization_id = ?");
+        $deptCheck->execute([$departmentId, $orgId]);
+        $deptOk = (bool)$deptCheck->fetch();
+    }
+
     if (!$locationId || !$departmentId || !$itemDescription) {
         $error = 'कृपया जागा, विभाग व तपशील भरा.';
+    } elseif (!$locOk || !$deptOk) {
+        $error = 'निवडलेली जागा किंवा विभाग सापडला नाही.';
+    } elseif (!in_array($workType, ['बसवले', 'दुरुस्त केले', 'बदलले', 'तपासणी'], true)) {
+        $error = 'कामाचा प्रकार अवैध आहे.';
+    } elseif (!DateTime::createFromFormat('!Y-m-d', $workDate) || $workDate > date('Y-m-d')) {
+        $error = 'कामाची तारीख अवैध आहे.';
     } else {
         $insert = $pdo->prepare("
             INSERT INTO maintenance_logs (organization_id, location_id, department_id, item_description, work_type, work_date, cost, remarks, performed_by)
@@ -42,7 +61,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $insert->execute([$orgId, $locationId, $departmentId, $itemDescription, $workType, $workDate, $cost, $remarks, $user['id']]);
         $newLogId = $pdo->lastInsertId();
 
-        recordBudgetTransaction($pdo, $orgId, $departmentId, $cost, 'देखभाल', 'maintenance', $newLogId, $itemDescription, $user['id']);
+        // खर्च फक्त इथेच एकदा Budget मध्ये — नंतरचे Payments फक्त Paid/Due साठी (Budget मध्ये पुन्हा नाहीत)
+        recordBudgetTransaction($pdo, $orgId, $departmentId, $cost, 'देखभाल', 'maintenance', $newLogId, $itemDescription, $user['id'], $workDate);
 
         logActivity('देखभाल नोंद जोडली', 'maintenance_log', $newLogId, "$itemDescription — $workType");
         $_SESSION['flash'] = 'देखभाल नोंद जतन झाली.';

@@ -14,14 +14,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'rollb
     if ($batch) {
         $pdo->beginTransaction();
         try {
-            // FK-Safe क्रमाने काढतो — आधी Occupants, मग Rooms, मग Buildings
-            $pdo->prepare("DELETE FROM residency_occupants WHERE import_batch_id = ?")->execute([$batchId]);
-            $pdo->prepare("DELETE FROM maintenance_locations WHERE import_batch_id = ?")->execute([$batchId]);
-            $pdo->prepare("DELETE FROM buildings WHERE import_batch_id = ?")->execute([$batchId]);
+            // FK-Safe क्रमाने काढतो — आधी Occupants, मग Rooms, मग Buildings.
+            // Import नंतर जोडलेला Data (बिल, खोली-बदल, इतर रहिवासी, तपासणी, Maintenance Log इ.)
+            // असलेल्या नोंदी काढत नाही — त्या तशाच ठेवतो (Cascade ने तो Data पुसला जाऊ नये).
+            $pdo->prepare("
+                DELETE FROM residency_occupants WHERE import_batch_id = ?
+                  AND id NOT IN (SELECT occupant_id FROM residency_bill_shares)
+                  AND id NOT IN (SELECT occupant_id FROM residency_room_transfers)
+            ")->execute([$batchId]);
+            $keptOccStmt = $pdo->prepare("SELECT COUNT(*) FROM residency_occupants WHERE import_batch_id = ?");
+            $keptOccStmt->execute([$batchId]);
+            $keptOccupants = (int)$keptOccStmt->fetchColumn();
+
+            // maintenance_locations ला Reference करणाऱ्या सगळ्या Tables (FK वरून)
+            $refCols = $pdo->query("
+                SELECT TABLE_NAME, COLUMN_NAME FROM information_schema.KEY_COLUMN_USAGE
+                WHERE TABLE_SCHEMA = DATABASE() AND REFERENCED_TABLE_NAME = 'maintenance_locations'
+            ")->fetchAll();
+            $roomIdsStmt = $pdo->prepare("SELECT id FROM maintenance_locations WHERE import_batch_id = ?");
+            $roomIdsStmt->execute([$batchId]);
+            $keptRooms = 0;
+            $delRoom = $pdo->prepare("DELETE FROM maintenance_locations WHERE id = ?");
+            foreach ($roomIdsStmt->fetchAll(PDO::FETCH_COLUMN) as $roomId) {
+                $inUse = false;
+                foreach ($refCols as $rc) {
+                    $chk = $pdo->prepare("SELECT 1 FROM `{$rc['TABLE_NAME']}` WHERE `{$rc['COLUMN_NAME']}` = ? LIMIT 1");
+                    $chk->execute([$roomId]);
+                    if ($chk->fetchColumn()) { $inUse = true; break; }
+                }
+                if ($inUse) { $keptRooms++; continue; }
+                $delRoom->execute([$roomId]);
+            }
+            $pdo->prepare("DELETE FROM buildings WHERE import_batch_id = ? AND id NOT IN (SELECT building_id FROM maintenance_locations WHERE building_id IS NOT NULL)")->execute([$batchId]);
             $pdo->prepare("UPDATE residency_import_batches SET status = 'rolled_back' WHERE id = ?")->execute([$batchId]);
             $pdo->commit();
             logActivity('Residency Import Rollback केला', 'residency_import_batch', $batchId);
-            $_SESSION['flash'] = 'हा संपूर्ण Import मागे घेतला गेला (Rollback यशस्वी).';
+            if ($keptRooms || $keptOccupants) {
+                $_SESSION['flash'] = "Import मागे घेतला — पण $keptRooms खोल्या व $keptOccupants रहिवासी नोंदी ठेवल्या, कारण Import नंतर त्यांच्याशी बिल/खोली-बदल/रहिवासी/तपासणी इ. नोंदी जोडल्या गेल्या आहेत.";
+            } else {
+                $_SESSION['flash'] = 'हा संपूर्ण Import मागे घेतला गेला (Rollback यशस्वी).';
+            }
         } catch (Exception $e) {
             $pdo->rollBack();
             $_SESSION['form_error'] = 'Rollback करताना त्रुटी आली.';

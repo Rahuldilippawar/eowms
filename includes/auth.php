@@ -87,6 +87,24 @@ function requireLogin($rootPath = '') {
     }
     $_SESSION['last_activity'] = time();
 
+    // सुरक्षा: Login नंतर खातं (किंवा संस्था) निष्क्रिय केलं तरी जुनं Session
+    // चालूच राहू नये — दर ~60 सेकंदांनी एकदा Database मध्ये तपासतो.
+    if (empty($_SESSION['user_recheck_at']) || (time() - (int)$_SESSION['user_recheck_at']) >= 60) {
+        global $pdo;
+        $chk = $pdo->prepare("SELECT u.is_active, o.is_active AS org_active FROM users u LEFT JOIN organizations o ON o.id = u.organization_id WHERE u.id = ?");
+        $chk->execute([(int)currentUser()['id']]);
+        $chkRow = $chk->fetch();
+        if (!$chkRow || (int)$chkRow['is_active'] !== 1 || (int)($chkRow['org_active'] ?? 0) !== 1) {
+            session_unset();
+            session_destroy();
+            session_start();
+            $_SESSION['account_deactivated'] = true;
+            header('Location: ' . $rootPath . 'login.php');
+            exit;
+        }
+        $_SESSION['user_recheck_at'] = time();
+    }
+
     // 🛠️ Site Maintenance Mode — Super Admin ने Site "Off" केली असेल तर,
     // Super Admin सोडून बाकी सगळ्यांना Maintenance-पानावर वळवतो.
     $currentScriptForMaintenance = basename($_SERVER['SCRIPT_NAME']);
@@ -135,6 +153,11 @@ function requireLogin($rootPath = '') {
         if (in_array($currentDirForRestriction, $exemptDirs, true) && ($currentDirForRestriction !== '__root__' || in_array($currentPageForRestriction, $exemptRootPages, true))) {
             $isAllowedDir = true;
         }
+        // "माझं प्रोफाइल" (पासवर्ड/फोटो) आता staff/profile.php — स्वतःचं प्रोफाइल नेहमी उपलब्ध
+        if ($currentDirForRestriction === 'staff' && $currentPageForRestriction === 'profile.php'
+            && (empty($_GET['id']) || (int)$_GET['id'] === (int)(currentUser()['id'] ?? 0))) {
+            $isAllowedDir = true;
+        }
 
         if (!$isAllowedDir) {
             $firstModule = $registry[$restrictedModules[0]] ?? null;
@@ -152,6 +175,57 @@ function requireLogin($rootPath = '') {
         header('Location: ' . $rootPath . 'force-password-change.php');
         exit;
     }
+}
+
+/**
+ * Visitor चा खरा IP — X-Forwarded-For हा Header कोणीही खोटा पाठवू शकतो,
+ * म्हणून तो फक्त तेव्हाच मानतो जेव्हा REMOTE_ADDR स्वतःच Private/Proxy पत्ता असेल.
+ */
+function clientIp() {
+    $remote = $_SERVER['REMOTE_ADDR'] ?? '';
+    if ($remote === '') return 'unknown';
+    $isPrivate = filter_var($remote, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false;
+    if ($isPrivate && !empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+        $first = trim(explode(',', $_SERVER['HTTP_X_FORWARDED_FOR'])[0]);
+        if (filter_var($first, FILTER_VALIDATE_IP)) return $first;
+    }
+    return $remote;
+}
+
+/**
+ * सार्वजनिक (Login-शिवाय) फॉर्मसाठी साधी Rate-Limit — एका IP वरून ठराविक
+ * वेळेत जास्तीत जास्त $max Submissions. Table नसेल तर अडवत नाही.
+ */
+function publicFormRateLimited($formKey, $max = 5, $windowSeconds = 3600) {
+    global $pdo;
+    try {
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM public_form_submissions WHERE form_key = ? AND ip_address = ? AND created_at > ?");
+        $stmt->execute([$formKey, clientIp(), date('Y-m-d H:i:s', time() - $windowSeconds)]);
+        return (int)$stmt->fetchColumn() >= $max;
+    } catch (PDOException $e) {
+        return false;
+    }
+}
+
+function publicFormRecordSubmission($formKey) {
+    global $pdo;
+    try {
+        $pdo->prepare("INSERT INTO public_form_submissions (form_key, ip_address, created_at) VALUES (?, ?, ?)")
+            ->execute([$formKey, mb_substr(clientIp(), 0, 45), date('Y-m-d H:i:s')]);
+        // जुन्या (एक दिवसापेक्षा जुन्या) नोंदी अधूनमधून साफ करतो
+        if (random_int(1, 50) === 1) {
+            $pdo->prepare("DELETE FROM public_form_submissions WHERE created_at < ?")->execute([date('Y-m-d H:i:s', time() - 86400)]);
+        }
+    } catch (PDOException $e) {}
+}
+
+/** Bots साठी लपवलेलं Honeypot Field — माणसाला दिसत नाही, भरलं असेल तर Bot */
+function honeypotField() {
+    return '<div style="position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden;" aria-hidden="true"><label>Website<input type="text" name="website" tabindex="-1" autocomplete="off" value=""></label></div>';
+}
+
+function honeypotTripped() {
+    return trim((string)($_POST['website'] ?? '')) !== '';
 }
 
 // Escapes output for safe HTML display
@@ -401,73 +475,9 @@ function requirePermission($permissionKey, $rootPath = '') {
     }
 }
 
-/** Create an in-app notification for a specific user. Fails silently if not migrated yet. */
-function notifyUser($userId, $orgId, $title, $message = null, $link = null) {
-    global $pdo;
-    try {
-        $stmt = $pdo->prepare("INSERT INTO notifications (organization_id, user_id, title, message, link) VALUES (?, ?, ?, ?, ?)");
-        $stmt->execute([$orgId, $userId, $title, $message, $link]);
-    } catch (PDOException $e) {
-        // notifications table not migrated yet — skip silently
-    }
-
-    // App बंद असतानाही सूचना जावी म्हणून — Push सुद्धा पाठवायचा प्रयत्न
-    // करतो (Setup झालेलं नसेल, किंवा Subscription नसेल — तर शांतपणे वगळतो).
-    sendPushNotification($userId, $orgId, $title, $message, $link);
-
-    // Android App (Firebase FCM) — config/firebase-service-account.json नसेल तर वगळतो.
-    require_once __DIR__ . '/fcm.php';
-    sendFcmToUser($userId, $title, $message ?? '', $link);
-}
-
-/** App बंद असतानाही Mobile वर थेट सूचना पाठवण्यासाठी (Web Push). */
-function sendPushNotification($userId, $orgId, $title, $message = null, $link = null) {
-    global $pdo;
-    try {
-        $orgStmt = $pdo->prepare("SELECT vapid_public_key, vapid_private_key FROM organizations WHERE id = ?");
-        $orgStmt->execute([$orgId]);
-        $org = $orgStmt->fetch();
-        if (empty($org['vapid_public_key']) || empty($org['vapid_private_key'])) {
-            return; // Super Admin ने अजून Push Setup केलेलं नाही
-        }
-
-        $subStmt = $pdo->prepare("SELECT * FROM push_subscriptions WHERE user_id = ?");
-        $subStmt->execute([$userId]);
-        $subscriptions = $subStmt->fetchAll();
-        if (empty($subscriptions)) { return; }
-
-        require_once __DIR__ . '/webpush/WebPush.php';
-        $webPush = new WebPush($org['vapid_public_key'], $org['vapid_private_key'], 'mailto:admin@eowms.local');
-
-        foreach ($subscriptions as $sub) {
-            $result = $webPush->send($sub['endpoint'], $sub['p256dh'], $sub['auth'], [
-                'title' => $title,
-                'body' => $message ?: '',
-                'url' => $link ? (defined('APP_ROOT_URL') ? APP_ROOT_URL . $link : $link) : '/',
-            ]);
-            if ($result['should_delete']) {
-                $pdo->prepare("DELETE FROM push_subscriptions WHERE id = ?")->execute([$sub['id']]);
-            }
-        }
-    } catch (Exception $e) {
-        // Push कधीही अपयशी झाला तरी — मुख्य In-App Notification आधीच Save
-        // झालेली असते, त्यामुळे इथे शांतपणे वगळणं सुरक्षित आहे.
-    }
-}
-
-/** Notify every active staff member (and HOD) of a department. */
-function notifyDepartment($departmentId, $orgId, $title, $message = null, $link = null) {
-    global $pdo;
-    try {
-        $stmt = $pdo->prepare("SELECT id FROM users WHERE department_id = ? AND is_active = 1");
-        $stmt->execute([$departmentId]);
-        foreach ($stmt->fetchAll(PDO::FETCH_COLUMN) as $uid) {
-            notifyUser($uid, $orgId, $title, $message, $link);
-        }
-    } catch (PDOException $e) {
-        // ignore
-    }
-}
+// सूचना (In-App + Push Queue) — notifyUser / notifyUsers / notifyDepartment /
+// sendPushNotification आता includes/notify.php मध्ये (Cron मधूनही वापरता यावेत म्हणून).
+require_once __DIR__ . '/notify.php';
 
 /**
  * COUNT(*)+1 वरून बनवलेला क्रमांक (TSK-/WRK-/REQ- इ.) — एखादी नोंद Delete

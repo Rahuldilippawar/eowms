@@ -1,180 +1,169 @@
 <?php
+// विभाग Finance — एकच Dashboard: Budget vs Actual (एकच खर्च-Ledger) + Paid vs Due
 require_once __DIR__ . '/../includes/auth.php';
 requireLogin('../');
 requireMigratedTable($pdo, 'dept_payment_ledger', '../');
+requireMigratedTable($pdo, 'budget_transactions', '../', 'spend_date');
 require_once __DIR__ . '/../includes/dept-finance-helpers.php';
+require_once __DIR__ . '/../includes/budget-helpers.php';
 $user = currentUser();
 $orgId = activeOrgId();
 
-$pageTitle = 'विभाग Financial Dashboard';
+// पूर्वी "विभाग Budget" किंवा "Material Purchase" — यांपैकी कोणत्याही एकाची परवानगी असलेल्यांना
+$canAccess = hasPermission('manage_dept_finance') || hasPermission('manage_budget') || hasCategory('hod') || isManagementOrAbove();
+$accessibleDeptId = deptFinanceAccessibleDeptId($user);
+if (!$canAccess || $accessibleDeptId === 0) {
+    http_response_code(403);
+    die('<div style="font-family:sans-serif;padding:40px;">विभाग Finance पाहण्याची परवानगी नाही. <a href="../index.php">Dashboard वर परत जा</a></div>');
+}
+$canSetBudget = hasPermission('manage_budget');
+
+$fy = (int)($_GET['fy'] ?? getCurrentFinancialYear());
+if ($fy < 2000 || $fy > 2100) { $fy = getCurrentFinancialYear(); }
+$filterDeptId = $accessibleDeptId ?? (int)($_GET['department_id'] ?? 0);
+
+$rows = deptFinanceSummaryRows($pdo, $orgId, $fy, $filterDeptId ?: null);
+
+$totAllocated = array_sum(array_column($rows, 'allocated'));
+$totSpent = array_sum(array_column($rows, 'spent'));
+$totRemaining = $totAllocated - $totSpent;
+$totOwed = array_sum(array_column($rows, 'owed'));
+$totPaid = array_sum(array_column($rows, 'paid'));
+
+// Source-निहाय एकूण खर्च
+$sourceTotals = [];
+foreach ($rows as $r) { foreach ($r['by_source'] as $lbl => $amt) { $sourceTotals[$lbl] = ($sourceTotals[$lbl] ?? 0) + $amt; } }
+arsort($sourceTotals);
+
+// Paid vs Due — प्रकार-निहाय
+$pdTypes = ['material' => '🛒 Material Purchase', 'renewal' => '📋 नूतनीकरण (चालू Cycle)', 'maintenance' => '🔧 देखभाल'];
+$pdTotals = [];
+foreach ($pdTypes as $k => $lbl) { $pdTotals[$k] = ['total' => 0, 'paid' => 0]; }
+foreach ($rows as $r) { foreach ($r['paid_due'] as $k => $v) { $pdTotals[$k]['total'] += $v['total']; $pdTotals[$k]['paid'] += $v['paid']; } }
+
+$allDepts = [];
+if ($accessibleDeptId === null) {
+    $deptsStmt = $pdo->prepare("SELECT id, name_local, name FROM departments WHERE organization_id = ? AND is_active = 1 ORDER BY name_local");
+    $deptsStmt->execute([$orgId]);
+    $allDepts = $deptsStmt->fetchAll();
+}
+
+$pageTitle = 'विभाग Finance';
 $rootPath = '../';
 require_once __DIR__ . '/../includes/header.php';
-
-$accessibleDeptId = deptFinanceAccessibleDeptId($user);
-$filterDeptId = $accessibleDeptId ?: (int)($_GET['department_id'] ?? 0);
-
-// ---------------- प्रत्येक विभागासाठी — तिन्ही Categories चा एकूण-खर्च ----------------
-function fetchCategoryTotals($pdo, $orgId, $filterDeptId) {
-    $out = [];
-
-    // 1. Material Purchase
-    $sql1 = "SELECT department_id, SUM(total_amount) total FROM dept_material_purchases WHERE organization_id = ?";
-    $params1 = [$orgId];
-    if ($filterDeptId) { $sql1 .= " AND department_id = ?"; $params1[] = $filterDeptId; }
-    $sql1 .= " GROUP BY department_id";
-    $stmt1 = $pdo->prepare($sql1); $stmt1->execute($params1);
-    foreach ($stmt1->fetchAll() as $r) { $out[$r['department_id']]['material'] = (float)$r['total']; }
-
-    // 2. Renewals (फक्त Cost असलेले)
-    try {
-        $sql2 = "SELECT department_id, SUM(renewal_cost) total FROM renewal_items WHERE organization_id = ? AND renewal_cost IS NOT NULL";
-        $params2 = [$orgId];
-        if ($filterDeptId) { $sql2 .= " AND department_id = ?"; $params2[] = $filterDeptId; }
-        $sql2 .= " GROUP BY department_id";
-        $stmt2 = $pdo->prepare($sql2); $stmt2->execute($params2);
-        foreach ($stmt2->fetchAll() as $r) { $out[$r['department_id']]['renewal'] = (float)$r['total']; }
-    } catch (PDOException $e) {}
-
-    // 3. Maintenance
-    try {
-        $sql3 = "SELECT department_id, SUM(cost) total FROM maintenance_logs WHERE organization_id = ? AND cost IS NOT NULL";
-        $params3 = [$orgId];
-        if ($filterDeptId) { $sql3 .= " AND department_id = ?"; $params3[] = $filterDeptId; }
-        $sql3 .= " GROUP BY department_id";
-        $stmt3 = $pdo->prepare($sql3); $stmt3->execute($params3);
-        foreach ($stmt3->fetchAll() as $r) { $out[$r['department_id']]['maintenance'] = (float)$r['total']; }
-    } catch (PDOException $e) {}
-
-    return $out;
-}
-
-function fetchCategoryPaid($pdo, $orgId, $filterDeptId) {
-    $sql = "SELECT department_id, source_type, SUM(amount) total FROM dept_payment_ledger WHERE organization_id = ?";
-    $params = [$orgId];
-    if ($filterDeptId) { $sql .= " AND department_id = ?"; $params[] = $filterDeptId; }
-    $sql .= " GROUP BY department_id, source_type";
-    $stmt = $pdo->prepare($sql); $stmt->execute($params);
-    $out = [];
-    $map = ['material_purchase' => 'material', 'renewal' => 'renewal', 'maintenance' => 'maintenance'];
-    foreach ($stmt->fetchAll() as $r) { $out[$r['department_id']][$map[$r['source_type']]] = (float)$r['total']; }
-    return $out;
-}
-
-$totals = fetchCategoryTotals($pdo, $orgId, $filterDeptId);
-$paid = fetchCategoryPaid($pdo, $orgId, $filterDeptId);
-
-$deptsStmt = $pdo->prepare("SELECT id, name_local, name FROM departments WHERE organization_id = ? AND is_active = 1 ORDER BY name_local");
-$deptsStmt->execute([$orgId]);
-$allDeptsRaw = $deptsStmt->fetchAll();
-$deptNames = [];
-foreach ($allDeptsRaw as $d) { $deptNames[$d['id']] = $d['name_local'] ?: $d['name']; }
-
-if (!$accessibleDeptId) {
-    $campusDeptsStmt = $pdo->prepare("SELECT id, name_local, name FROM departments WHERE organization_id = ? AND is_active = 1 ORDER BY name_local");
-    $campusDeptsStmt->execute([$orgId]);
-    $allDepts = $campusDeptsStmt->fetchAll();
-}
-
-// एकूण (सगळे विभाग किंवा Filter केलेला)
-$grandMaterial = array_sum(array_column($totals, 'material'));
-$grandRenewal = array_sum(array_column($totals, 'renewal'));
-$grandMaintenance = array_sum(array_column($totals, 'maintenance'));
-$grandSpent = $grandMaterial + $grandRenewal + $grandMaintenance;
-
-$grandPaidMaterial = array_sum(array_column($paid, 'material'));
-$grandPaidRenewal = array_sum(array_column($paid, 'renewal'));
-$grandPaidMaintenance = array_sum(array_column($paid, 'maintenance'));
-$grandPaid = $grandPaidMaterial + $grandPaidRenewal + $grandPaidMaintenance;
-$grandDue = $grandSpent - $grandPaid;
-
-// Department-निहाय Table साठी — सगळे Dept-IDs एकत्र (ज्यांना काहीतरी Record आहे)
-$deptIdsInvolved = array_unique(array_merge(array_keys($totals), array_keys($paid)));
+$qsBase = 'fy=' . $fy . ($filterDeptId ? '&department_id=' . $filterDeptId : '');
 ?>
 
 <div class="page-eyebrow"><?= h(activeOrgName()) ?></div>
-<div class="d-flex justify-content-between align-items-start mb-1">
-  <div class="page-title mb-0">📊 विभाग Financial Dashboard</div>
-  <a href="index.php" style="font-size:12.5px;color:var(--rail);font-weight:600;text-decoration:none;align-self:center;"><i class="fa-solid fa-arrow-left me-1"></i>Material Purchase Ledger</a>
+<div class="d-flex justify-content-between align-items-start mb-1 flex-wrap gap-2">
+  <div>
+    <div class="page-title mb-1">💰 विभाग Finance</div>
+    <div style="font-size:12.5px;color:var(--text-dim);margin-bottom:16px;">आर्थिक वर्ष <?= h(formatFinancialYearLabel($fy)) ?> — Budget vs प्रत्यक्ष खर्च (प्रत्येक खर्च एकदाच) + Paid vs Due</div>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <a href="index.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13px;padding:8px 16px;">🛒 Material Purchase</a>
+    <?php if ($canSetBudget): ?><a href="budget.php?fy=<?= $fy ?>" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13px;padding:8px 16px;">🎯 Budget वाटप</a><?php endif; ?>
+    <a href="budget-report.php?department_id=<?= $filterDeptId ?: ($canSetBudget ? 'all' : (int)($user['department_id'] ?? 0)) ?>&fy=<?= $fy ?>" target="_blank" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13px;padding:8px 16px;"><i class="fa-solid fa-file-pdf me-1"></i>अहवाल</a>
+    <a href="export.php?<?= $qsBase ?>&type=summary" class="btn" style="border:1px solid var(--rail);color:var(--rail);border-radius:9px;font-size:13px;padding:8px 16px;font-weight:600;"><i class="fa-solid fa-file-excel me-1"></i>Excel (सारांश)</a>
+    <a href="export.php?<?= $qsBase ?>&type=ledger" class="btn" style="border:1px solid var(--rail);color:var(--rail);border-radius:9px;font-size:13px;padding:8px 16px;font-weight:600;"><i class="fa-solid fa-file-excel me-1"></i>Excel (खर्च Ledger)</a>
+  </div>
 </div>
-<p style="font-size:12.5px;color:var(--text-dim);margin-bottom:20px;">🛒 Material Purchase + 📋 Renewals/Subscriptions + 🔧 Maintenance — सगळं एकत्र</p>
 
-<?php if (!$accessibleDeptId): ?>
-<form method="GET" class="mb-3">
-  <select name="department_id" class="form-select-custom" style="width:auto;" onchange="this.form.submit()">
-    <option value="">-- सगळे विभाग --</option>
-    <?php foreach ($allDepts as $d): ?><option value="<?= $d['id'] ?>" <?= $filterDeptId === (int)$d['id'] ? 'selected' : '' ?>><?= h($d['name_local'] ?: $d['name']) ?></option><?php endforeach; ?>
+<form method="GET" class="d-flex gap-2 mb-3 flex-wrap">
+  <select name="fy" class="form-select-custom" style="width:auto;" onchange="this.form.submit()">
+    <?php for ($y = getCurrentFinancialYear() + 1; $y >= getCurrentFinancialYear() - 3; $y--): ?>
+      <option value="<?= $y ?>" <?= $fy === $y ? 'selected' : '' ?>>FY <?= $y ?>-<?= substr($y + 1, 2) ?></option>
+    <?php endfor; ?>
   </select>
+  <?php if ($accessibleDeptId === null): ?>
+    <select name="department_id" class="form-select-custom" style="width:auto;" onchange="this.form.submit()">
+      <option value="">-- सगळे विभाग --</option>
+      <?php foreach ($allDepts as $d): ?><option value="<?= $d['id'] ?>" <?= $filterDeptId === (int)$d['id'] ? 'selected' : '' ?>><?= h($d['name_local'] ?: $d['name']) ?></option><?php endforeach; ?>
+    </select>
+  <?php endif; ?>
 </form>
-<?php endif; ?>
 
 <div class="row g-3 mb-4">
-  <div class="col-6 col-lg-3"><div class="kpi-mini"><div class="lbl">💰 एकूण खर्च</div><div class="val">₹<?= number_format($grandSpent, 0) ?></div></div></div>
-  <div class="col-6 col-lg-3"><div class="kpi-mini"><div class="lbl">✅ एकूण Paid</div><div class="val" style="color:var(--rail);">₹<?= number_format($grandPaid, 0) ?></div></div></div>
-  <div class="col-6 col-lg-3"><div class="kpi-mini"><div class="lbl">⚠️ एकूण बाकी</div><div class="val" style="color:<?= $grandDue > 0 ? 'var(--rose)' : 'var(--rail)' ?>;">₹<?= number_format($grandDue, 0) ?></div></div></div>
-  <div class="col-6 col-lg-3"><div class="kpi-mini"><div class="lbl">Payment % पूर्ण</div><div class="val"><?= $grandSpent > 0 ? round(($grandPaid / $grandSpent) * 100) : 0 ?>%</div></div></div>
+  <div class="col-6 col-lg-3"><div class="kpi-mini"><div class="lbl">🎯 दिलेलं Budget</div><div class="val" style="color:var(--rail);">₹<?= number_format($totAllocated, 0) ?></div></div></div>
+  <div class="col-6 col-lg-3"><div class="kpi-mini"><div class="lbl">💸 प्रत्यक्ष खर्च</div><div class="val" style="color:var(--amber);">₹<?= number_format($totSpent, 0) ?></div></div></div>
+  <div class="col-6 col-lg-3"><div class="kpi-mini"><div class="lbl">शिल्लक</div><div class="val" style="color:<?= $totRemaining < 0 ? 'var(--rose)' : 'var(--rail)' ?>;">₹<?= number_format($totRemaining, 0) ?></div></div></div>
+  <div class="col-6 col-lg-3"><div class="kpi-mini"><div class="lbl">⚠️ एकूण देणे बाकी (Due)</div><div class="val" style="color:<?= ($totOwed - $totPaid) > 0 ? 'var(--rose)' : 'var(--rail)' ?>;">₹<?= number_format(max(0, $totOwed - $totPaid), 0) ?></div></div></div>
 </div>
 
-<div class="row g-3 mb-4">
-  <div class="col-lg-6">
-    <div class="panel">
-      <div class="panel-head"><div class="title">📂 प्रकारानुसार खर्च</div></div>
-      <div style="padding:16px 20px;"><canvas id="categoryChart" height="180"></canvas></div>
-    </div>
-  </div>
-  <div class="col-lg-6">
-    <div class="panel">
-      <div class="panel-head"><div class="title">💳 Paid vs Due</div></div>
-      <div style="padding:16px 20px;"><canvas id="paidDueChart" height="180"></canvas></div>
-    </div>
-  </div>
-</div>
-
-<?php if (!$accessibleDeptId): ?>
-<div class="panel">
-  <div class="panel-head"><div class="title">🏢 विभाग-निहाय तपशील</div></div>
+<div class="panel mb-4">
+  <div class="panel-head"><div class="title">📊 Budget vs Actual — विभाग-निहाय</div><div class="sub">खर्च = विभाग Finance Ledger (Material Purchase, Dead Stock, देखभाल, वाहन, नूतनीकरण Payments, पत्र-मंजुरी)</div></div>
+  <div style="overflow-x:auto;">
   <table class="rtable">
-    <thead><tr><th>विभाग</th><th>🛒 Material</th><th>📋 Renewals</th><th>🔧 Maintenance</th><th>एकूण</th><th>Paid</th><th>बाकी</th></tr></thead>
+    <thead><tr><th>विभाग</th><th>दिलेलं</th><th>खर्च</th><th>शिल्लक</th><th>वापर %</th><th>खर्च — Source-निहाय</th><th>Paid / Due</th></tr></thead>
     <tbody>
-      <?php if (empty($deptIdsInvolved)): ?><tr><td colspan="7" style="text-align:center;color:var(--text-dim);padding:24px;">अजून कुठलाही Record नाही</td></tr><?php endif; ?>
-      <?php foreach ($deptIdsInvolved as $did):
-        $m = $totals[$did]['material'] ?? 0; $r = $totals[$did]['renewal'] ?? 0; $mt = $totals[$did]['maintenance'] ?? 0;
-        $spent = $m + $r + $mt;
-        $pd = ($paid[$did]['material'] ?? 0) + ($paid[$did]['renewal'] ?? 0) + ($paid[$did]['maintenance'] ?? 0);
-        $due = $spent - $pd;
-      ?>
+      <?php if (empty($rows)): ?><tr><td colspan="7" style="text-align:center;color:var(--text-dim);padding:24px;">कुठलाही विभाग नाही</td></tr><?php endif; ?>
+      <?php foreach ($rows as $r): $over = $r['remaining'] < 0; ?>
         <tr>
-          <td style="font-weight:600;"><?= h($deptNames[$did] ?? ('Dept #' . $did)) ?></td>
-          <td class="font-mono">₹<?= number_format($m, 0) ?></td>
-          <td class="font-mono">₹<?= number_format($r, 0) ?></td>
-          <td class="font-mono">₹<?= number_format($mt, 0) ?></td>
-          <td class="font-mono" style="font-weight:700;">₹<?= number_format($spent, 0) ?></td>
-          <td class="font-mono" style="color:var(--rail);">₹<?= number_format($pd, 0) ?></td>
-          <td class="font-mono" style="color:<?= $due > 0 ? 'var(--rose)' : 'var(--rail)' ?>;font-weight:700;">₹<?= number_format($due, 0) ?></td>
+          <td style="font-weight:600;"><?= h($r['name']) ?><div style="font-size:10.5px;color:var(--text-dim);font-weight:400;"><?= h($r['campus_name'] ?: '🏛️ Trust-स्तरीय') ?></div></td>
+          <td class="font-mono"><?= $r['has_budget'] ? '₹' . number_format($r['allocated'], 0) : '<span style="color:var(--text-dim);">सेट नाही</span>' ?></td>
+          <td class="font-mono">₹<?= number_format($r['spent'], 0) ?></td>
+          <td class="font-mono" style="font-weight:600;color:<?= $over ? 'var(--rose)' : 'var(--ink)' ?>;">₹<?= number_format($r['remaining'], 0) ?><?= $over ? ' ⚠️' : '' ?></td>
+          <td>
+            <div style="background:var(--canvas);border-radius:10px;height:8px;width:70px;overflow:hidden;display:inline-block;vertical-align:middle;">
+              <div style="height:100%;width:<?= $r['percent_used'] ?>%;background:<?= $over ? 'var(--rose)' : ($r['percent_used'] > 80 ? 'var(--amber)' : 'var(--rail)') ?>;"></div>
+            </div>
+            <span style="font-size:11px;color:var(--text-dim);margin-left:4px;"><?= $r['percent_used'] ?>%</span>
+          </td>
+          <td style="font-size:10.5px;color:var(--text-dim);line-height:1.6;">
+            <?php foreach ($r['by_source'] as $lbl => $amt): if ($amt <= 0) continue; ?><?= h($lbl) ?>: ₹<?= number_format($amt, 0) ?><br><?php endforeach; ?>
+            <?= empty($r['by_source']) ? '—' : '' ?>
+          </td>
+          <td class="font-mono" style="font-size:12px;">
+            <span style="color:var(--rail);">₹<?= number_format($r['paid'], 0) ?></span> /
+            <span style="color:<?= $r['due'] > 0 ? 'var(--rose)' : 'var(--text-dim)' ?>;">₹<?= number_format($r['due'], 0) ?></span>
+          </td>
         </tr>
       <?php endforeach; ?>
     </tbody>
   </table>
+  </div>
 </div>
-<?php endif; ?>
+
+<div class="row g-3 mb-4">
+  <div class="col-lg-6">
+    <div class="panel">
+      <div class="panel-head"><div class="title">📂 खर्च — Source-निहाय</div></div>
+      <div style="padding:16px 20px;"><canvas id="sourceChart" height="200"></canvas></div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="panel">
+      <div class="panel-head"><div class="title">💳 Paid vs Due</div><div class="sub">Purchase / नूतनीकरण (चालू Cycle) / देखभाल — आजपर्यंतची देणी</div></div>
+      <div style="padding:16px 20px;"><canvas id="paidDueChart" height="200"></canvas></div>
+      <table class="rtable">
+        <thead><tr><th>प्रकार</th><th>एकूण</th><th>Paid</th><th>बाकी</th></tr></thead>
+        <tbody>
+          <?php foreach ($pdTypes as $k => $lbl): $v = $pdTotals[$k]; ?>
+            <tr><td><?= h($lbl) ?></td><td class="font-mono">₹<?= number_format($v['total'], 0) ?></td><td class="font-mono" style="color:var(--rail);">₹<?= number_format($v['paid'], 0) ?></td><td class="font-mono" style="color:<?= ($v['total'] - $v['paid']) > 0 ? 'var(--rose)' : 'var(--text-dim)' ?>;">₹<?= number_format(max(0, $v['total'] - $v['paid']), 0) ?></td></tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-  new Chart(document.getElementById('categoryChart'), {
+  new Chart(document.getElementById('sourceChart'), {
     type: 'doughnut',
     data: {
-      labels: ['🛒 Material Purchase', '📋 Renewals/Subscriptions', '🔧 Maintenance'],
-      datasets: [{ data: [<?= $grandMaterial ?>, <?= $grandRenewal ?>, <?= $grandMaintenance ?>], backgroundColor: ['#1B8A83','#C97F1D','#B23A48'], borderWidth: 2, borderColor: '#fff' }]
+      labels: <?= json_encode(array_keys($sourceTotals), JSON_UNESCAPED_UNICODE) ?>,
+      datasets: [{ data: <?= json_encode(array_values($sourceTotals)) ?>, backgroundColor: ['#1B8A83','#C97F1D','#B23A48','#8A5CD6','#2255AA','#666B7D','#2FA37A'], borderWidth: 2, borderColor: '#fff' }]
     },
     options: { plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } } }, cutout: '55%' }
   });
-
   new Chart(document.getElementById('paidDueChart'), {
     type: 'bar',
     data: {
-      labels: ['Material', 'Renewals', 'Maintenance'],
+      labels: <?= json_encode(array_values($pdTypes), JSON_UNESCAPED_UNICODE) ?>,
       datasets: [
-        { label: 'Paid', data: [<?= $grandPaidMaterial ?>, <?= $grandPaidRenewal ?>, <?= $grandPaidMaintenance ?>], backgroundColor: '#1B8A83', borderRadius: 6 },
-        { label: 'Due', data: [<?= max(0, $grandMaterial - $grandPaidMaterial) ?>, <?= max(0, $grandRenewal - $grandPaidRenewal) ?>, <?= max(0, $grandMaintenance - $grandPaidMaintenance) ?>], backgroundColor: '#B23A48', borderRadius: 6 }
+        { label: 'Paid', data: <?= json_encode(array_map(fn($v) => $v['paid'], array_values($pdTotals))) ?>, backgroundColor: '#1B8A83', borderRadius: 6 },
+        { label: 'Due', data: <?= json_encode(array_map(fn($v) => max(0, $v['total'] - $v['paid']), array_values($pdTotals))) ?>, backgroundColor: '#B23A48', borderRadius: 6 }
       ]
     },
     options: { plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } } }, scales: { x: { stacked: true }, y: { stacked: true } } }

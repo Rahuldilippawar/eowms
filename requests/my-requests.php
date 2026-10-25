@@ -2,8 +2,11 @@
 $pageTitle = 'माझ्या विनंत्या';
 $rootPath = '../';
 require_once __DIR__ . '/../includes/header.php';
+require_once __DIR__ . '/../includes/ticket-helpers.php';
 
 $orgId = activeOrgId();
+$category = $_GET['category'] ?? '';
+if ($category !== '' && !isset(TICKET_CATEGORIES[$category])) { $category = ''; }
 
 $dbNotReady = false;
 $myRequests = [];
@@ -11,12 +14,12 @@ try {
     $stmt = $pdo->prepare("
         SELECT r.*, d.name_local AS dept_name, u.name AS completed_by_name
         FROM work_requests r
-        JOIN departments d ON d.id = r.department_id
+        LEFT JOIN departments d ON d.id = r.department_id
         LEFT JOIN users u ON u.id = r.completed_by
-        WHERE r.organization_id = ? AND r.requested_by_user_id = ?
-        ORDER BY r.created_at DESC
+        WHERE r.organization_id = ? AND r.requested_by_user_id = ?" . ($category !== '' ? " AND r.category = ?" : "") . "
+        ORDER BY (r.status = 'completed') DESC, r.created_at DESC
     ");
-    $stmt->execute([$orgId, $user['id']]);
+    $stmt->execute($category !== '' ? [$orgId, $user['id'], $category] : [$orgId, $user['id']]);
     $myRequests = $stmt->fetchAll();
 } catch (PDOException $e) {
     // work_requests चं requested_by_user_id Column अजून Database मध्ये
@@ -38,16 +41,23 @@ if ($dbNotReady) {
 }
 
 
-$statusLabels = ['pending' => '⏳ प्रलंबित', 'in_progress' => '🔧 सुरू आहे', 'completed' => '✅ पूर्ण'];
-$statusChips = ['pending' => 'pending', 'in_progress' => 'pending', 'completed' => 'done'];
+$statusLabels = TICKET_STATUS_LABELS;
+$statusChips = TICKET_STATUS_CHIPS;
 ?>
 
 <div class="page-eyebrow"><?= h(activeOrgName()) ?></div>
 <div class="d-flex justify-content-between align-items-start mb-1">
   <div class="page-title mb-0">📋 माझ्या पाठवलेल्या विनंत्या</div>
-  <a href="create.php" class="btn" style="background:var(--rail);color:#fff;border-radius:9px;font-size:13px;padding:9px 18px;font-weight:600;">
-    <i class="fa-solid fa-plus me-1"></i>नवीन विनंती पाठवा
-  </a>
+  <div class="d-flex gap-2">
+    <a href="create.php" class="btn" style="background:var(--rail);color:#fff;border-radius:9px;font-size:13px;padding:9px 18px;font-weight:600;">
+      <i class="fa-solid fa-plus me-1"></i>नवीन विनंती पाठवा
+    </a>
+    <a href="create.php?category=it" class="btn" style="border:1px solid var(--rail);color:var(--rail);border-radius:9px;font-size:13px;padding:9px 18px;font-weight:600;">🖥️ IT विनंती</a>
+  </div>
+</div>
+<div class="period-toggle mb-3">
+  <a href="my-requests.php" class="period-btn <?= $category === '' ? 'active' : '' ?>">सगळ्या</a>
+  <?php foreach (TICKET_CATEGORIES as $k => $lbl): ?><a href="?category=<?= $k ?>" class="period-btn <?= $category === $k ? 'active' : '' ?>"><?= h($lbl) ?></a><?php endforeach; ?>
 </div>
 
 <?php if (!empty($_SESSION['flash'])): ?>
@@ -57,21 +67,22 @@ $statusChips = ['pending' => 'pending', 'in_progress' => 'pending', 'completed' 
 
 <div class="panel">
   <table class="rtable">
-    <thead><tr><th>Request ID</th><th>कोणत्या विभागाला</th><th>काम</th><th>दिनांक</th><th>स्थिती</th></tr></thead>
+    <thead><tr><th>Request ID</th><th>कोणत्या विभागाला</th><th>काम</th><th>दिनांक / वय</th><th>स्थिती</th></tr></thead>
     <tbody>
       <?php if (empty($myRequests)): ?>
         <tr><td colspan="5" style="text-align:center;color:var(--text-dim);padding:24px;">तुम्ही अजून कुठलीही विनंती पाठवलेली नाही</td></tr>
       <?php endif; ?>
       <?php foreach ($myRequests as $r): ?>
         <tr>
-          <td class="font-mono" style="font-weight:600;font-size:12px;"><?= h($r['request_code']) ?></td>
-          <td><?= h($r['dept_name']) ?></td>
-          <td style="max-width:260px;"><?= h($r['work_description']) ?></td>
-          <td style="font-size:11.5px;"><?= date('d M Y', strtotime($r['created_at'])) ?></td>
+          <td class="font-mono" style="font-weight:600;font-size:12px;"><a href="view.php?id=<?= $r['id'] ?>" style="color:var(--rail);"><?= h($r['request_code']) ?></a></td>
+          <td><?= h($r['dept_name'] ?: ($r['category'] === 'it' ? 'IT' : '—')) ?><div style="font-size:10.5px;color:var(--text-dim);"><?= h(TICKET_CATEGORIES[$r['category']] ?? $r['category']) ?></div></td>
+          <td style="max-width:260px;"><?php if ($r['title']): ?><strong><?= h($r['title']) ?></strong><br><?php endif; ?><?= h(mb_strimwidth($r['work_description'], 0, 160, '…')) ?></td>
+          <td style="font-size:11.5px;"><?= date('d M Y', strtotime($r['created_at'])) ?><div style="color:var(--text-dim);"><?= h(ticketAgeLabel($r['created_at'])) ?></div><?= ticketSlaBadge($r)['html'] ?></td>
           <td>
             <span class="status-chip <?= $statusChips[$r['status']] ?>"><?= $statusLabels[$r['status']] ?></span>
             <?php if ($r['status'] === 'completed' && $r['completed_by_name']): ?>
               <div style="font-size:10.5px;color:var(--text-dim);margin-top:2px;"><?= h($r['completed_by_name']) ?> यांनी पूर्ण केलं</div>
+              <a href="view.php?id=<?= $r['id'] ?>" style="font-size:11px;color:var(--rail);font-weight:600;">⭐ Rating देऊन बंद करा</a>
             <?php endif; ?>
           </td>
         </tr>

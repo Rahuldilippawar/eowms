@@ -3152,124 +3152,10 @@ ALTER TABLE role_definitions ADD COLUMN restricted_modules VARCHAR(255) NULL COM
 -- ============================================================
 ALTER TABLE users ADD COLUMN onboarding_seen TINYINT(1) DEFAULT 0 AFTER must_change_password;
 
+-- 10. Student/Parent Feedback (ऐच्छिक — Simple Rating)
 -- ============================================================
 -- FROM: migration-teaching-staff.sql
 -- ============================================================
--- ============================================================
--- Migration: Teaching vs Non-Teaching Staff — संपूर्ण System
--- टीप: `users.teaching_mode` (Teaching/Non Teaching/Other) आधीच
--- अस्तित्वात आहे (पण कुठेच वापरलेलं नव्हतं) — तेच वापरतो, नवीन Column
--- नाही.
--- ============================================================
-
--- 2. Personal Teaching Timetable (शिक्षकाचं स्वतःचं — Virtual Classroom
--- शी Independent, फक्त एक Class/Section Setup असणं गरजेचं नाही)
-CREATE TABLE teacher_timetable (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  organization_id INT NOT NULL,
-  campus_id INT NOT NULL,
-  teacher_id INT NOT NULL,
-  day_of_week TINYINT NOT NULL COMMENT '1=Sunday..7=Saturday',
-  period_no TINYINT NOT NULL,
-  start_time TIME NULL,
-  end_time TIME NULL,
-  subject_name VARCHAR(150) NOT NULL,
-  class_section VARCHAR(100) NOT NULL,
-  academic_year VARCHAR(20) NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
-  FOREIGN KEY (campus_id) REFERENCES campuses(id) ON DELETE CASCADE,
-  FOREIGN KEY (teacher_id) REFERENCES users(id) ON DELETE CASCADE
-) ENGINE=InnoDB;
-
--- 3. Substitute/Cover-Class व्यवस्थापन
-CREATE TABLE substitute_assignments (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  organization_id INT NOT NULL,
-  original_timetable_id INT NULL COMMENT 'teacher_timetable.id — कुठला Period होता',
-  original_teacher_id INT NOT NULL,
-  substitute_teacher_id INT NOT NULL,
-  substitute_date DATE NOT NULL,
-  period_no TINYINT NOT NULL,
-  subject_name VARCHAR(150) NOT NULL,
-  class_section VARCHAR(100) NOT NULL,
-  reason VARCHAR(255) NULL,
-  assigned_by INT NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
-  FOREIGN KEY (original_timetable_id) REFERENCES teacher_timetable(id) ON DELETE SET NULL,
-  FOREIGN KEY (original_teacher_id) REFERENCES users(id) ON DELETE CASCADE,
-  FOREIGN KEY (substitute_teacher_id) REFERENCES users(id) ON DELETE CASCADE,
-  FOREIGN KEY (assigned_by) REFERENCES users(id) ON DELETE CASCADE
-) ENGINE=InnoDB;
-
--- 4. Syllabus Completion Tracker
-CREATE TABLE syllabus_trackers (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  organization_id INT NOT NULL,
-  campus_id INT NOT NULL,
-  teacher_id INT NOT NULL,
-  subject_name VARCHAR(150) NOT NULL,
-  class_section VARCHAR(100) NOT NULL,
-  academic_year VARCHAR(20) NOT NULL,
-  total_chapters INT NOT NULL DEFAULT 0,
-  chapters_completed INT NOT NULL DEFAULT 0,
-  last_updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
-  FOREIGN KEY (campus_id) REFERENCES campuses(id) ON DELETE CASCADE,
-  FOREIGN KEY (teacher_id) REFERENCES users(id) ON DELETE CASCADE,
-  UNIQUE KEY uniq_syllabus (teacher_id, subject_name, class_section, academic_year)
-) ENGINE=InnoDB;
-
--- 5. Academic Qualifications Master (NAAC Documentation साठीही उपयोगी)
-CREATE TABLE teacher_qualifications (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  teacher_id INT NOT NULL,
-  qualification_type VARCHAR(100) NOT NULL COMMENT 'उदा. PhD, NET, SET, M.Ed',
-  specialization VARCHAR(150) NULL,
-  institution VARCHAR(255) NULL,
-  year_completed YEAR NULL,
-  net_set_status ENUM('NET','SET','Both','None') DEFAULT 'None',
-  research_papers_count INT DEFAULT 0,
-  remarks TEXT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (teacher_id) REFERENCES users(id) ON DELETE CASCADE
-) ENGINE=InnoDB;
-
--- 6. Class Teacher / Coordinator Assignment
-CREATE TABLE class_teacher_assignments (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  organization_id INT NOT NULL,
-  campus_id INT NOT NULL,
-  class_section VARCHAR(100) NOT NULL,
-  teacher_id INT NOT NULL,
-  academic_year VARCHAR(20) NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
-  FOREIGN KEY (campus_id) REFERENCES campuses(id) ON DELETE CASCADE,
-  FOREIGN KEY (teacher_id) REFERENCES users(id) ON DELETE CASCADE,
-  UNIQUE KEY uniq_class_teacher (campus_id, class_section, academic_year)
-) ENGINE=InnoDB;
-
--- 7. Exam Duty / Invigilation Allocation
-CREATE TABLE exam_duty_allocations (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  organization_id INT NOT NULL,
-  campus_id INT NOT NULL,
-  exam_name VARCHAR(255) NOT NULL,
-  duty_date DATE NOT NULL,
-  shift ENUM('morning','afternoon','full_day') DEFAULT 'morning',
-  teacher_id INT NOT NULL,
-  room_hall VARCHAR(100) NULL,
-  created_by INT NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
-  FOREIGN KEY (campus_id) REFERENCES campuses(id) ON DELETE CASCADE,
-  FOREIGN KEY (teacher_id) REFERENCES users(id) ON DELETE CASCADE,
-  FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
-) ENGINE=InnoDB;
-
--- 10. Student/Parent Feedback (ऐच्छिक — Simple Rating)
 CREATE TABLE teacher_feedback (
   id INT AUTO_INCREMENT PRIMARY KEY,
   teacher_id INT NOT NULL,
@@ -3282,8 +3168,6 @@ CREATE TABLE teacher_feedback (
 ) ENGINE=InnoDB;
 
 -- नवीन Permissions
-INSERT IGNORE INTO permissions (permission_key, label, label_local, sort_order) VALUES
-('manage_teaching_academics', 'Manage teaching staff timetable, substitutes, syllabus, exam duty', 'शिक्षक Timetable, Substitute, Syllabus, Exam Duty व्यवस्थापन', 36);
 
 -- ============================================================
 -- FROM: migration-profile-advance.sql
@@ -3968,3 +3852,441 @@ ALTER TABLE users DROP COLUMN gatekeeper_clerk_id;
 DROP TABLE IF EXISTS letter_watchers;
 DROP TABLE IF EXISTS letter_templates;
 DROP TABLE IF EXISTS letter_attachment_remarks;
+
+-- ============================================================
+-- FROM: migration-security-fixes-w1.sql
+-- ============================================================
+-- Biometric: अनोळखी Machine आपोआप "मंजूर" होऊ नये — Super Admin ने मंजूर केल्यावरच तिचे Punches स्वीकारायचे
+-- (आधीपासून असलेली Devices मंजूरच राहतात — DEFAULT 1; नवीन, आपोआप नोंदलेली Devices iclock/cdata.php मधून 0 ने येतात)
+ALTER TABLE biometric_devices ADD COLUMN is_approved TINYINT(1) NOT NULL DEFAULT 1 AFTER is_active;
+
+-- Biometric: Machine ने तेच Punches पुन्हा पाठवले तरी दुप्पट नोंद होऊ नये
+DELETE p1 FROM biometric_punch_logs p1 JOIN biometric_punch_logs p2 ON p1.device_serial = p2.device_serial AND p1.biometric_pin = p2.biometric_pin AND p1.punch_time = p2.punch_time AND p1.id > p2.id;
+ALTER TABLE biometric_punch_logs ADD UNIQUE KEY uniq_device_pin_time (device_serial, biometric_pin, punch_time);
+
+-- Public फॉर्म (request.php, guests/pre-register.php) साठी साधी Rate-Limit नोंद
+CREATE TABLE IF NOT EXISTS public_form_submissions (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  form_key VARCHAR(40) NOT NULL,
+  ip_address VARCHAR(45) NOT NULL,
+  created_at DATETIME NOT NULL,
+  INDEX idx_form_ip_time (form_key, ip_address, created_at)
+) ENGINE=InnoDB;
+
+-- ============================================================
+-- FROM: migration-renewals-upgrade.sql
+-- ============================================================
+-- ============================================================
+-- Migration: नूतनीकरण Module सुधारणा
+--  1) स्थिती (Active/लवकरच/मुदत संपली) आता expiry_date वरून काढली जाते —
+--     'renewed' कायमची स्थिती काढली; 'inactive' = Soft-Delete (निष्क्रिय)
+--  2) Reminder Dedupe Table (item + milestone + expiry_date)
+--  3) नूतनीकरण-Cycle नुसार प्रमाणपत्र/दस्तऐवज Attachments
+--  4) Cron Jobs — शेवटचं कधी चाललं (Last-Run) + दैनंदिन Digest Dedupe
+-- Run this in phpMyAdmin -> your database -> SQL tab
+-- ============================================================
+
+ALTER TABLE renewal_items MODIFY status ENUM('active','due_soon','expired','renewed','inactive') DEFAULT 'active';
+
+-- जुन्या 'renewed'/'due_soon'/'expired' नोंदी पुन्हा सामान्य 'active' — इतिहास renewal_history मध्ये तसाच राहतो
+UPDATE renewal_items SET status = 'active' WHERE status IN ('renewed','due_soon','expired');
+
+CREATE TABLE renewal_reminder_log (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  renewal_item_id INT NOT NULL,
+  milestone VARCHAR(20) NOT NULL,
+  expiry_date DATE NOT NULL,
+  recipients INT DEFAULT 0,
+  sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_item_milestone_expiry (renewal_item_id, milestone, expiry_date),
+  FOREIGN KEY (renewal_item_id) REFERENCES renewal_items(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE renewal_attachments (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  renewal_item_id INT NOT NULL,
+  organization_id INT NOT NULL,
+  cycle_expiry_date DATE NULL,
+  title VARCHAR(255) NULL,
+  file_path VARCHAR(255) NOT NULL,
+  original_filename VARCHAR(255) NULL,
+  file_size INT NULL,
+  uploaded_by INT NULL,
+  uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (renewal_item_id) REFERENCES renewal_items(id) ON DELETE CASCADE,
+  FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE SET NULL,
+  INDEX idx_item_cycle (renewal_item_id, cycle_expiry_date)
+) ENGINE=InnoDB;
+
+CREATE TABLE cron_job_runs (
+  job_key VARCHAR(100) NOT NULL PRIMARY KEY,
+  last_started_at DATETIME NULL,
+  last_finished_at DATETIME NULL,
+  last_status ENUM('running','success','failed') DEFAULT 'running',
+  last_duration_sec INT NULL,
+  last_output TEXT NULL
+) ENGINE=InnoDB;
+
+CREATE TABLE cron_digest_log (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  cron_key VARCHAR(50) NOT NULL,
+  user_id INT NOT NULL,
+  digest_date DATE NOT NULL,
+  item_count INT DEFAULT 0,
+  sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_cron_user_day (cron_key, user_id, digest_date),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- ============================================================
+-- FROM: migration-remove-teaching-module.sql
+-- ============================================================
+-- ============================================================
+-- Migration: Teaching Module पूर्णपणे काढलं — Virtual Classroom
+-- (academics/) हेच Class/Timetable साठी एकमेव ठिकाण.
+-- टीप: या Tables चा Data कायमचा जातो (मालकाची मंजुरी आहे).
+-- teacher_feedback ठेवली आहे — Student Portal (give-feedback) तिथे लिहितो.
+-- ============================================================
+
+DROP TABLE IF EXISTS substitute_assignments;
+DROP TABLE IF EXISTS teacher_timetable;
+DROP TABLE IF EXISTS syllabus_trackers;
+DROP TABLE IF EXISTS teacher_qualifications;
+DROP TABLE IF EXISTS class_teacher_assignments;
+DROP TABLE IF EXISTS exam_duty_allocations;
+
+-- Teaching Module ची Permission (फक्त त्याच Module मध्ये वापरली जात होती)
+DELETE FROM role_permissions WHERE permission_key = 'manage_teaching_academics';
+DELETE FROM permissions WHERE permission_key = 'manage_teaching_academics';
+
+-- Help Center मधला "Teaching Module" लेख
+DELETE FROM help_articles WHERE title LIKE '%Teaching Module%';
+
+-- Student Feedback — एक विद्यार्थी एका शिक्षकाला महिन्यातून एकदाच (कोणी दिलं ते Anonymous च दाखवतो)
+ALTER TABLE teacher_feedback ADD COLUMN student_id INT NULL AFTER teacher_id;
+ALTER TABLE teacher_feedback ADD FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE;
+ALTER TABLE teacher_feedback ADD INDEX idx_fb_student_teacher (student_id, teacher_id, submitted_at);
+
+-- ============================================================
+-- FROM: migration-residency-music-events-fixes.sql
+-- ============================================================
+-- ============================================================
+-- Migration: रहिवासी विभाग — निवासी खोली Flag; संगीत/कार्यक्रम/इतर दुरुस्त्या
+-- ============================================================
+
+-- maintenance_locations मध्ये Office/Kitchen सुद्धा आहेत — फक्त "निवासी" जागाच रहिवासी विभागात मोजायच्या
+ALTER TABLE maintenance_locations ADD COLUMN is_residential TINYINT(1) NOT NULL DEFAULT 0 AFTER capacity;
+
+-- आधीपासून रहिवासी Data (रहिवासी/बिल/साहित्य/तपासणी/पाहुणे/खोली-बदल/वाटप/Import) असलेल्या जागा = निवासी,
+-- जेणेकरून चालू Setup तसंच चालेल. (ज्या संस्थेत आधीच एखादी जागा निवासी चिन्हांकित आहे, तिथे पुन्हा चालवत नाही)
+UPDATE maintenance_locations SET is_residential = 1 WHERE (id IN (SELECT location_id FROM residency_occupants) OR id IN (SELECT location_id FROM residency_bills) OR id IN (SELECT location_id FROM residency_room_items) OR id IN (SELECT location_id FROM residency_inspections) OR id IN (SELECT location_id FROM residency_guests) OR id IN (SELECT to_location_id FROM residency_room_transfers) OR id IN (SELECT allotted_location_id FROM residency_allotment_requests WHERE allotted_location_id IS NOT NULL) OR import_batch_id IS NOT NULL) AND organization_id NOT IN (SELECT organization_id FROM (SELECT DISTINCT organization_id FROM maintenance_locations WHERE is_residential = 1) AS already_flagged);
+
+-- संगीत: वाद्य कोणाकडे आहे — Staff असेल तर current_holder_id, इतर (विद्यार्थी इ.) नाव इथे; आधी हे remarks मध्ये लिहिलं जायचं
+ALTER TABLE music_instruments ADD COLUMN current_holder_name VARCHAR(255) NULL AFTER current_holder_id;
+UPDATE music_instruments SET current_holder_name = TRIM(REPLACE(REPLACE(remarks, 'सध्या: ', ''), ' कडे', '')), remarks = NULL WHERE remarks LIKE 'सध्या: % कडे' AND current_holder_name IS NULL;
+
+-- कार्यक्रम उपस्थिती — एकाच कर्मचाऱ्याची/विद्यार्थ्याची दुहेरी नोंद नको (Guest साठी user_id/student_id NULL — लागू होत नाही)
+ALTER TABLE event_attendance ADD UNIQUE KEY uniq_event_staff (event_id, user_id);
+ALTER TABLE event_attendance ADD UNIQUE KEY uniq_event_student (event_id, student_id);
+
+-- ============================================================
+-- FROM: migration-task-verification.sql
+-- ============================================================
+-- टास्क — Assign करणाऱ्याकडून रद्द करणे (cancelled) आणि पूर्ण टास्कची पडताळणी/पुन्हा उघडणे
+ALTER TABLE tasks MODIFY COLUMN status ENUM('pending','in_progress','completed','cancelled') DEFAULT 'pending';
+ALTER TABLE tasks ADD COLUMN verified_at DATETIME NULL AFTER cost_incurred;
+ALTER TABLE tasks ADD COLUMN verified_by INT NULL AFTER verified_at;
+ALTER TABLE tasks ADD COLUMN verification_remarks TEXT NULL AFTER verified_by;
+
+-- ============================================================
+-- FROM: migration-module-merge.sql
+-- ============================================================
+-- ============================================================
+-- Migration: Duplicate Modules एकत्र करणे
+--  1. Asset Checkout → Asset Allocation ("Issue / Return Register")
+--  2. विभाग Budget + Material Purchase → एकच "विभाग Finance" (एकच खर्च-Ledger)
+--  3. Restricted-Mode Roles मधले जुने Module-Keys नवीन Keys ने बदलणे
+-- कितीही वेळा चालवली तरी सुरक्षित — प्रत्येक Data-INSERT "NOT EXISTS" ने तपासलेला आहे.
+-- जुन्या checkout_items / checkout_logs Tables काढलेल्या नाहीत (फक्त वापर बंद).
+-- ============================================================
+
+-- ---------- 1. Allocation: Loan (उसनं) Types + वस्तू-Master + Return नोंद ----------
+ALTER TABLE asset_allocation_types
+  ADD COLUMN is_loan TINYINT(1) DEFAULT 0,
+  ADD COLUMN legacy_checkout_category VARCHAR(150) NULL;
+
+CREATE TABLE asset_items (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  organization_id INT NOT NULL,
+  type_id INT NOT NULL,
+  campus_id INT NULL,
+  name VARCHAR(255) NOT NULL,
+  default_location VARCHAR(150) NULL,
+  is_active TINYINT(1) DEFAULT 1,
+  legacy_checkout_item_id INT NULL,
+  created_by INT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+  FOREIGN KEY (type_id) REFERENCES asset_allocation_types(id) ON DELETE CASCADE,
+  FOREIGN KEY (campus_id) REFERENCES campuses(id) ON DELETE SET NULL,
+  FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+  UNIQUE KEY uniq_legacy_checkout_item (legacy_checkout_item_id),
+  INDEX idx_org_type (organization_id, type_id)
+) ENGINE=InnoDB;
+
+ALTER TABLE asset_allocations
+  MODIFY campus_id INT NULL,
+  ADD COLUMN item_id INT NULL,
+  ADD COLUMN purpose VARCHAR(255) NULL,
+  ADD COLUMN allocated_at DATETIME NULL,
+  ADD COLUMN due_at DATETIME NULL,
+  ADD COLUMN returned_at DATETIME NULL,
+  ADD COLUMN returned_to INT NULL,
+  ADD COLUMN legacy_checkout_log_id INT NULL,
+  ADD UNIQUE KEY uniq_legacy_checkout_log (legacy_checkout_log_id),
+  ADD INDEX idx_item_active (item_id, unallocated_date),
+  ADD FOREIGN KEY (item_id) REFERENCES asset_items(id) ON DELETE SET NULL,
+  ADD FOREIGN KEY (returned_to) REFERENCES users(id) ON DELETE SET NULL;
+
+-- आधीच्या Allocations मधल्या "वस्तूचं नाव" (asset_label) वरून वस्तू-Master तयार करतो
+INSERT INTO asset_items (organization_id, type_id, campus_id, name, is_active, created_by)
+SELECT aa.organization_id, aa.type_id, MIN(aa.campus_id), aa.asset_label, 1, MIN(aa.allocated_by)
+FROM asset_allocations aa
+WHERE aa.asset_label IS NOT NULL AND aa.asset_label <> '' AND aa.item_id IS NULL AND aa.legacy_checkout_log_id IS NULL
+  AND NOT EXISTS (SELECT 1 FROM asset_items ai WHERE ai.organization_id = aa.organization_id AND ai.type_id = aa.type_id AND ai.name COLLATE utf8mb4_unicode_ci = aa.asset_label COLLATE utf8mb4_unicode_ci)
+GROUP BY aa.organization_id, aa.type_id, aa.asset_label;
+
+UPDATE asset_allocations aa
+JOIN asset_items ai ON ai.organization_id = aa.organization_id AND ai.type_id = aa.type_id AND ai.name COLLATE utf8mb4_unicode_ci = aa.asset_label COLLATE utf8mb4_unicode_ci
+SET aa.item_id = ai.id
+WHERE aa.item_id IS NULL AND aa.asset_label IS NOT NULL AND aa.asset_label <> '';
+
+-- Checkout वस्तूंच्या प्रत्येक "प्रकार" (category) साठी एक Loan-Type
+INSERT INTO asset_allocation_types (organization_id, name, icon, is_active, is_loan, legacy_checkout_category, created_by)
+SELECT ci.organization_id, COALESCE(NULLIF(TRIM(ci.category), ''), 'Checkout वस्तू'), 'fa-solid fa-key', 1, 1, COALESCE(NULLIF(TRIM(ci.category), ''), 'Checkout वस्तू'), MIN(ci.created_by)
+FROM checkout_items ci
+WHERE NOT EXISTS (
+  SELECT 1 FROM asset_allocation_types t
+  WHERE t.organization_id = ci.organization_id AND t.legacy_checkout_category = COALESCE(NULLIF(TRIM(ci.category), ''), 'Checkout वस्तू')
+)
+GROUP BY ci.organization_id, COALESCE(NULLIF(TRIM(ci.category), ''), 'Checkout वस्तू');
+
+-- Checkout वस्तू → वस्तू-Master
+INSERT INTO asset_items (organization_id, type_id, campus_id, name, default_location, is_active, legacy_checkout_item_id, created_by, created_at)
+SELECT ci.organization_id, t.id, ci.campus_id, ci.name, ci.default_location, ci.is_active, ci.id, ci.created_by, ci.created_at
+FROM checkout_items ci
+JOIN asset_allocation_types t ON t.organization_id = ci.organization_id AND t.legacy_checkout_category = COALESCE(NULLIF(TRIM(ci.category), ''), 'Checkout वस्तू')
+WHERE NOT EXISTS (SELECT 1 FROM asset_items ai WHERE ai.legacy_checkout_item_id = ci.id);
+
+-- Checkout Log → Allocation History (कोणी घेतलं, कधी, मुदत, कधी परत आलं, कोणी परत घेतलं)
+INSERT INTO asset_allocations (organization_id, type_id, campus_id, user_id, item_id, asset_label, purpose, allocated_date, allocated_at, due_at, unallocated_date, returned_at, returned_to, unallocated_reason, allocated_by, legacy_checkout_log_id, created_at)
+SELECT ai.organization_id, ai.type_id, ai.campus_id, cl.borrowed_by, ai.id, ai.name, cl.purpose, DATE(cl.checkout_at), cl.checkout_at, cl.expected_return_at, DATE(cl.actual_return_at), cl.actual_return_at, cl.returned_to, cl.remarks, cl.issued_by, cl.id, cl.checkout_at
+FROM checkout_logs cl
+JOIN asset_items ai ON ai.legacy_checkout_item_id = cl.item_id
+WHERE NOT EXISTS (SELECT 1 FROM asset_allocations aa WHERE aa.legacy_checkout_log_id = cl.id);
+
+-- ---------- 2. एकच खर्च-Ledger (budget_transactions) ----------
+ALTER TABLE budget_transactions
+  MODIFY category ENUM('नवीन खरेदी','देखभाल','इंधन','नूतनीकरण','इतर') NOT NULL,
+  ADD COLUMN spend_date DATE NULL,
+  ADD INDEX idx_source_ref (source_module, reference_id);
+
+-- जुन्या नोंदींसाठी — खर्चाचा खरा दिनांक भरतो
+UPDATE budget_transactions bt JOIN dead_stock_items ds ON ds.id = bt.reference_id
+SET bt.spend_date = COALESCE(ds.purchase_date, DATE(ds.created_at))
+WHERE bt.source_module = 'dead_stock' AND bt.spend_date IS NULL;
+
+UPDATE budget_transactions bt JOIN maintenance_logs ml ON ml.id = bt.reference_id
+SET bt.spend_date = ml.work_date
+WHERE bt.source_module = 'maintenance' AND bt.spend_date IS NULL;
+
+-- वाहन इंधन/देखभाल: आधी reference_id मध्ये वाहनाचा ID जात होता — योग्य Log-ID शोधून दुरुस्त करतो
+UPDATE budget_transactions bt
+JOIN vehicle_fuel_log f ON f.vehicle_id = bt.reference_id AND f.cost = bt.amount AND ABS(TIMESTAMPDIFF(SECOND, f.created_at, bt.created_at)) <= 300
+SET bt.reference_id = f.id, bt.source_module = 'vehicle_fuel_log', bt.spend_date = f.fill_date
+WHERE bt.source_module = 'vehicle_fuel';
+
+UPDATE budget_transactions bt
+JOIN vehicle_maintenance vm ON vm.vehicle_id = bt.reference_id AND vm.cost = bt.amount AND ABS(TIMESTAMPDIFF(SECOND, vm.created_at, bt.created_at)) <= 300
+SET bt.reference_id = vm.id, bt.source_module = 'vehicle_maintenance_log', bt.spend_date = vm.maintenance_date
+WHERE bt.source_module = 'vehicle_maintenance';
+
+UPDATE budget_transactions SET spend_date = DATE(created_at) WHERE spend_date IS NULL;
+
+-- आर्थिक वर्ष "आज" वरून नाही — खर्चाच्या दिनांकावरून
+UPDATE budget_transactions SET financial_year = IF(MONTH(spend_date) >= 4, YEAR(spend_date), YEAR(spend_date) - 1) WHERE spend_date IS NOT NULL;
+
+-- Material Purchase — आत्तापर्यंत फक्त Payment-Ledger मध्ये होत्या; Budget-Ledger मध्ये एकदाच नोंदवतो
+INSERT INTO budget_transactions (organization_id, department_id, financial_year, amount, category, source_module, reference_id, description, created_by, spend_date, created_at)
+SELECT p.organization_id, p.department_id, IF(MONTH(p.purchase_date) >= 4, YEAR(p.purchase_date), YEAR(p.purchase_date) - 1), p.total_amount, 'नवीन खरेदी', 'material_purchase', p.id, LEFT(CONCAT(p.material_name, ' — ', p.vendor_name), 255), p.created_by, p.purchase_date, p.created_at
+FROM dept_material_purchases p
+WHERE p.total_amount > 0
+  AND NOT EXISTS (SELECT 1 FROM budget_transactions bt WHERE bt.source_module = 'material_purchase' AND bt.reference_id = p.id);
+
+-- Renewal Payments — प्रत्येक Payment एकदाच खर्च म्हणून
+INSERT INTO budget_transactions (organization_id, department_id, financial_year, amount, category, source_module, reference_id, description, created_by, spend_date, created_at)
+SELECT l.organization_id, l.department_id, IF(MONTH(l.payment_date) >= 4, YEAR(l.payment_date), YEAR(l.payment_date) - 1), l.amount, 'नूतनीकरण', 'renewal_payment', l.id, LEFT(CONCAT('नूतनीकरण Payment — ', COALESCE(ri.item_name, '')), 255), l.recorded_by, l.payment_date, l.created_at
+FROM dept_payment_ledger l
+LEFT JOIN renewal_items ri ON ri.id = l.source_id
+WHERE l.source_type = 'renewal' AND l.amount > 0
+  AND NOT EXISTS (SELECT 1 FROM budget_transactions bt WHERE bt.source_module = 'renewal_payment' AND bt.reference_id = l.id);
+
+-- ---------- 3. Restricted-Mode Roles — काढलेले Module-Keys ----------
+UPDATE role_definitions SET restricted_modules = TRIM(BOTH ',' FROM REPLACE(CONCAT(',', restricted_modules, ','), ',checkout,', ',allocations,')) WHERE restricted_modules LIKE '%checkout%';
+UPDATE role_definitions SET restricted_modules = TRIM(BOTH ',' FROM REPLACE(CONCAT(',', restricted_modules, ','), ',budget,', ',dept-finance,')) WHERE restricted_modules LIKE '%budget%';
+
+UPDATE permissions SET label_local = 'Asset Issue/Return (उसनं) व्यवस्थापन' WHERE permission_key = 'manage_checkout';
+UPDATE permissions SET label_local = 'विभाग Finance — Material Purchase व Payment' WHERE permission_key = 'manage_dept_finance';
+
+-- ============================================================
+-- FROM: migration-notifications-tickets-sos.sql
+-- ============================================================
+-- ============================================================
+-- Migration: सूचना Push-Queue, एकत्रित विनंती (Ticket) प्रणाली + SLA,
+-- तक्रार निवारण सुधारणा, आणीबाणी (SOS) प्रतिसाद, परिपत्रक Edit/Pin/मुदत
+-- कितीही वेळा चालवली तरी सुरक्षित (Runner: dbmRunMigrationFile)
+-- ============================================================
+
+-- ---------------- 1. Push Queue ----------------
+CREATE TABLE notification_push_queue (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  organization_id INT NOT NULL,
+  user_id INT NOT NULL,
+  notification_id INT NULL,
+  title VARCHAR(255) NOT NULL,
+  message TEXT NULL,
+  link VARCHAR(255) NULL,
+  is_urgent TINYINT(1) NOT NULL DEFAULT 0,
+  status ENUM('pending','sending','sent','failed') NOT NULL DEFAULT 'pending',
+  attempts TINYINT NOT NULL DEFAULT 0,
+  locked_at DATETIME NULL,
+  sent_at DATETIME NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_queue_status (status, is_urgent, id),
+  FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+ALTER TABLE notifications
+  ADD INDEX idx_read_created (is_read, created_at);
+
+-- ---------------- 2. एकत्रित विनंती (work_requests = एकमेव Ticket Table) ----------------
+ALTER TABLE work_requests
+  MODIFY department_id INT NULL,
+  MODIFY status ENUM('pending','in_progress','completed','closed','cancelled') DEFAULT 'pending',
+  ADD COLUMN category VARCHAR(30) NOT NULL DEFAULT 'general' AFTER department_id,
+  ADD COLUMN sub_category VARCHAR(50) NULL AFTER category,
+  ADD COLUMN title VARCHAR(255) NULL AFTER sub_category,
+  ADD COLUMN location VARCHAR(255) NULL AFTER title,
+  ADD COLUMN priority ENUM('low','normal','high','urgent') NOT NULL DEFAULT 'normal' AFTER location,
+  ADD COLUMN due_at DATETIME NULL AFTER priority,
+  ADD COLUMN escalation_level TINYINT NOT NULL DEFAULT 0,
+  ADD COLUMN escalated_at DATETIME NULL,
+  ADD COLUMN rating TINYINT NULL,
+  ADD COLUMN feedback TEXT NULL,
+  ADD COLUMN closed_at DATETIME NULL,
+  ADD COLUMN cancelled_at DATETIME NULL,
+  ADD COLUMN reopened_count INT NOT NULL DEFAULT 0,
+  ADD COLUMN legacy_it_request_id INT NULL COMMENT 'जुन्या it_general_requests.id — स्थलांतर शोधण्यासाठी',
+  ADD UNIQUE KEY uniq_legacy_it (legacy_it_request_id),
+  ADD INDEX idx_org_category_status (organization_id, category, status),
+  ADD INDEX idx_status_due (status, due_at);
+
+ALTER TABLE work_request_actions
+  MODIFY action_type ENUM('created','status_changed','assigned','comment','reopened','closed','cancelled','escalated') NOT NULL;
+
+CREATE TABLE work_request_comments (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  request_id INT NOT NULL,
+  user_id INT NULL,
+  comment TEXT NOT NULL,
+  legacy_it_comment_id INT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_legacy_it_comment (legacy_it_comment_id),
+  INDEX idx_request (request_id),
+  FOREIGN KEY (request_id) REFERENCES work_requests(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB;
+
+-- जुन्या IT Requests → work_requests (category = 'it'); मूळ Table जशीच्या तशी (Archive) राहते
+INSERT INTO work_requests (request_code, organization_id, department_id, category, sub_category, title, location, priority, requester_name, requester_contact, requested_by_user_id, requesting_department_id, assigned_to_user_id, work_description, completion_remarks, status, completed_by, completed_at, closed_at, created_at, legacy_it_request_id)
+SELECT
+  IF(EXISTS(SELECT 1 FROM work_requests w2 WHERE w2.request_code = r.request_code), CONCAT(r.request_code, '-L', r.id), r.request_code),
+  r.organization_id,
+  (SELECT d.id FROM departments d WHERE d.organization_id = r.organization_id AND d.code = 'IT' ORDER BY d.id LIMIT 1),
+  'it', r.category, r.title, r.location, r.priority,
+  COALESCE(u.name, '—'), u.mobile, r.requested_by, r.department_id, r.assigned_to, r.description, r.resolution_notes,
+  CASE r.status WHEN 'in_progress' THEN 'in_progress' WHEN 'resolved' THEN 'completed' WHEN 'closed' THEN 'closed' ELSE 'pending' END,
+  r.resolved_by, r.resolved_at, IF(r.status = 'closed', r.resolved_at, NULL), r.created_at, r.id
+FROM it_general_requests r LEFT JOIN users u ON u.id = r.requested_by
+WHERE NOT EXISTS (SELECT 1 FROM work_requests w WHERE w.legacy_it_request_id = r.id);
+
+INSERT INTO work_request_comments (request_id, user_id, comment, legacy_it_comment_id, created_at)
+SELECT w.id, c.commented_by, c.comment, c.id, c.created_at
+FROM it_general_request_comments c JOIN work_requests w ON w.legacy_it_request_id = c.request_id
+WHERE NOT EXISTS (SELECT 1 FROM work_request_comments x WHERE x.legacy_it_comment_id = c.id);
+
+INSERT INTO work_request_actions (request_id, action_type, new_status, remark, changed_by, created_at)
+SELECT w.id, 'created', w.status, 'जुन्या IT Request मधून स्थलांतरित', w.requested_by_user_id, w.created_at
+FROM work_requests w
+WHERE w.legacy_it_request_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM work_request_actions a WHERE a.request_id = w.id);
+
+-- SLA मुदत — जुन्या नोंदींसाठी (urgent 8 तास, high 1 दिवस, normal 3, low 7)
+UPDATE work_requests SET due_at = DATE_ADD(created_at, INTERVAL (CASE priority WHEN 'urgent' THEN 8 WHEN 'high' THEN 24 WHEN 'low' THEN 168 ELSE 72 END) HOUR) WHERE due_at IS NULL;
+
+-- ---------------- 3. तक्रार निवारण ----------------
+ALTER TABLE grievances
+  MODIFY submitted_by INT NULL,
+  ADD COLUMN submitter_hash CHAR(64) NULL COMMENT 'गुप्त तक्रारीसाठी — व्यक्तीचा ID न ठेवता HMAC',
+  ADD COLUMN escalated_at DATETIME NULL,
+  ADD COLUMN reopened_count INT NOT NULL DEFAULT 0,
+  ADD INDEX idx_submitter_hash (submitter_hash);
+
+CREATE TABLE grievance_comments (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  grievance_id INT NOT NULL,
+  user_id INT NULL COMMENT 'गुप्त तक्रारदाराची टिप्पणी असेल तर NULL',
+  author_role ENUM('submitter','handler') NOT NULL,
+  comment TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_grievance (grievance_id),
+  FOREIGN KEY (grievance_id) REFERENCES grievances(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB;
+
+-- ---------------- 4. आणीबाणी (SOS) ----------------
+ALTER TABLE emergency_alerts
+  ADD COLUMN campus_id INT NULL AFTER triggered_by,
+  ADD COLUMN latitude DECIMAL(10,7) NULL,
+  ADD COLUMN longitude DECIMAL(10,7) NULL,
+  ADD COLUMN first_ack_at DATETIME NULL,
+  ADD COLUMN escalated_at DATETIME NULL,
+  ADD COLUMN resolution_remark TEXT NULL,
+  ADD INDEX idx_user_created (triggered_by, created_at);
+
+CREATE TABLE emergency_alert_recipients (
+  alert_id INT NOT NULL,
+  user_id INT NOT NULL,
+  notified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (alert_id, user_id),
+  FOREIGN KEY (alert_id) REFERENCES emergency_alerts(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE emergency_alert_responses (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  alert_id INT NOT NULL,
+  user_id INT NOT NULL,
+  responded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_alert_user (alert_id, user_id),
+  FOREIGN KEY (alert_id) REFERENCES emergency_alerts(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- ---------------- 5. परिपत्रक ----------------
+ALTER TABLE announcements
+  ADD COLUMN is_pinned TINYINT(1) NOT NULL DEFAULT 0,
+  ADD COLUMN expires_at DATE NULL,
+  ADD COLUMN withdrawn_at DATETIME NULL,
+  ADD COLUMN withdrawn_by INT NULL,
+  ADD COLUMN updated_at DATETIME NULL;

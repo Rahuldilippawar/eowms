@@ -46,11 +46,20 @@ function updateCopyRecursive($src, $dest, $baseRelative = '') {
 /** Staging Folder पूर्णपणे रिकामी करते (पुढच्या Update साठी जागा मोकळी) */
 function updateClearDir($dir) {
     if (!is_dir($dir)) return;
+    // update-staging चा .htaccess (Browser मधून थेट प्रवेश बंद) कधीच काढायचा नाही
+    $isStagingRoot = basename(realpath($dir)) === 'update-staging';
     $items = scandir($dir);
     foreach ($items as $item) {
         if ($item === '.' || $item === '..') continue;
+        if ($isStagingRoot && $item === '.htaccess') continue;
         $path = $dir . '/' . $item;
         if (is_dir($path)) { updateClearDir($path); rmdir($path); } else { unlink($path); }
+    }
+    if ($isStagingRoot) {
+        $ht = $dir . '/.htaccess';
+        if (!is_file($ht) || strpos((string)file_get_contents($ht), 'Require all denied') === false) {
+            file_put_contents($ht, "Require all denied\n<IfModule !mod_authz_core.c>\nDeny from all\n</IfModule>\n");
+        }
     }
 }
 

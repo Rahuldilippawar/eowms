@@ -15,9 +15,20 @@ if ($q !== '') {
     $stmt->execute([$orgId, $like, $like, $like]);
     $results['employees'] = $stmt->fetchAll();
 
+    // विभाग-मर्यादित (Staff/HOD) व्यक्तीला फक्त स्वतःच्या/परवानगी असलेल्या विभागांचीच
+    // कामं, Tasks आणि नूतनीकरणं दिसावीत — बाकी Modules प्रमाणेच (null = सगळे)
+    $visibleDeptIds = getVisibleDepartmentIds('view_org_wide_dashboards');
+    $deptFilterSql = '';
+    $deptFilterParams = [];
+    if ($visibleDeptIds !== null) {
+        $visibleDeptIds = $visibleDeptIds ?: [0];
+        $deptFilterSql = ' IN (' . implode(',', array_fill(0, count($visibleDeptIds), '?')) . ')';
+        $deptFilterParams = $visibleDeptIds;
+    }
+
     // Work records (by code or title)
-    $stmt = $pdo->prepare("SELECT wr.*, d.name_local AS dept_name FROM work_records wr JOIN departments d ON d.id = wr.department_id WHERE wr.organization_id = ? AND (wr.work_code LIKE ? OR wr.title LIKE ?) ORDER BY wr.work_date DESC LIMIT 15");
-    $stmt->execute([$orgId, $like, $like]);
+    $stmt = $pdo->prepare("SELECT wr.*, d.name_local AS dept_name FROM work_records wr JOIN departments d ON d.id = wr.department_id WHERE wr.organization_id = ? AND (wr.work_code LIKE ? OR wr.title LIKE ?)" . ($deptFilterSql ? " AND wr.department_id$deptFilterSql" : '') . " ORDER BY wr.work_date DESC LIMIT 15");
+    $stmt->execute(array_merge([$orgId, $like, $like], $deptFilterParams));
     $results['work_records'] = $stmt->fetchAll();
 
     // Departments
@@ -26,13 +37,14 @@ if ($q !== '') {
     $results['departments'] = $stmt->fetchAll();
 
     // Renewals
-    $stmt = $pdo->prepare("SELECT r.*, d.name_local AS dept_name FROM renewal_items r JOIN departments d ON d.id = r.department_id WHERE r.organization_id = ? AND r.item_name LIKE ? LIMIT 10");
-    $stmt->execute([$orgId, $like]);
+    $stmt = $pdo->prepare("SELECT r.*, d.name_local AS dept_name FROM renewal_items r JOIN departments d ON d.id = r.department_id WHERE r.organization_id = ? AND r.status <> 'inactive' AND r.item_name LIKE ?" . ($deptFilterSql ? " AND r.department_id$deptFilterSql" : '') . " LIMIT 10");
+    $stmt->execute(array_merge([$orgId, $like], $deptFilterParams));
     $results['renewals'] = $stmt->fetchAll();
 
     // Tasks
-    $stmt = $pdo->prepare("SELECT t.*, u.name AS assignee_name FROM tasks t JOIN users u ON u.id = t.assigned_to WHERE t.organization_id = ? AND (t.title LIKE ? OR t.task_code LIKE ?) LIMIT 10");
-    $stmt->execute([$orgId, $like, $like]);
+    // (स्वतःला दिलेले / स्वतः दिलेले Tasks नेहमी दिसतात)
+    $stmt = $pdo->prepare("SELECT t.*, u.name AS assignee_name FROM tasks t JOIN users u ON u.id = t.assigned_to WHERE t.organization_id = ? AND (t.title LIKE ? OR t.task_code LIKE ?)" . ($deptFilterSql ? " AND (t.department_id$deptFilterSql OR t.assigned_to = ? OR t.assigned_by = ?)" : '') . " LIMIT 10");
+    $stmt->execute(array_merge([$orgId, $like, $like], $deptFilterParams, $deptFilterSql ? [$user['id'], $user['id']] : []));
     $results['tasks'] = $stmt->fetchAll();
 
     // Letters / Files — only ones this user can actually access

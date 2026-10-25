@@ -4,27 +4,34 @@ $rootPath = '../';
 require_once __DIR__ . '/../includes/header.php';
 
 $status = $_GET['status'] ?? 'all';
+if (!in_array($status, ['all', 'pending', 'in_progress', 'completed', 'cancelled'], true)) { $status = 'all'; }
 
-$sql = "SELECT t.*, u.name AS assigner_name FROM tasks t JOIN users u ON u.id = t.assigned_by WHERE t.assigned_to = ?";
-$params = [$user['id']];
+$sql = "SELECT t.*, u.name AS assigner_name FROM tasks t JOIN users u ON u.id = t.assigned_by WHERE t.assigned_to = ? AND t.organization_id = ?";
+$params = [$user['id'], activeOrgId()];
 if ($status !== 'all') { $sql .= " AND t.status = ?"; $params[] = $status; }
 $sql .= " ORDER BY t.target_date";
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $tasks = $stmt->fetchAll();
 
-$statusLabels = ['pending' => 'प्रलंबित', 'in_progress' => 'सुरू आहे', 'completed' => 'पूर्ण झाले'];
-$statusChip = ['pending' => 'pending', 'in_progress' => 'pending', 'completed' => 'done'];
+$statusLabels = ['pending' => 'प्रलंबित', 'in_progress' => 'सुरू आहे', 'completed' => 'पूर्ण झाले', 'cancelled' => 'रद्द केले'];
+$statusChip = ['pending' => 'pending', 'in_progress' => 'pending', 'completed' => 'done', 'cancelled' => 'overdue'];
 ?>
 
 <div class="page-eyebrow"><?= h($user['designation']) ?></div>
-<div class="page-title"><?= h(t('s206')) ?></div>
+<div class="d-flex justify-content-between align-items-start mb-1">
+  <div class="page-title mb-0"><?= h(t('s206')) ?></div>
+  <?php if (hasPermission('assign_tasks') || hasPermission('view_task_tracker')): ?>
+    <a href="index.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13px;padding:9px 16px;"><i class="fa-solid fa-list-check me-1"></i>टास्क ट्रॅकर</a>
+  <?php endif; ?>
+</div>
 
 <div class="period-toggle mb-3">
   <a href="?status=all" class="period-btn <?= $status === 'all' ? 'active' : '' ?>"><?= h(t('s19')) ?></a>
   <a href="?status=pending" class="period-btn <?= $status === 'pending' ? 'active' : '' ?>"><?= h(t('s7')) ?></a>
   <a href="?status=in_progress" class="period-btn <?= $status === 'in_progress' ? 'active' : '' ?>"><?= h(t('s9')) ?></a>
   <a href="?status=completed" class="period-btn <?= $status === 'completed' ? 'active' : '' ?>"><?= h(t('s10')) ?></a>
+  <a href="?status=cancelled" class="period-btn <?= $status === 'cancelled' ? 'active' : '' ?>">रद्द</a>
 </div>
 
 <div class="row g-3">
@@ -32,9 +39,10 @@ $statusChip = ['pending' => 'pending', 'in_progress' => 'pending', 'completed' =
     <div class="col-12"><div class="panel" style="padding:30px;text-align:center;color:var(--text-dim);"><?= h(t('s83')) ?></div></div>
   <?php endif; ?>
   <?php foreach ($tasks as $task):
-    $isOverdue = strtotime($task['target_date']) < strtotime(date('Y-m-d')) && $task['status'] !== 'completed';
-    $chip = $isOverdue && $task['status'] !== 'completed' ? 'overdue' : $statusChip[$task['status']];
-    $chipText = $isOverdue && $task['status'] !== 'completed' ? 'मुदत संपली' : $statusLabels[$task['status']];
+    $isOverdue = strtotime($task['target_date']) < strtotime(date('Y-m-d')) && !in_array($task['status'], ['completed', 'cancelled'], true);
+    $chip = $isOverdue ? 'overdue' : $statusChip[$task['status']];
+    $chipText = $isOverdue ? 'मुदत संपली' : $statusLabels[$task['status']];
+    if ($task['status'] === 'completed' && !empty($task['verified_at'])) { $chipText .= ' ✔ पडताळले'; }
   ?>
     <div class="col-md-6">
       <div class="panel h-100">
@@ -56,7 +64,12 @@ $statusChip = ['pending' => 'pending', 'in_progress' => 'pending', 'completed' =
             &nbsp;·&nbsp; असाइन केले: <?= h($task['assigner_name']) ?>
           </div>
 
-          <?php if ($task['status'] !== 'completed'): ?>
+          <?php if (!empty($task['verification_remarks'])): ?>
+            <div style="font-size:12px;color:var(--amber);margin-bottom:8px;">💬 <?= h($task['assigner_name']) ?>: <?= h($task['verification_remarks']) ?></div>
+          <?php endif; ?>
+          <?php if ($task['status'] === 'cancelled'): ?>
+            <div style="font-size:12px;color:var(--rose);font-weight:600;">✖ हा टास्क रद्द केला गेला आहे.</div>
+          <?php elseif ($task['status'] !== 'completed'): ?>
             <form method="POST" action="update-status.php">
               <input type="hidden" name="task_id" value="<?= $task['id'] ?>">
               <div class="d-flex gap-2 mb-2">

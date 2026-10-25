@@ -32,21 +32,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     } elseif ($action === 'log') {
         $instrumentId = (int)($_POST['instrument_id'] ?? 0);
-        $logType = $_POST['log_type'] ?? '';
+        $logType = in_array($_POST['log_type'] ?? '', ['issued', 'returned', 'tuned', 'repaired'], true) ? $_POST['log_type'] : '';
         $holderName = trim($_POST['holder_name'] ?? '');
+        $holderUserId = (int)($_POST['holder_user_id'] ?? 0) ?: null;
         $remarks = trim($_POST['remarks'] ?? '');
 
-        $ownStmt = $pdo->prepare("SELECT id FROM music_instruments WHERE id = ? AND organization_id = ?");
+        $ownStmt = $pdo->prepare("SELECT id, current_holder_id, current_holder_name FROM music_instruments WHERE id = ? AND organization_id = ?");
         $ownStmt->execute([$instrumentId, $orgId]);
-        if (!$ownStmt->fetch()) { header('Location: instruments.php'); exit; }
+        $instRow = $ownStmt->fetch();
+        if (!$instRow || !$logType) { header('Location: instruments.php'); exit; }
+
+        if ($holderUserId) {
+            $huStmt = $pdo->prepare("SELECT name FROM users WHERE id = ? AND organization_id = ? AND is_active = 1");
+            $huStmt->execute([$holderUserId, $orgId]);
+            $huName = $huStmt->fetchColumn();
+            if ($huName === false) { $holderUserId = null; } elseif ($holderName === '') { $holderName = $huName; }
+        }
+        $isIssued = !empty($instRow['current_holder_id']) || !empty($instRow['current_holder_name']);
+        if ($logType === 'issued' && ($isIssued || $holderName === '')) {
+            $_SESSION['flash'] = $isIssued ? '⚠️ हे वाद्य आधीच कोणाकडे तरी दिलेलं आहे — आधी परत घ्या.' : '⚠️ कोणाला दिलं ते निवडा/लिहा.';
+            header('Location: instruments.php');
+            exit;
+        }
+        if ($logType === 'returned' && !$isIssued) {
+            $_SESSION['flash'] = '⚠️ हे वाद्य सध्या कोणाकडेही दिलेलं नाही.';
+            header('Location: instruments.php');
+            exit;
+        }
+        if ($logType === 'returned' && $holderName === '') { $holderName = (string)$instRow['current_holder_name']; }
 
         $pdo->prepare("INSERT INTO music_instrument_log (instrument_id, action_type, holder_name, remarks, logged_by) VALUES (?, ?, ?, ?, ?)")
             ->execute([$instrumentId, $logType, $holderName, $remarks, $user['id']]);
 
+        // सध्या कोणाकडे — current_holder_id (Staff) / current_holder_name; वाद्याचा "remarks" तसाच राहतो
         if ($logType === 'issued') {
-            $pdo->prepare("UPDATE music_instruments SET remarks = ? WHERE id = ? AND organization_id = ?")->execute(["सध्या: $holderName कडे", $instrumentId, $orgId]);
+            $pdo->prepare("UPDATE music_instruments SET current_holder_id = ?, current_holder_name = ? WHERE id = ? AND organization_id = ?")->execute([$holderUserId, $holderName, $instrumentId, $orgId]);
         } elseif ($logType === 'returned') {
-            $pdo->prepare("UPDATE music_instruments SET remarks = NULL WHERE id = ? AND organization_id = ?")->execute([$instrumentId, $orgId]);
+            $pdo->prepare("UPDATE music_instruments SET current_holder_id = NULL, current_holder_name = NULL WHERE id = ? AND organization_id = ?")->execute([$instrumentId, $orgId]);
         } elseif ($logType === 'tuned') {
             $pdo->prepare("UPDATE music_instruments SET last_tuned_date = CURDATE(), condition_status = 'good' WHERE id = ? AND organization_id = ?")->execute([$instrumentId, $orgId]);
         } elseif ($logType === 'repaired') {
@@ -55,7 +77,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['flash'] = 'नोंद जतन झाली.';
     } elseif ($action === 'update_status') {
         $instrumentId = (int)($_POST['instrument_id'] ?? 0);
-        $status = $_POST['condition_status'] ?? 'good';
+        $status = in_array($_POST['condition_status'] ?? '', ['excellent', 'good', 'needs_tuning', 'under_repair', 'damaged'], true) ? $_POST['condition_status'] : 'good';
         $pdo->prepare("UPDATE music_instruments SET condition_status = ? WHERE id = ? AND organization_id = ?")->execute([$status, $instrumentId, $orgId]);
         $_SESSION['flash'] = 'स्थिती अद्ययावत केली.';
     }
@@ -66,6 +88,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $pageTitle = 'वाद्य-साहित्य Inventory';
 $rootPath = '../';
 require_once __DIR__ . '/../includes/header.php';
+
+$holderStaffStmt = $pdo->prepare("SELECT id, name FROM users WHERE organization_id = ? AND is_active = 1 ORDER BY name");
+$holderStaffStmt->execute([$orgId]);
+$orgStaffForHolder = $holderStaffStmt->fetchAll();
 
 $stmt = $pdo->prepare("SELECT mi.*, u.name AS holder_name FROM music_instruments mi LEFT JOIN users u ON u.id = mi.current_holder_id WHERE mi.organization_id = ? AND mi.is_active = 1 ORDER BY mi.instrument_name");
 $stmt->execute([$orgId]);
@@ -117,7 +143,7 @@ $statusChips = ['excellent' => 'done', 'good' => 'done', 'needs_tuning' => 'pend
             <form method="POST" id="statusForm<?= $i['id'] ?>"><input type="hidden" name="action" value="update_status"><input type="hidden" name="instrument_id" value="<?= $i['id'] ?>"></form>
           </td>
           <td><?= $i['last_tuned_date'] ? date('d M Y', strtotime($i['last_tuned_date'])) : '—' ?></td>
-          <td style="font-size:11.5px;"><?= h($i['remarks'] ?: '—') ?></td>
+          <td style="font-size:11.5px;"><?= h($i['holder_name'] ?: ($i['current_holder_name'] ?: '—')) ?><?php if ($i['remarks']): ?><div style="font-size:10px;color:var(--text-dim);"><?= h($i['remarks']) ?></div><?php endif; ?></td>
           <td>
             <button type="button" class="btn btn-sm" style="border:1px solid var(--line);border-radius:7px;font-size:11px;padding:4px 10px;" data-bs-toggle="modal" data-bs-target="#logModal<?= $i['id'] ?>">नोंद करा</button>
           </td>
@@ -135,8 +161,12 @@ $statusChips = ['excellent' => 'done', 'good' => 'done', 'needs_tuning' => 'pend
                   <option value="tuned">🎵 Tuning केली</option>
                   <option value="repaired">🔧 दुरुस्त केली</option>
                 </select>
-                <label class="form-label-custom">कोणाला/कोणी (Issued असल्यास)</label>
-                <input type="text" name="holder_name" class="form-control-custom mb-3">
+                <label class="form-label-custom">कोणाला (Issued असल्यास) — कर्मचारी</label>
+                <select name="holder_user_id" class="form-select-custom mb-2">
+                  <option value="">-- कर्मचारी नाही / खाली नाव लिहा --</option>
+                  <?php foreach ($orgStaffForHolder as $st): ?><option value="<?= $st['id'] ?>"><?= h($st['name']) ?></option><?php endforeach; ?>
+                </select>
+                <input type="text" name="holder_name" class="form-control-custom mb-3" placeholder="किंवा नाव (उदा. विद्यार्थी)">
                 <label class="form-label-custom">टिप्पणी</label>
                 <textarea name="remarks" class="form-control-custom" rows="2"></textarea>
               </div>

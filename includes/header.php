@@ -93,13 +93,17 @@ if (hasRole('super_admin')) {
       <div class="dropdown-menu dropdown-menu-end" style="width:320px;max-height:400px;overflow-y:auto;padding:8px;">
         <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;">
           <strong style="font-size:13px;"><?= h(t('s93')) ?></strong>
-          <?php if ($unreadCount > 0): ?><a href="<?= $rootPath ?? '' ?>notifications/mark-all-read.php" style="font-size:11px;color:var(--rail);"><?= h(t('s293')) ?></a><?php endif; ?>
+          <?php if ($unreadCount > 0): ?>
+            <form method="POST" action="<?= $rootPath ?? '' ?>notifications/mark-all-read.php" style="margin:0;">
+              <button type="submit" style="border:none;background:none;padding:0;font-size:11px;color:var(--rail);cursor:pointer;"><?= h(t('s293')) ?></button>
+            </form>
+          <?php endif; ?>
         </div>
         <?php if (empty($recentNotifs)): ?>
           <div style="padding:16px;text-align:center;color:var(--text-dim);font-size:12.5px;"><?= h(t('s94')) ?></div>
         <?php endif; ?>
         <?php foreach ($recentNotifs as $n): ?>
-          <a href="<?= $rootPath ?? '' ?><?= h($n['link'] ?: 'notifications/index.php') ?>" style="display:block;padding:9px 10px;border-radius:8px;text-decoration:none;color:inherit;<?= $n['is_read'] ? '' : 'background:var(--rail-soft);' ?>">
+          <a href="<?= $rootPath ?? '' ?>notifications/open.php?id=<?= (int)$n['id'] ?>" style="display:block;padding:9px 10px;border-radius:8px;text-decoration:none;color:inherit;<?= $n['is_read'] ? '' : 'background:var(--rail-soft);' ?>">
             <div style="font-size:12.5px;font-weight:600;color:var(--ink);"><?= h($n['title']) ?></div>
             <?php if ($n['message']): ?><div style="font-size:11.5px;color:var(--text-dim);"><?= h($n['message']) ?></div><?php endif; ?>
             <div style="font-size:10px;color:var(--text-dim);margin-top:2px;"><?= date('d M, h:i A', strtotime($n['created_at'])) ?></div>
@@ -149,7 +153,13 @@ if (hasRole('super_admin')) {
   <script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async></script>
 
   <div class="content">
-    <?php if (!empty($_SESSION['flash'])): ?>
-      <div class="alert alert-success" style="border-radius:10px;font-size:13.5px;"><?= h($_SESSION['flash']) ?></div>
-      <?php unset($_SESSION['flash']); ?>
+    <?php if (!empty($_SESSION['flash'])):
+      // बरीच Pages चुकीचे संदेशही 'flash' मधूनच पाठवतात — असा संदेश हिरव्या ऐवजी पिवळ्या Banner मध्ये
+      $flashIsError = !empty($_SESSION['flash_error']) || preg_match('/^(⚠️|❌)|अवैध|त्रुटी|सापडल[ाीे] नाही|झाल[ाेंी]* नाही|झाले नाहीत|करता येत नाही|बदलता येत नाही|परवानगी नाही|आवश्यक आहे/u', $_SESSION['flash']); ?>
+      <div class="alert <?= $flashIsError ? 'alert-warning' : 'alert-success' ?>" style="border-radius:10px;font-size:13.5px;"><?= h($_SESSION['flash']) ?></div>
+      <?php unset($_SESSION['flash'], $_SESSION['flash_error']); ?>
+    <?php endif; ?>
+    <?php if (!empty($_SESSION['budget_warning'])): // विभाग Finance — नवीन खर्चाने Budget ओलांडलं ?>
+      <div class="alert alert-warning" style="border-radius:10px;font-size:13.5px;"><?= h($_SESSION['budget_warning']) ?></div>
+      <?php unset($_SESSION['budget_warning']); ?>
     <?php endif; ?>

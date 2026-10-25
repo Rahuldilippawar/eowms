@@ -12,14 +12,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $icon = trim($_POST['icon'] ?? '') ?: 'fa-solid fa-building';
     $hodId = ($_POST['hod_id'] ?? '') !== '' ? (int)$_POST['hod_id'] : null;
 
+    // याच कॅम्पसमध्ये (किंवा Trust-स्तरावर) हाच कोड आधीच आहे का — Blank पानाऐवजी स्पष्ट संदेश
+    $dupStmt = $pdo->prepare("SELECT id FROM departments WHERE organization_id = ? AND campus_id <=> ? AND code = ? LIMIT 1");
+    $dupStmt->execute([activeOrgId(), $campusId, $code]);
+    if ($campusId) {
+        $cChk = $pdo->prepare("SELECT id FROM campuses WHERE id = ? AND organization_id = ?");
+        $cChk->execute([$campusId, activeOrgId()]);
+        if (!$cChk->fetch()) { $campusId = null; }
+    }
+
     if (!$name || !$code) {
         $_SESSION['form_error'] = t('s428');
+    } elseif ($dupStmt->fetch()) {
+        $_SESSION['form_error'] = "'$code' हा विभाग-कोड या कॅम्पसमध्ये आधीच वापरात आहे — कृपया वेगळा कोड द्या.";
     } else {
-        $stmt = $pdo->prepare("INSERT INTO departments (organization_id, campus_id, name, name_local, code, icon, hod_id) VALUES (?, ?, ?, ?, ?, ?, ?)");
-        $stmt->execute([activeOrgId(), $campusId, $name, $nameLocal, $code, $icon, $hodId]);
-        $_SESSION['flash'] = t('s522');
-        header('Location: index.php');
-        exit;
+        try {
+            $stmt = $pdo->prepare("INSERT INTO departments (organization_id, campus_id, name, name_local, code, icon, hod_id) VALUES (?, ?, ?, ?, ?, ?, ?)");
+            $stmt->execute([activeOrgId(), $campusId, $name, $nameLocal, $code, $icon, $hodId]);
+            $_SESSION['flash'] = t('s522');
+            header('Location: index.php');
+            exit;
+        } catch (PDOException $e) {
+            if ((int)($e->errorInfo[1] ?? 0) !== 1062) { throw $e; }
+            $_SESSION['form_error'] = "'$code' हा विभाग-कोड या कॅम्पसमध्ये आधीच वापरात आहे — कृपया वेगळा कोड द्या.";
+        }
     }
 }
 

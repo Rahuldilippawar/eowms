@@ -51,7 +51,7 @@ function fcmAccessToken($sa) {
 }
 
 /** User च्या सर्व Android devices ना Push पाठवतो. $link = 'letters/view.php?id=6' सारखा relative link. */
-function sendFcmToUser($userId, $title, $body = '', $link = null) {
+function sendFcmToUser($userId, $title, $body = '', $link = null, $timeout = null) {
     global $pdo;
     try {
         $sa = fcmServiceAccount();
@@ -72,7 +72,7 @@ function sendFcmToUser($userId, $title, $body = '', $link = null) {
             ]];
             $ch = curl_init($url);
             curl_setopt_array($ch, [
-                CURLOPT_POST => true, CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 6,
+                CURLOPT_POST => true, CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => $timeout ? (int)$timeout : 6, CURLOPT_CONNECTTIMEOUT => 4,
                 CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . $access, 'Content-Type: application/json'],
                 CURLOPT_POSTFIELDS => json_encode($msg, JSON_UNESCAPED_UNICODE),
             ]);

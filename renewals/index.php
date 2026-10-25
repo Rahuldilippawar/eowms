@@ -2,6 +2,7 @@
 $pageTitle = 'नूतनीकरण व अनुपालन';
 $rootPath = '../';
 require_once __DIR__ . '/../includes/header.php';
+require_once __DIR__ . '/../includes/renewal-helpers.php';
 
 $orgId = activeOrgId();
 $filter = $_GET['filter'] ?? 'all';
@@ -15,16 +16,22 @@ if ($visibleDeptIds === null) {
 }
 $filterType = $_GET['item_type'] ?? '';
 $filterRegBody = $_GET['regulatory_body'] ?? '';
+$focusItemId = (int)($_GET['item'] ?? 0); // Notification मधून आलेली विशिष्ट नोंद
+$activeSql = renewalActiveSql('r');
+$activeSqlPlain = renewalActiveSql('');
 
 $sql = "SELECT r.*, d.name_local AS dept_name, d.name AS dept_name_en, DATEDIFF(r.expiry_date, CURDATE()) AS days_left
         FROM renewal_items r JOIN departments d ON d.id = r.department_id
-        WHERE r.organization_id = ?";
+        WHERE r.organization_id = ? AND $activeSql";
 $params = [$orgId];
 
-if ($filter === 'expired') {
-    $sql .= " AND r.expiry_date < CURDATE()";
-} elseif ($filter === 'due_soon') {
-    $sql .= " AND r.expiry_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)";
+// स्थिती नेहमी expiry_date वरून — DB मधल्या status वरून नाही
+if (in_array($filter, ['expired', 'due_soon', 'active'], true)) {
+    $sql .= " AND " . renewalStatusSql($filter, 'r');
+}
+if ($focusItemId) {
+    $sql .= " AND r.id = ?";
+    $params[] = $focusItemId;
 }
 if ($filterDeptId) {
     $sql .= " AND r.department_id = ?";
@@ -48,17 +55,25 @@ $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $items = $stmt->fetchAll();
 
-$countAll = $pdo->prepare("SELECT COUNT(*) c FROM renewal_items WHERE organization_id=?");
-$countAll->execute([$orgId]);
-$countAll = $countAll->fetch()['c'];
-
-$countDue = $pdo->prepare("SELECT COUNT(*) c FROM renewal_items WHERE organization_id=? AND expiry_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)");
-$countDue->execute([$orgId]);
-$countDue = $countDue->fetch()['c'];
-
-$countExpired = $pdo->prepare("SELECT COUNT(*) c FROM renewal_items WHERE organization_id=? AND expiry_date < CURDATE()");
-$countExpired->execute([$orgId]);
-$countExpired = $countExpired->fetch()['c'];
+// Chips/Chart चे आकडे — तेच विभाग-Filter लावून, स्थिती expiry_date वरून
+$countScopeSql = "organization_id = ? AND $activeSqlPlain";
+$countScopeParams = [$orgId];
+if ($filterDeptId) {
+    $countScopeSql .= " AND department_id = ?";
+    $countScopeParams[] = $filterDeptId;
+} elseif ($visibleDeptIds !== null) {
+    $countScopeSql .= empty($visibleDeptIds) ? " AND 0" : " AND department_id IN (" . implode(',', array_fill(0, count($visibleDeptIds), '?')) . ")";
+    $countScopeParams = array_merge($countScopeParams, $visibleDeptIds);
+}
+$countStmt = $pdo->prepare("SELECT COUNT(*) c,
+    SUM(CASE WHEN " . renewalStatusSql('due_soon', '') . " THEN 1 ELSE 0 END) due,
+    SUM(CASE WHEN " . renewalStatusSql('expired', '') . " THEN 1 ELSE 0 END) expired
+    FROM renewal_items WHERE $countScopeSql");
+$countStmt->execute($countScopeParams);
+$countRow = $countStmt->fetch();
+$countAll = (int)$countRow['c'];
+$countDue = (int)$countRow['due'];
+$countExpired = (int)$countRow['expired'];
 
 $countHealthy = max(0, $countAll - $countDue - $countExpired);
 
@@ -66,13 +81,12 @@ $countHealthy = max(0, $countAll - $countDue - $countExpired);
 $regBodyStmt = $pdo->prepare("
     SELECT regulatory_body,
       COUNT(*) AS total,
-      SUM(CASE WHEN expiry_date < CURDATE() THEN 1 ELSE 0 END) AS expired,
-      SUM(CASE WHEN expiry_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY) THEN 1 ELSE 0 END) AS due_soon
-    FROM renewal_items WHERE organization_id = ? AND regulatory_body IS NOT NULL" . ($filterDeptId ? " AND department_id = ?" : "") . "
+      SUM(CASE WHEN " . renewalStatusSql('expired', '') . " THEN 1 ELSE 0 END) AS expired,
+      SUM(CASE WHEN " . renewalStatusSql('due_soon', '') . " THEN 1 ELSE 0 END) AS due_soon
+    FROM renewal_items WHERE $countScopeSql AND regulatory_body IS NOT NULL
     GROUP BY regulatory_body ORDER BY expired DESC, due_soon DESC
 ");
-$regBodyParams = $filterDeptId ? [$orgId, $filterDeptId] : [$orgId];
-$regBodyStmt->execute($regBodyParams);
+$regBodyStmt->execute($countScopeParams);
 $regBodyOverview = $regBodyStmt->fetchAll();
 
 
@@ -91,23 +105,11 @@ $campusesForCascade = $pdo->prepare("SELECT id, name FROM campuses WHERE organiz
 $campusesForCascade->execute([$orgId]);
 $campusesForCascade = $campusesForCascade->fetchAll();
 
-$typeStmt = $pdo->prepare("SELECT DISTINCT item_type FROM renewal_items WHERE organization_id = ? ORDER BY item_type");
+$typeStmt = $pdo->prepare("SELECT DISTINCT item_type FROM renewal_items WHERE organization_id = ? AND $activeSqlPlain ORDER BY item_type");
 $typeStmt->execute([$orgId]);
 $allTypes = array_column($typeStmt->fetchAll(), 'item_type');
 
-function renewalTypeIcon($type) {
-    $type = mb_strtolower($type);
-    if (str_contains($type, 'insurance') || str_contains($type, 'विमा')) return '🛡️';
-    if (str_contains($type, 'puc')) return '🌫️';
-    if (str_contains($type, 'license') || str_contains($type, 'परवाना')) return '📜';
-    if (str_contains($type, 'permit')) return '📋';
-    if (str_contains($type, 'fitness')) return '✅';
-    if (str_contains($type, 'tax') || str_contains($type, 'कर')) return '💰';
-    if (str_contains($type, 'amc') || str_contains($type, 'contract') || str_contains($type, 'करार')) return '🔧';
-    if (str_contains($type, 'warranty')) return '🛠️';
-    if (str_contains($type, 'domain') || str_contains($type, 'hosting') || str_contains($type, 'software')) return '💻';
-    return '📄';
-}
+function renewalTypeIcon($type) { return renewalTypeIconFor($type); }
 
 // Executive President, General Manager, इतर Management-tier — आणि कुठलाही
 // विशिष्ट विभाग Filter केलेला नसेल — तर एकत्रित (Centralized), विभाग-निहाय
@@ -145,6 +147,14 @@ if ($showGrouped) {
     </a>
   </div>
 </div>
+
+<?php if (!empty($_SESSION['form_error'])): ?>
+  <div class="alert alert-danger" style="border-radius:10px;font-size:13px;"><?= h($_SESSION['form_error']) ?></div>
+  <?php unset($_SESSION['form_error']); ?>
+<?php endif; ?>
+<?php if ($focusItemId): ?>
+  <div class="alert alert-info" style="border-radius:10px;font-size:12.5px;">🔔 सूचनेतील नोंद दाखवत आहे — <a href="index.php">सगळ्या नोंदी बघा</a></div>
+<?php endif; ?>
 
 <?php if (!empty($regBodyOverview)): ?>
 <div class="panel mb-3" style="border-color:var(--rail);">
@@ -256,9 +266,10 @@ if ($showGrouped) {
       <?php endif; ?>
       <?php foreach ($section['items'] as $item):
         $days = (int)$item['days_left'];
-        $color = $days < 0 ? 'rose' : ($days <= 7 ? 'rose' : ($days <= 30 ? 'amber' : 'rail'));
-        $label = $days < 0 ? 'मुदत संपली' : $days . ' दिवस';
-        $chip = $color === 'rail' ? 'done' : ($color === 'amber' ? 'pending' : 'overdue');
+        $statusInfo = renewalStatusInfo($days);
+        $color = $statusInfo['color'];
+        $label = $days < 0 ? abs($days) . ' दिवस उलटले' : $days . ' दिवस';
+        $chip = $statusInfo['chip'];
       ?>
         <tr>
           <td style="font-weight:500;">
@@ -284,10 +295,11 @@ if ($showGrouped) {
           <td class="font-mono"><?= h($item['reference_no'] ?: '—') ?></td>
           <td class="font-mono"><?= date('d M Y', strtotime($item['expiry_date'])) ?></td>
           <td><span class="font-mono" style="font-weight:600;color:var(--<?= $color ?>);"><?= h($label) ?></span></td>
-          <td><span class="status-chip <?= $chip ?>"><?= h(ucfirst($item['status'])) ?></span></td>
+          <td><span class="status-chip <?= $chip ?>"><?= h($statusInfo['label']) ?></span></td>
           <td>
             <button type="button" class="btn btn-sm" style="border:1px solid var(--line);border-radius:7px;font-size:12px;padding:5px 12px;"
               data-bs-toggle="modal" data-bs-target="#renewModal<?= $item['id'] ?>"><?= h(t('s165')) ?></button>
+            <a href="edit.php?id=<?= $item['id'] ?>" style="font-size:11px;color:var(--text-dim);margin-left:4px;" title="संपादित करा / प्रमाणपत्र"><i class="fa-solid fa-pen"></i></a>
             <a href="history.php?id=<?= $item['id'] ?>" style="font-size:11px;color:var(--text-dim);margin-left:4px;" title="इतिहास बघा"><i class="fa-solid fa-clock-rotate-left"></i></a>
             <a href="payment.php?id=<?= $item['id'] ?>" style="font-size:11px;color:var(--rail);margin-left:6px;" title="Payment Track करा">💰</a>
           </td>
@@ -296,7 +308,7 @@ if ($showGrouped) {
         <div class="modal fade" id="renewModal<?= $item['id'] ?>" tabindex="-1">
           <div class="modal-dialog">
             <div class="modal-content" style="border-radius:14px;">
-              <form method="POST" action="renew.php">
+              <form method="POST" action="renew.php" enctype="multipart/form-data">
                 <input type="hidden" name="id" value="<?= $item['id'] ?>">
                 <div class="modal-body" style="padding:22px;">
                   <div style="font-family:'Space Grotesk';font-weight:600;font-size:16px;margin-bottom:14px;"><?= h($item['item_name']) ?> <?= h(t('s166')) ?></div>
@@ -305,7 +317,9 @@ if ($showGrouped) {
                   <label class="form-label-custom"><?= h(t('s70')) ?></label>
                   <input type="number" step="0.01" name="renewal_cost" class="form-control-custom mb-3">
                   <label class="form-label-custom">Vendor (बदलायचं असल्यास)</label>
-                  <input type="text" name="vendor_name" class="form-control-custom" placeholder="<?= h($item['vendor_name'] ?: '') ?>">
+                  <input type="text" name="vendor_name" class="form-control-custom mb-3" placeholder="<?= h($item['vendor_name'] ?: '') ?>">
+                  <label class="form-label-custom">नवीन प्रमाणपत्र (PDF/प्रतिमा, ऐच्छिक)</label>
+                  <input type="file" name="certificate" class="form-control-custom" accept=".pdf,.jpg,.jpeg,.png,.webp">
                 </div>
                 <div class="modal-footer" style="border-top:1px solid var(--line);">
                   <button type="button" class="btn btn-sm" data-bs-dismiss="modal" style="border:1px solid var(--line);border-radius:7px;"><?= h(t('s3')) ?></button>

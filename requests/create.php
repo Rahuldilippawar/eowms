@@ -1,30 +1,44 @@
 <?php
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/ticket-helpers.php';
 requireLogin('../');
 $user = currentUser();
 $orgId = activeOrgId();
 
-// IT विभागाला वेगळी, समर्पित Request System आहे (general-request.php) —
-// त्यामुळे इथून (सर्वसाधारण आंतर-विभागीय विनंती) IT ला विनंती पाठवता येऊ
-// नये — नाहीतर IT Staff ला दोन वेगळ्या ठिकाणी बघावं लागेल.
-$itDeptStmt = $pdo->prepare("SELECT id FROM departments WHERE organization_id = ? AND code = 'IT' LIMIT 1");
-$itDeptStmt->execute([$orgId]);
-$itDeptIdForJs = $itDeptStmt->fetch()['id'] ?? 0;
+// एकच विनंती-प्रणाली — ?category=it असेल तर IT चा Form (it/general-request.php इथेच येतो)
+$isItForm = (($_GET['category'] ?? $_POST['category'] ?? '') === 'it');
+$itDeptIdForJs = ticketItDepartmentId($pdo, $orgId) ?? 0;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $deptId = (int)($_POST['department_id'] ?? 0);
-    $assignedToUserId = ($_POST['assigned_to_user_id'] ?? '') !== '' ? (int)$_POST['assigned_to_user_id'] : null;
+    $priority = $_POST['priority'] ?? 'normal';
+    if (!isset(TICKET_PRIORITIES[$priority])) { $priority = 'normal'; }
+    $title = trim($_POST['title'] ?? '') ?: null;
+    $location = trim($_POST['location'] ?? '') ?: null;
     $workDescription = trim($_POST['work_description'] ?? '');
+    $assignedToUserId = null;
+    $subCategory = null;
 
-    $deptCheckStmt = $pdo->prepare("SELECT id FROM departments WHERE id = ? AND organization_id = ? AND is_active = 1");
-    $deptCheckStmt->execute([$deptId, $orgId]);
-    $deptIsValid = (bool)$deptCheckStmt->fetch();
+    if ($isItForm) {
+        $category = 'it';
+        $subCategory = $_POST['sub_category'] ?? 'other';
+        if (!isset(TICKET_IT_SUB_CATEGORIES[$subCategory])) { $subCategory = 'other'; }
+        $deptId = $itDeptIdForJs ?: null; // IT विभाग नसला तरी चालेल — manage_it असलेल्यांना दिसेल
+        $deptIsValid = true;
+    } else {
+        $category = $_POST['ticket_category'] ?? 'general';
+        if (!isset(TICKET_CATEGORIES[$category]) || $category === 'it') { $category = 'general'; }
+        $deptId = (int)($_POST['department_id'] ?? 0);
+        $assignedToUserId = ($_POST['assigned_to_user_id'] ?? '') !== '' ? (int)$_POST['assigned_to_user_id'] : null;
+        $deptCheckStmt = $pdo->prepare("SELECT id FROM departments WHERE id = ? AND organization_id = ? AND is_active = 1");
+        $deptCheckStmt->execute([$deptId, $orgId]);
+        $deptIsValid = (bool)$deptCheckStmt->fetch();
+    }
 
-    if ($deptId && $itDeptIdForJs && (int)$deptId === (int)$itDeptIdForJs) {
-        $_SESSION['form_error'] = 'IT विभागाला विनंती/तक्रार पाठवण्यासाठी कृपया "IT तक्रार/विनंती नोंदवा" हे स्वतंत्र Page वापरा (Sidebar मध्ये उपलब्ध).';
-    } elseif ($deptId && $deptIsValid && (int)$deptId === (int)($user['department_id'] ?? 0)) {
+    if (!$isItForm && $deptId && $itDeptIdForJs && (int)$deptId === (int)$itDeptIdForJs) {
+        $_SESSION['form_error'] = 'IT विभागाला विनंती पाठवण्यासाठी कृपया "IT तक्रार/विनंती नोंदवा" हा Form वापरा.';
+    } elseif (!$isItForm && $deptId && $deptIsValid && (int)$deptId === (int)($user['department_id'] ?? 0)) {
         $_SESSION['form_error'] = 'तुम्ही तुमच्याच विभागाला विनंती पाठवू शकत नाही.';
-    } elseif ($deptId && $deptIsValid && $workDescription) {
+    } elseif (($isItForm || ($deptId && $deptIsValid)) && $workDescription && (!$isItForm || $title)) {
         try {
             // जर विशिष्ट व्यक्ती निवडली असेल — ती खरंच याच विभागाची आहे ना ते पडताळतो
             if ($assignedToUserId) {
@@ -33,46 +47,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!$personCheck->fetch()) { $assignedToUserId = null; }
             }
 
-            $requestCode = 'REQ-' . date('ymd') . '-' . strtoupper(substr(uniqid(), -5));
+            $requestCode = ($isItForm ? 'IT-' : 'REQ-') . date('ymd') . '-' . strtoupper(substr(uniqid(), -5));
             $pdo->prepare("
-                INSERT INTO work_requests (request_code, organization_id, department_id, requester_name, requester_contact, requested_by_user_id, requesting_department_id, assigned_to_user_id, work_description)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ")->execute([$requestCode, $orgId, $deptId, $user['name'], $user['mobile'] ?? null, $user['id'], $user['department_id'] ?? null, $assignedToUserId, $workDescription]);
-            $newRequestId = $pdo->lastInsertId();
+                INSERT INTO work_requests (request_code, organization_id, department_id, category, sub_category, title, location, priority, due_at, requester_name, requester_contact, requested_by_user_id, requesting_department_id, assigned_to_user_id, work_description)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ")->execute([$requestCode, $orgId, $deptId ?: null, $category, $subCategory, $title, $location, $priority, ticketDueAt($priority),
+                $user['name'], $user['mobile'] ?? null, $user['id'], ($user['department_id'] ?? null) ?: null, $assignedToUserId, $workDescription]);
+            $newRequestId = (int)$pdo->lastInsertId();
+            ticketLog($pdo, $newRequestId, 'created', null, 'pending', null, $user['id']);
 
-            try {
-                $pdo->prepare("INSERT INTO work_request_actions (request_id, action_type, new_status, changed_by) VALUES (?, 'created', 'pending', ?)")
-                    ->execute([$newRequestId, $user['id']]);
-            } catch (PDOException $e) { /* table not migrated yet */ }
+            $priorityIcon = $priority === 'urgent' ? '🚨 ' : ($priority === 'high' ? '⚠️ ' : '');
+            ticketNotifyReceivers($pdo, ['id' => $newRequestId, 'department_id' => $deptId ?: null, 'assigned_to_user_id' => $assignedToUserId], $orgId,
+                $priorityIcon . ($isItForm ? "नवीन IT Request — $requestCode" : ($assignedToUserId ? 'तुम्हाला कामाची विनंती आली आहे' : 'नवीन कामाची विनंती')),
+                $user['name'] . ' — ' . mb_substr($title ?: $workDescription, 0, 60));
 
-            // विशिष्ट व्यक्ती निवडली असेल तर तिला थेट Notification, नाहीतर विभागाच्या HOD ला
-            if ($assignedToUserId) {
-                notifyUser($assignedToUserId, $orgId, 'तुम्हाला कामाची विनंती आली आहे', $user['name'] . ' यांनी विनंती केली — ' . mb_substr($workDescription, 0, 60), 'requests/index.php');
-            } else {
-                $hodStmt = $pdo->prepare("SELECT hod_id, name_local FROM departments WHERE id = ?");
-                $hodStmt->execute([$deptId]);
-                $deptRow = $hodStmt->fetch();
-                if (!empty($deptRow['hod_id'])) {
-                    notifyUser($deptRow['hod_id'], $orgId, 'नवीन कामाची विनंती', $user['name'] . ' यांनी विनंती केली — ' . mb_substr($workDescription, 0, 60), 'requests/index.php');
-                }
-            }
-
-            logActivity('आंतर-विभागीय कामाची विनंती पाठवली', 'work_request', $newRequestId, $requestCode);
+            logActivity($isItForm ? 'IT Request तयार केली' : 'आंतर-विभागीय कामाची विनंती पाठवली', 'work_request', $newRequestId, $requestCode);
             $_SESSION['flash'] = "विनंती यशस्वीरित्या पाठवली गेली — Request ID: $requestCode";
-            header('Location: my-requests.php');
+            header('Location: view.php?id=' . $newRequestId);
             exit;
         } catch (PDOException $e) {
-            // work_requests चे नवीन Columns अजून Database मध्ये तयार झालेले नाहीत —
-            // म्हणजे database/migration-internal-work-requests.sql किंवा
-            // migration-work-request-person.sql अजून चालवलेली नाही.
-            $_SESSION['form_error'] = 'Database अजून पूर्णपणे तयार नाही — Super Admin ला संबंधित Migration चालवायला सांगा.';
+            // work_requests चे नवीन Columns अजून तयार नाहीत — migration-notifications-tickets-sos.sql चालवा
+            $_SESSION['form_error'] = 'Database अजून पूर्णपणे तयार नाही — Super Admin ला Database Update चालवायला सांगा.';
         }
     } else {
-        $_SESSION['form_error'] = 'कृपया विभाग निवडा आणि कामाचं वर्णन लिहा.';
+        $_SESSION['form_error'] = $isItForm ? 'कृपया शीर्षक आणि तपशील भरा.' : 'कृपया विभाग निवडा आणि कामाचं वर्णन लिहा.';
     }
+    header('Location: create.php' . ($isItForm ? '?category=it' : ''));
+    exit;
 }
 
-$pageTitle = 'नवीन कामाची विनंती';
+$pageTitle = $isItForm ? 'IT/Internet तक्रार नोंदवा' : 'नवीन कामाची विनंती';
 $rootPath = '../';
 require_once __DIR__ . '/../includes/header.php';
 
@@ -83,16 +87,45 @@ $campuses = $campusesStmt->fetchAll();
 
 <div class="page-eyebrow"><?= h(activeOrgName()) ?></div>
 <div class="d-flex justify-content-between align-items-start mb-1">
-  <div class="page-title mb-0">📤 दुसऱ्या विभागाला कामाची विनंती पाठवा</div>
-  <a href="my-requests.php" style="font-size:12.5px;color:var(--rail);font-weight:600;text-decoration:none;align-self:center;"><i class="fa-solid fa-list-check me-1"></i>माझ्या विनंत्या</a>
+  <div class="page-title mb-0"><?= $isItForm ? '🖥️ IT/Internet तक्रार किंवा विनंती नोंदवा' : '📤 दुसऱ्या विभागाला कामाची विनंती पाठवा' ?></div>
+  <a href="my-requests.php<?= $isItForm ? '?category=it' : '' ?>" style="font-size:12.5px;color:var(--rail);font-weight:600;text-decoration:none;align-self:center;"><i class="fa-solid fa-list-check me-1"></i>माझ्या विनंत्या</a>
 </div>
-<p style="font-size:12.5px;color:var(--text-dim);margin-bottom:20px;">तुमच्या स्वतःच्या विभागाव्यतिरिक्त, इतर कुठल्याही विभागाला काम-सहाय्यासाठी विनंती करता येईल.</p>
+<p style="font-size:12.5px;color:var(--text-dim);margin-bottom:20px;"><?= $isItForm
+  ? 'Internet/Network समस्या, Software हवं आहे, नवीन Hardware, Account/Access — कुठलाही विशिष्ट Asset माहीत नसेल तरी इथे नोंदवा.'
+  : 'तुमच्या स्वतःच्या विभागाव्यतिरिक्त, इतर कुठल्याही विभागाला काम-सहाय्यासाठी विनंती करता येईल.' ?></p>
 
 <?php if (!empty($_SESSION['form_error'])): ?>
   <div class="alert alert-danger" style="border-radius:10px;font-size:13px;"><?= h($_SESSION['form_error']) ?></div>
   <?php unset($_SESSION['form_error']); ?>
 <?php endif; ?>
 
+<?php if ($isItForm): ?>
+<div class="panel" style="max-width:700px;">
+  <form method="POST" action="create.php?category=it" style="padding:22px 24px;">
+    <input type="hidden" name="category" value="it">
+    <label class="form-label-custom">प्रकार</label>
+    <select name="sub_category" class="form-select-custom mb-3" required>
+      <?php foreach (TICKET_IT_SUB_CATEGORIES as $k => $lbl): ?><option value="<?= $k ?>"><?= h($lbl) ?></option><?php endforeach; ?>
+    </select>
+
+    <label class="form-label-custom">प्राधान्य</label>
+    <select name="priority" class="form-select-custom mb-3">
+      <?php foreach (TICKET_PRIORITIES as $k => $lbl): ?><option value="<?= $k ?>" <?= $k === 'normal' ? 'selected' : '' ?>><?= h($lbl) ?> (<?= ticketSlaHours($k) >= 24 ? (ticketSlaHours($k) / 24) . ' दिवस' : ticketSlaHours($k) . ' तास' ?>)</option><?php endforeach; ?>
+    </select>
+
+    <label class="form-label-custom">शीर्षक</label>
+    <input type="text" name="title" class="form-control-custom mb-3" placeholder="उदा. Lab 2 मध्ये Internet बंद आहे" required maxlength="255">
+
+    <label class="form-label-custom">ठिकाण <span style="font-weight:400;color:var(--text-dim);">(ऐच्छिक)</span></label>
+    <input type="text" name="location" class="form-control-custom mb-3" placeholder="उदा. प्रयोगशाळा 2, दुसरा मजला" maxlength="255">
+
+    <label class="form-label-custom">संपूर्ण तपशील</label>
+    <textarea name="work_description" class="form-control-custom mb-3" rows="5" required></textarea>
+
+    <button type="submit" class="btn w-100" style="background:var(--rail);color:#fff;border-radius:9px;font-size:14px;padding:11px;font-weight:600;">तक्रार/विनंती नोंदवा</button>
+  </form>
+</div>
+<?php else: ?>
 <div class="panel" style="max-width:640px;">
   <form method="POST" style="padding:22px 24px;">
     <label class="form-label-custom">1️⃣ कोणतं College/School (किंवा Trust-स्तरीय)</label>
@@ -108,12 +141,30 @@ $campuses = $campusesStmt->fetchAll();
     <select name="department_id" id="deptSelect" class="form-select-custom mb-2" required disabled>
       <option value="">-- आधी College/School निवडा --</option>
     </select>
-    <p style="font-size:11px;color:var(--text-dim);margin-bottom:14px;">💡 <strong>IT/Internet/Software संबंधित</strong> असल्यास — <a href="../it/general-request.php" style="color:var(--rail);font-weight:600;">इथे थेट IT ला कळवा</a> (जास्त जलद, Category/प्राधान्यसह).</p>
+    <p style="font-size:11px;color:var(--text-dim);margin-bottom:14px;">💡 <strong>IT/Internet/Software संबंधित</strong> असल्यास — <a href="create.php?category=it" style="color:var(--rail);font-weight:600;">इथे थेट IT ला कळवा</a> (जास्त जलद, Category/प्राधान्यसह).</p>
 
     <label class="form-label-custom">3️⃣ कोणाकडे पाठवायचं</label>
     <select name="assigned_to_user_id" id="personSelect" class="form-select-custom mb-3" disabled>
       <option value="">-- आधी विभाग निवडा --</option>
     </select>
+
+    <div class="row g-2">
+      <div class="col-6">
+        <label class="form-label-custom">प्रकार</label>
+        <select name="ticket_category" class="form-select-custom mb-3">
+          <?php foreach (TICKET_CATEGORIES as $k => $lbl): if ($k === 'it') continue; ?><option value="<?= $k ?>"><?= h($lbl) ?></option><?php endforeach; ?>
+        </select>
+      </div>
+      <div class="col-6">
+        <label class="form-label-custom">प्राधान्य</label>
+        <select name="priority" class="form-select-custom mb-3">
+          <?php foreach (TICKET_PRIORITIES as $k => $lbl): ?><option value="<?= $k ?>" <?= $k === 'normal' ? 'selected' : '' ?>><?= h($lbl) ?></option><?php endforeach; ?>
+        </select>
+      </div>
+    </div>
+
+    <label class="form-label-custom">शीर्षक <span style="font-weight:400;color:var(--text-dim);">(ऐच्छिक)</span></label>
+    <input type="text" name="title" class="form-control-custom mb-3" maxlength="255">
 
     <label class="form-label-custom">काय काम हवं आहे — तपशीलवार लिहा</label>
     <textarea name="work_description" class="form-control-custom mb-3" rows="4" placeholder="उदा. आमच्या वर्गखोलीतला Fan बंद पडलाय, कृपया दुरुस्त करा" required></textarea>
@@ -121,7 +172,9 @@ $campuses = $campusesStmt->fetchAll();
     <button type="submit" class="btn w-100" style="background:var(--rail);color:#fff;border-radius:9px;font-size:14px;padding:11px;font-weight:600;">विनंती पाठवा</button>
   </form>
 </div>
+<?php endif; ?>
 
+<?php if (!$isItForm): ?>
 <script>
 (function () {
   var rootPath = '../';
@@ -179,5 +232,6 @@ $campuses = $campusesStmt->fetchAll();
   });
 })();
 </script>
+<?php endif; ?>
 
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

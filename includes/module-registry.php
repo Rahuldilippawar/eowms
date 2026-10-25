@@ -32,13 +32,10 @@ function getModuleRegistry() {
             'label' => 'पाहुणे नोंदणी', 'icon' => 'fa-solid fa-id-card-clip',
             'dirs' => ['guests'], 'dashboard' => 'guests/index.php', 'color' => '#8A5CD6',
         ],
-        'checkout' => [
-            'label' => 'Asset Checkout/Borrowing', 'icon' => 'fa-solid fa-key',
-            'dirs' => ['checkout'], 'dashboard' => 'checkout/index.php', 'color' => '#C97F1D',
-        ],
+        // जुना 'checkout' Module आता यातच (checkout/ फक्त Redirect)
         'allocations' => [
-            'label' => 'Asset Allocation Registry', 'icon' => 'fa-solid fa-boxes-packing',
-            'dirs' => ['allocations'], 'dashboard' => 'allocations/index.php', 'color' => '#2255AA',
+            'label' => 'Issue / Return Register (Asset Allocation)', 'icon' => 'fa-solid fa-boxes-packing',
+            'dirs' => ['allocations', 'checkout'], 'dashboard' => 'allocations/index.php', 'color' => '#2255AA',
         ],
         'room-booking' => [
             'label' => 'Room/Hall Booking', 'icon' => 'fa-solid fa-door-open',
@@ -48,9 +45,10 @@ function getModuleRegistry() {
             'label' => 'Internal Messaging', 'icon' => 'fa-solid fa-comments',
             'dirs' => ['messages'], 'dashboard' => 'messages/index.php', 'color' => '#2255AA',
         ],
+        // जुना 'budget' Module आता यातच (budget/ फक्त Redirect)
         'dept-finance' => [
-            'label' => 'विभाग Financial Tracking', 'icon' => 'fa-solid fa-sack-dollar',
-            'dirs' => ['dept-finance'], 'dashboard' => 'dept-finance/index.php', 'color' => '#2255AA',
+            'label' => 'विभाग Finance (Budget + Purchase)', 'icon' => 'fa-solid fa-sack-dollar',
+            'dirs' => ['dept-finance', 'budget'], 'dashboard' => 'dept-finance/dashboard.php', 'color' => '#2255AA',
         ],
         'grievances' => [
             'label' => 'तक्रार निवारण', 'icon' => 'fa-solid fa-gavel',
@@ -103,10 +101,6 @@ function getModuleRegistry() {
         'sop' => [
             'label' => 'SOP', 'icon' => 'fa-solid fa-list-check',
             'dirs' => ['sop'], 'dashboard' => 'sop/checklist.php', 'color' => '#666B7D',
-        ],
-        'budget' => [
-            'label' => 'विभाग Budget', 'icon' => 'fa-solid fa-sack-dollar',
-            'dirs' => ['budget'], 'dashboard' => 'budget/index.php', 'color' => '#2255AA',
         ],
     ];
 }

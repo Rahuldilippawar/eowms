@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/ticket-helpers.php';
 requireLogin('../');
 $user = currentUser();
 
@@ -21,10 +22,16 @@ if (!$request) {
     exit;
 }
 
-// Department-scoped users can only update requests for their own department
-if (isDeptScoped() && (int)$request['department_id'] !== (int)$user['department_id']) {
+// पाहण्याइतकीच परवानगी — स्वतःचा/Extra विभाग, नेमलेली व्यक्ती, किंवा
+// manage_requests_org_wide असलेले Management (त्याशिवाय Management ला नाही)
+if (!ticketCanManage($request)) {
     http_response_code(403);
     die(t('s519'));
+}
+// बंद/रद्द झालेली विनंती इथून बदलता येत नाही (पुन्हा उघडणं — फक्त विनंती करणाऱ्याकडून)
+if (!in_array($request['status'], TICKET_OPEN_STATUSES, true)) {
+    header('Location: view.php?id=' . $id);
+    exit;
 }
 
 $completedBy = $status === 'completed' ? $user['id'] : null;
@@ -36,12 +43,7 @@ $update = $pdo->prepare("UPDATE work_requests SET status = ?, completed_by = ?, 
 $update->execute([$status, $completedBy, $completedAt, $remark, $costIncurred, $id]);
 
 if ($status !== $request['status'] || $remark) {
-    try {
-        $pdo->prepare("INSERT INTO work_request_actions (request_id, action_type, old_status, new_status, remark, changed_by) VALUES (?, 'status_changed', ?, ?, ?, ?)")
-            ->execute([$id, $request['status'], $status, $remark, $user['id']]);
-    } catch (PDOException $e) {
-        // work_request_actions table not migrated yet — status update above already succeeded
-    }
+    ticketLog($pdo, $id, 'status_changed', $request['status'], $status, $remark, $user['id']);
 }
 
 // विनंती पाठवणारा जर आपलाच Logged-in Staff असेल (Internal Request) —
@@ -52,10 +54,11 @@ if (!empty($request['requested_by_user_id']) && $status !== $request['status']) 
         $request['requested_by_user_id'], activeOrgId(),
         'तुमच्या विनंतीची स्थिती बदलली',
         $request['request_code'] . ' — आता "' . ($statusLabelsForNotify[$status] ?? $status) . '"',
-        'requests/my-requests.php'
+        'requests/view.php?id=' . $id
     );
 }
 
 $_SESSION['flash'] = t('s520');
-header('Location: index.php');
+$back = $_POST['back'] ?? '';
+header('Location: ' . (preg_match('/^index\.php(\?[\w=&%\-]*)?$/', $back) ? $back : 'index.php'));
 exit;

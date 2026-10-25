@@ -40,21 +40,42 @@ if ($unlockAccount) {
     $pdo->prepare("UPDATE users SET failed_login_attempts = 0, locked_until = NULL WHERE id = ?")->execute([$id]);
 }
 
-if (!$name || !$departmentId) {
-    $_SESSION['form_error'] = t('s428');
+// Management-श्रेणीतले पद (President, GM, Super Admin, इ.) — विभागाशिवायही चालतं
+$roleCat = roleCategory($role);
+$deptOptional = in_array($roleCat, ['management', 'super_admin'], true);
+
+if (!$name || (!$departmentId && !$deptOptional)) {
+    $_SESSION['form_error'] = $name ? 'या पदासाठी विभाग निवडणं आवश्यक आहे (फक्त Management पदांना विभागाशिवाय ठेवता येतं).' : t('s428');
     header('Location: edit.php?id=' . $id);
     exit;
 }
 
-$deptStmt = $pdo->prepare("SELECT campus_id FROM departments WHERE id = ?");
-$deptStmt->execute([$departmentId]);
-$dept = $deptStmt->fetch();
+$dept = ['campus_id' => null];
+if ($departmentId) {
+    $deptStmt = $pdo->prepare("SELECT campus_id FROM departments WHERE id = ? AND organization_id = ?");
+    $deptStmt->execute([$departmentId, activeOrgId()]);
+    $dept = $deptStmt->fetch();
+    if (!$dept) {
+        $_SESSION['form_error'] = t('s428');
+        header('Location: edit.php?id=' . $id);
+        exit;
+    }
+}
 
 // Safety: never allow the LAST remaining super_admin to be demoted or deactivated —
 // this prevents the whole system from becoming permanently inaccessible.
-$targetStmt = $pdo->prepare("SELECT role, is_active, left_date, department_id, salary FROM users WHERE id = ?");
-$targetStmt->execute([$id]);
+$targetStmt = $pdo->prepare("SELECT role, is_active, left_date, department_id, campus_id, salary FROM users WHERE id = ? AND organization_id = ?");
+$targetStmt->execute([$id, activeOrgId()]);
 $targetRow = $targetStmt->fetch();
+if (!$targetRow) {
+    header('Location: index.php');
+    exit;
+}
+// विभाग नसेल किंवा Trust-HQ (Campus नसलेला) विभाग असेल — तर आधीचाच Campus ठेवतो
+if (empty($dept['campus_id'])) {
+    $dept['campus_id'] = $targetRow['campus_id'];
+}
+$departmentId = $departmentId ?: null;
 $targetCurrentRole = $targetRow['role'] ?? null;
 $wasActive = (int)($targetRow['is_active'] ?? 1);
 

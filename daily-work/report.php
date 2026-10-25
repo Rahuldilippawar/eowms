@@ -1,94 +1,44 @@
 <?php
+// कामाचा अहवाल — व्यक्तिगत / विभाग / संपूर्ण संस्था (पूर्वीचं "अहवाल" (reports/) Module इथेच)
 $pageTitle = 'कामाचा अहवाल';
 $rootPath = '../';
 require_once __DIR__ . '/../includes/header.php';
+require_once __DIR__ . '/report-common.php';
 
-$orgId = activeOrgId();
-$period = $_GET['period'] ?? 'weekly';
-$filterDeptId = isDeptScoped() ? $user['department_id'] : ($_GET['department_id'] ?? '');
+$ctx = dwReportContext($pdo, $user);
+$orgId = $ctx['org_id'];
+$scope = $ctx['scope'];
+$period = $ctx['period'];
+$start = $ctx['start'];
+$end = $ctx['end'];
+$filterDeptId = $ctx['department_id'];
 
-switch ($period) {
-    case 'monthly':
-        $start = date('Y-m-01');
-        $end = date('Y-m-t');
-        break;
-    case 'yearly':
-        $start = date('Y-01-01');
-        $end = date('Y-12-31');
-        break;
-    default:
-        $start = date('Y-m-d', strtotime('monday this week'));
-        $end = date('Y-m-d', strtotime('sunday this week'));
-}
-
-$stmt = $pdo->prepare("SELECT * FROM departments WHERE organization_id = ? AND is_active = 1" . (isDeptScoped() ? " AND id = ?" : "") . " ORDER BY name_local");
-$stmt->execute(isDeptScoped() ? [$orgId, $user['department_id']] : [$orgId]);
-$departments = $stmt->fetchAll();
+$departments = [];
 $campusesForCascade = [];
-if (!isDeptScoped()) {
+if (!$ctx['dept_locked']) {
+    $stmt = $pdo->prepare("SELECT * FROM departments WHERE organization_id = ? AND is_active = 1 ORDER BY name_local");
+    $stmt->execute([$orgId]);
+    $departments = $stmt->fetchAll();
     $cStmt = $pdo->prepare("SELECT id, name FROM campuses WHERE organization_id = ? AND is_active = 1 ORDER BY name");
     $cStmt->execute([$orgId]);
     $campusesForCascade = $cStmt->fetchAll();
 }
 
-// Department-wise summary
-$summary = [];
-foreach ($departments as $dept) {
-    $totalStmt = $pdo->prepare("SELECT COUNT(*) c FROM work_records WHERE department_id=? AND work_date BETWEEN ? AND ?");
-    $totalStmt->execute([$dept['id'], $start, $end]);
-    $total = $totalStmt->fetch()['c'];
-
-    $doneStmt = $pdo->prepare("SELECT COUNT(*) c FROM work_records WHERE department_id=? AND work_date BETWEEN ? AND ? AND status='completed'");
-    $doneStmt->execute([$dept['id'], $start, $end]);
-    $done = $doneStmt->fetch()['c'];
-
-    $summary[] = [
-        'name' => $dept['name_local'] ?: $dept['name'],
-        'total' => $total,
-        'done' => $done,
-        'pct' => $total > 0 ? round(($done / $total) * 100) : 0,
-    ];
-}
-
-// Detailed entries list
-$sql = "SELECT wr.*, d.name_local AS dept_name,
-          (SELECT GROUP_CONCAT(u2.name SEPARATOR ', ') FROM work_record_team wt2 JOIN users u2 ON u2.id = wt2.user_id WHERE wt2.work_record_id = wr.id) AS emp_name,
-          (SELECT GROUP_CONCAT(CONCAT(cf.field_label, ': ', cfv.field_value) SEPARATOR ' | ')
-           FROM custom_field_values cfv
-           JOIN custom_fields cf ON cf.field_key = cfv.field_key AND cf.organization_id = wr.organization_id
-           WHERE cfv.work_record_id = wr.id) AS custom_fields_display
-        FROM work_records wr
-        JOIN departments d ON d.id = wr.department_id
-        WHERE wr.work_date BETWEEN ? AND ?";
-$params = [$start, $end];
-if ($filterDeptId) {
-    $sql .= " AND wr.department_id = ?";
-    $params[] = $filterDeptId;
-}
-$sql .= " ORDER BY wr.work_date DESC LIMIT 100";
-$entriesStmt = $pdo->prepare($sql);
-try {
-    $entriesStmt->execute($params);
-    $entries = $entriesStmt->fetchAll();
-} catch (PDOException $e) {
-    // custom_fields/custom_field_values not migrated yet — retry without that subquery
-    $fallbackSql = "SELECT wr.*, d.name_local AS dept_name,
-          (SELECT GROUP_CONCAT(u2.name SEPARATOR ', ') FROM work_record_team wt2 JOIN users u2 ON u2.id = wt2.user_id WHERE wt2.work_record_id = wr.id) AS emp_name,
-          NULL AS custom_fields_display
-        FROM work_records wr
-        JOIN departments d ON d.id = wr.department_id
-        WHERE wr.work_date BETWEEN ? AND ?" . ($filterDeptId ? " AND wr.department_id = ?" : "") . " ORDER BY wr.work_date DESC LIMIT 100";
-    $entriesStmt = $pdo->prepare($fallbackSql);
-    $entriesStmt->execute($params);
-    $entries = $entriesStmt->fetchAll();
-}
+// विभाग-निहाय सारांश (संस्था/विभाग Scope)
+$summary = $scope === 'personal' ? [] : dwReportOrgSummary($pdo, $ctx);
+// तपशीलवार नोंदी — नेहमी याच संस्थेच्या
+$entries = dwReportRecords($pdo, $ctx, $user, 100);
 
 $statusLabels = ['pending' => 'प्रलंबित', 'in_progress' => 'सुरू आहे', 'completed' => 'पूर्ण झाले'];
 $statusChip = ['pending' => 'overdue', 'in_progress' => 'pending', 'completed' => 'done'];
+$scopeLabels = ['personal' => '👤 व्यक्तिगत', 'department' => '🏢 विभाग', 'organization' => '🏛️ संपूर्ण संस्था'];
+$qs = function ($over) use ($scope, $period, $filterDeptId) {
+    return http_build_query(array_merge(['scope' => $scope, 'period' => $period, 'department_id' => $filterDeptId ?: null], $over));
+};
 ?>
 
 <div class="page-eyebrow"><?= h(activeOrgName()) ?></div>
-<div class="d-flex justify-content-between align-items-start mb-1">
+<div class="d-flex justify-content-between align-items-start mb-1 flex-wrap gap-2">
   <div class="page-title mb-0"><?= h(t('s231')) ?></div>
   <a href="material-usage-report.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13px;padding:9px 16px;"><i class="fa-solid fa-boxes-stacked me-1"></i>📦 साहित्य वापर-अहवाल</a>
 </div>
@@ -98,14 +48,22 @@ $statusChip = ['pending' => 'overdue', 'in_progress' => 'pending', 'completed' =
   <a href="report.php" class="mode-tab active" style="padding:9px 20px;border-radius:9px;font-size:13.5px;font-weight:600;background:var(--ink);color:#fff;text-decoration:none;"><?= h(t('s90')) ?></a>
 </div>
 
+<div class="period-toggle mb-3" style="width:fit-content;">
+  <?php foreach ($ctx['allowed_scopes'] as $s): ?>
+    <a href="?<?= h($qs(['scope' => $s])) ?>" class="period-btn <?= $scope === $s ? 'active' : '' ?>"><?= $scopeLabels[$s] ?></a>
+  <?php endforeach; ?>
+</div>
+
 <div class="d-flex flex-wrap align-items-center justify-content-between mb-3 gap-2">
   <div class="period-toggle">
-    <a href="?period=weekly" class="period-btn <?= $period === 'weekly' ? 'active' : '' ?>"><?= h(t('s232')) ?></a>
-    <a href="?period=monthly" class="period-btn <?= $period === 'monthly' ? 'active' : '' ?>"><?= h(t('s233')) ?></a>
-    <a href="?period=yearly" class="period-btn <?= $period === 'yearly' ? 'active' : '' ?>"><?= h(t('s234')) ?></a>
+    <?php foreach (dwReportPeriodLabels() as $p => $lbl): ?>
+      <a href="?<?= h($qs(['period' => $p])) ?>" class="period-btn <?= $period === $p ? 'active' : '' ?>"><?= h($lbl) ?></a>
+    <?php endforeach; ?>
   </div>
+  <?php if ($scope !== 'personal' && !$ctx['dept_locked']): ?>
   <form method="GET" class="d-flex gap-2">
     <input type="hidden" name="period" value="<?= h($period) ?>">
+    <input type="hidden" name="scope" value="<?= h($scope) ?>">
     <?php if (count($campusesForCascade) > 1): ?>
       <select id="campusSelect" class="form-select-custom" style="width:auto;" onchange="loadDeptsCascade_dwRep(this.value)">
         <option value="">-- College/School --</option>
@@ -113,9 +71,9 @@ $statusChip = ['pending' => 'overdue', 'in_progress' => 'pending', 'completed' =
       </select>
     <?php endif; ?>
     <select name="department_id" id="departmentSelect" class="form-select-custom" style="width:auto;" onchange="this.form.submit()">
-      <option value=""><?= h(t('s18')) ?></option>
+      <?php if ($scope === 'organization'): ?><option value=""><?= h(t('s18')) ?></option><?php endif; ?>
       <?php foreach ($departments as $dept): ?>
-        <option value="<?= $dept['id'] ?>" <?= (string)$filterDeptId === (string)$dept['id'] ? 'selected' : '' ?>><?= h($dept['name_local'] ?: $dept['name']) ?></option>
+        <option value="<?= $dept['id'] ?>" <?= (int)$filterDeptId === (int)$dept['id'] ? 'selected' : '' ?>><?= h($dept['name_local'] ?: $dept['name']) ?></option>
       <?php endforeach; ?>
     </select>
     <?php if (count($campusesForCascade) > 1): ?>
@@ -126,7 +84,7 @@ $statusChip = ['pending' => 'overdue', 'in_progress' => 'pending', 'completed' =
       sel.disabled = true;
       fetch('../ajax-cascade.php?action=departments_for_campus&campus_id=' + campusId)
         .then(r => r.json()).then(data => {
-          sel.innerHTML = '<option value=""><?= h(t('s18')) ?></option>';
+          sel.innerHTML = '<?= $scope === 'organization' ? '<option value="">' . h(t('s18')) . '</option>' : '' ?>';
           (data.departments || []).forEach(d => { const o = document.createElement('option'); o.value = d.id; o.textContent = d.name; sel.appendChild(o); });
           sel.disabled = false;
         });
@@ -134,9 +92,29 @@ $statusChip = ['pending' => 'overdue', 'in_progress' => 'pending', 'completed' =
     </script>
     <?php endif; ?>
   </form>
-  <a href="export-csv.php?period=<?= h($period) ?>&department_id=<?= h($filterDeptId) ?>" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13px;padding:9px 16px;"><i class="fa-solid fa-file-excel me-1"></i>Excel</a>
+  <?php endif; ?>
+  <div class="d-flex gap-2">
+    <a href="export-csv.php?<?= h($qs([])) ?>" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13px;padding:9px 16px;"><i class="fa-solid fa-file-excel me-1"></i>Excel</a>
+    <button type="button" class="btn" style="background:var(--rail);color:#fff;border-radius:9px;font-size:13px;padding:9px 16px;font-weight:600;" onclick="var p=document.getElementById('printOpts');p.style.display=p.style.display==='none'?'block':'none';"><i class="fa-solid fa-print me-1"></i>Print / PDF</button>
+  </div>
 </div>
 
+<div id="printOpts" class="panel mb-3" style="display:none;">
+  <form method="GET" action="report-print.php" target="_blank" style="padding:16px 20px;">
+    <input type="hidden" name="scope" value="<?= h($scope) ?>">
+    <input type="hidden" name="period" value="<?= h($period) ?>">
+    <?php if ($filterDeptId): ?><input type="hidden" name="department_id" value="<?= (int)$filterDeptId ?>"><?php endif; ?>
+    <div style="font-weight:700;font-size:13px;margin-bottom:8px;">📋 छापील अहवालात कोणते Columns हवेत</div>
+    <div class="d-flex flex-wrap gap-3" style="font-size:12.5px;">
+      <?php foreach (['heading' => 'कामाचं शीर्षक', 'details' => 'तपशील/वर्णन', 'requester' => 'विनंती करणारा', 'priority' => 'प्राधान्य', 'cost' => 'खर्च', 'materials' => 'वापरलेलं साहित्य', 'dates' => 'दिनांक', 'status' => 'स्थिती'] as $k => $lbl): ?>
+        <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="cols[]" value="<?= $k ?>" checked> <?= h($lbl) ?></label>
+      <?php endforeach; ?>
+    </div>
+    <button type="submit" class="btn mt-3" style="background:var(--rail);color:#fff;border-radius:9px;font-size:13px;padding:8px 20px;font-weight:600;"><i class="fa-solid fa-file-pdf me-1"></i>अहवाल तयार करा</button>
+  </form>
+</div>
+
+<?php if ($scope !== 'personal'): ?>
 <div class="panel">
   <div class="panel-head"><div class="title"><?= h(t('s235')) ?></div><div class="sub"><?= h($start) ?> — <?= h($end) ?></div></div>
   <table class="rtable">
@@ -159,19 +137,21 @@ $statusChip = ['pending' => 'overdue', 'in_progress' => 'pending', 'completed' =
     </tbody>
   </table>
 </div>
+<?php endif; ?>
 
 <div class="panel mt-3">
-  <div class="panel-head"><div class="title"><?= h(t('s236')) ?></div><div class="sub"><?= h(t('s237')) ?></div></div>
+  <div class="panel-head"><div class="title"><?= h(t('s236')) ?></div><div class="sub"><?= h(t('s237')) ?> · <?= h($start) ?> — <?= h($end) ?></div></div>
+  <div style="overflow-x:auto;">
   <table class="rtable">
-    <thead><tr><th><?= h(t('s13')) ?></th><th><?= h(t('s1')) ?></th><th><?= h(t('s238')) ?></th><th><?= h(t('s6')) ?></th><th><?= h(t('s21')) ?></th><th><?= h(t('s2')) ?></th></tr></thead>
+    <thead><tr><th><?= h(t('s13')) ?></th><th><?= h(t('s1')) ?></th><th><?= h(t('s238')) ?></th><th><?= h(t('s6')) ?></th><th><?= h(t('s21')) ?></th><th>साहित्य</th><th><?= h(t('s2')) ?></th></tr></thead>
     <tbody>
       <?php if (empty($entries)): ?>
-        <tr><td colspan="6" style="text-align:center;color:var(--text-dim);padding:24px;"><?= h(t('s44')) ?></td></tr>
+        <tr><td colspan="7" style="text-align:center;color:var(--text-dim);padding:24px;"><?= h(t('s44')) ?></td></tr>
       <?php endif; ?>
       <?php foreach ($entries as $entry): ?>
         <tr>
           <td class="font-mono"><?= date('d M', strtotime($entry['work_date'])) ?></td>
-          <td><?= h($entry['dept_name']) ?></td>
+          <td><?= h($entry['dept_name'] ?: $entry['dept_name_en']) ?></td>
           <td style="color:var(--text-dim);"><?= $entry['requested_by'] ? h($entry['requested_by']) : '<span style="font-size:11px;">🔁 नियमित</span>' ?></td>
           <td><?= h($entry['emp_name']) ?></td>
           <td>
@@ -180,11 +160,13 @@ $statusChip = ['pending' => 'overdue', 'in_progress' => 'pending', 'completed' =
               <div style="font-size:11px;color:var(--text-dim);margin-top:2px;"><?= h($entry['custom_fields_display']) ?></div>
             <?php endif; ?>
           </td>
-          <td><span class="status-chip <?= $statusChip[$entry['status']] ?>"><?= $statusLabels[$entry['status']] ?></span></td>
+          <td style="font-size:11px;color:var(--text-dim);"><?= h($entry['materials_used'] ?: '—') ?></td>
+          <td><span class="status-chip <?= $statusChip[$entry['status']] ?? 'pending' ?>"><?= $statusLabels[$entry['status']] ?? h($entry['status']) ?></span></td>
         </tr>
       <?php endforeach; ?>
     </tbody>
   </table>
+  </div>
 </div>
 
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

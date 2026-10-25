@@ -39,7 +39,7 @@ $stmt = $pdo->prepare("SELECT COUNT(*) c FROM work_records WHERE organization_id
 $stmt->execute(array_merge([$orgId], $deptScopeParams));
 $todayPending = $stmt->fetch()['c'];
 
-$stmt = $pdo->prepare("SELECT COUNT(*) c FROM renewal_items WHERE organization_id=? AND expiry_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)$deptScopeSql");
+$stmt = $pdo->prepare("SELECT COUNT(*) c FROM renewal_items WHERE organization_id=? AND status <> 'inactive' AND expiry_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)$deptScopeSql");
 $stmt->execute(array_merge([$orgId], $deptScopeParams));
 $renewalsDue = $stmt->fetch()['c'];
 
@@ -152,7 +152,7 @@ try {
 $upcomingRenewalsSql = "
     SELECT r.*, d.name_local AS dept_name, DATEDIFF(r.expiry_date, CURDATE()) AS days_left
     FROM renewal_items r JOIN departments d ON d.id = r.department_id
-    WHERE r.organization_id=? AND r.expiry_date <= DATE_ADD(CURDATE(), INTERVAL 30 DAY)" . ($isMgmtView ? "" : " AND r.department_id = ?") . "
+    WHERE r.organization_id=? AND r.status <> 'inactive' AND r.expiry_date <= DATE_ADD(CURDATE(), INTERVAL 30 DAY)" . ($isMgmtView ? "" : " AND r.department_id = ?") . "
     ORDER BY r.expiry_date LIMIT 6
 ";
 $stmt = $pdo->prepare($upcomingRenewalsSql);
@@ -198,8 +198,8 @@ if (hasPermission('view_task_tracker')) {
     $recentTasks = $stmt->fetchAll();
 }
 
-$statusLabelsMap = ['pending' => 'प्रलंबित', 'in_progress' => 'सुरू आहे', 'completed' => 'पूर्ण झाले'];
-$statusChipMap = ['pending' => 'pending', 'in_progress' => 'pending', 'completed' => 'done'];
+$statusLabelsMap = ['pending' => 'प्रलंबित', 'in_progress' => 'सुरू आहे', 'completed' => 'पूर्ण झाले', 'cancelled' => 'रद्द केले'];
+$statusChipMap = ['pending' => 'pending', 'in_progress' => 'pending', 'completed' => 'done', 'cancelled' => 'overdue'];
 
 // Campus-निहाय संपूर्ण विभाजन — पूर्वी "केंद्रीकृत Dashboard" या वेगळ्या
 // पानावर होतं, आता Command Center चाच एक Section (फक्त manage_campuses

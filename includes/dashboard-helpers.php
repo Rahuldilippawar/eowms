@@ -44,10 +44,10 @@ function getDashboardRowMetrics($pdo, $orgId, $campusIdOrNull, $isTrustLevel = f
     $taskCounts = ['pending' => 0, 'in_progress' => 0, 'completed' => 0];
     foreach ($taskStmt->fetchAll() as $r) { $taskCounts[$r['status']] = (int)$r['c']; }
 
-    $renewalStmt = $pdo->prepare("SELECT COUNT(*) c FROM renewal_items WHERE department_id IN ($ph) AND expiry_date < CURDATE()");
+    $renewalStmt = $pdo->prepare("SELECT COUNT(*) c FROM renewal_items WHERE department_id IN ($ph) AND status <> 'inactive' AND expiry_date < CURDATE()");
     $renewalStmt->execute($deptIds);
     $renewalsExpired = (int)$renewalStmt->fetch()['c'];
-    $renewalStmt2 = $pdo->prepare("SELECT COUNT(*) c FROM renewal_items WHERE department_id IN ($ph) AND expiry_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)");
+    $renewalStmt2 = $pdo->prepare("SELECT COUNT(*) c FROM renewal_items WHERE department_id IN ($ph) AND status <> 'inactive' AND expiry_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)");
     $renewalStmt2->execute($deptIds);
     $renewalsDueSoon = (int)$renewalStmt2->fetch()['c'];
 

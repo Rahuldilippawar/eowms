@@ -21,14 +21,22 @@ $hostel = $stmt->fetch();
 if (!$hostel) { die('वसतिगृह सापडले नाही.'); }
 
 $date = $_GET['date'] ?? date('Y-m-d');
+if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || !strtotime($date)) { $date = date('Y-m-d'); }
 $session = $_GET['session'] ?? 'morning';
 if (!in_array($session, ['morning', 'afternoon', 'evening'], true)) { $session = 'morning'; }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $postDate = $_POST['attendance_date'] ?? '';
     $postSession = $_POST['session'] ?? '';
-    $statuses = $_POST['status'] ?? [];
-    $remarks = $_POST['remark'] ?? [];
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $postDate) || !strtotime($postDate)) { $postDate = date('Y-m-d'); }
+    if (!in_array($postSession, ['morning', 'afternoon', 'evening'], true)) { $postSession = 'morning'; }
+    $statuses = is_array($_POST['status'] ?? null) ? $_POST['status'] : [];
+    $remarks = is_array($_POST['remark'] ?? null) ? $_POST['remark'] : [];
+    // फक्त याच वसतिगृहातले विद्यार्थी
+    $validStmt = $pdo->prepare("SELECT id FROM hostel_students WHERE hostel_id = ?");
+    $validStmt->execute([$hostelId]);
+    $validIds = array_map('intval', $validStmt->fetchAll(PDO::FETCH_COLUMN));
+    $statuses = array_filter($statuses, fn($k) => in_array((int)$k, $validIds, true), ARRAY_FILTER_USE_KEY);
 
     $upsert = $pdo->prepare("
         INSERT INTO hostel_student_attendance (hostel_id, student_id, attendance_date, session, status, remark, marked_by)
@@ -56,6 +64,15 @@ $stmt = $pdo->prepare("SELECT student_id, status, remark FROM hostel_student_att
 $stmt->execute([$hostelId, $date, $session]);
 $existing = [];
 foreach ($stmt->fetchAll() as $row) { $existing[$row['student_id']] = $row; }
+
+// त्या दिवशी रजेवर (Leave — बाहेर) असलेले विद्यार्थी — त्यांची Default हजेरी "अनुपस्थित"
+$leaveStmt = $pdo->prepare("
+    SELECT DISTINCT l.student_id FROM hostel_leave_records l JOIN hostel_students hs ON hs.id = l.student_id
+    WHERE hs.hostel_id = ? AND l.leave_date <= ?
+      AND ((l.status = 'out' AND l.actual_return_date IS NULL) OR l.actual_return_date > ?)
+");
+$leaveStmt->execute([$hostelId, $date, $date]);
+$onLeaveIds = array_map('intval', $leaveStmt->fetchAll(PDO::FETCH_COLUMN));
 
 $sessionLabels = ['morning' => '🌅 सकाळ', 'afternoon' => '☀️ दुपार', 'evening' => '🌆 संध्याकाळ'];
 
@@ -104,11 +121,12 @@ require_once __DIR__ . '/../includes/header.php';
           <tr><td colspan="4" style="text-align:center;color:var(--text-dim);padding:20px;">कोणतेही विद्यार्थी सापडले नाहीत</td></tr>
         <?php endif; ?>
         <?php foreach ($students as $s):
-          $curStatus = $existing[$s['id']]['status'] ?? 'present';
-          $curRemark = $existing[$s['id']]['remark'] ?? '';
+          $isOnLeave = in_array((int)$s['id'], $onLeaveIds, true);
+          $curStatus = $existing[$s['id']]['status'] ?? ($isOnLeave ? 'absent' : 'present');
+          $curRemark = $existing[$s['id']]['remark'] ?? ($isOnLeave ? 'रजेवर' : '');
         ?>
           <tr>
-            <td style="font-weight:500;"><?= h($s['name']) ?></td>
+            <td style="font-weight:500;"><?= h($s['name']) ?><?php if ($isOnLeave): ?> <span class="status-chip pending" style="font-size:10px;">रजेवर</span><?php endif; ?></td>
             <td><?= h($s['class_grade'] ?? '—') ?></td>
             <td>
               <div class="d-flex gap-2">

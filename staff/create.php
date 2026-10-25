@@ -28,8 +28,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         $check = $pdo->prepare("SELECT id FROM users WHERE email = ?");
         $check->execute([$email]);
+        $codeCheck = $pdo->prepare("SELECT id FROM users WHERE employee_code = ?");
+        $codeCheck->execute([$employeeCode]);
         if ($check->fetch()) {
             $error = "'$email' आधीच अस्तित्वात आहे.";
+        } elseif ($employeeCode !== null && $codeCheck->fetch()) {
+            $error = "कर्मचारी कोड '$employeeCode' आधीच दुसऱ्या कर्मचाऱ्याला दिलेला आहे — कृपया वेगळा कोड द्या.";
         } else {
             $campusId = null;
             if ($departmentId) {
@@ -72,7 +76,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 INSERT INTO users (organization_id, campus_id, department_id, employee_code, name, email, mobile, designation, teaching_mode, salary, joining_date, date_of_birth, photo_path, password, must_change_password, role, is_active)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, 1)
             ");
-            $insert->execute([$orgId, $campusId, $departmentId, $employeeCode, $name, $email, $mobile, $designation, $teachingMode, $salary, $joiningDate, $dateOfBirth, $photoPath, password_hash($password, PASSWORD_DEFAULT), $role]);
+            try {
+                $insert->execute([$orgId, $campusId, $departmentId, $employeeCode, $name, $email, $mobile, $designation, $teachingMode, $salary, $joiningDate, $dateOfBirth, $photoPath, password_hash($password, PASSWORD_DEFAULT), $role]);
+            } catch (PDOException $e) {
+                // एकाच वेळी दुसऱ्याने तोच Email/कोड वापरला — Blank पान न दाखवता स्पष्ट संदेश
+                if ((int)($e->errorInfo[1] ?? 0) !== 1062) { throw $e; }
+                $error = 'हा ईमेल किंवा कर्मचारी कोड आधीच वापरात आहे — कृपया तपासून पुन्हा प्रयत्न करा.';
+            }
+        }
+        if (!$error && isset($insert)) {
 
             // Role-wise welcome email with login credentials — silently skipped if
             // the hosting's mail server isn't configured (e.g. local XAMPP testing).

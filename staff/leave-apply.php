@@ -10,9 +10,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $endDate = $_POST['end_date'] ?? '';
     $reason = trim($_POST['reason'] ?? '');
 
+    // दिनांक वैध (Y-m-d) आहेत ना
+    foreach (['startDate', 'endDate'] as $dv) {
+        $dObj = DateTime::createFromFormat('Y-m-d', $$dv);
+        if (!$dObj || $dObj->format('Y-m-d') !== $$dv) { $$dv = ''; }
+    }
+    $leaveError = null;
     if ($leaveTypeId && $startDate && $endDate && $reason && $startDate <= $endDate) {
         $totalDays = (strtotime($endDate) - strtotime($startDate)) / 86400 + 1;
 
+        // रजा-प्रकार याच संस्थेचा व सक्रिय असायलाच हवा
+        $ltStmt = $pdo->prepare("SELECT id FROM leave_types WHERE id = ? AND organization_id = ? AND is_active = 1");
+        $ltStmt->execute([$leaveTypeId, $orgId]);
+        if (!$ltStmt->fetch()) {
+            $leaveError = 'निवडलेला रजा-प्रकार वैध नाही.';
+        }
+
+        // आधीच्या प्रलंबित/मंजूर रजेशी दिवस एकमेकांवर येऊ नयेत
+        if (!$leaveError) {
+            $ovStmt = $pdo->prepare("SELECT start_date, end_date FROM leave_applications WHERE user_id = ? AND status IN ('pending','approved') AND start_date <= ? AND end_date >= ? LIMIT 1");
+            $ovStmt->execute([$user['id'], $endDate, $startDate]);
+            if ($ov = $ovStmt->fetch()) {
+                $leaveError = "या दिवसांसाठी आधीच रजा-अर्ज आहे ({$ov['start_date']} ते {$ov['end_date']}) — एकमेकांवर येणारी रजा मागता येणार नाही.";
+            }
+        }
+
+        // शिल्लक तपासणी — त्या वर्षासाठी शिल्लक (Balance) नोंदवलेली असेल तरच लागू
+        if (!$leaveError) {
+            $balYear = (int)date('Y', strtotime($startDate));
+            $balStmt = $pdo->prepare("SELECT allocated_days, used_days FROM leave_balances WHERE user_id = ? AND leave_type_id = ? AND year = ?");
+            $balStmt->execute([$user['id'], $leaveTypeId, $balYear]);
+            if ($bal = $balStmt->fetch()) {
+                $pendStmt = $pdo->prepare("SELECT COALESCE(SUM(total_days), 0) FROM leave_applications WHERE user_id = ? AND leave_type_id = ? AND status = 'pending' AND YEAR(start_date) = ?");
+                $pendStmt->execute([$user['id'], $leaveTypeId, $balYear]);
+                $available = (float)$bal['allocated_days'] - (float)$bal['used_days'] - (float)$pendStmt->fetchColumn();
+                if ($totalDays > $available) {
+                    $leaveError = 'पुरेशी रजा शिल्लक नाही — उपलब्ध (प्रलंबित अर्ज वजा करून): ' . max(0, $available) . " दिवस, मागितलेले: $totalDays दिवस.";
+                }
+            }
+        }
+    }
+
+    if ($leaveError) {
+        $_SESSION['form_error'] = $leaveError;
+    } elseif ($leaveTypeId && $startDate && $endDate && $reason && $startDate <= $endDate) {
         $pdo->prepare("INSERT INTO leave_applications (organization_id, user_id, leave_type_id, start_date, end_date, total_days, reason) VALUES (?, ?, ?, ?, ?, ?, ?)")
             ->execute([$orgId, $user['id'], $leaveTypeId, $startDate, $endDate, $totalDays, $reason]);
         $newAppId = $pdo->lastInsertId();

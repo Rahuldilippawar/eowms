@@ -49,7 +49,7 @@ $stmt->execute([$deptId]);
 $todayPending = $stmt->fetch()['c'];
 
 // Department renewals (due soon / expired)
-$stmt = $pdo->prepare("SELECT *, DATEDIFF(expiry_date, CURDATE()) AS days_left FROM renewal_items WHERE department_id = ? AND expiry_date <= DATE_ADD(CURDATE(), INTERVAL 30 DAY) ORDER BY expiry_date LIMIT 6");
+$stmt = $pdo->prepare("SELECT *, DATEDIFF(expiry_date, CURDATE()) AS days_left FROM renewal_items WHERE department_id = ? AND status <> 'inactive' AND expiry_date <= DATE_ADD(CURDATE(), INTERVAL 30 DAY) ORDER BY expiry_date LIMIT 6");
 $stmt->execute([$deptId]);
 $renewals = $stmt->fetchAll();
 
@@ -74,8 +74,8 @@ $stmt = $pdo->prepare("SELECT wr.*, (SELECT GROUP_CONCAT(u2.name SEPARATOR ', ')
 $stmt->execute([$deptId]);
 $recentWork = $stmt->fetchAll();
 
-$statusLabels = ['pending' => 'प्रलंबित', 'in_progress' => 'सुरू आहे', 'completed' => 'पूर्ण झाले'];
-$statusChip = ['pending' => 'pending', 'in_progress' => 'pending', 'completed' => 'done'];
+$statusLabels = ['pending' => 'प्रलंबित', 'in_progress' => 'सुरू आहे', 'completed' => 'पूर्ण झाले', 'cancelled' => 'रद्द केले'];
+$statusChip = ['pending' => 'pending', 'in_progress' => 'pending', 'completed' => 'done', 'cancelled' => 'overdue'];
 
 // This month's status + priority breakdown — for the pie/bar charts
 $statusCounts = [];

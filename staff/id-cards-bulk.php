@@ -83,7 +83,7 @@ if (!empty($_GET['generate'])) {
     </div>
     <div class="grid">
       <?php foreach ($employees as $emp):
-        $verifyUrl = $baseUrl . '/staff/verify-id.php?code=' . urlencode($emp['employee_code'] ?: $emp['id']);
+        $verifyUrl = $baseUrl . '/staff/verify-id.php?org=' . (int)activeOrgId() . '&code=' . urlencode($emp['employee_code'] ?? '');
         $qrSrc = 'https://api.qrserver.com/v1/create-qr-code/?size=160x160&margin=1&data=' . urlencode($verifyUrl);
         $joiningDateFmt = $emp['joining_date'] ? date('d.m.Y', strtotime($emp['joining_date'])) : '—';
         $branchLine = trim(implode(', ', array_filter([$emp['campus_address'] ?? null, $emp['campus_city'] ?? null])));

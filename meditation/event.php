@@ -10,7 +10,7 @@ $canManage = isManagementOrAbove() || hasPermission('manage_meditation');
 $deptCodeCheck = $pdo->prepare("SELECT code FROM departments WHERE id = ?");
 $deptCodeCheck->execute([$user['department_id'] ?? 0]);
 $userDeptCode = $deptCodeCheck->fetch()['code'] ?? null;
-$canMarkAttendance = hasRole('super_admin') || $userDeptCode === 'MED';
+$canMarkAttendance = hasRole('super_admin') || $userDeptCode === 'MED' || $canManage;
 
 $stmt = $pdo->prepare("
     SELECT se.*, d.name_local AS dept_name
@@ -34,6 +34,10 @@ $duties = $stmt->fetchAll();
 $stmt = $pdo->prepare("SELECT id, name, designation FROM users WHERE organization_id = ? AND is_active = 1 ORDER BY name");
 $stmt->execute([$orgId]);
 $staffPool = $stmt->fetchAll();
+
+$deptStmt = $pdo->prepare("SELECT id, name, name_local FROM departments WHERE organization_id = ? AND is_active = 1 ORDER BY name_local");
+$deptStmt->execute([$orgId]);
+$departments = $deptStmt->fetchAll();
 ?>
 
 <div class="page-eyebrow"><?= h(activeOrgName()) ?></div>
@@ -55,6 +59,35 @@ $staffPool = $stmt->fetchAll();
   <?php unset($_SESSION['flash']); ?>
 <?php endif; ?>
 
+<?php if ($canManage): ?>
+  <details class="panel mb-3" style="padding:12px 20px;">
+    <summary style="cursor:pointer;font-size:13px;font-weight:600;">✏️ कार्यक्रम बदला / काढा</summary>
+    <form method="POST" action="event-save.php" class="mt-3">
+      <input type="hidden" name="event_id" value="<?= $eventId ?>">
+      <input type="hidden" name="action" value="update">
+      <div class="row g-2">
+        <div class="col-md-3"><label class="form-label-custom">दिनांक</label><input type="date" name="event_date" class="form-control-custom" value="<?= h($event['event_date']) ?>" required></div>
+        <div class="col-md-4"><label class="form-label-custom"><?= h(t('s601')) ?></label>
+          <select name="organizing_department_id" class="form-select-custom">
+            <option value=""><?= h(t('s602')) ?></option>
+            <?php foreach ($departments as $dept): ?><option value="<?= $dept['id'] ?>" <?= (int)$event['organizing_department_id'] === (int)$dept['id'] ? 'selected' : '' ?>><?= h($dept['name_local'] ?: $dept['name']) ?></option><?php endforeach; ?>
+          </select>
+        </div>
+        <div class="col-md-5"><label class="form-label-custom"><?= h(t('s603')) ?></label><input type="text" name="theme" class="form-control-custom" value="<?= h($event['theme']) ?>"></div>
+        <div class="col-12"><label class="form-label-custom"><?= h(t('s604')) ?></label><textarea name="notes" class="form-control-custom" rows="2"><?= h($event['notes']) ?></textarea></div>
+      </div>
+      <div class="d-flex justify-content-between mt-2">
+        <button type="submit" form="satsangDeleteForm" class="btn btn-sm" style="border:1px solid var(--rose);color:var(--rose);border-radius:7px;font-size:12px;">🗑️ कार्यक्रम काढा</button>
+        <button type="submit" class="btn btn-sm" style="background:var(--rail);color:#fff;border-radius:7px;font-size:12px;padding:6px 18px;">जतन करा</button>
+      </div>
+    </form>
+    <form method="POST" action="event-save.php" id="satsangDeleteForm" onsubmit="return confirm('हा सत्संग कार्यक्रम, त्याच्या जबाबदाऱ्या व हजेरी काढायची?');">
+      <input type="hidden" name="event_id" value="<?= $eventId ?>">
+      <input type="hidden" name="action" value="delete">
+    </form>
+  </details>
+<?php endif; ?>
+
 <?php if ($event['notes']): ?>
   <div class="panel mb-3" style="padding:16px 20px;font-size:13px;color:var(--text-dim);"><?= nl2br(h($event['notes'])) ?></div>
 <?php endif; ?>
@@ -74,7 +107,17 @@ $staffPool = $stmt->fetchAll();
           <td style="font-weight:500;"><?= h($d['staff_name']) ?></td>
           <td><?= h($d['designation'] ?? '—') ?></td>
           <td><?= h($d['duty_description']) ?></td>
-          <td><?php if ($d['status'] === 'completed'): ?><span class="status-chip done">पूर्ण</span><?php else: ?><span class="status-chip pending">प्रलंबित</span><?php endif; ?></td>
+          <td>
+            <?php if ($d['status'] === 'completed'): ?><span class="status-chip done">पूर्ण</span><?php else: ?><span class="status-chip pending">प्रलंबित</span><?php endif; ?>
+            <?php if ($canManage || (int)$d['assigned_to'] === (int)$user['id']): ?>
+              <form method="POST" action="duty-save.php" style="display:inline;">
+                <input type="hidden" name="action" value="set_status">
+                <input type="hidden" name="id" value="<?= $d['id'] ?>">
+                <input type="hidden" name="status" value="<?= $d['status'] === 'completed' ? 'pending' : 'completed' ?>">
+                <button type="submit" class="btn btn-sm" style="border:1px solid var(--line);border-radius:7px;font-size:11px;padding:3px 9px;"><?= $d['status'] === 'completed' ? '↺ प्रलंबित' : '✓ पूर्ण झाली' ?></button>
+              </form>
+            <?php endif; ?>
+          </td>
           <?php if ($canManage): ?>
             <td>
               <form method="POST" action="duty-delete.php" style="display:inline;" onsubmit="return confirm('<?= addslashes(t('s639')) ?>');">

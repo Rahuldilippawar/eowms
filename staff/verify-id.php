@@ -1,18 +1,22 @@
 <?php
 require_once __DIR__ . '/../includes/auth.php';
 
-$code = trim($_GET['code'] ?? '');
+$code = is_string($_GET['code'] ?? null) ? trim($_GET['code']) : '';
+$verifyOrgId = (int)($_GET['org'] ?? 0);
 $emp = null;
 
-if ($code) {
-    $stmt = $pdo->prepare("
-        SELECT u.name, u.designation, u.is_active, d.name_local AS dept_name, o.name AS org_name, o.logo_path
+// सुरक्षा: फक्त कर्मचारी-कोडनेच शोध (क्रमांकाने — id=1,2,3... — सगळ्यांची यादी
+// काढता येऊ नये), Card वर संस्था दिलेली असेल तर त्याच संस्थेत, आणि अगदी कमी माहिती.
+if ($code !== '') {
+    $sql = "
+        SELECT u.name, u.designation, u.is_active, o.name AS org_name
         FROM users u
-        LEFT JOIN departments d ON d.id = u.department_id
-        LEFT JOIN organizations o ON o.id = u.organization_id
-        WHERE u.employee_code = ? OR u.id = ?
-    ");
-    $stmt->execute([$code, is_numeric($code) ? (int)$code : 0]);
+        JOIN organizations o ON o.id = u.organization_id
+        WHERE u.employee_code = ?";
+    $params = [$code];
+    if ($verifyOrgId) { $sql .= " AND u.organization_id = ?"; $params[] = $verifyOrgId; }
+    $stmt = $pdo->prepare($sql . " LIMIT 1");
+    $stmt->execute($params);
     $emp = $stmt->fetch();
 }
 ?>
@@ -47,7 +51,7 @@ if ($code) {
     <div class="icon">✅</div>
     <h1><?= htmlspecialchars($emp['org_name'] ?? '') ?></h1>
     <div class="name"><?= htmlspecialchars($emp['name']) ?></div>
-    <div class="sub"><?= htmlspecialchars($emp['designation'] ?? '') ?><?= $emp['dept_name'] ? ' — ' . htmlspecialchars($emp['dept_name']) : '' ?></div>
+    <div class="sub"><?= htmlspecialchars($emp['designation'] ?? '') ?></div>
     <?php if ($emp['is_active']): ?>
       <div class="badge valid">✓ वैध कर्मचारी (Active)</div>
     <?php else: ?>

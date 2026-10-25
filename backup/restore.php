@@ -8,6 +8,24 @@ $orgId = activeOrgId();
 $error = null;
 $successSummary = null;
 
+/**
+ * Zip मधली Entry सुरक्षित आहे का — '..', Absolute Path, Backslash, Drive-Letter
+ * असलेली नावं, आणि Server वर चालू शकणाऱ्या (PHP/.htaccess इ.) Files नाकारतो.
+ */
+function backupZipEntryIsSafe($entryName) {
+    if ($entryName === '' || strpos($entryName, "\0") !== false) return false;
+    if (strpos($entryName, '\\') !== false) return false;
+    if ($entryName[0] === '/' || preg_match('#^[A-Za-z]:#', $entryName)) return false;
+    foreach (explode('/', $entryName) as $seg) {
+        if ($seg === '..' || $seg === '.') return false;
+    }
+    if (strpos($entryName, '..') !== false) return false;
+    $base = strtolower(basename($entryName));
+    if ($base === '' || $base[0] === '.') return false; // .htaccess, .user.ini, इ.
+    if (preg_match('/\.(php\d*|phtml|phar|pht|phps|shtml|cgi|pl|py|sh|htaccess)(\.|$)/i', $base)) return false;
+    return true;
+}
+
 // सध्याच्या Organization मध्ये आधीच काही Data आहे का — असेल तर Restore
 // केल्याने जुनी नोंद डुप्लिकेट होण्याचा धोका आहे, त्यासाठी Explicit
 // Confirmation आवश्यक करतो.
@@ -21,6 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
     $uploadedFilePath = $_FILES['backup_file']['tmp_name'];
     $uploadedFileName = $_FILES['backup_file']['name'] ?? '';
     $restoredFileCount = 0;
+    $rejectedFileCount = 0;
 
     // Full Backup (.zip — Data + प्रत्यक्ष Files) असेल तर आधी Files
     // काढून, आतला data.json वापरतो. साधा (.json) असेल तर पूर्वीसारखंच.
@@ -35,23 +54,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                 $json = false;
             } else {
                 $json = $zip->getFromName('data.json');
-                // सगळ्या Uploaded Files परत जागच्या जागी ठेवतो
+                // सगळ्या Uploaded Files परत जागच्या जागी ठेवतो — पण Zip-Slip
+                // (../ ने बाहेर लिहिणं) आणि PHP/.htaccess सारख्या धोकादायक Files नाकारतो
                 $uploadsRestoreDir = __DIR__ . '/../assets/uploads';
+                if (!is_dir($uploadsRestoreDir)) { mkdir($uploadsRestoreDir, 0755, true); }
+                $uploadsRealRoot = realpath($uploadsRestoreDir);
+                $rejectedFileCount = 0;
                 for ($i = 0; $i < $zip->numFiles; $i++) {
                     $entryName = $zip->getNameIndex($i);
-                    if (strpos($entryName, 'uploads/') === 0) {
-                        $targetPath = __DIR__ . '/../assets/' . $entryName;
-                        $targetDir = dirname($targetPath);
-                        if (!is_dir($targetDir)) { mkdir($targetDir, 0755, true); }
-                        if (!is_file($targetPath)) { // आधीच असलेली File Overwrite करत नाही
-                            copy('zip://' . $uploadedFilePath . '#' . $entryName, $targetPath);
-                            $restoredFileCount++;
-                        }
-                    } elseif (strpos($entryName, 'org-branding/') === 0) {
-                        $targetPath = __DIR__ . '/../assets/uploads/' . basename($entryName);
-                        if (!is_dir(dirname($targetPath))) { mkdir(dirname($targetPath), 0755, true); }
-                        if (!is_file($targetPath)) {
-                            copy('zip://' . $uploadedFilePath . '#' . $entryName, $targetPath);
+                    if ($entryName === 'data.json' || substr($entryName, -1) === '/') continue;
+                    $isUploadEntry = strpos($entryName, 'uploads/') === 0;
+                    $isBrandingEntry = strpos($entryName, 'org-branding/') === 0;
+                    if (!$isUploadEntry && !$isBrandingEntry) continue;
+                    if (!backupZipEntryIsSafe($entryName)) { $rejectedFileCount++; continue; }
+
+                    $targetPath = $isUploadEntry
+                        ? $uploadsRealRoot . '/' . substr($entryName, strlen('uploads/'))
+                        : $uploadsRealRoot . '/' . basename($entryName);
+                    $targetDir = dirname($targetPath);
+                    if (!is_dir($targetDir)) { mkdir($targetDir, 0755, true); }
+                    $realTargetDir = realpath($targetDir);
+                    // अंतिम तपासणी: Folder खरंच assets/uploads च्या आतच आहे ना
+                    if ($realTargetDir === false || ($realTargetDir !== $uploadsRealRoot && strpos($realTargetDir . '/', $uploadsRealRoot . '/') !== 0)) {
+                        $rejectedFileCount++;
+                        continue;
+                    }
+                    $targetPath = $realTargetDir . '/' . basename($targetPath);
+                    if (!is_file($targetPath)) { // आधीच असलेली File Overwrite करत नाही
+                        $stream = $zip->getStream($entryName);
+                        if ($stream) {
+                            file_put_contents($targetPath, $stream);
+                            fclose($stream);
                             $restoredFileCount++;
                         }
                     }
@@ -113,8 +146,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
             foreach ($existingDeptStmt->fetchAll() as $ed) { $existingDeptByName[mb_strtolower(trim($ed['name']))] = $ed['id']; }
 
             foreach ($data['departments'] ?? [] as $d) {
-                $newCampusId = $campusMap[$d['campus_id']] ?? null;
-                if (!$newCampusId) continue;
+                // campus_id NULL = Trust-HQ (संस्था-स्तरीय) विभाग — तोही Restore करायचा
+                if (empty($d['campus_id'])) {
+                    $newCampusId = null;
+                } else {
+                    $newCampusId = $campusMap[$d['campus_id']] ?? null;
+                    if (!$newCampusId) continue;
+                }
                 $nameKey = mb_strtolower(trim($d['name']));
                 if (isset($existingDeptByName[$nameKey])) {
                     // आधीच याच नावाचा विभाग आहे — नवीन तयार न करता तोच वापरतो
@@ -129,13 +167,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
             }
 
             // ---------------- Users (skip if email already exists — protects existing accounts) ----------------
-            $checkEmail = $pdo->prepare("SELECT id FROM users WHERE email = ?");
+            // फक्त याच संस्थेतल्या, त्याच Email च्या User शीच जोडतो — दुसऱ्या संस्थेतल्या
+            // User कडे नोंदी कधीही जोडल्या जाऊ नयेत. (Email पूर्ण System मध्ये Unique असल्याने
+            // असा User नवीन तयार करता येत नाही — तो वगळला जातो.)
+            $checkEmail = $pdo->prepare("SELECT id, organization_id FROM users WHERE email = ?");
+            $skippedForeignUsers = 0;
             foreach ($data['users'] ?? [] as $u) {
                 $checkEmail->execute([$u['email']]);
                 $existing = $checkEmail->fetch();
                 if ($existing) {
-                    // Already exists (e.g. the protected Super Admin) — map to the existing user, don't duplicate
-                    $userMap[$u['id']] = $existing['id'];
+                    if ((int)$existing['organization_id'] === (int)$orgId) {
+                        // Already exists in this org (e.g. the protected Super Admin) — map to the existing user, don't duplicate
+                        $userMap[$u['id']] = $existing['id'];
+                    } else {
+                        $skippedForeignUsers++;
+                    }
                     continue;
                 }
                 $newCampusId = $campusMap[$u['campus_id']] ?? null;
@@ -1148,84 +1194,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                 }
             } catch (PDOException $e) { /* table not migrated yet */ }
 
-            // ---------------- Teaching Module (Timetable, Substitute, Syllabus, इ.) ----------------
+            // ---------------- Student → शिक्षक Feedback (Teaching Module काढलं; फक्त हा Data राहतो) ----------------
             try {
-                $timetableMap = [];
-                foreach ($data['teacher_timetable'] ?? [] as $tt) {
-                    $newTeacherId1 = $userMap[$tt['teacher_id']] ?? null;
-                    $newCampusIdTt = $campusMap[$tt['campus_id']] ?? null;
-                    if (!$newTeacherId1 || !$newCampusIdTt) continue;
-                    $ins = $pdo->prepare("
-                        INSERT INTO teacher_timetable (organization_id, campus_id, teacher_id, day_of_week, period_no, start_time, end_time, subject_name, class_section, academic_year, created_at)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    ");
-                    $ins->execute([$orgId, $newCampusIdTt, $newTeacherId1, $tt['day_of_week'], $tt['period_no'], $tt['start_time'], $tt['end_time'], $tt['subject_name'], $tt['class_section'], $tt['academic_year'], $tt['created_at']]);
-                    $timetableMap[$tt['id']] = $pdo->lastInsertId();
-                }
-
-                foreach ($data['substitute_assignments'] ?? [] as $sa) {
-                    $newOrigTeacher = $userMap[$sa['original_teacher_id']] ?? null;
-                    $newSubTeacher = $userMap[$sa['substitute_teacher_id']] ?? null;
-                    $newAssignedBy = $userMap[$sa['assigned_by']] ?? null;
-                    if (!$newOrigTeacher || !$newSubTeacher || !$newAssignedBy) continue;
-                    $newOrigTtId = !empty($sa['original_timetable_id']) ? ($timetableMap[$sa['original_timetable_id']] ?? null) : null;
-                    $pdo->prepare("
-                        INSERT INTO substitute_assignments (organization_id, original_timetable_id, original_teacher_id, substitute_teacher_id, substitute_date, period_no, subject_name, class_section, reason, assigned_by, created_at)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    ")->execute([$orgId, $newOrigTtId, $newOrigTeacher, $newSubTeacher, $sa['substitute_date'], $sa['period_no'], $sa['subject_name'], $sa['class_section'], $sa['reason'], $newAssignedBy, $sa['created_at']]);
-                }
-
-                foreach ($data['syllabus_trackers'] ?? [] as $st) {
-                    $newTeacherId2 = $userMap[$st['teacher_id']] ?? null;
-                    $newCampusIdSt = $campusMap[$st['campus_id']] ?? null;
-                    if (!$newTeacherId2 || !$newCampusIdSt) continue;
-                    try {
-                        $pdo->prepare("
-                            INSERT INTO syllabus_trackers (organization_id, campus_id, teacher_id, subject_name, class_section, academic_year, total_chapters, chapters_completed, last_updated_at)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                        ")->execute([$orgId, $newCampusIdSt, $newTeacherId2, $st['subject_name'], $st['class_section'], $st['academic_year'], $st['total_chapters'], $st['chapters_completed'], $st['last_updated_at']]);
-                    } catch (PDOException $e) { /* Duplicate Unique Key — वगळतो */ }
-                }
-
-                foreach ($data['teacher_qualifications'] ?? [] as $tq) {
-                    $newTeacherId3 = $userMap[$tq['teacher_id']] ?? null;
-                    if (!$newTeacherId3) continue;
-                    $pdo->prepare("
-                        INSERT INTO teacher_qualifications (teacher_id, qualification_type, specialization, institution, year_completed, net_set_status, research_papers_count, remarks, created_at)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    ")->execute([$newTeacherId3, $tq['qualification_type'], $tq['specialization'], $tq['institution'], $tq['year_completed'], $tq['net_set_status'], $tq['research_papers_count'], $tq['remarks'], $tq['created_at']]);
-                }
-
-                foreach ($data['class_teacher_assignments'] ?? [] as $cta) {
-                    $newTeacherId4 = $userMap[$cta['teacher_id']] ?? null;
-                    $newCampusIdCta = $campusMap[$cta['campus_id']] ?? null;
-                    if (!$newTeacherId4 || !$newCampusIdCta) continue;
-                    try {
-                        $pdo->prepare("
-                            INSERT INTO class_teacher_assignments (organization_id, campus_id, class_section, teacher_id, academic_year, created_at)
-                            VALUES (?, ?, ?, ?, ?, ?)
-                        ")->execute([$orgId, $newCampusIdCta, $cta['class_section'], $newTeacherId4, $cta['academic_year'], $cta['created_at']]);
-                    } catch (PDOException $e) { /* Duplicate Unique Key — वगळतो */ }
-                }
-
-                foreach ($data['exam_duty_allocations'] ?? [] as $eda) {
-                    $newTeacherId5 = $userMap[$eda['teacher_id']] ?? null;
-                    $newCampusIdEda = $campusMap[$eda['campus_id']] ?? null;
-                    $newCreatedByEda = $userMap[$eda['created_by']] ?? null;
-                    if (!$newTeacherId5 || !$newCampusIdEda || !$newCreatedByEda) continue;
-                    $pdo->prepare("
-                        INSERT INTO exam_duty_allocations (organization_id, campus_id, exam_name, duty_date, shift, teacher_id, room_hall, created_by, created_at)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    ")->execute([$orgId, $newCampusIdEda, $eda['exam_name'], $eda['duty_date'], $eda['shift'], $newTeacherId5, $eda['room_hall'], $newCreatedByEda, $eda['created_at']]);
-                }
-
                 foreach ($data['teacher_feedback'] ?? [] as $tf) {
                     $newTeacherId6 = $userMap[$tf['teacher_id']] ?? null;
                     if (!$newTeacherId6) continue;
+                    $newFbStudentId = !empty($tf['student_id']) ? ($studentMap[$tf['student_id']] ?? null) : null;
                     $pdo->prepare("
-                        INSERT INTO teacher_feedback (teacher_id, academic_year, rating, comment, submitted_by_type, submitted_at)
-                        VALUES (?, ?, ?, ?, ?, ?)
-                    ")->execute([$newTeacherId6, $tf['academic_year'], $tf['rating'], $tf['comment'], $tf['submitted_by_type'], $tf['submitted_at']]);
+                        INSERT INTO teacher_feedback (teacher_id, student_id, academic_year, rating, comment, submitted_by_type, submitted_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                    ")->execute([$newTeacherId6, $newFbStudentId, $tf['academic_year'], $tf['rating'], $tf['comment'], $tf['submitted_by_type'], $tf['submitted_at']]);
                 }
             } catch (PDOException $e) { /* table not migrated yet */ }
 
@@ -1349,8 +1327,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
             // ---------------- Grievances ----------------
             try {
                 foreach ($data['grievances'] ?? [] as $gr) {
-                    $newSubmittedBy2 = $userMap[$gr['submitted_by']] ?? null;
-                    if (!$newSubmittedBy2) continue;
+                    $newSubmittedBy2 = !empty($gr['submitted_by']) ? ($userMap[$gr['submitted_by']] ?? null) : null;
+                    if (!$newSubmittedBy2 && empty($gr['is_anonymous'])) continue; // गुप्त तक्रारीत ओळख नसतेच
                     $newAssignedTo2 = !empty($gr['assigned_to']) ? ($userMap[$gr['assigned_to']] ?? null) : null;
                     $pdo->prepare("
                         INSERT INTO grievances (organization_id, submitted_by, category, description, is_anonymous, status, assigned_to, resolution, sla_deadline, resolved_at, created_at)
@@ -1495,7 +1473,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     if (!$newEventId5 || !$newMarkedBy) continue;
                     $newAttUserId = !empty($ea['user_id']) ? ($userMap[$ea['user_id']] ?? null) : null;
                     $newAttStudentId = !empty($ea['student_id']) ? ($studentMap[$ea['student_id']] ?? null) : null;
-                    $pdo->prepare("INSERT INTO event_attendance (event_id, attendee_type, user_id, student_id, guest_name, marked_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)")
+                    $pdo->prepare("INSERT IGNORE INTO event_attendance (event_id, attendee_type, user_id, student_id, guest_name, marked_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)")
                         ->execute([$newEventId5, $ea['attendee_type'], $newAttUserId, $newAttStudentId, $ea['guest_name'], $newMarkedBy, $ea['created_at']]);
                 }
             } catch (PDOException $e) { /* table not migrated yet */ }
@@ -1960,6 +1938,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
 
             $pdo->commit();
             if ($restoredFileCount > 0) { $counts['restored_files'] = $restoredFileCount; }
+            if ($rejectedFileCount > 0) { $counts['rejected_files'] = $rejectedFileCount; }
+            if (!empty($skippedForeignUsers)) { $counts['skipped_users'] = $skippedForeignUsers; }
             logActivity('बॅकअपमधून डेटा रिस्टोर केला', 'organization', $orgId, json_encode($counts));
             $successSummary = $counts;
         } catch (Exception $e) {
@@ -1994,6 +1974,12 @@ require_once __DIR__ . '/../includes/header.php';
         <li><?= $successSummary['renewal_items'] ?> <?= h(t('s357')) ?></li>
         <li><?= $successSummary['hostels'] ?> <?= h(t('s358')) ?> <?= $successSummary['hostel_students'] ?> <?= h(t('s25')) ?></li>
         <li><?= $successSummary['work_requests'] ?> <?= h(t('s359')) ?></li>
+        <?php if (!empty($successSummary['rejected_files'])): ?>
+          <li style="color:var(--danger,#c0392b);">⚠️ <?= (int)$successSummary['rejected_files'] ?> Files असुरक्षित (चुकीचा Path किंवा PHP/.htaccess प्रकार) असल्यामुळे नाकारल्या</li>
+        <?php endif; ?>
+        <?php if (!empty($successSummary['skipped_users'])): ?>
+          <li style="color:var(--danger,#c0392b);">⚠️ <?= (int)$successSummary['skipped_users'] ?> कर्मचारी वगळले — त्यांचा Email दुसऱ्या संस्थेत आधीच वापरात आहे (त्यांच्याशी संबंधित नोंदीही वगळल्या)</li>
+        <?php endif; ?>
         <?php if (!empty($successSummary['restored_files'])): ?>
           <li>📎 <?= $successSummary['restored_files'] ?> Uploaded Files (Logo/Attachments/Photos) परत ठेवल्या गेल्या</li>
         <?php endif; ?>

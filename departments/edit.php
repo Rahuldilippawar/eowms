@@ -14,8 +14,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $hodId = ($_POST['hod_id'] ?? '') !== '' ? (int)$_POST['hod_id'] : null;
     $isActive = (int)($_POST['is_active'] ?? 1);
 
+    // कॅम्पस याच संस्थेचा असायलाच हवा
+    if ($campusId) {
+        $cChk = $pdo->prepare("SELECT id FROM campuses WHERE id = ? AND organization_id = ?");
+        $cChk->execute([$campusId, activeOrgId()]);
+        if (!$cChk->fetch()) {
+            $_SESSION['form_error'] = t('s428');
+            header('Location: edit.php?id=' . $id);
+            exit;
+        }
+    }
+    $oldCampusStmt = $pdo->prepare("SELECT campus_id FROM departments WHERE id = ? AND organization_id = ?");
+    $oldCampusStmt->execute([$id, activeOrgId()]);
+    $oldCampusId = $oldCampusStmt->fetchColumn();
+
     $stmt = $pdo->prepare("UPDATE departments SET campus_id=?, name=?, name_local=?, icon=?, hod_id=?, is_active=? WHERE id=? AND organization_id=?");
-    $stmt->execute([$campusId, $name, $nameLocal, $icon, $hodId, $isActive, $id, activeOrgId()]);
+    try {
+        $stmt->execute([$campusId, $name, $nameLocal, $icon, $hodId, $isActive, $id, activeOrgId()]);
+    } catch (PDOException $e) {
+        if ((int)($e->errorInfo[1] ?? 0) !== 1062) { throw $e; }
+        $_SESSION['form_error'] = 'निवडलेल्या कॅम्पसमध्ये याच कोडचा विभाग आधीच आहे — आधी कोड बदला किंवा दुसरा कॅम्पस निवडा.';
+        header('Location: edit.php?id=' . $id);
+        exit;
+    }
+
+    // विभाग दुसऱ्या कॅम्पसमध्ये हलवला — त्याच्या कर्मचाऱ्यांचा कॅम्पसही बदलतो
+    // (Trust-स्तरावर हलवला तर कर्मचाऱ्यांचा आधीचाच कॅम्पस राहतो — users.campus_id रिकामा असू शकत नाही)
+    if ($campusId && (int)$oldCampusId !== $campusId) {
+        $pdo->prepare("UPDATE users SET campus_id = ? WHERE department_id = ? AND organization_id = ?")->execute([$campusId, $id, activeOrgId()]);
+    }
 
     if ($stmt->rowCount() === 0) {
         // Either nothing actually changed, or (more likely) the active organization

@@ -22,21 +22,24 @@ if (!$serialNumber) {
 }
 
 // हे Device आधीच नोंदवलेलं (Registered) आहे का ते तपासतो — नसेल तर आपोआप
-// एक "Unregistered" नोंद तयार करतो, जेणेकरून Super Admin ला Devices
-// यादीत दिसेल आणि तिथूनच योग्य संस्था/Campus शी जोडता येईल.
+// एक "मंजुरी-प्रलंबित" (is_active = 0, is_approved = 0) नोंद तयार करतो.
+// सुरक्षा: अनोळखी Machine चे Punches Super Admin ने Devices पानावरून
+// मंजूर करेपर्यंत अजिबात स्वीकारले जात नाहीत.
+$deviceApproved = false;
 try {
-    $devStmt = $pdo->prepare("SELECT id, organization_id FROM biometric_devices WHERE serial_number = ?");
+    $devStmt = $pdo->prepare("SELECT id, organization_id, is_active, is_approved FROM biometric_devices WHERE serial_number = ?");
     $devStmt->execute([$serialNumber]);
     $device = $devStmt->fetch();
     if (!$device) {
         // कुठल्या Organization शी जोडायचं हे आधी माहीत नसतं — पहिल्या Active
-        // Organization शी तात्पुरतं जोडतो; Super Admin नंतर योग्य ते बदलू शकतो.
+        // Organization खाली (फक्त यादीत दिसण्यासाठी) निष्क्रिय नोंद करतो.
         $firstOrgStmt = $pdo->query("SELECT id FROM organizations WHERE is_active = 1 ORDER BY id LIMIT 1");
         $firstOrgId = $firstOrgStmt->fetch()['id'] ?? 1;
-        $pdo->prepare("INSERT INTO biometric_devices (organization_id, serial_number, device_name, last_seen_at) VALUES (?, ?, ?, NOW())")
-            ->execute([$firstOrgId, $serialNumber, 'नवीन Device (नाव द्या)']);
+        $pdo->prepare("INSERT INTO biometric_devices (organization_id, serial_number, device_name, last_seen_at, is_active, is_approved) VALUES (?, ?, ?, NOW(), 0, 0)")
+            ->execute([$firstOrgId, mb_substr($serialNumber, 0, 50), 'नवीन Device — मंजुरी प्रलंबित']);
     } else {
         $pdo->prepare("UPDATE biometric_devices SET last_seen_at = NOW() WHERE id = ?")->execute([$device['id']]);
+        $deviceApproved = (int)$device['is_active'] === 1 && (int)$device['is_approved'] === 1;
     }
 } catch (PDOException $e) {
     // Migration अजून चाललेली नसेल तरी Machine ला Error न देता शांतपणे पुढे जातो
@@ -64,6 +67,13 @@ if ($method === 'POST') {
     $table = $_GET['table'] ?? '';
     $body = file_get_contents('php://input');
 
+    if (strtoupper($table) === 'ATTLOG' && $body && !$deviceApproved) {
+        // मंजूर न झालेलं / निष्क्रिय Device — Punches दुर्लक्षित
+        header('Content-Type: text/plain');
+        echo "OK: 0";
+        exit;
+    }
+
     if (strtoupper($table) === 'ATTLOG' && $body) {
         $lines = preg_split('/\r\n|\r|\n/', trim($body));
         $inserted = 0;
@@ -81,9 +91,10 @@ if ($method === 'POST') {
             $punchDateTime = date('Y-m-d H:i:s', $ts);
 
             try {
-                $pdo->prepare("INSERT INTO biometric_punch_logs (device_serial, biometric_pin, punch_time, verify_mode) VALUES (?, ?, ?, ?)")
-                    ->execute([$serialNumber, $pin, $punchDateTime, $verifyMode]);
-                $inserted++;
+                // INSERT IGNORE — Machine ने तोच Punch पुन्हा पाठवला तरी दुप्पट नोंद नाही (Unique Key)
+                $insStmt = $pdo->prepare("INSERT IGNORE INTO biometric_punch_logs (device_serial, biometric_pin, punch_time, verify_mode) VALUES (?, ?, ?, ?)");
+                $insStmt->execute([$serialNumber, $pin, $punchDateTime, $verifyMode]);
+                $inserted += $insStmt->rowCount();
             } catch (PDOException $e) {
                 // Migration अजून चाललेली नसेल — शांतपणे वगळतो
             }

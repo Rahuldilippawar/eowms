@@ -53,3 +53,73 @@ function vehicleRenewalFieldLabel($field) {
     ];
     return $labels[$field] ?? $field;
 }
+
+/**
+ * ट्रिप/इंधन नोंद दुरुस्त/डिलीट केल्यावर — वाहनाचं "सध्याचं मीटर" उरलेल्या
+ * नोंदींमधल्या सर्वात मोठ्या वाचनावरून पुन्हा मोजतो (नोंदच नसेल तर बदलत नाही).
+ */
+function vehicleRecomputeOdometer($pdo, $vehicleId, $oldReading = null) {
+    $stmt = $pdo->prepare("
+        SELECT MAX(r) m FROM (
+            SELECT GREATEST(COALESCE(end_odometer, 0), COALESCE(start_odometer, 0)) r FROM vehicle_trips WHERE vehicle_id = ?
+            UNION ALL
+            SELECT COALESCE(odometer_reading, 0) FROM vehicle_fuel_log WHERE vehicle_id = ?
+        ) x
+    ");
+    $stmt->execute([$vehicleId, $vehicleId]);
+    $max = $stmt->fetch()['m'] ?? null;
+    $curStmt = $pdo->prepare("SELECT current_odometer FROM vehicles WHERE id = ?");
+    $curStmt->execute([$vehicleId]);
+    $current = (float)$curStmt->fetchColumn();
+    // दुरुस्त/डिलीट झालेली नोंद सध्याच्या मीटरपेक्षा कमी होती — म्हणजे सध्याचं मीटर
+    // त्या नोंदीवरून आलेलं नाही (उदा. वाहन-Form मध्ये हाताने टाकलेलं), ते कमी करत नाही
+    if ($oldReading !== null && (float)$oldReading < $current) {
+        $max = max($current, (float)$max);
+    }
+    if ($max !== null) {
+        $pdo->prepare("UPDATE vehicles SET current_odometer = ? WHERE id = ?")->execute([$max, $vehicleId]);
+    }
+}
+
+/** ट्रिप/इंधन नोंदीचं मीटर-वाचन (दुरुस्ती आधी लक्षात ठेवण्यासाठी) */
+function vehicleEntryReading($pdo, $entryType, $entryId) {
+    if ($entryType === 'trip') {
+        $stmt = $pdo->prepare("SELECT GREATEST(COALESCE(end_odometer, 0), COALESCE(start_odometer, 0)) FROM vehicle_trips WHERE id = ?");
+    } elseif ($entryType === 'fuel') {
+        $stmt = $pdo->prepare("SELECT odometer_reading FROM vehicle_fuel_log WHERE id = ?");
+    } else {
+        return null;
+    }
+    $stmt->execute([$entryId]);
+    $r = $stmt->fetchColumn();
+    return $r === false ? null : (float)$r;
+}
+
+/** वाहन यादी/नवीन वाहन/Import — Super Admin किंवा manage_vehicles Permission (सगळीकडे हाच नियम) */
+function canManageVehicles() {
+    return hasRole('super_admin') || hasPermission('manage_vehicles');
+}
+
+/**
+ * Form मधून आलेले चालक/Campus याच संस्थेचे आहेत का, इंधन-प्रकार व
+ * तारखा वैध आहेत का — तपासून, चूक असल्यास मराठी संदेश परत देतो (नाहीतर null).
+ */
+function vehicleValidateInput($pdo, $orgId, $driverId, $campusId, $fuelType, array $dates) {
+    if ($driverId) {
+        $st = $pdo->prepare("SELECT 1 FROM users WHERE id = ? AND organization_id = ?");
+        $st->execute([$driverId, $orgId]);
+        if (!$st->fetch()) { return 'निवडलेला चालक सापडला नाही.'; }
+    }
+    if ($campusId) {
+        $st = $pdo->prepare("SELECT 1 FROM campuses WHERE id = ? AND organization_id = ?");
+        $st->execute([$campusId, $orgId]);
+        if (!$st->fetch()) { return 'निवडलेलं College/Campus सापडलं नाही.'; }
+    }
+    if (!in_array($fuelType, ['petrol', 'diesel', 'cng', 'electric', 'other'], true)) {
+        return 'इंधनाचा प्रकार अवैध आहे.';
+    }
+    foreach ($dates as $d) {
+        if ($d !== null && $d !== '' && !DateTime::createFromFormat('!Y-m-d', (string)$d)) { return 'एखादी तारीख चुकीच्या स्वरूपात आहे.'; }
+    }
+    return null;
+}

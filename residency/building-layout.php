@@ -16,7 +16,7 @@ if (!$isMgmt && $userDeptCode !== 'RES') {
 }
 
 $buildingsStmt = $pdo->prepare("
-    SELECT b.*, (SELECT COUNT(*) FROM maintenance_locations WHERE building_id = b.id AND is_active = 1) AS room_count
+    SELECT b.*, (SELECT COUNT(*) FROM maintenance_locations WHERE building_id = b.id AND is_active = 1 AND is_residential = 1) AS room_count
     FROM buildings b WHERE b.organization_id = ? ORDER BY b.name
 ");
 $buildingsStmt->execute([$orgId]);
@@ -27,7 +27,7 @@ $selectedBuildingId = (int)($_GET['building_id'] ?? ($buildings[0]['id'] ?? 0));
 $roomsStmt = $pdo->prepare("
     SELECT ml.*, (SELECT COUNT(*) FROM residency_occupants WHERE location_id = ml.id AND status = 'active') AS occupant_count
     FROM maintenance_locations ml
-    WHERE ml.organization_id = ? AND ml.building_id = ? AND ml.is_active = 1
+    WHERE ml.organization_id = ? AND ml.building_id = ? AND ml.is_active = 1 AND ml.is_residential = 1
     ORDER BY ml.floor DESC, ml.name
 ");
 $roomsStmt->execute([$orgId, $selectedBuildingId]);

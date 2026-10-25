@@ -8,6 +8,7 @@ $canManage = $isMgmt || hasPermission('manage_attendance');
 
 $targetUserId = (int)($_GET['user_id'] ?? $user['id']);
 $month = $_GET['month'] ?? date('Y-m');
+if (!is_string($month) || !preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $month)) { $month = date('Y-m'); }
 
 if ($targetUserId !== (int)$user['id'] && !$canManage) {
     http_response_code(403);
@@ -35,9 +36,34 @@ $summaryStmt->execute([$targetUserId, $month]);
 $summary = $summaryStmt->fetch();
 
 $monthLabel = date('F Y', strtotime($month . '-01'));
-$totalDaysInMonth = (int)date('t', strtotime($month . '-01'));
+$daysInMonth = (int)date('t', strtotime($month . '-01'));
+
+// टक्केवारी "कामाच्या दिवसां"वर — सुट्ट्या (संस्था-स्तरीय किंवा त्याच्या Campus च्या)
+// आणि साप्ताहिक सुट्टी (Shift Settings, Default रविवार) वगळून
+$offDates = [];
+$holStmt = $pdo->prepare("SELECT holiday_date FROM holidays WHERE organization_id = ? AND (campus_id IS NULL OR campus_id = ?) AND DATE_FORMAT(holiday_date, '%Y-%m') = ?");
+$holStmt->execute([$orgId, $targetUser['campus_id'], $month]);
+foreach ($holStmt->fetchAll(PDO::FETCH_COLUMN) as $hd) { $offDates[$hd] = true; }
+$holMarkStmt = $pdo->prepare("SELECT attendance_date FROM staff_attendance WHERE user_id = ? AND status = 'holiday' AND DATE_FORMAT(attendance_date, '%Y-%m') = ?");
+$holMarkStmt->execute([$targetUserId, $month]);
+foreach ($holMarkStmt->fetchAll(PDO::FETCH_COLUMN) as $hd) { $offDates[$hd] = true; }
+$weeklyOffs = [0];
+try {
+    $woStmt = $pdo->prepare("SELECT weekly_off_1, weekly_off_2 FROM staff_shift_settings WHERE user_id = ?");
+    $woStmt->execute([$targetUserId]);
+    if ($wo = $woStmt->fetch()) {
+        $weeklyOffs = [$wo['weekly_off_1'] !== null ? (int)$wo['weekly_off_1'] : 0];
+        if ($wo['weekly_off_2'] !== null) { $weeklyOffs[] = (int)$wo['weekly_off_2']; }
+    }
+} catch (PDOException $e) {}
+$totalDaysInMonth = 0; // कामाचे दिवस
+for ($d = 1; $d <= $daysInMonth; $d++) {
+    $dt = $month . '-' . str_pad((string)$d, 2, '0', STR_PAD_LEFT);
+    if (isset($offDates[$dt]) || in_array((int)date('w', strtotime($dt)), $weeklyOffs, true)) continue;
+    $totalDaysInMonth++;
+}
 $effectivePresent = (float)($summary['present_count'] ?? 0) + (0.5 * (float)($summary['half_day_count'] ?? 0));
-$attendancePct = $totalDaysInMonth > 0 ? round(($effectivePresent / $totalDaysInMonth) * 100, 1) : 0;
+$attendancePct = $totalDaysInMonth > 0 ? min(100, round(($effectivePresent / $totalDaysInMonth) * 100, 1)) : 0;
 ?>
 <!DOCTYPE html>
 <html lang="mr">
@@ -85,7 +111,7 @@ $attendancePct = $totalDaysInMonth > 0 ? round(($effectivePresent / $totalDaysIn
     हे प्रमाणित करण्यात येते की <strong><?= h($targetUser['name']) ?></strong>
     (<?= h($targetUser['designation'] ?: '') ?><?= $targetUser['dept_name'] ? ', ' . h($targetUser['dept_name']) : '' ?>)
     यांनी <strong><?= h($monthLabel) ?></strong> या महिन्यात
-    <strong><?= $effectivePresent ?> पैकी <?= $totalDaysInMonth ?> दिवस (<?= $attendancePct ?>%)</strong> हजेरी लावली आहे.
+    <strong><?= $effectivePresent ?> पैकी <?= $totalDaysInMonth ?> कामाचे दिवस (<?= $attendancePct ?>%)</strong> हजेरी लावली आहे.
   </div>
 
   <div class="stats-grid">

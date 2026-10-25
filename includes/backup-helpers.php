@@ -148,13 +148,6 @@ function buildOrgBackup($pdo, $orgId) {
         'student_notifications' => safeFetchAll($pdo, "
             SELECT sn.* FROM student_notifications sn JOIN students s ON s.id = sn.student_id WHERE s.organization_id = ?", [$orgId]),
         'events' => safeFetchAll($pdo, "SELECT * FROM events WHERE organization_id = ?", [$orgId]),
-        'teacher_timetable' => safeFetchAll($pdo, "SELECT * FROM teacher_timetable WHERE organization_id = ?", [$orgId]),
-        'substitute_assignments' => safeFetchAll($pdo, "SELECT * FROM substitute_assignments WHERE organization_id = ?", [$orgId]),
-        'syllabus_trackers' => safeFetchAll($pdo, "SELECT * FROM syllabus_trackers WHERE organization_id = ?", [$orgId]),
-        'teacher_qualifications' => safeFetchAll($pdo, "
-            SELECT tq.* FROM teacher_qualifications tq JOIN users u ON u.id = tq.teacher_id WHERE u.organization_id = ?", [$orgId]),
-        'class_teacher_assignments' => safeFetchAll($pdo, "SELECT * FROM class_teacher_assignments WHERE organization_id = ?", [$orgId]),
-        'exam_duty_allocations' => safeFetchAll($pdo, "SELECT * FROM exam_duty_allocations WHERE organization_id = ?", [$orgId]),
         'teacher_feedback' => safeFetchAll($pdo, "
             SELECT tf.* FROM teacher_feedback tf JOIN users u ON u.id = tf.teacher_id WHERE u.organization_id = ?", [$orgId]),
         'event_tasks' => safeFetchAll($pdo, "
@@ -174,7 +167,8 @@ function buildOrgBackup($pdo, $orgId) {
             SELECT rb.* FROM room_bookings rb JOIN bookable_rooms br ON br.id = rb.room_id WHERE br.organization_id = ?", [$orgId]),
         'staff_messages' => safeFetchAll($pdo, "
             SELECT sm.* FROM staff_messages sm JOIN users u ON u.id = sm.sender_id WHERE u.organization_id = ?", [$orgId]),
-        'grievances' => safeFetchAll($pdo, "SELECT * FROM grievances WHERE organization_id = ?", [$orgId]),
+        // गुप्त तक्रार — तक्रारदाराची ओळख (submitted_by / submitter_hash) Backup मध्ये कधीही नाही
+        'grievances' => safeFetchAll($pdo, "SELECT id, organization_id, IF(is_anonymous = 1, NULL, submitted_by) AS submitted_by, category, description, is_anonymous, status, assigned_to, resolution, sla_deadline, resolved_at, created_at FROM grievances WHERE organization_id = ?", [$orgId]),
         'dept_material_purchases' => safeFetchAll($pdo, "SELECT * FROM dept_material_purchases WHERE organization_id = ?", [$orgId]),
         'dept_payment_ledger' => safeFetchAll($pdo, "SELECT * FROM dept_payment_ledger WHERE organization_id = ?", [$orgId]),
         'gaushala_cattle' => safeFetchAll($pdo, "SELECT * FROM gaushala_cattle WHERE organization_id = ?", [$orgId]),

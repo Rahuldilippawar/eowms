@@ -129,7 +129,8 @@ try {
       <?php endif; ?>
       <div class="col-md-6">
         <label class="form-label-custom"><?= h(t('s1')) ?></label>
-        <select name="department_id" id="departmentSelect" class="form-select-custom" required>
+        <select name="department_id" id="departmentSelect" class="form-select-custom">
+          <option value="">— विभाग नाही (फक्त Management पदांसाठी) —</option>
           <?php foreach ($departments as $dept): ?>
             <option value="<?= $dept['id'] ?>" <?= (int)$staffMember['department_id'] === (int)$dept['id'] ? 'selected' : '' ?>><?= h($dept['name_local'] ?: $dept['name']) ?></option>
           <?php endforeach; ?>
@@ -143,7 +144,7 @@ try {
         sel.disabled = true;
         fetch('../ajax-cascade.php?action=departments_for_campus&campus_id=' + campusId)
           .then(r => r.json()).then(data => {
-            sel.innerHTML = '';
+            sel.innerHTML = '<option value="">— विभाग नाही (फक्त Management पदांसाठी) —</option>';
             (data.departments || []).forEach(d => { const o = document.createElement('option'); o.value = d.id; o.textContent = d.name; sel.appendChild(o); });
             sel.disabled = false;
           });

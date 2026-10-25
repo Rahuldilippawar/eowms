@@ -262,10 +262,12 @@ window.addEventListener('load', function () {
 <div class="modal fade" id="sosModal" tabindex="-1">
   <div class="modal-dialog">
     <div class="modal-content" style="border-radius:14px;border-top:4px solid #B23A48;">
-      <form method="POST" action="<?= $rootPath ?? '' ?>emergency/trigger.php">
+      <form method="POST" action="<?= $rootPath ?? '' ?>emergency/trigger.php" id="sosForm">
+        <input type="hidden" name="latitude" id="sosLat">
+        <input type="hidden" name="longitude" id="sosLng">
         <div class="modal-body" style="padding:24px;">
           <div style="font-size:17px;font-weight:700;color:#B23A48;margin-bottom:4px;">🆘 आणीबाणी सूचना पाठवा</div>
-          <div style="font-size:12px;color:#666B7D;margin-bottom:16px;">ही सूचना Management/Security ला त्वरित पाठवली जाईल.</div>
+          <div style="font-size:12px;color:#666B7D;margin-bottom:16px;">ही सूचना Management, Security, तुमचे विभाग-प्रमुख यांना त्वरित पाठवली जाईल.</div>
           <label class="form-label-custom">प्रकार</label>
           <select name="alert_type" class="form-select-custom mb-3" required>
             <option value="fire">🔥 आग</option>
@@ -277,6 +279,7 @@ window.addEventListener('load', function () {
           <input type="text" name="location" class="form-control-custom mb-3" placeholder="उदा. मुख्य इमारत, दुसरा मजला">
           <label class="form-label-custom">तपशील (ऐच्छिक)</label>
           <textarea name="message" class="form-control-custom" rows="2"></textarea>
+          <div id="sosGeoStatus" style="font-size:11px;color:#666B7D;margin-top:8px;">📍 ठिकाण (GPS) — परवानगी दिल्यास नकाशा-Link सोबत जाईल; नाही दिली तरी सूचना जाईल.</div>
         </div>
         <div class="modal-footer" style="border-top:1px solid #EEF0F4;">
           <button type="button" class="btn btn-sm" data-bs-dismiss="modal" style="border:1px solid #D7DAE0;border-radius:7px;">रद्द करा</button>
@@ -286,5 +289,29 @@ window.addEventListener('load', function () {
     </div>
   </div>
 </div>
+<script>
+(function () {
+  // SOS उघडताच Browser Geolocation विचारतो (ऐच्छिक) — नकार/अपयश आलं तरी पाठवता येतं
+  var modal = document.getElementById('sosModal');
+  if (!modal) return;
+  modal.addEventListener('shown.bs.modal', function () {
+    var st = document.getElementById('sosGeoStatus');
+    if (!navigator.geolocation) { st.textContent = '📍 हा Browser ठिकाण देत नाही — तरीही सूचना जाईल.'; return; }
+    st.textContent = '📍 ठिकाण शोधत आहे…';
+    navigator.geolocation.getCurrentPosition(function (p) {
+      document.getElementById('sosLat').value = p.coords.latitude.toFixed(7);
+      document.getElementById('sosLng').value = p.coords.longitude.toFixed(7);
+      st.textContent = '📍 ठिकाण मिळालं (±' + Math.round(p.coords.accuracy) + ' मी.) — नकाशा-Link सोबत जाईल.';
+    }, function () {
+      st.textContent = '📍 ठिकाण मिळालं नाही — तरीही सूचना जाईल (स्थान वर लिहा).';
+    }, { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 });
+  });
+  document.getElementById('sosForm').addEventListener('submit', function (e) {
+    var b = this.querySelector('button[type=submit]');
+    if (b.disabled) { e.preventDefault(); return; }
+    b.disabled = true; b.textContent = 'पाठवत आहे…';
+  });
+})();
+</script>
 </body>
 </html>

@@ -1,121 +1,140 @@
 <?php
 // ============================================================
 // RENEWAL REMINDER CRON — run this once daily via a scheduled
-// cron job (Hostinger hPanel -> Advanced -> Cron Jobs).
+// cron job (Hostinger hPanel -> Advanced -> Cron Jobs), किंवा
+// cron/run-all.php मधून आपोआप.
 //
 // Command to schedule (once a day, e.g. 8:00 AM):
 //   php /home/USERNAME/domains/YOURDOMAIN/public_html/cron/send-renewal-reminders.php
 //
-// This does NOT need a browser/login — safe to run from cron.
-// It creates IN-APP notifications AND sends EMAIL for each
-// department's HOD + staff when a renewal item crosses a
-// reminder milestone (90/60/30/15/7/3/1/0 days), without
-// sending duplicate notifications for the same item on the
-// same day.
+// मुदत संपण्याआधी 90/60/30/15/7/3/1/0 दिवस — आणि मुदत संपल्यावर
+// 1 दिवसाने, मग दर 7 दिवसांनी (नूतनीकरण होईपर्यंत) — In-App
+// Notification + Email पाठवते.
+//   - जबाबदार व्यक्ती (नसेल तर संपूर्ण विभाग)
+//   - 7 दिवस किंवा कमी उरले / मुदत संपली — + विभाग HOD
+//   - मुदत संपून 7 दिवसांपेक्षा जास्त — + Management (role_definitions.category)
+// एकाच नोंदीसाठी एकाच Milestone ची सूचना (त्याच expiry_date साठी)
+// कधीही दुसऱ्यांदा जात नाही — renewal_reminder_log मध्ये नोंद ठेवतो.
+// Renew केल्यावर expiry_date बदलते, त्यामुळे पुढच्या Cycle चे Reminders
+// पुन्हा आपोआप सुरू होतात.
+//
+// Testing: php send-renewal-reminders.php --date=2026-12-01
 // ============================================================
 
 if (PHP_SAPI !== 'cli') { http_response_code(403); exit('CLI only'); }
-require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/mailer.php';
+require_once __DIR__ . '/../includes/cron-helpers.php';
 
-$milestones = [90, 60, 30, 15, 7, 3, 1, 0];
-$today = date('Y-m-d');
+const RENEWAL_MILESTONES = [90, 60, 30, 15, 7, 3, 1, 0];
+const RENEWAL_CATCHUP_DAYS = 2;      // Cron एखादा दिवस चुकला तर — 2 दिवसांपर्यंत चुकलेला Milestone पाठवतो
+const RENEWAL_ESCALATE_AFTER_DAYS = 7;
+
+$today = cronToday();
 $sent = 0;
+cronJobStart($pdo, 'send-renewal-reminders');
+
+/** आजच्या उरलेल्या दिवसांवरून — कोणता Milestone लागू आहे (नसेल तर null) */
+function renewalDueMilestone($daysLeft) {
+    if ($daysLeft >= 0) {
+        foreach (array_reverse(RENEWAL_MILESTONES) as $m) { // 0,1,3,7,... — सगळ्यात जवळचा आधी
+            if ($m >= $daysLeft && $m - $daysLeft <= RENEWAL_CATCHUP_DAYS) { return 'd' . $m; }
+            if ($m > $daysLeft + RENEWAL_CATCHUP_DAYS) { break; }
+        }
+        return null;
+    }
+    $overdue = -$daysLeft;
+    $k = 1 + 7 * intdiv($overdue - 1, 7); // 1, 8, 15, 22 ...
+    return ($overdue - $k <= RENEWAL_CATCHUP_DAYS) ? 'o' . $k : null;
+}
 
 try {
-    $items = $pdo->query("
-        SELECT r.*, DATEDIFF(r.expiry_date, CURDATE()) AS days_left
-        FROM renewal_items r
-        WHERE r.expiry_date >= CURDATE() - INTERVAL 3 DAY
-          AND r.status != 'renewed'
-    ")->fetchAll();
+    $items = $pdo->query("SELECT r.* FROM renewal_items r WHERE r.status <> 'inactive'")->fetchAll();
 } catch (PDOException $e) {
+    cronJobFinish($pdo, 'send-renewal-reminders', false, 'renewal_items table not found');
     die("renewal_items table not found — nothing to do.\n");
 }
 
+$orgNames = [];
 foreach ($items as $item) {
-    $daysLeft = (int)$item['days_left'];
-    if (!in_array($daysLeft, $milestones, true)) {
-        continue; // only notify exactly on milestone days, not every single day
-    }
+    $daysLeft = (int)round((strtotime($item['expiry_date']) - strtotime($today)) / 86400);
+    $milestone = renewalDueMilestone($daysLeft);
+    if ($milestone === null) { continue; }
 
-    // Skip if we've already notified about this exact item today
+    // Dedupe — item + milestone + expiry_date (Renew केल्यावर नवीन expiry_date = नवीन Cycle)
     try {
-        $check = $pdo->prepare("
-            SELECT COUNT(*) c FROM notifications
-            WHERE link = ? AND DATE(created_at) = ?
-        ");
-        $link = 'renewals/index.php?item=' . $item['id'];
-        $check->execute([$link, $today]);
-        if ($check->fetch()['c'] > 0) {
-            continue;
-        }
+        $claim = $pdo->prepare("INSERT IGNORE INTO renewal_reminder_log (renewal_item_id, milestone, expiry_date) VALUES (?, ?, ?)");
+        $claim->execute([$item['id'], $milestone, $item['expiry_date']]);
+        if ($claim->rowCount() === 0) { continue; }
     } catch (PDOException $e) {
-        break; // notifications table not migrated — stop entirely
+        die("renewal_reminder_log table not found — Database Update चालवा.\n");
     }
 
-    $label = $daysLeft < 0 ? 'मुदत संपली' : ($daysLeft === 0 ? 'आज मुदत संपते' : "$daysLeft दिवसात मुदत संपणार");
-    $title = "नूतनीकरण सूचना — {$item['item_name']}";
-    $message = "$label";
+    $overdueDays = max(0, -$daysLeft);
+    $label = $daysLeft < 0 ? "मुदत संपून $overdueDays दिवस झाले" : ($daysLeft === 0 ? 'आज मुदत संपते' : "$daysLeft दिवसात मुदत संपणार");
+    $title = ($daysLeft < 0 ? '⚠️ ' : '🔔 ') . "नूतनीकरण सूचना — {$item['item_name']}";
+    $message = $label . ' (' . date('d M Y', strtotime($item['expiry_date'])) . ')';
+    $link = 'renewals/index.php?item=' . $item['id'];
 
     // ------------- Escalating Reminder -------------
-    // 30/15 दिवस — फक्त जबाबदार व्यक्तीला (नसेल तर संपूर्ण विभागाला)
-    // 7/3 दिवस — जबाबदार व्यक्ती + HOD
-    // 1/0/मुदत-संपलेली — जबाबदार व्यक्ती + HOD + Management (सगळ्यात वरची पातळी)
     $notifyIds = [];
     try {
         if (!empty($item['responsible_user_id'])) {
-            $notifyIds[] = $item['responsible_user_id'];
+            $notifyIds[] = (int)$item['responsible_user_id'];
         } else {
             $staffStmt = $pdo->prepare("SELECT id FROM users WHERE department_id = ? AND is_active = 1");
             $staffStmt->execute([$item['department_id']]);
-            $notifyIds = array_merge($notifyIds, $staffStmt->fetchAll(PDO::FETCH_COLUMN));
+            $notifyIds = array_merge($notifyIds, array_map('intval', $staffStmt->fetchAll(PDO::FETCH_COLUMN)));
         }
 
         if ($daysLeft <= 7) {
             $hodStmt = $pdo->prepare("SELECT hod_id FROM departments WHERE id = ?");
             $hodStmt->execute([$item['department_id']]);
             $hodId = $hodStmt->fetch()['hod_id'] ?? null;
-            if ($hodId) { $notifyIds[] = $hodId; }
+            if ($hodId) { $notifyIds[] = (int)$hodId; }
         }
 
-        if ($daysLeft <= 1) {
-            $mgmtStmt = $pdo->prepare("
-                SELECT u.id FROM users u JOIN role_definitions rd ON rd.role_key = u.role
-                WHERE u.organization_id = ? AND u.is_active = 1 AND rd.category = 'management'
-            ");
-            $mgmtStmt->execute([$item['organization_id']]);
-            $notifyIds = array_merge($notifyIds, $mgmtStmt->fetchAll(PDO::FETCH_COLUMN));
+        if ($overdueDays > RENEWAL_ESCALATE_AFTER_DAYS) {
+            $notifyIds = array_merge($notifyIds, cronManagementUserIds($pdo, $item['organization_id']));
+            $title = "🚨 Escalation — {$item['item_name']}";
         }
 
-        $notifyIds = array_unique(array_filter($notifyIds));
+        // विभागात कोणीच नसेल (HOD/Staff नाही) — तर सूचना कुठेच न जाता हरवू नये म्हणून Management ला
+        if (!array_filter($notifyIds)) {
+            $notifyIds = cronManagementUserIds($pdo, $item['organization_id']);
+        }
+        $notifyIds = array_values(array_unique(array_filter($notifyIds)));
 
-        // Email साठी — संस्थेचं नाव एकदाच काढतो
-        $orgStmt = $pdo->prepare("SELECT name FROM organizations WHERE id = ?");
-        $orgStmt->execute([$item['organization_id']]);
-        $orgName = $orgStmt->fetch()['name'] ?? 'E-Admin';
-        $emailLink = rtrim(SITE_BASE_URL, '/') . '/renewals/index.php?item=' . $item['id'];
+        if (!isset($orgNames[$item['organization_id']])) {
+            $orgStmt = $pdo->prepare("SELECT name FROM organizations WHERE id = ?");
+            $orgStmt->execute([$item['organization_id']]);
+            $orgNames[$item['organization_id']] = $orgStmt->fetch()['name'] ?? 'E-Admin';
+        }
+        $emailLink = rtrim(SITE_BASE_URL, '/') . '/' . $link;
 
         foreach ($notifyIds as $uid) {
-            $pdo->prepare("INSERT INTO notifications (organization_id, user_id, title, message, link) VALUES (?, ?, ?, ?, ?)")
-                ->execute([$item['organization_id'], $uid, $title, $message, $link]);
+            notifyUser($uid, $item['organization_id'], $title, $message, $link);
             $sent++;
 
             // In-App Notification बरोबरच — त्याच व्यक्तीला Email सुद्धा पाठवतो
             try {
-                $uStmt = $pdo->prepare("SELECT name, email FROM users WHERE id = ?");
+                $uStmt = $pdo->prepare("SELECT name, email FROM users WHERE id = ? AND is_active = 1");
                 $uStmt->execute([$uid]);
                 $u = $uStmt->fetch();
                 if ($u && $u['email']) {
-                    sendRenewalReminderEmail($u['email'], $u['name'], $item['item_name'], $daysLeft, date('d M Y', strtotime($item['expiry_date'])), $orgName, $emailLink);
+                    sendRenewalReminderEmail($u['email'], $u['name'], $item['item_name'], $daysLeft, date('d M Y', strtotime($item['expiry_date'])), $orgNames[$item['organization_id']], $emailLink);
                 }
             } catch (Throwable $e) {
                 // Email पाठवता आला नाही तरी In-App Notification आधीच गेली आहे — पुढे चालू ठेवतो
             }
         }
+        $pdo->prepare("UPDATE renewal_reminder_log SET recipients = ? WHERE renewal_item_id = ? AND milestone = ? AND expiry_date = ?")
+            ->execute([count($notifyIds), $item['id'], $milestone, $item['expiry_date']]);
     } catch (PDOException $e) {
         // skip this item on error, continue with the rest
     }
 }
 
-echo "Done. $sent notifications sent for " . date('Y-m-d H:i:s') . "\n";
+$out = "Done. $sent renewal notifications sent for $today (" . date('Y-m-d H:i:s') . ")";
+cronJobFinish($pdo, 'send-renewal-reminders', true, $out);
+echo $out . "\n";

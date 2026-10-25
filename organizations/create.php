@@ -7,6 +7,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $name = trim($_POST['name'] ?? '');
     $slug = trim($_POST['slug'] ?? '');
     $type = $_POST['type'] ?? 'trust';
+    // फक्त ENUM मधलेच प्रकार स्वीकारा
+    if (!in_array($type, ['trust', 'school', 'hospital', 'corporate'], true)) { $type = 'trust'; }
     $email = trim($_POST['contact_email'] ?? '') ?: null;
     $phone = trim($_POST['contact_phone'] ?? '') ?: null;
     $parentOrgId = ($_POST['parent_organization_id'] ?? '') !== '' ? (int)$_POST['parent_organization_id'] : null;

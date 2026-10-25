@@ -10,6 +10,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $orgId = activeOrgId();
     $label = trim($_POST['field_label'] ?? '');
     $type = $_POST['field_type'] ?? 'text';
+    // फक्त परवानगी असलेले Field-प्रकार
+    if (!in_array($type, ['text', 'textarea', 'number', 'date', 'select', 'checkbox'], true)) { $type = 'text'; }
     $options = trim($_POST['field_options'] ?? '') ?: null;
     $isRequired = isset($_POST['is_required']) ? 1 : 0;
     $sortOrder = (int)($_POST['sort_order'] ?? 0);

@@ -3,6 +3,7 @@ require_once __DIR__ . '/../includes/auth.php';
 requireLogin('../');
 requireMigratedTable($pdo, 'dept_payment_ledger', '../');
 require_once __DIR__ . '/../includes/dept-finance-helpers.php';
+require_once __DIR__ . '/../includes/budget-helpers.php';
 $user = currentUser();
 $orgId = activeOrgId();
 
@@ -12,8 +13,7 @@ $itemStmt->execute([$itemId, $orgId]);
 $item = $itemStmt->fetch();
 if (!$item) { die('नोंद सापडली नाही.'); }
 
-$accessibleDeptId = deptFinanceAccessibleDeptId($user);
-$canManage = !$accessibleDeptId || $accessibleDeptId == $item['department_id'];
+$canManage = deptFinanceCanAccessDept($user, $item['department_id']);
 if (!$canManage) { http_response_code(403); die('परवानगी नाही.'); }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -28,6 +28,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($amount > 0) {
             $pdo->prepare("INSERT INTO dept_payment_ledger (organization_id, department_id, source_type, source_id, amount, payment_date, payment_type, payment_mode, for_month, remarks, recorded_by) VALUES (?, ?, 'renewal', ?, ?, ?, ?, ?, ?, ?, ?)")
                 ->execute([$orgId, $item['department_id'], $itemId, $amount, $paymentDate, $paymentType, $paymentMode, $forMonth, $remarks, $user['id']]);
+            // नूतनीकरणाचा खर्च — प्रत्येक Payment एकदाच विभाग Finance (Budget) Ledger मध्ये
+            recordBudgetTransaction($pdo, $orgId, $item['department_id'], $amount, 'नूतनीकरण', 'renewal_payment', (int)$pdo->lastInsertId(), 'नूतनीकरण Payment — ' . $item['item_name'], $user['id'], $paymentDate);
             $_SESSION['flash'] = 'Payment नोंदवलं गेलं.';
         }
     }
@@ -43,7 +45,8 @@ $paymentsStmt = $pdo->prepare("SELECT dpl.*, u.name AS recorder_name FROM dept_p
 $paymentsStmt->execute([$itemId]);
 $payments = $paymentsStmt->fetchAll();
 
-$totalPaid = array_sum(array_column($payments, 'amount'));
+// "बाकी" — फक्त चालू Cycle चे Payments (शेवटच्या Renew नंतरचे) धरून
+$totalPaid = deptFinanceRenewalCyclePaid($pdo, $itemId);
 $totalCost = (float)($item['renewal_cost'] ?? 0);
 $due = $totalCost - $totalPaid;
 
@@ -65,7 +68,7 @@ $recurringMonths = $item['is_recurring_monthly'] ? deptFinanceRecurringMonths($i
 <?php if (!$item['is_recurring_monthly']): ?>
 <div class="row g-3 mb-4">
   <div class="col-6 col-lg-3"><div class="kpi-mini"><div class="lbl">एकूण Cost</div><div class="val">₹<?= number_format($totalCost, 0) ?></div></div></div>
-  <div class="col-6 col-lg-3"><div class="kpi-mini"><div class="lbl">✅ Paid</div><div class="val" style="color:var(--rail);">₹<?= number_format($totalPaid, 0) ?></div></div></div>
+  <div class="col-6 col-lg-3"><div class="kpi-mini"><div class="lbl">✅ Paid (चालू Cycle)</div><div class="val" style="color:var(--rail);">₹<?= number_format($totalPaid, 0) ?></div></div></div>
   <div class="col-6 col-lg-3"><div class="kpi-mini"><div class="lbl">⚠️ बाकी</div><div class="val" style="color:<?= $due > 0 ? 'var(--rose)' : 'var(--rail)' ?>;">₹<?= number_format($due, 0) ?></div></div></div>
 </div>
 <?php endif; ?>

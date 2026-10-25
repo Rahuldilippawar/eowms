@@ -28,8 +28,20 @@ if ($confirmText !== $campus['name']) {
     exit;
 }
 
-// FK cascades (ON DELETE CASCADE) will remove all departments, users, work_records,
-// renewal_items, and tasks under this campus.
+// सुरक्षितता: कॅम्पस डिलीट केल्यास FK Cascade मुळे त्याचे सगळे विभाग आणि
+// कर्मचारी (users.campus_id ON DELETE CASCADE) कायमचे नष्ट होतात — म्हणून
+// एकही कर्मचारी किंवा विभाग जोडलेला असेल तर डिलीट नाकारतो.
+$cntStmt = $pdo->prepare("SELECT
+    (SELECT COUNT(*) FROM users WHERE campus_id = ?) AS users_count,
+    (SELECT COUNT(*) FROM departments WHERE campus_id = ?) AS depts_count");
+$cntStmt->execute([$id, $id]);
+$cnt = $cntStmt->fetch();
+if ((int)$cnt['users_count'] > 0 || (int)$cnt['depts_count'] > 0) {
+    $_SESSION['form_error'] = "'{$campus['name']}' डिलीट करता येणार नाही — या कॅम्पसला अजून {$cnt['users_count']} कर्मचारी आणि {$cnt['depts_count']} विभाग जोडलेले आहेत. डिलीट केल्यास ते सगळे कायमचे नष्ट होतील. आधी विभाग व कर्मचारी दुसऱ्या कॅम्पसमध्ये हलवा / निष्क्रिय करा, किंवा कॅम्पस फक्त निष्क्रिय (Inactive) करा.";
+    header('Location: index.php');
+    exit;
+}
+
 $pdo->prepare("DELETE FROM campuses WHERE id = ?")->execute([$id]);
 
 logActivity('कॅम्पस कायमचा डिलीट केला', 'campus', $id, $campus['name']);
