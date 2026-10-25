@@ -90,6 +90,19 @@ jobs:
           echo "$OUT" | grep -qE '^[^ ]*login\.php$' || { echo "::error::login.php not found in '$SERVER_DIR' on the FTP server — set the FTP_SERVER_DIR variable to the folder that holds the app"; exit 1; }
           echo "FTP login OK and app found in '$SERVER_DIR'"
 
+      # Repo मधून काढलेले Folders — Upload Action ते Server वरून काढताना Folder
+      # आधीच नसेल तर 550 देऊन थांबतो (मग Sync-State जतन होत नाही). म्हणून
+      # Upload आधी असे Folders (रिकामे) असल्याची खात्री करतो — Action ते काढतो.
+      - name: Make sure removed folders exist for the sync step
+        if: github.event_name != 'pull_request'
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        run: |
+          if [ "$PROTOCOL" = "ftps" ]; then SSL="set ftp:ssl-force true; set ftp:ssl-protect-data true;"; else SSL="set ftp:ssl-allow false;"; fi
+          lftp -u "$FTP_USERNAME,$FTP_PASSWORD" "$FTP_SERVER" -e "set net:max-retries 1; set net:timeout 20; $SSL cd ${SERVER_DIR%/}; pwd; mkdir -p -f teaching; bye" || true
+
       - name: Upload changed files
         if: github.event_name != 'pull_request'
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
