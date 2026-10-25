@@ -6,7 +6,7 @@ export interface DashboardData {
   from: string
   to: string
   today: string
-  kpis: Record<'employees' | 'present_today' | 'on_leave_today' | 'absent_today' | 'students' | 'pending_leave_approvals' | 'pending_corrections', number | null>
+  kpis: Record<'employees' | 'present_today' | 'on_leave_today' | 'absent_today' | 'students' | 'pending_leave_approvals' | 'pending_corrections' | 'my_open_tasks' | 'tasks_to_verify' | 'overdue_tasks', number | null>
   charts: {
     attendance_trend: { date: string; present: number; late: number; absent: number; leave: number }[] | null
     by_department: { id: number | null; name: string | null; total: number }[] | null

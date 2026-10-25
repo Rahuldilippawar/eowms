@@ -85,7 +85,11 @@
     "teamAttendance": "Team attendance",
     "employees": "Employees",
     "students": "Students",
-    "leaveTypes": "Leave types"
+    "leaveTypes": "Leave types",
+    "myWork": "My work",
+    "tasks": "Tasks",
+    "performance": "Performance",
+    "teamWork": "Team work log"
   },
   "dashboard": {
     "welcome": "Hello, {{name}}",
@@ -117,7 +121,10 @@
       "absent_today": "Not marked / absent today",
       "students": "Active students",
       "pending_leave_approvals": "Leave awaiting approval",
-      "pending_corrections": "Corrections awaiting approval"
+      "pending_corrections": "Corrections awaiting approval",
+      "my_open_tasks": "My open tasks",
+      "tasks_to_verify": "Tasks waiting for my check",
+      "overdue_tasks": "Overdue tasks"
     }
   },
   "notFound": {
@@ -221,7 +228,8 @@
     "assign": "Assign / remove roles",
     "export": "Export",
     "approve": "Approve",
-    "manage_types": "Manage types"
+    "manage_types": "Manage types",
+    "review": "Review"
   },
   "modules": {
     "organizations": "Organizations",
@@ -233,7 +241,10 @@
     "employees": "Employees",
     "students": "Students",
     "attendance": "Attendance",
-    "leave": "Leave"
+    "leave": "Leave",
+    "daily_work": "Daily work",
+    "tasks": "Tasks",
+    "performance": "Performance reports"
   },
   "attendance": {
     "notMarked": "Not marked",
@@ -356,5 +367,163 @@
     "reportingOfficer": "Reporting officer",
     "section": "Division",
     "studentCode": "Student code"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "bell": "Notifications",
+    "bellUnread_one": "Notifications, {{count}} unread",
+    "bellUnread_other": "Notifications, {{count}} unread",
+    "none": "No notifications.",
+    "seeAll": "See all",
+    "markAll": "Mark all as read",
+    "unreadOnly": "Unread only",
+    "unread": "Unread",
+    "generic": "You have a new update.",
+    "types": {
+      "task_assigned": "{{by}} assigned you {{code}} “{{title}}” (due {{due_date}}).",
+      "task_unassigned": "{{code}} “{{title}}” was moved to someone else by {{by}}.",
+      "task_start": "{{by}} started {{code}} “{{title}}”.",
+      "task_submit": "{{by}} marked {{code}} “{{title}}” as done — please check it.",
+      "task_complete": "{{by}} verified {{code}} “{{title}}” as completed.",
+      "task_reopen": "{{by}} sent back {{code}} “{{title}}”: {{note}}",
+      "task_cancel": "{{by}} cancelled {{code}} “{{title}}”: {{note}}",
+      "task_comment": "{{by}} commented on {{code}}: {{note}}",
+      "task_due_soon": "{{code}} “{{title}}” is due tomorrow.",
+      "task_overdue": "{{code}} “{{title}}” is overdue (due {{due_date}}).",
+      "leave_requested": "{{employee}} applied for {{type}}, {{start_date}} – {{end_date}}.",
+      "leave_decided_approved": "{{by}} approved your {{type}}, {{start_date}} – {{end_date}}.",
+      "leave_decided_rejected": "{{by}} rejected your {{type}}, {{start_date}} – {{end_date}}.",
+      "correction_decided_approved": "{{by}} approved your attendance correction for {{work_date}}.",
+      "correction_decided_rejected": "{{by}} rejected your attendance correction for {{work_date}}.",
+      "work_reviewed": "{{by}} reviewed your work “{{title}}” ({{work_date}})."
+    }
+  },
+  "work": {
+    "status": {
+      "completed": "Completed",
+      "in_progress": "In progress",
+      "pending": "Pending"
+    },
+    "addEntry": "Add today's work",
+    "editEntry": "Edit entry",
+    "whatDidYouDo": "What did you do?",
+    "hours": "Hours (optional)",
+    "hoursRule": "Use 0.25 to 24, in steps of 0.25.",
+    "linkedTask": "Related task (optional)",
+    "noTask": "None",
+    "details": "Details (optional)",
+    "history": "My entries",
+    "none": "No work entries for these dates.",
+    "hoursCount_one": "{{count}} hour",
+    "hoursCount_other": "{{count}} hours",
+    "editWindow_one": "Entries can be added or changed for today and the last {{count}} day, until they are reviewed.",
+    "editWindow_other": "Entries can be added or changed for today and the last {{count}} days, until they are reviewed.",
+    "deleteTitle": "Delete this entry?",
+    "deleteNamed": "Delete {{name}}",
+    "deleted": "Entry deleted.",
+    "reviewedBy": "Reviewed by {{name}}",
+    "review": "Review",
+    "reviewTitle": "Mark this work as reviewed?",
+    "markReviewed": "Mark reviewed",
+    "reviewedToast": "Marked as reviewed.",
+    "reviewState": "Review",
+    "reviewed": "Reviewed",
+    "notReviewed": "Not reviewed"
+  },
+  "tasks": {
+    "status": {
+      "open": "Not started",
+      "in_progress": "In progress",
+      "submitted": "Waiting for check",
+      "completed": "Completed",
+      "cancelled": "Cancelled",
+      "active": "Active (not closed)"
+    },
+    "priority": {
+      "low": "Low",
+      "normal": "Normal",
+      "high": "High",
+      "urgent": "Urgent"
+    },
+    "view": {
+      "mine": "Assigned to me",
+      "assigned": "Assigned by me",
+      "all": "All I can see"
+    },
+    "views": "Which tasks",
+    "action": {
+      "start": "Start",
+      "submit": "Mark done",
+      "complete": "Verify & close",
+      "reopen": "Send back",
+      "cancel": "Cancel task"
+    },
+    "confirm": {
+      "start": "Start this task?",
+      "submit": "Mark this task as done?",
+      "complete": "Verify and close this task?",
+      "reopen": "Send this task back?",
+      "cancel": "Cancel this task?"
+    },
+    "done": {
+      "start": "Task started.",
+      "submit": "Sent for checking.",
+      "complete": "Task closed.",
+      "reopen": "Sent back to the assignee.",
+      "cancel": "Task cancelled."
+    },
+    "event": {
+      "created": "assigned the task",
+      "comment": "commented",
+      "started": "started it",
+      "submitted": "marked it done",
+      "completed": "verified and closed it",
+      "reopened": "sent it back",
+      "cancelled": "cancelled it",
+      "edited": "edited the details"
+    },
+    "newTask": "Assign a task",
+    "editTask": "Edit task",
+    "assign": "Assign",
+    "taskTitle": "Task",
+    "assignee": "Assigned to",
+    "assignedBy": "Assigned by",
+    "chooseAssignee": "Choose a person",
+    "nobodyToAssign": "There is nobody you can assign tasks to.",
+    "dueDate": "Due date",
+    "priorityLabel": "Priority",
+    "dueInPast": "The due date cannot be in the past.",
+    "assignedToast": "Task assigned to {{name}}.",
+    "dueOn": "Due {{date}}",
+    "overdue": "Overdue",
+    "overdueOnly": "Overdue only",
+    "fromName": "From {{name}}",
+    "toName": "To {{name}}",
+    "none": "No tasks here.",
+    "notFound": "This task does not exist or you cannot see it.",
+    "timeline": "History",
+    "addComment": "Add a comment",
+    "sendComment": "Send",
+    "reason": "Reason",
+    "noteOptional": "Note (optional)",
+    "noteRequired": "Please write a short reason."
+  },
+  "performance": {
+    "mine": "My figures",
+    "team": "Team",
+    "employee": "Employee",
+    "daysPresent": "Days present",
+    "leaveDays": "Leave days",
+    "workHours": "Hours logged",
+    "tasksAssigned": "Tasks due",
+    "tasksCompleted": "Completed",
+    "onTimeRate": "On time",
+    "lateHint_one": "{{count}} late",
+    "lateHint_other": "{{count}} late",
+    "daysLogged_one": "on {{count}} day",
+    "daysLogged_other": "on {{count}} days",
+    "overdueHint_one": "{{count}} overdue",
+    "overdueHint_other": "{{count}} overdue",
+    "note": "Tasks count when their due date is in the range; cancelled tasks are left out. \"On time\" is tasks closed by their due date, out of all tasks due."
   }
 }

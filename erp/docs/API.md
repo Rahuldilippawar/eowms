@@ -88,3 +88,30 @@ Rules behind these endpoints: [`ATTENDANCE.md`](ATTENDANCE.md).
 | POST | `/leave-requests/{id}/decide` | as above | `approve, remarks?`; 404 if the caller may not decide it |
 | GET | `/leave-requests` | `leave.view` | Query `status?, employee_id?, from?, to?` |
 | GET / POST / PUT | `/leave-types`, `/leave-types/{id}` | `leave.manage_types` (organization scope) | `code, name, days_per_year, is_paid, is_active` |
+
+## Phase 5 — daily work, tasks, notifications, performance
+
+Rules behind these endpoints: [`WORK-AND-TASKS.md`](WORK-AND-TASKS.md).
+
+| Method | Path | Permission | Notes |
+|---|---|---|---|
+| GET | `/me/work` | own employee record | Query `from, to` (default last 7 days). `meta.edit_days`, `meta.today`; each entry has `can_edit` |
+| POST / PUT / DELETE | `/me/work`, `/me/work/{id}` | own entry | `work_date, title, description?, hours? (0.25–24, step 0.25), status (completed/in_progress/pending), task_id? (own task)` |
+| GET | `/me/tasks/open` | — | The caller's open tasks, for linking work |
+| GET | `/work` | `daily_work.view` | Query `from, to, employee_id?, department_id?, institution_id?, reviewed?, search?, page` |
+| GET | `/work/export` | `daily_work.export` | Same filters, CSV |
+| POST | `/work/{id}/review` | `daily_work.review` | `remarks?`; not one's own work |
+| GET | `/tasks` | — (only tasks the caller may see) | Query `view (mine/assigned/all), status (… or active), overdue?, search?, page` |
+| GET | `/tasks/assignable` | — | Employees the caller may assign to |
+| POST | `/tasks` | reporting officer or `tasks.create` in scope | `title, description?, priority (low/normal/high/urgent), due_date (not past), assignee_employee_id` |
+| GET / PUT | `/tasks/{id}` | visible / manager | Detail includes `actions` (what the caller may do) and `updates` (timeline) |
+| POST | `/tasks/{id}/start`, `/submit` | assignee | `note?` |
+| POST | `/tasks/{id}/complete`, `/reopen`, `/cancel` | manager | `note` (required for reopen and cancel) |
+| POST | `/tasks/{id}/comments` | assignee or manager | `body` |
+| GET | `/notifications` | own | Query `unread?, per_page (≤50), page`; response also has `unread` |
+| GET | `/notifications/unread-count` | own | |
+| POST | `/notifications/{id}/read`, `/notifications/read-all` | own | Return the new unread count |
+| GET | `/me/performance` | own employee record | Query `from, to` |
+| GET | `/performance` | `performance.view` (+ `performance.export` for `format=csv`) | Query `from, to, department_id?, institution_id?, search?, page` |
+
+`GET /dashboard` adds `my_open_tasks`, `tasks_to_verify` and `overdue_tasks` (needs `tasks.view`).

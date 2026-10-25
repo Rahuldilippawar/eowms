@@ -9,6 +9,7 @@ use App\Models\Employee;
 use App\Models\Institution;
 use App\Models\Organization;
 use App\Models\Student;
+use App\Models\Task;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\BuildsTenants;
@@ -84,5 +85,32 @@ class DashboardTest extends TestCase
         } finally {
             CarbonImmutable::setTestNow();
         }
+    }
+
+    public function test_task_kpis(): void
+    {
+        $this->setUpPermissions();
+        $org = Organization::factory()->create();
+        $dept = Department::factory()->for($org)->create();
+        $boss = $this->userWithRole($org, []);
+        $bossEmployee = Employee::factory()->in($dept)->create(['user_id' => $boss->id]);
+        $worker = $this->userWithRole($org, []);
+        $workerEmployee = Employee::factory()->in($dept)->create(['user_id' => $worker->id, 'reporting_officer_id' => $bossEmployee->id]);
+        $make = fn (string $status, string $due) => Task::withoutGlobalScopes()->create(['organization_id' => $org->id, 'title' => 't', 'priority' => 'normal',
+            'due_date' => $due, 'assignee_employee_id' => $workerEmployee->id, 'assigned_by' => $boss->id, 'status' => $status]);
+        $make('open', '2020-01-01');
+        $make('in_progress', '2999-01-01');
+        $make('submitted', '2999-01-01');
+
+        $this->actingAs($worker);
+        $kpis = $this->spa()->getJson('/api/v1/dashboard')->assertOk()->json('data.kpis');
+        $this->assertSame([2, 0, null], [$kpis['my_open_tasks'], $kpis['tasks_to_verify'], $kpis['overdue_tasks']]);
+
+        $this->actingAs($boss);
+        $kpis = $this->spa()->getJson('/api/v1/dashboard')->assertOk()->json('data.kpis');
+        $this->assertSame([0, 1, null], [$kpis['my_open_tasks'], $kpis['tasks_to_verify'], $kpis['overdue_tasks']]);
+
+        $this->actingAs($this->userWithRole($org, ['tasks.view']));
+        $this->assertSame(1, $this->spa()->getJson('/api/v1/dashboard')->json('data.kpis.overdue_tasks'));
     }
 }

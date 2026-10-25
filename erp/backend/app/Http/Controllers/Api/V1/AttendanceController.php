@@ -9,8 +9,10 @@ use App\Models\AttendanceRecord;
 use App\Models\Employee;
 use App\Services\AttendanceRules;
 use App\Services\AttendanceService;
+use App\Services\Notifier;
 use App\Support\Access\AccessContext;
 use App\Support\Audit\AuditLogger;
+use App\Support\Export\Csv;
 use App\Support\Queries\PeopleQueries;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonPeriod;
@@ -131,6 +133,11 @@ class AttendanceController extends Controller
             }
         });
 
+        Notifier::employee($correction->employee, 'correction.decided', [
+            'correction_id' => $correction->id, 'status' => $data['approve'] ? 'approved' : 'rejected',
+            'work_date' => $correction->work_date->toDateString(), 'by' => $request->user()->name, 'note' => $data['remarks'] ?? null,
+        ], '/my/attendance');
+
         return response()->json(['data' => ['id' => $correction->id, 'status' => $data['approve'] ? 'approved' : 'rejected']]);
     }
 
@@ -182,16 +189,7 @@ class AttendanceController extends Controller
         AuditLogger::record('attendance', 'export', null, null, ['from' => $f['from'], 'to' => $f['to'], 'group_by' => $f['group_by'], 'rows' => $rows->count()]);
         $filename = "attendance-{$f['group_by']}-{$f['from']}-{$f['to']}.csv";
 
-        return response()->streamDownload(function () use ($rows) {
-            $out = fopen('php://output', 'w');
-            fwrite($out, "\xEF\xBB\xBF"); // UTF-8 BOM so Excel shows Marathi correctly
-            fputcsv($out, ['code', 'name', 'present', 'late', 'half_day', 'absent', 'leave']);
-            foreach ($rows as $r) {
-                // Prefix cells that a spreadsheet would treat as a formula.
-                $safe = fn ($v) => is_string($v) && preg_match('/^[=+\-@]/', $v) ? "'".$v : $v;
-                fputcsv($out, [$safe($r['code']), $safe($r['label']), $r['present'], $r['late'], $r['half_day'], $r['absent'], $r['leave']]);
-            }
-            fclose($out);
-        }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
+        return Csv::download($filename, ['code', 'name', 'present', 'late', 'half_day', 'absent', 'leave'],
+            $rows->map(fn ($r) => [$r['code'], $r['label'], $r['present'], $r['late'], $r['half_day'], $r['absent'], $r['leave']]));
     }
 }

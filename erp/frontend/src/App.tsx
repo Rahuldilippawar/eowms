@@ -22,6 +22,12 @@ import { DepartmentsPage } from '@/features/org/DepartmentsPage'
 import { InstitutionsPage } from '@/features/org/InstitutionsPage'
 import { EmployeesPage } from '@/features/people/EmployeesPage'
 import { StudentsPage } from '@/features/people/StudentsPage'
+import { NotificationsPage } from '@/features/notifications/NotificationsPage'
+import { PerformancePage } from '@/features/performance/PerformancePage'
+import { TaskDetailPage } from '@/features/tasks/TaskDetailPage'
+import { TasksPage } from '@/features/tasks/TasksPage'
+import { MyWorkPage } from '@/features/work/MyWorkPage'
+import { TeamWorkPage } from '@/features/work/TeamWorkPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 
 const guard = (permission: string, page: ReactNode) => <RequirePermission permission={permission}>{page}</RequirePermission>
@@ -40,6 +46,12 @@ export function AppRoutes() {
           <Route path="my/attendance" element={<MyAttendancePage />} />
           <Route path="my/leave" element={<MyLeavePage />} />
           <Route path="approvals" element={<ApprovalsPage />} />
+          <Route path="my/work" element={<MyWorkPage />} />
+          <Route path="tasks" element={<TasksPage />} />
+          <Route path="tasks/:id" element={<TaskDetailPage />} />
+          <Route path="notifications" element={<NotificationsPage />} />
+          <Route path="performance" element={<PerformancePage />} />
+          <Route path="work" element={guard('daily_work.view', <TeamWorkPage />)} />
           <Route path="attendance" element={guard('attendance.view', <TeamAttendancePage />)} />
           <Route path="employees" element={guard('employees.view', <EmployeesPage />)} />
           <Route path="students" element={guard('students.view', <StudentsPage />)} />

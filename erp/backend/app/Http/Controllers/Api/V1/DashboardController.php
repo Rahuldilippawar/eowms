@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\Employee;
 use App\Models\LeaveRequest;
+use App\Models\Task;
 use App\Services\AttendanceRules;
 use App\Support\Access\AccessContext;
 use App\Support\Queries\PeopleQueries;
@@ -41,7 +42,7 @@ class DashboardController extends Controller
                 ->when($f['department_id'] ?? null, fn ($w, $id) => $w->where("{$prefix}.department_id", $id));
         };
 
-        $kpis = ['employees' => null, 'present_today' => null, 'on_leave_today' => null, 'absent_today' => null, 'students' => null, 'pending_leave_approvals' => null, 'pending_corrections' => null];
+        $kpis = ['employees' => null, 'present_today' => null, 'on_leave_today' => null, 'absent_today' => null, 'students' => null, 'pending_leave_approvals' => null, 'pending_corrections' => null, 'my_open_tasks' => null, 'tasks_to_verify' => null, 'overdue_tasks' => null];
         $charts = ['attendance_trend' => null, 'by_department' => null, 'by_institution' => null];
 
         if ($context->can('employees.view')) {
@@ -89,6 +90,26 @@ class DashboardController extends Controller
 
         if ($context->can('attendance.approve')) {
             $kpis['pending_corrections'] = PeopleQueries::corrections()->where('status', 'pending')->whereNotIn('employee_id', $myEmployeeIds)->count();
+        }
+
+        $mine = PeopleQueries::myEmployee();
+        if ($mine !== null) {
+            $kpis['my_open_tasks'] = Task::query()->where('assignee_employee_id', $mine->id)->whereIn('status', ['open', 'in_progress'])->count();
+        }
+        // Submitted tasks this user can verify: ones they assigned, their direct reports', or within tasks.edit.
+        $kpis['tasks_to_verify'] = Task::query()->where('status', 'submitted')->whereNotIn('assignee_employee_id', $myEmployeeIds)
+            ->where(function ($w) use ($request, $context, $mine) {
+                $w->where('assigned_by', $request->user()->id);
+                if ($mine !== null) {
+                    $w->orWhereIn('assignee_employee_id', Employee::query()->where('reporting_officer_id', $mine->id)->select('id'));
+                }
+                if ($context->can('tasks.edit')) {
+                    $w->orWhereIn('assignee_employee_id', PeopleQueries::employeeIds('tasks.edit'));
+                }
+            })->count();
+        if ($context->can('tasks.view')) {
+            $kpis['overdue_tasks'] = $filter(Task::query()->whereIn('assignee_employee_id', PeopleQueries::employeeIds('tasks.view')), 'tasks')
+                ->whereIn('status', Task::OPEN_STATES)->where('due_date', '<', $today)->count();
         }
 
         return response()->json(['data' => ['from' => $from, 'to' => $to, 'today' => $today, 'kpis' => $kpis, 'charts' => $charts]]);
