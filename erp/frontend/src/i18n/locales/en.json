@@ -15,7 +15,24 @@
     "pagination": "Pages",
     "previous": "Previous",
     "next": "Next",
-    "showing": "{{from}}–{{to}} of {{total}}"
+    "showing": "{{from}}–{{to}} of {{total}}",
+    "close": "Close",
+    "cancel": "Cancel",
+    "save": "Save",
+    "saving": "Saving…",
+    "edit": "Edit",
+    "view": "View",
+    "delete": "Delete",
+    "editNamed": "Edit {{name}}",
+    "actions": "Actions",
+    "activate": "Activate",
+    "deactivate": "Deactivate",
+    "activateTitle": "Activate {{name}}?",
+    "deactivateTitle": "Deactivate {{name}}?",
+    "activateBody": "It will be in use again.",
+    "deactivateBody": "It stays in the list but is no longer in use. You can activate it again later.",
+    "reasonOptional": "Reason (optional — stored in the audit log)",
+    "actionFailed": "That did not work. Please try again."
   },
   "auth": {
     "title": "Sign in",
@@ -55,7 +72,12 @@
     "main": "Main",
     "structure": "Organization structure",
     "institutions": "Institutions",
-    "departments": "Departments"
+    "departments": "Departments",
+    "administration": "Administration",
+    "users": "Users",
+    "roles": "Roles",
+    "organizationSettings": "Organization settings",
+    "allOrganizations": "All organizations"
   },
   "dashboard": {
     "welcome": "Hello, {{name}}",
@@ -87,10 +109,92 @@
       "college": "College",
       "school": "School",
       "other": "Other"
-    }
+    },
+    "newInstitution": "New institution",
+    "editInstitution": "Edit institution",
+    "newDepartment": "New department",
+    "editDepartment": "Edit department",
+    "phone": "Phone",
+    "address": "Address",
+    "category": "Category",
+    "centralOption": "Central (not under an institution)",
+    "shortName": "Short name",
+    "website": "Website",
+    "fyStart": "Financial year starts in"
   },
   "errors": {
     "forbiddenTitle": "Not allowed",
     "forbiddenBody": "You do not have permission to view this page. Please contact the administrator."
+  },
+  "form": {
+    "required": "This is required",
+    "codeFormat": "Letters, numbers, - and _ only",
+    "saved": "Saved"
+  },
+  "admin": {
+    "role": "Role",
+    "roles": "Roles",
+    "chooseRole": "Choose a role",
+    "limitInstitutions": "For which institutions",
+    "limitDepartments": "For which departments",
+    "newUser": "New user",
+    "newUserHint": "When the account is created, the person receives an email link to set their own password. You never choose it.",
+    "createUser": "Create account",
+    "userCreated": "Account created; password link sent",
+    "noUsers": "No users yet.",
+    "superAdmin": "Super admin",
+    "sendReset": "Send password link",
+    "sendResetBody": "Send a password reset link to {{email}}?",
+    "send": "Send",
+    "resetSent": "Link sent",
+    "account": "Account",
+    "rolesHere": "Roles in this organization",
+    "noRolesHere": "No role in this organization.",
+    "wholeOrganization": "Whole organization",
+    "removeRole": "Remove role",
+    "removeRoleTitle": "Remove the \"{{role}}\" role?",
+    "removeRoleBody": "The person loses that role's permissions immediately.",
+    "addRole": "Add role",
+    "selfNote": "You cannot change your own roles.",
+    "newRole": "New role",
+    "noRoles": "No roles yet.",
+    "builtIn": "Built-in",
+    "assignedTo": "Assigned to {{count}}",
+    "deleteRoleTitle": "Delete the \"{{role}}\" role?",
+    "deleteRoleBody": "The role is deleted permanently.",
+    "roleDeleted": "Role deleted",
+    "description": "Description",
+    "permissions": "Permissions",
+    "permissionsHint": "Choose the scope each permission applies at. You cannot give permissions you do not hold, or a wider scope than your own.",
+    "scopeFor": "Scope for {{permission}}",
+    "newOrganization": "New organization",
+    "newOrganizationHint": "A new organization gets the built-in roles (Org Admin, Principal, HOD, Staff) automatically.",
+    "organizationCreated": "Organization created",
+    "noOrganizations": "No organizations yet."
+  },
+  "scopes": {
+    "organization": "Whole organization",
+    "institutions": "Assigned institutions",
+    "departments": "Assigned departments",
+    "own": "Own records",
+    "assigned": "Assigned records"
+  },
+  "actions": {
+    "view": "View",
+    "create": "Create",
+    "edit": "Edit",
+    "delete": "Delete",
+    "activate": "Activate / deactivate",
+    "reset_password": "Send password link",
+    "assign": "Assign / remove roles",
+    "export": "Export"
+  },
+  "modules": {
+    "organizations": "Organizations",
+    "institutions": "Institutions",
+    "departments": "Departments",
+    "users": "Users",
+    "roles": "Roles",
+    "audit": "Audit log"
   }
 }

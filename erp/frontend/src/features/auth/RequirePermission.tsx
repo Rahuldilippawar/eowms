@@ -4,10 +4,11 @@ import { useTranslation } from 'react-i18next'
 import { useAuth } from './AuthProvider'
 
 /** Hides a page the user cannot use; the API refuses the data regardless. */
-export function RequirePermission({ permission, children }: { permission: string; children: ReactNode }) {
+export function RequirePermission({ permission, superAdmin, children }: { permission?: string; superAdmin?: boolean; children: ReactNode }) {
   const { t } = useTranslation()
-  const { can } = useAuth()
-  if (can(permission)) return <>{children}</>
+  const { can, user } = useAuth()
+  const allowed = superAdmin ? !!user?.is_super_admin : !!permission && can(permission)
+  if (allowed) return <>{children}</>
   return (
     <div className="mx-auto max-w-md py-16 text-center">
       <ShieldAlert aria-hidden className="mx-auto size-8 text-slate-400" />

@@ -6,10 +6,10 @@ import { NAVIGATION } from './navigation'
 
 export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const { t } = useTranslation()
-  const { can } = useAuth()
+  const { can, user } = useAuth()
   const sections = NAVIGATION.map((section) => ({
     ...section,
-    items: section.items.filter((item) => !item.permission || can(item.permission)),
+    items: section.items.filter((item) => (item.superAdminOnly ? !!user?.is_super_admin : !item.permission || can(item.permission))),
   })).filter((section) => section.items.length > 0)
 
   return (
@@ -22,7 +22,7 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
               <li key={item.to}>
                 <NavLink
                   to={item.to}
-                  end={item.to === '/'}
+                  end={item.to === '/' || item.to === '/organization'}
                   onClick={onNavigate}
                   className={({ isActive }) =>
                     cn(

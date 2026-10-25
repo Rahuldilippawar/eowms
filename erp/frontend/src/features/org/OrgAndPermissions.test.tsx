@@ -15,7 +15,18 @@ vi.mock('@/features/auth/api', () => ({
   requestPasswordReset: vi.fn(),
   resetPassword: vi.fn(),
 }))
-vi.mock('./api', () => ({ fetchInstitutions: vi.fn(), fetchDepartments: vi.fn() }))
+vi.mock('./api', () => ({
+  fetchInstitutions: vi.fn(),
+  fetchDepartments: vi.fn(),
+  setInstitutionActive: vi.fn(),
+  setDepartmentActive: vi.fn(),
+  createInstitution: vi.fn(),
+  updateInstitution: vi.fn(),
+  createDepartment: vi.fn(),
+  updateDepartment: vi.fn(),
+  fetchInstitutionOptions: vi.fn(),
+  fetchDepartmentOptions: vi.fn(),
+}))
 
 const auth = vi.mocked(authApi)
 const org = vi.mocked(orgApi)

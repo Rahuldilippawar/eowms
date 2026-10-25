@@ -62,8 +62,7 @@ CI runs all of these on every pull request touching `erp/` (`.github/workflows/e
 - React app shell: login page with validation, protected routes, responsive layout (desktop
   sidebar, mobile drawer), user menu with sign-out, Marathi/English switch, dashboard
   placeholder that states plainly which modules are not built yet.
-- Tests: 10 backend feature tests, 7 frontend component tests, end-to-end tests on desktop and
-  mobile viewports; CI workflow.
+- Tests at the end of Phase 1: 10 backend, 7 frontend, end-to-end on desktop and mobile; CI workflow.
 
 ### Phase 2 — done
 - Schema: organizations, institutions, departments (central or per institution), permissions,
@@ -75,11 +74,22 @@ CI runs all of these on every pull request touching `erp/` (`.github/workflows/e
   server messages in the UI's language.
 - SPA: organization switcher, forgot / reset password pages, permission-aware menu and pages,
   read-only institution and department lists (table on desktop, cards on phones).
-- Tests: 35 backend (incl. cross-tenant attempts with manipulated ids), 18 frontend, 15 end-to-end.
+- Tests at the end of Phase 2: 35 backend (incl. cross-tenant attempts with manipulated ids), 18 frontend, 15 end-to-end.
 
 Dev accounts (password `password`): `admin@example.com` (super admin), `orgadmin@`,
 `principal@`, `hod@`, `staff@`, `hospital.admin@` — all `@example.com`.
 
+### Phase 3 — done
+- Create / edit / activate-deactivate for organizations (super admin), the current organization's
+  settings, institutions and departments (within scope), users (account + scoped role
+  assignments, set-password link instead of admin-chosen passwords) and custom roles with a
+  permission × scope matrix.
+- Privilege-escalation guard, self-change and last-admin protection, protected shared accounts,
+  audit entries with old/new values and reasons.
+- SPA: dialogs and pages for all of the above with client + server validation, confirmations,
+  success toasts, phone-friendly layouts.
+- Tests: 62 backend, 27 frontend, 21 end-to-end.
+
 ### Not yet (later phases)
-- Create / edit screens for organizations, institutions, departments, users and roles (Phase 3).
-- All business modules, reports, deployment to Hostinger.
+- Dashboard KPIs, employees, students, attendance, leave (Phase 4) and the other business modules.
+- Reports, deployment to Hostinger.

@@ -127,4 +127,9 @@ return [
         'per_ip' => (int) env('LOGIN_THROTTLE_PER_IP', 20),
     ],
 
+    'password_reset_throttle' => [
+        'per_email' => (int) env('PASSWORD_RESET_THROTTLE_PER_EMAIL', 3),
+        'per_ip' => (int) env('PASSWORD_RESET_THROTTLE_PER_IP', 10),
+    ],
+
 ];

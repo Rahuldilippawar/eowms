@@ -5,9 +5,11 @@ namespace App\Support\Queries;
 use App\Enums\PermissionScope;
 use App\Models\Department;
 use App\Models\Institution;
+use App\Models\User;
 use App\Support\Access\AccessContext;
 use App\Support\Access\ResolvedScope;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Permission-scoped queries for the organization structure. Each method
@@ -43,6 +45,37 @@ final class ScopedQueries
             'department' => 'id',
             'owner' => 'created_by',
         ]);
+    }
+
+    /**
+     * Users who hold a role in the current organization, limited to the
+     * caller's scope: an institution-level caller sees people assigned to
+     * those institutions (or their departments), a department-level caller
+     * people assigned to those departments, "own" the people they assigned.
+     *
+     * @return Builder<User>
+     */
+    public static function users(string $permission = 'users.view'): Builder
+    {
+        $scope = self::scopeOrFail($permission);
+        $orgId = AccessContext::current()->organizationId();
+
+        $assignments = DB::table('role_assignments as ra')->where('ra.organization_id', $orgId);
+        $assignments = match ($scope->scope) {
+            PermissionScope::Organization => $assignments,
+            PermissionScope::Institutions => $assignments->where(function ($q) use ($scope) {
+                $ids = $scope->institutionIds ?: [0];
+                $q->whereExists(fn ($e) => $e->from('role_assignment_institution as rai')->whereColumn('rai.role_assignment_id', 'ra.id')->whereIn('rai.institution_id', $ids))
+                    ->orWhereExists(fn ($e) => $e->from('role_assignment_department as rad')->join('departments as d', 'd.id', '=', 'rad.department_id')
+                        ->whereColumn('rad.role_assignment_id', 'ra.id')->whereIn('d.institution_id', $ids));
+            }),
+            PermissionScope::Departments => $assignments->whereExists(fn ($e) => $e->from('role_assignment_department as rad')
+                ->whereColumn('rad.role_assignment_id', 'ra.id')->whereIn('rad.department_id', $scope->departmentIds ?: [0])),
+            PermissionScope::Own => $assignments->where('ra.created_by', $scope->userId),
+            PermissionScope::Assigned => $assignments->whereRaw('1 = 0'),
+        };
+
+        return User::query()->whereIn('users.id', $assignments->select('ra.user_id'));
     }
 
     private static function scopeOrFail(string $permission): ResolvedScope
