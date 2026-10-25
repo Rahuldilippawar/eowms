@@ -2,8 +2,8 @@
 // ============================================================
 // RUN-ALL CRON — सगळे Cron Jobs एकाच Cron Line मधून, क्रमाने.
 // Hostinger hPanel -> Advanced -> Cron Jobs मध्ये फक्त ही एकच ओळ टाका
-// (दर 15 मिनिटांनी):
-//   */15 * * * * php /home/USERNAME/domains/YOURDOMAIN/public_html/cron/run-all.php
+// (दर 5 मिनिटांनी):
+//   */5 * * * * php /home/USERNAME/domains/YOURDOMAIN/public_html/cron/run-all.php
 //
 // प्रत्येक Job ची वेळ खाली ठरलेली आहे (रोज ठराविक तासानंतर एकदा, किंवा
 // दर N मिनिटांनी) — Job "Due" असेल तरच चालतो. प्रत्येक Job शेवटचं कधी
@@ -37,6 +37,10 @@ try {
 } catch (PDOException $e) {
     die("cron_job_runs table not found — Database Update चालवा.\n");
 }
+
+// आधीचा run-all अजून चालू असेल (उदा. मोठा Backup) — तर हा लगेच थांबतो, Jobs दुप्पट चालत नाहीत
+$lockFp = fopen(sys_get_temp_dir() . '/eadmin-run-all.lock', 'c');
+if ($lockFp && !flock($lockFp, LOCK_EX | LOCK_NB)) { exit("run-all already running\n"); }
 
 $now = time();
 $todayStr = date('Y-m-d');

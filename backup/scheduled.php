@@ -54,7 +54,7 @@ $cronHost = preg_replace('/[^a-zA-Z0-9_-]/', '', $_SERVER['HTTP_HOST'] ?? 'youru
       <strong>शिफारस:</strong> वेगवेगळ्या Cron Lines ऐवजी — फक्त ही <strong>एकच ओळ</strong> (दर 15 मिनिटांनी) टाका. ती Backup, नूतनीकरण Reminders, उशिरा टास्क, वाहन Service, गोशाळा लसीकरण इ. सगळे Jobs त्यांच्या ठरलेल्या वेळी क्रमाने चालवते:
     </div>
     <div class="font-mono" style="background:var(--canvas);padding:10px 14px;border-radius:8px;margin-top:8px;font-size:12px;">
-      */15 * * * * php /home/<?= h($cronHost) ?>/public_html/cron/run-all.php
+      */5 * * * * php /home/<?= h($cronHost) ?>/public_html/cron/run-all.php
     </div>
   </div>
 </div>

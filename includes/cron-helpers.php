@@ -12,7 +12,9 @@
  */
 function cronRunAllJobs() {
     return [
+        'send-push-queue'                  => ['every' => 5],
         'process-biometric-attendance'     => ['every' => 15],
+        'escalate-tickets'                 => ['every' => 60],
         'scheduled-backup'                 => ['daily' => 2],
         'send-birthday-anniversary-emails' => ['daily' => 7],
         'send-renewal-reminders'           => ['daily' => 8],
