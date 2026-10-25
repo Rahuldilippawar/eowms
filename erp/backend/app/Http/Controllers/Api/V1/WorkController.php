@@ -11,6 +11,7 @@ use App\Services\WorkService;
 use App\Support\Access\AccessContext;
 use App\Support\Audit\AuditLogger;
 use App\Support\Export\Csv;
+use App\Support\Forms\CustomFields;
 use App\Support\Queries\PeopleQueries;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
@@ -160,6 +161,7 @@ class WorkController extends Controller
             'hours' => ['nullable', 'numeric', 'min:0.25', 'max:24', 'multiple_of:0.25'],
             'status' => ['required', Rule::in(WorkEntry::STATUSES)],
             'task_id' => ['nullable', 'integer'],
+            ...CustomFields::rules('work_entry'),
         ]);
     }
 }

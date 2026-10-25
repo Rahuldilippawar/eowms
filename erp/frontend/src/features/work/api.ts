@@ -16,6 +16,7 @@ export interface WorkEntry {
   reviewer: { id: number; name: string } | null
   review_remarks: string | null
   can_edit: boolean
+  custom?: Record<string, string | number | boolean | null>
 }
 
 export interface WorkInput {
@@ -25,6 +26,7 @@ export interface WorkInput {
   hours: number | null
   status: WorkStatus
   task_id: number | null
+  custom?: Record<string, string | number | boolean | null>
 }
 
 export interface MyWork {

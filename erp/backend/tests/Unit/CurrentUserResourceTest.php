@@ -23,7 +23,7 @@ class CurrentUserResourceTest extends TestCase
 
         $data = (new CurrentUserResource($user))->resolve(Request::create('/'));
 
-        $this->assertSame(['id', 'name', 'email', 'is_super_admin', 'last_login_at'], array_keys($data));
+        $this->assertSame(['id', 'name', 'email', 'is_super_admin', 'last_login_at', 'must_change_password'], array_keys($data));
         $this->assertNull($data['last_login_at']);
     }
 }

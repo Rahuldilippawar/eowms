@@ -155,7 +155,7 @@ describe('phase 5 screens', () => {
     await userEvent.selectOptions(screen.getByLabelText('Related task (optional)'), '7')
     await userEvent.click(screen.getByRole('button', { name: 'Save' }))
     await waitFor(() =>
-      expect(work.saveWork).toHaveBeenCalledWith(null, { work_date: todayYmd(), title: 'Checked lab records', description: null, hours: 1.5, status: 'completed', task_id: 7 }),
+      expect(work.saveWork).toHaveBeenCalledWith(null, { work_date: todayYmd(), title: 'Checked lab records', description: null, hours: 1.5, status: 'completed', task_id: 7, custom: {} }),
     )
   })
 })

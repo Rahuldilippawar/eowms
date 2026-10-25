@@ -65,7 +65,9 @@
     "confirmPassword": "Repeat password",
     "resetSubmit": "Change password",
     "saving": "Saving…",
-    "requestNewLink": "Request a new link"
+    "requestNewLink": "Request a new link",
+    "passwordRule": "At least 8 characters, with a letter and a number.",
+    "passwordMismatch": "The two passwords do not match."
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -89,7 +91,9 @@
     "myWork": "My work",
     "tasks": "Tasks",
     "performance": "Performance",
-    "teamWork": "Team work log"
+    "teamWork": "Team work log",
+    "myProfile": "My profile",
+    "customFields": "Custom fields"
   },
   "dashboard": {
     "welcome": "Hello, {{name}}",
@@ -168,7 +172,8 @@
   "form": {
     "required": "This is required",
     "codeFormat": "Letters, numbers, - and _ only",
-    "saved": "Saved"
+    "saved": "Saved",
+    "choose": "Choose"
   },
   "admin": {
     "role": "Role",
@@ -229,7 +234,8 @@
     "export": "Export",
     "approve": "Approve",
     "manage_types": "Manage types",
-    "review": "Review"
+    "review": "Review",
+    "sensitive": "See / edit private data"
   },
   "modules": {
     "organizations": "Organizations",
@@ -525,5 +531,190 @@
     "overdueHint_one": "{{count}} overdue",
     "overdueHint_other": "{{count}} overdue",
     "note": "Tasks count when their due date is in the range; cancelled tasks are left out. \"On time\" is tasks closed by their due date, out of all tasks due."
+  },
+  "account": {
+    "changePassword": "Change password",
+    "currentPassword": "Current password",
+    "newPassword": "New password",
+    "confirmPassword": "Repeat new password",
+    "savePassword": "Save password",
+    "passwordChanged": "Password changed. Other devices were signed out.",
+    "mustChange": "Please set your own password before using the app."
+  },
+  "profile": {
+    "fields": {
+      "secondary_designation": "Second designation",
+      "employment_type": "Employment type",
+      "staff_group": "Group",
+      "teaching_mode": "Teaching / non-teaching",
+      "father_name": "Father's name",
+      "mother_name": "Mother's name",
+      "gender": "Gender",
+      "date_of_birth": "Date of birth",
+      "marital_status": "Marital status",
+      "blood_group": "Blood group",
+      "whatsapp": "WhatsApp number",
+      "local_address": "Current address",
+      "permanent_address": "Permanent address",
+      "religion": "Religion",
+      "caste": "Caste",
+      "caste_validity_no": "Caste validity no.",
+      "is_disabled": "Person with disability",
+      "emergency_contact_name": "Emergency contact",
+      "emergency_contact_relation": "Their relation",
+      "emergency_contact_phone": "Emergency phone",
+      "left_date": "Date of leaving"
+    },
+    "choices": {
+      "employment_type": {
+        "permanent": "Permanent",
+        "probation": "Probation",
+        "contract": "Contract",
+        "temporary": "Temporary",
+        "part_time": "Part time",
+        "honorary": "Honorary",
+        "volunteer": "Volunteer"
+      },
+      "teaching_mode": {
+        "teaching": "Teaching",
+        "non_teaching": "Non-teaching"
+      },
+      "gender": {
+        "female": "Female",
+        "male": "Male",
+        "other": "Other"
+      },
+      "marital_status": {
+        "single": "Single",
+        "married": "Married",
+        "widowed": "Widowed",
+        "divorced": "Divorced"
+      }
+    },
+    "tabs": {
+      "personal": "Personal",
+      "private": "Private",
+      "documents": "Documents",
+      "family": "Family",
+      "achievements": "Achievements"
+    },
+    "sections": "Profile sections",
+    "notFound": "This employee does not exist or you cannot see them.",
+    "selfHint": "You can update your contact details and emergency contact; the office keeps the rest.",
+    "privateHint": "Aadhaar and bank numbers are stored encrypted and shown masked. Showing the full numbers is recorded in the audit log.",
+    "reveal": "Show full numbers",
+    "private": {
+      "aadhaar": "Aadhaar",
+      "bank_account": "Bank account",
+      "newAadhaar": "New Aadhaar number",
+      "newBankAccount": "New bank account number",
+      "keep": "Leave blank to keep",
+      "ifsc": "IFSC",
+      "bank_name": "Bank",
+      "bank_branch": "Branch",
+      "ration_card": "Ration card",
+      "uan": "PF UAN",
+      "esic": "ESIC no.",
+      "salary": "Monthly salary (₹)",
+      "pf_applicable": "PF applies",
+      "esic_applicable": "ESIC applies",
+      "pt_applicable": "Professional tax applies"
+    },
+    "docTypes": {
+      "aadhaar": "Aadhaar",
+      "pan": "PAN",
+      "photo_id": "Photo ID",
+      "education": "Education",
+      "experience": "Experience",
+      "appointment": "Appointment letter",
+      "medical": "Medical",
+      "bank": "Bank",
+      "other": "Other"
+    },
+    "docType": "Document type",
+    "docTitle": "Title (optional)",
+    "upload": "Upload",
+    "uploaded": "Document uploaded.",
+    "noDocuments": "No documents yet.",
+    "noFamily": "No family members added.",
+    "relation": "Relation",
+    "livesOnCampus": "Lives on campus",
+    "addMember": "Add member",
+    "noAchievements": "No achievements recorded.",
+    "achievement": "Achievement",
+    "addAchievement": "Add",
+    "changePhoto": "Change photo",
+    "photoOf": "Photo of {{name}}",
+    "photoSaved": "Photo saved.",
+    "photoTooBig": "The photo is larger than 2 MB.",
+    "idCard": "ID card"
+  },
+  "idCards": {
+    "title": "ID cards",
+    "pick": "Choose people (optional — otherwise the whole department)",
+    "showPicked_one": "Show card for {{count}} person",
+    "showPicked_other": "Show cards for {{count}} people",
+    "showDepartment": "Show cards for the department",
+    "print": "Print",
+    "emergency": "Emergency",
+    "qr": "Verification QR code for {{name}}",
+    "moveTo": "Move to department",
+    "move_one": "Move {{count}} person",
+    "move_other": "Move {{count}} people",
+    "moved_one": "{{count}} person moved.",
+    "moved_other": "{{count}} people moved."
+  },
+  "import": {
+    "employeesTitle": "Import staff (CSV)",
+    "step1": "Download the template and fill one row per person.",
+    "template": "CSV template",
+    "step2": "Choose the file: every row is checked first, nothing is saved yet.",
+    "step3": "When no row has a problem, import all rows at once.",
+    "chooseFile": "CSV file",
+    "checking": "Checking…",
+    "line": "Line",
+    "problems": "Problems",
+    "ok": "OK",
+    "summaryOk": "{{total}} rows, all OK.",
+    "summaryBad": "{{total}} rows, {{bad}} with problems — fix them in the file and choose it again.",
+    "run_one": "Import {{count}} row",
+    "run_other": "Import {{count}} rows",
+    "done_one": "{{count}} employee imported.",
+    "done_other": "{{count}} employees imported."
+  },
+  "settings": {
+    "modules": "Modules",
+    "modulesHint": "Switch off modules this organization does not use. They disappear from menus and the server refuses them; data is kept.",
+    "fieldsHint": "Extra fields on your own forms. Their values are checked on the server and kept with each record.",
+    "form": "Form",
+    "entities": {
+      "employee": "Employee profile",
+      "student": "Student",
+      "work_entry": "Daily work entry"
+    },
+    "newField": "New field",
+    "editField": "Edit field",
+    "noFields": "No fields yet.",
+    "label": "Label",
+    "key": "Key (a-z, 0-9, _)",
+    "keyRule": "Start with a letter; use only a-z, 0-9 and _.",
+    "type": "Type",
+    "order": "Order",
+    "options": "Choices (one per line)",
+    "required": "Required",
+    "types": {
+      "text": "Text",
+      "textarea": "Long text",
+      "number": "Number",
+      "date": "Date",
+      "select": "Choice list",
+      "checkbox": "Yes / no"
+    }
+  },
+  "verify": {
+    "title": "ID card check",
+    "active": "Currently working here",
+    "inactive": "Not working here any more",
+    "notFound": "This card could not be verified."
   }
 }

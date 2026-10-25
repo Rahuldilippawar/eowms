@@ -114,7 +114,19 @@ Dev accounts (password `password`): `admin@example.com` (super admin), `orgadmin
 - Rules: [`docs/WORK-AND-TASKS.md`](docs/WORK-AND-TASKS.md). Seed: a sample task from `hod@` to `teacher@`.
 - Tests: 102 backend, 39 frontend, 27 end-to-end.
 
+### Phase 5A-1 — done (old-app parity, staff)
+- Full HR profile with the old app's fields, private data (encrypted Aadhaar / bank, masked, audited
+  reveal), photo, documents, family, achievements; employees update their own contact details.
+- Staff CSV import with a full check before an all-or-nothing import; ID cards with a QR code and a
+  public verification page; moving many staff to another department.
+- Organization-defined fields on employee, student and daily-work forms; modules on / off per
+  organization; own password change and forced change for flagged accounts.
+- Rules: [`docs/PEOPLE.md`](docs/PEOPLE.md). Old-app coverage: [`../docs/erp/PARITY.md`](../docs/erp/PARITY.md).
+- Tests: 114 backend, 44 frontend, 29 end-to-end.
+
 ### Not yet (later phases)
-- Correspondence, approvals and PDF/QR (Phase 6) and the other business modules; holiday calendar;
+- Phase 5A-2 (holidays, shifts, leave balances, attendance grid / certificate / movement / salary
+  reports, biometric devices, daily crons, student fields + import, daily-work team / photos / import),
+  then correspondence, approvals and PDF/QR (Phase 6) and the other business modules; holiday calendar;
   email / push delivery of notifications; organization-defined extra fields on work entries.
 - Reports, deployment to Hostinger.

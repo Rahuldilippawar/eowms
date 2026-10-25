@@ -9,6 +9,7 @@ use App\Models\Student;
 use App\Support\Access\AccessContext;
 use App\Support\Access\Reach;
 use App\Support\Audit\AuditLogger;
+use App\Support\Forms\CustomFields;
 use App\Support\Queries\PeopleQueries;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -110,8 +111,10 @@ class StudentController extends Controller
             'admission_date' => ['nullable', 'date'],
             'guardian_name' => ['nullable', 'string', 'max:255'],
             'guardian_phone' => ['nullable', 'string', 'max:30'],
+            ...CustomFields::rules('student'),
         ]);
         $data['department_id'] = $data['department_id'] ?? null;
+        $data['custom'] = CustomFields::clean('student', $data['custom'] ?? null, $student?->custom);
 
         // A student's department must belong to the student's institution.
         if ($data['department_id'] && ! Department::query()->whereKey($data['department_id'])->where('institution_id', $data['institution_id'])->exists()) {

@@ -13,7 +13,9 @@ use App\Support\Audit\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rules\Password as PasswordRule;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -64,6 +66,24 @@ class AuthController extends Controller
         AuditLogger::record('auth', 'switch_organization', $organization);
 
         return (new CurrentUserResource($user))->response();
+    }
+
+    /**
+     * Change one's own password (also clears a forced change). Other sessions
+     * of this user end; this one stays signed in.
+     */
+    public function changePassword(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'current_password' => ['required', 'string', 'current_password:web'],
+            'password' => ['required', 'string', 'confirmed', 'different:current_password', PasswordRule::min(8)->letters()->numbers()],
+        ]);
+        $user = $request->user();
+        $user->forceFill(['password' => $data['password'], 'must_change_password' => false])->save();
+        DB::table('sessions')->where('user_id', $user->id)->where('id', '!=', $request->session()->getId())->delete();
+        AuditLogger::record('auth', 'password_changed', $user, userId: $user->id);
+
+        return (new CurrentUserResource($user->fresh()))->response();
     }
 
     public function logout(Request $request): JsonResponse

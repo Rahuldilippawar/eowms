@@ -62,7 +62,7 @@ final class AccessContext
     /** Null when the user does not hold the permission in this organization. */
     public function scope(string $permission): ?ResolvedScope
     {
-        if ($this->organization === null) {
+        if ($this->organization === null || ! Modules::permissionAllowed($this->organization, $permission)) {
             return null;
         }
         if ($this->user->is_super_admin) {
@@ -78,11 +78,10 @@ final class AccessContext
         if ($this->organization === null) {
             return [];
         }
-        if ($this->user->is_super_admin) {
-            return DB::table('permissions')->orderBy('key')->pluck('key')->all();
-        }
+        $keys = $this->user->is_super_admin ? DB::table('permissions')->orderBy('key')->pluck('key')->all() : array_keys($this->grants());
 
-        return array_keys($this->grants());
+        // Permissions of modules the organization switched off count as not held.
+        return array_values(array_filter($keys, fn (string $key) => Modules::permissionAllowed($this->organization, $key)));
     }
 
     /**

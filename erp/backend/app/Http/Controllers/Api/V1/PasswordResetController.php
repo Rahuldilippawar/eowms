@@ -46,6 +46,7 @@ class PasswordResetController extends Controller
             $user->forceFill([
                 'password' => $password,
                 'remember_token' => Str::random(60),
+                'must_change_password' => false,
             ])->save();
 
             // Sign the user out everywhere: any session opened before the reset ends.

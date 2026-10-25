@@ -49,9 +49,10 @@ export interface Student {
   guardian_name: string | null
   guardian_phone: string | null
   is_active: boolean
+  custom?: Record<string, string | number | boolean | null>
 }
 
-export type StudentInput = Omit<Student, 'id' | 'institution' | 'department' | 'is_active'> & { institution_id: number; department_id: number | null }
+export type StudentInput = Omit<Student, 'id' | 'institution' | 'department' | 'is_active' | 'custom'> & { institution_id: number; department_id: number | null; custom?: Record<string, string | number | boolean | null> }
 
 type ListParams = { search?: string; page?: number }
 const q = (p: ListParams & Record<string, unknown>) => ({ ...p, search: p.search || undefined })
@@ -66,3 +67,5 @@ export const fetchStudents = async (p: ListParams): Promise<Paginated<Student>> 
 export const createStudent = async (i: StudentInput): Promise<Student> => (await api.post('/students', i)).data.data
 export const updateStudent = async (id: number, i: StudentInput): Promise<Student> => (await api.put(`/students/${id}`, i)).data.data
 export const setStudentActive = async (id: number, v: boolean, reason?: string) => (await api.post(`/students/${id}/active`, { is_active: v, reason: reason || undefined })).data.data
+export const fetchDepartmentEmployees = async (departmentId: number): Promise<Employee[]> =>
+  (await api.get('/employees', { params: { department_id: departmentId, is_active: 1, per_page: 100 } })).data.data

@@ -8,6 +8,7 @@ use App\Models\Task;
 use App\Models\User;
 use App\Models\WorkEntry;
 use App\Support\Audit\AuditLogger;
+use App\Support\Forms\CustomFields;
 use App\Support\Queries\PeopleQueries;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
@@ -72,6 +73,7 @@ final class WorkService
                 'hours' => $data['hours'] ?? null,
                 'status' => $data['status'],
                 'task_id' => $data['task_id'] ?? null,
+                'custom' => CustomFields::clean('work_entry', $data['custom'] ?? null, $entry?->custom),
             ];
             if ($entry === null) {
                 $entry = WorkEntry::create($values + [

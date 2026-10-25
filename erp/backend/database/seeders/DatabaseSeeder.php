@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Enums\InstitutionType;
+use App\Models\CustomField;
 use App\Models\Department;
 use App\Models\Employee;
 use App\Models\Institution;
@@ -57,6 +58,12 @@ class DatabaseSeeder extends Seeder
         $eTeacher = $this->employee($trust, $teacher, 'EMP-003', 'Physics Teacher', 'Assistant Professor', $physics, $eHod);
         $this->employee($trust, $staff, 'EMP-004', 'IT Staff', 'System Administrator', $it);
         $this->employee($trust, $admin, 'EMP-005', 'Org Admin (SET)', 'Administrator', $it);
+        $eTeacher->fill(['gender' => 'female', 'date_of_birth' => '1991-07-12', 'blood_group' => 'B+', 'employment_type' => 'permanent', 'teaching_mode' => 'teaching'])->save();
+        // Organization-defined fields, as the old app's community fields became.
+        foreach ([['ashram_resident', 'आश्रमात राहतात', 'checkbox', null], ['naam_dharak', 'नामधारक', 'checkbox', null], ['food_preference', 'आहार', 'select', ['शाकाहारी', 'सात्विक']]] as $i => [$key, $label, $type, $options]) {
+            CustomField::firstOrCreate(['organization_id' => $trust->id, 'entity' => 'employee', 'key' => $key], ['label' => $label, 'type' => $type, 'options' => $options, 'sort_order' => $i]);
+        }
+
         // A sample task from the HOD to the teacher.
         $task = Task::firstOrCreate(['organization_id' => $trust->id, 'title' => 'Prepare the physics lab inventory'], [
             'description' => 'List equipment that needs repair before the practical exams.', 'priority' => 'high',

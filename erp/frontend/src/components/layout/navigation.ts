@@ -1,4 +1,4 @@
-import { BarChart3, Building, ClipboardPen, ListChecks, NotebookPen, Building2, CalendarClock, CalendarDays, ClipboardCheck, ClipboardList, GraduationCap, IdCard, KeyRound, LayoutDashboard, Network, Plane, Settings, Users, type LucideIcon } from 'lucide-react'
+import { BarChart3, SlidersHorizontal, UserRound, Building, ClipboardPen, ListChecks, NotebookPen, Building2, CalendarClock, CalendarDays, ClipboardCheck, ClipboardList, GraduationCap, IdCard, KeyRound, LayoutDashboard, Network, Plane, Settings, Users, type LucideIcon } from 'lucide-react'
 
 export interface NavItem {
   to: string
@@ -7,6 +7,8 @@ export interface NavItem {
   /** Shown only when the user holds this permission (the API enforces it regardless). */
   permission?: string
   superAdminOnly?: boolean
+  /** Hidden when the organization switched this module off. */
+  module?: string
 }
 
 export interface NavSection {
@@ -20,13 +22,14 @@ export const NAVIGATION: NavSection[] = [
     titleKey: 'nav.main',
     items: [
       { to: '/', labelKey: 'nav.dashboard', icon: LayoutDashboard },
-      { to: '/my/attendance', labelKey: 'nav.myAttendance', icon: CalendarClock },
-      { to: '/my/leave', labelKey: 'nav.myLeave', icon: Plane },
-      { to: '/my/work', labelKey: 'nav.myWork', icon: NotebookPen },
-      { to: '/tasks', labelKey: 'nav.tasks', icon: ListChecks },
+      { to: '/my/profile', labelKey: 'nav.myProfile', icon: UserRound },
+      { to: '/my/attendance', labelKey: 'nav.myAttendance', icon: CalendarClock, module: 'attendance' },
+      { to: '/my/leave', labelKey: 'nav.myLeave', icon: Plane, module: 'leave' },
+      { to: '/my/work', labelKey: 'nav.myWork', icon: NotebookPen, module: 'daily_work' },
+      { to: '/tasks', labelKey: 'nav.tasks', icon: ListChecks, module: 'tasks' },
       // Reporting officers approve without holding leave.approve, so this entry is shown to everyone.
       { to: '/approvals', labelKey: 'nav.approvals', icon: ClipboardCheck },
-      { to: '/performance', labelKey: 'nav.performance', icon: BarChart3 },
+      { to: '/performance', labelKey: 'nav.performance', icon: BarChart3, module: 'performance' },
     ],
   },
   {
@@ -52,6 +55,7 @@ export const NAVIGATION: NavSection[] = [
       { to: '/users', labelKey: 'nav.users', icon: Users, permission: 'users.view' },
       { to: '/roles', labelKey: 'nav.roles', icon: KeyRound, permission: 'roles.view' },
       { to: '/organization', labelKey: 'nav.organizationSettings', icon: Settings, permission: 'organizations.edit' },
+      { to: '/organization/fields', labelKey: 'nav.customFields', icon: SlidersHorizontal, permission: 'organizations.edit' },
       { to: '/admin/organizations', labelKey: 'nav.allOrganizations', icon: Building, superAdminOnly: true },
     ],
   },

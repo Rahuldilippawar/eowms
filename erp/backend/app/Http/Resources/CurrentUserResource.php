@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use App\Models\User;
 use App\Support\Access\AccessContext;
+use App\Support\Access\Modules;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -39,6 +40,8 @@ class CurrentUserResource extends JsonResource
             'organizations' => $this->when($isCurrentUser, fn () => AccessContext::organizationsFor($this->resource)
                 ->map(fn ($o) => ['id' => $o->id, 'name' => $o->name, 'short_name' => $o->short_name])->values()),
             'permissions' => $this->when($isCurrentUser, fn () => $context->permissionKeys()),
+            'disabled_modules' => $this->when($isCurrentUser, fn () => Modules::disabled($context->organization())),
+            'must_change_password' => (bool) $this->must_change_password,
         ];
     }
 }

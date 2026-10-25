@@ -1,6 +1,7 @@
-import { Plus } from 'lucide-react'
+import { IdCard, Plus, Upload } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router-dom'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { useAuth } from '@/features/auth/AuthProvider'
@@ -15,7 +16,15 @@ export function EmployeesPage() {
   const [editing, setEditing] = useState<Employee | undefined>()
   const [open, setOpen] = useState(false)
   const columns: Column<Employee>[] = [
-    { key: 'name', header: t('org.name'), cell: (e) => e.name },
+    {
+      key: 'name',
+      header: t('org.name'),
+      cell: (e) => (
+        <Link to={`/employees/${e.id}`} className="font-medium text-brand-700 hover:underline">
+          {e.name}
+        </Link>
+      ),
+    },
     { key: 'code', header: t('people.employeeCode'), cell: (e) => <span className="font-mono text-xs">{e.employee_code}</span> },
     { key: 'designation', header: t('people.designation'), cell: (e) => e.designation ?? '—' },
     { key: 'department', header: t('people.department'), cell: (e) => e.department.name },
@@ -32,19 +41,35 @@ export function EmployeesPage() {
         fetcher={fetchEmployees}
         columns={columns}
         emptyMessage={t('people.noEmployees')}
-        cardTitle={(e) => e.name}
+        cardTitle={(e) => (
+          <Link to={`/employees/${e.id}`} className="text-brand-700 hover:underline">
+            {e.name}
+          </Link>
+        )}
         toolbar={
-          can('employees.create') ? (
-            <Button
-              onClick={() => {
-                setEditing(undefined)
-                setOpen(true)
-              }}
-            >
-              <Plus aria-hidden className="size-4" />
-              {t('people.newEmployee')}
-            </Button>
-          ) : null
+          <>
+            <Link to="/employees/id-cards" className="inline-flex min-h-10 items-center gap-2 text-sm font-medium text-brand-700 hover:underline">
+              <IdCard aria-hidden className="size-4" />
+              {t('idCards.title')}
+            </Link>
+            {can('employees.create') ? (
+              <Link to="/employees/import" className="inline-flex min-h-10 items-center gap-2 text-sm font-medium text-brand-700 hover:underline">
+                <Upload aria-hidden className="size-4" />
+                {t('import.employeesTitle')}
+              </Link>
+            ) : null}
+            {can('employees.create') ? (
+              <Button
+                onClick={() => {
+                  setEditing(undefined)
+                  setOpen(true)
+                }}
+              >
+                <Plus aria-hidden className="size-4" />
+                {t('people.newEmployee')}
+              </Button>
+            ) : null}
+          </>
         }
         actions={
           canEdit || canToggle

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
 import { useAuth } from './AuthProvider'
+import { ChangePasswordPage } from './ChangePasswordPage'
 
 function FullPageState() {
   const { t } = useTranslation()
@@ -29,6 +30,8 @@ export function RequireAuth() {
   const location = useLocation()
   if (isLoading || isError) return <FullPageState />
   if (!user) return <Navigate to="/login" replace state={{ from: location.pathname }} />
+  // The API refuses everything else until the password is changed.
+  if (user.must_change_password) return <ChangePasswordPage forced />
   return <Outlet />
 }
 
