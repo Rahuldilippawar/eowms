@@ -9,16 +9,35 @@ $orgId = activeOrgId();
 $isMgmt = hasPermission('manage_sop');
 $deptId = (int)($_GET['department_id'] ?? ($user['department_id'] ?? 0));
 
-if (!$isMgmt && (int)($user['department_id'] ?? 0) !== $deptId) {
+// स्वतःचा विभाग + Extra दिलेले विभाग (manage_sop असेल तर सगळे)
+$sopVisibleDeptIds = $isMgmt ? null : getVisibleDepartmentIds();
+if ($sopVisibleDeptIds !== null && !in_array($deptId, $sopVisibleDeptIds, true)) {
     http_response_code(403);
     die('तुम्हाला दुसऱ्या विभागाची Checklist पाहण्याची परवानगी नाही.');
 }
 if (!$deptId) {
     die('तुम्हाला कोणताही विभाग नेमलेला नाही.');
 }
+// विभाग सक्रिय संस्थेचाच असावा
+$deptOrgCheck = $pdo->prepare("SELECT id FROM departments WHERE id = ? AND organization_id = ?");
+$deptOrgCheck->execute([$deptId, $orgId]);
+if (!$deptOrgCheck->fetch()) { die('विभाग सापडला नाही.'); }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'mark_done') {
     $stepId = (int)($_POST['step_id'] ?? 0);
+    // पायरी — याच संस्थेच्या, या विभागाला नेमलेल्या सक्रिय SOP ची व "Manual" प्रकारची असावी
+    $stepCheck = $pdo->prepare("
+        SELECT st.id FROM sop_steps st
+        JOIN sops s ON s.id = st.sop_id
+        JOIN sop_department_assignments sda ON sda.sop_id = s.id AND sda.department_id = ?
+        WHERE st.id = ? AND s.organization_id = ? AND s.is_active = 1 AND st.detection_type = 'manual'
+    ");
+    $stepCheck->execute([$deptId, $stepId, $orgId]);
+    if (!$stepCheck->fetch()) {
+        $_SESSION['flash'] = '⚠️ ही पायरी या विभागाच्या Checklist मधली नाही (किंवा आपोआप तपासली जाते).';
+        header('Location: checklist.php?department_id=' . $deptId);
+        exit;
+    }
     $pdo->prepare("
         INSERT INTO sop_compliance_logs (sop_step_id, department_id, log_date, status, completed_by)
         VALUES (?, ?, CURDATE(), 'done', ?)

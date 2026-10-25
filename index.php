@@ -198,8 +198,8 @@ if (hasPermission('view_task_tracker')) {
     $recentTasks = $stmt->fetchAll();
 }
 
-$statusLabelsMap = ['pending' => 'प्रलंबित', 'in_progress' => 'सुरू आहे', 'completed' => 'पूर्ण झाले'];
-$statusChipMap = ['pending' => 'pending', 'in_progress' => 'pending', 'completed' => 'done'];
+$statusLabelsMap = ['pending' => 'प्रलंबित', 'in_progress' => 'सुरू आहे', 'completed' => 'पूर्ण झाले', 'cancelled' => 'रद्द केले'];
+$statusChipMap = ['pending' => 'pending', 'in_progress' => 'pending', 'completed' => 'done', 'cancelled' => 'overdue'];
 
 // Campus-निहाय संपूर्ण विभाजन — पूर्वी "केंद्रीकृत Dashboard" या वेगळ्या
 // पानावर होतं, आता Command Center चाच एक Section (फक्त manage_campuses

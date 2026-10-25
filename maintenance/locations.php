@@ -7,6 +7,21 @@ $user = currentUser();
 $orgId = activeOrgId();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // इमारत / Campus — याच संस्थेचे असावेत (दुसऱ्या संस्थेचा id चालणार नाही)
+    $orgOwns = function ($table, $id) use ($pdo, $orgId) {
+        if ($id === null) { return true; }
+        $st = $pdo->prepare("SELECT 1 FROM `$table` WHERE id = ? AND organization_id = ?");
+        $st->execute([$id, $orgId]);
+        return (bool)$st->fetch();
+    };
+    $postedBuildingId = ($_POST['building_id'] ?? $_POST['edit_building_id'] ?? '') !== '' ? (int)($_POST['building_id'] ?? $_POST['edit_building_id']) : null;
+    $postedCampusId = ($_POST['building_campus_id'] ?? '') !== '' ? (int)$_POST['building_campus_id'] : null;
+    if (!$orgOwns('buildings', $postedBuildingId) || !$orgOwns('campuses', $postedCampusId)) {
+        $_SESSION['form_error'] = 'निवडलेली इमारत/College सापडली नाही.';
+        header('Location: locations.php');
+        exit;
+    }
+
     if (isset($_POST['add_building'])) {
         $name = trim($_POST['building_name'] ?? '');
         $campusId = ($_POST['building_campus_id'] ?? '') !== '' ? (int)$_POST['building_campus_id'] : null;

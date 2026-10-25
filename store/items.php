@@ -7,11 +7,48 @@ requireStoreAccess($pdo, $user);
 $orgId = activeOrgId();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $action = $_POST['action'] ?? 'add';
     $itemName = trim($_POST['item_name'] ?? '');
     $category = trim($_POST['category'] ?? '');
     $departmentId = ($_POST['department_id'] ?? '') !== '' ? (int)$_POST['department_id'] : null;
     $unit = trim($_POST['unit'] ?? '');
     $reorderLevel = (float)($_POST['reorder_level'] ?? 0);
+
+    // विभाग (असल्यास) याच संस्थेचा असावा
+    if ($departmentId) {
+        $deptCheck = $pdo->prepare("SELECT id FROM departments WHERE id = ? AND organization_id = ?");
+        $deptCheck->execute([$departmentId, $orgId]);
+        if (!$deptCheck->fetch()) {
+            $_SESSION['flash'] = 'निवडलेला विभाग सापडला नाही — बदल झाला नाही.';
+            header('Location: items.php');
+            exit;
+        }
+    }
+
+    if ($action === 'update' || $action === 'toggle_active') {
+        $itemId = (int)($_POST['item_id'] ?? 0);
+        $itemStmt = $pdo->prepare("SELECT * FROM store_items WHERE id = ? AND organization_id = ?");
+        $itemStmt->execute([$itemId, $orgId]);
+        $item = $itemStmt->fetch();
+        if (!$item) {
+            $_SESSION['flash'] = 'वस्तू सापडली नाही.';
+        } elseif ($action === 'toggle_active') {
+            $newActive = $item['is_active'] ? 0 : 1;
+            $pdo->prepare("UPDATE store_items SET is_active = ? WHERE id = ? AND organization_id = ?")->execute([$newActive, $itemId, $orgId]);
+            logActivity($newActive ? 'भांडार वस्तू पुन्हा सक्रिय केली' : 'भांडार वस्तू निष्क्रिय केली', 'store_item', $itemId, $item['item_name']);
+            $_SESSION['flash'] = "'{$item['item_name']}' " . ($newActive ? 'पुन्हा सक्रिय केली.' : 'निष्क्रिय केली (नवीन कामात दिसणार नाही).');
+        } elseif ($itemName && $unit) {
+            $pdo->prepare("UPDATE store_items SET item_name = ?, category = ?, department_id = ?, unit = ?, reorder_level = ? WHERE id = ? AND organization_id = ?")
+                ->execute([$itemName, $category, $departmentId, $unit, $reorderLevel, $itemId, $orgId]);
+            logActivity('भांडार वस्तू बदलली', 'store_item', $itemId, $itemName);
+            $_SESSION['flash'] = "'$itemName' अद्ययावत झाली.";
+        } else {
+            $_SESSION['flash'] = 'वस्तूचं नाव व एकक आवश्यक आहे.';
+        }
+        header('Location: items.php');
+        exit;
+    }
+
     if ($itemName && $unit) {
         $pdo->prepare("INSERT INTO store_items (organization_id, item_name, category, department_id, unit, reorder_level, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)")
             ->execute([$orgId, $itemName, $category, $departmentId, $unit, $reorderLevel, $user['id']]);
@@ -43,7 +80,7 @@ $campusesForCascade = $campusesForCascade->fetchAll();
 <div class="page-eyebrow"><?= h(activeOrgName()) ?></div>
 <div class="d-flex justify-content-between align-items-start mb-1">
   <div class="page-title mb-0">📋 भांडार वस्तू यादी</div>
-  <a href="index.php" style="font-size:12.5px;color:var(--rail);font-weight:600;text-decoration:none;align-self:center;"><i class="fa-solid fa-arrow-left me-1"></i>भांडार विभाग</a>
+  <a href="../index.php" style="font-size:12.5px;color:var(--rail);font-weight:600;text-decoration:none;align-self:center;"><i class="fa-solid fa-arrow-left me-1"></i>Dashboard</a>
 </div>
 
 <?php if (!empty($_SESSION['flash'])): ?>
@@ -97,10 +134,32 @@ $campusesForCascade = $campusesForCascade->fetchAll();
 
 <div class="panel">
   <table class="rtable">
-    <thead><tr><th>वस्तू</th><th>प्रकार</th><th>विभाग</th><th>एकक</th><th>किमान मर्यादा</th></tr></thead>
+    <thead><tr><th>वस्तू</th><th>प्रकार</th><th>विभाग</th><th>एकक</th><th>किमान मर्यादा</th><th></th></tr></thead>
     <tbody>
       <?php foreach ($items as $it): ?>
-        <tr><td style="font-weight:500;"><?= h($it['item_name']) ?></td><td><?= h($it['category']) ?></td><td><?= h($it['dept_name'] ?: '⚪ सामायिक') ?></td><td><?= h($it['unit']) ?></td><td><?= number_format($it['reorder_level'], 2) ?></td></tr>
+        <tr style="<?= $it['is_active'] ? '' : 'opacity:.55;' ?>">
+          <td style="font-weight:500;"><?= h($it['item_name']) ?><?= $it['is_active'] ? '' : ' <span class="status-chip overdue">निष्क्रिय</span>' ?></td><td><?= h($it['category']) ?></td><td><?= h($it['dept_name'] ?: '⚪ सामायिक') ?></td><td><?= h($it['unit']) ?></td><td><?= number_format($it['reorder_level'], 2) ?></td>
+          <td style="white-space:nowrap;">
+            <button type="button" class="btn btn-sm" style="border:1px solid var(--line);border-radius:7px;font-size:11px;padding:3px 10px;" onclick="document.getElementById('itemEdit<?= $it['id'] ?>').classList.toggle('d-none')">Edit</button>
+            <form method="POST" style="display:inline;" onsubmit="return confirm('<?= $it['is_active'] ? 'ही वस्तू निष्क्रिय करायची?' : 'ही वस्तू पुन्हा सक्रिय करायची?' ?>')">
+              <input type="hidden" name="action" value="toggle_active"><input type="hidden" name="item_id" value="<?= $it['id'] ?>">
+              <button type="submit" class="btn btn-sm" style="border:1px solid var(--line);border-radius:7px;font-size:11px;padding:3px 10px;"><?= $it['is_active'] ? 'निष्क्रिय करा' : 'सक्रिय करा' ?></button>
+            </form>
+          </td>
+        </tr>
+        <tr id="itemEdit<?= $it['id'] ?>" class="d-none">
+          <td colspan="6">
+            <form method="POST" class="row g-2 align-items-end">
+              <input type="hidden" name="action" value="update"><input type="hidden" name="item_id" value="<?= $it['id'] ?>">
+              <div class="col-md-3"><input type="text" name="item_name" class="form-control-custom" value="<?= h($it['item_name']) ?>" required></div>
+              <div class="col-md-2"><input type="text" name="category" class="form-control-custom" value="<?= h($it['category']) ?>" placeholder="प्रकार"></div>
+              <div class="col-md-3"><select name="department_id" class="form-select-custom"><option value="">-- सामायिक/इतर --</option><?php foreach ($deptsForItems as $d): ?><option value="<?= $d['id'] ?>" <?= (int)$d['id'] === (int)$it['department_id'] ? 'selected' : '' ?>><?= h($d['name_local'] ?: $d['name']) ?></option><?php endforeach; ?></select></div>
+              <div class="col-md-1"><input type="text" name="unit" class="form-control-custom" value="<?= h($it['unit']) ?>" required></div>
+              <div class="col-md-1"><input type="number" step="0.01" name="reorder_level" class="form-control-custom" value="<?= h($it['reorder_level']) ?>"></div>
+              <div class="col-md-2"><button type="submit" class="btn btn-sm" style="background:var(--rail);color:#fff;border-radius:7px;font-size:12px;">जतन करा</button></div>
+            </form>
+          </td>
+        </tr>
       <?php endforeach; ?>
     </tbody>
   </table>

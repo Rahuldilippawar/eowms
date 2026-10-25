@@ -8,10 +8,11 @@ $isMgmt = isManagementOrAbove() || hasPermission('manage_dead_stock_master');
 
 // Staff/HOD only ever see their OWN department; Management/Super Admin can
 // pick any department (or view all together)
+// Staff/HOD — स्वतःचा + Extra दिलेले विभाग; विभाग नसेल तर काहीच दिसणार नाही
+$dsVisibleDeptIds = $isMgmt ? null : (getVisibleDepartmentIds() ?: [0]);
+$deptId = (int)($_GET['department_id'] ?? 0);
 if (!$isMgmt) {
-    $deptId = (int)($user['department_id'] ?? 0);
-} else {
-    $deptId = (int)($_GET['department_id'] ?? 0);
+    if (!in_array($deptId, $dsVisibleDeptIds, true)) { $deptId = count($dsVisibleDeptIds) === 1 ? $dsVisibleDeptIds[0] : 0; }
 }
 
 $stmt = $pdo->prepare("SELECT * FROM departments WHERE organization_id = ? AND is_active = 1 ORDER BY name_local");
@@ -29,9 +30,9 @@ $sql = "
     WHERE ds.organization_id = ?
 ";
 $params = [$orgId];
-if (!$isMgmt) {
-    $sql .= " AND ds.department_id = ?";
-    $params[] = $deptId;
+if (!$isMgmt && !$deptId) {
+    $sql .= " AND ds.department_id IN (" . implode(',', array_fill(0, count($dsVisibleDeptIds), '?')) . ")";
+    $params = array_merge($params, $dsVisibleDeptIds);
 } elseif ($deptId) {
     $sql .= " AND ds.department_id = ?";
     $params[] = $deptId;

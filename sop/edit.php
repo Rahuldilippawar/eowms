@@ -13,12 +13,23 @@ $sopId = (int)($_GET['id'] ?? 0);
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
+    // SOP सक्रिय संस्थेचंच असावं — नाहीतर कोणतीही कृती नाही
+    $sopOrgCheck = $pdo->prepare("SELECT id FROM sops WHERE id = ? AND organization_id = ?");
+    $sopOrgCheck->execute([$sopId, $orgId]);
+    if (!$sopOrgCheck->fetch()) {
+        http_response_code(404);
+        die('SOP सापडलं नाही.');
+    }
+
     if ($action === 'add_step') {
         $stepDesc = trim($_POST['step_description'] ?? '');
         $frequency = $_POST['frequency'] ?? 'daily';
         $detectionType = $_POST['detection_type'] ?? 'manual';
         $autoSource = $detectionType === 'auto' ? ($_POST['auto_source_module'] ?? null) : null;
-        if ($stepDesc) {
+        if (!in_array($frequency, ['daily', 'weekly', 'monthly'], true) || !in_array($detectionType, ['manual', 'auto'], true)
+            || ($detectionType === 'auto' && !in_array($autoSource, ['daily_work', 'hostel_attendance', 'vehicle_trip', 'maintenance_log'], true))) {
+            $_SESSION['form_error'] = 'अवैध वारंवारता/प्रकार/Auto-स्रोत — पायरी जोडली नाही.';
+        } elseif ($stepDesc) {
             $orderStmt = $pdo->prepare("SELECT COALESCE(MAX(step_order),0)+1 n FROM sop_steps WHERE sop_id = ?");
             $orderStmt->execute([$sopId]);
             $nextOrder = $orderStmt->fetch()['n'];
@@ -31,7 +42,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['flash'] = 'पायरी काढली.';
     } elseif ($action === 'assign_dept') {
         $deptId = (int)($_POST['department_id'] ?? 0);
-        if ($deptId) {
+        // विभाग याच संस्थेचा असावा
+        $deptCheck = $pdo->prepare("SELECT id FROM departments WHERE id = ? AND organization_id = ?");
+        $deptCheck->execute([$deptId, $orgId]);
+        if (!$deptCheck->fetch()) {
+            $_SESSION['form_error'] = 'निवडलेला विभाग सापडला नाही.';
+        } else {
             try {
                 $pdo->prepare("INSERT INTO sop_department_assignments (sop_id, department_id, assigned_by) VALUES (?, ?, ?)")
                     ->execute([$sopId, $deptId, $user['id']]);

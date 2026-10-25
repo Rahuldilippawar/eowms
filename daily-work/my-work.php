@@ -8,12 +8,14 @@ $status = $_GET['status'] ?? 'pending';
 // Staff sees work where they are part of the team (solo or with others);
 // HOD sees their whole department's work
 $isHod = hasCategory('hod');
+// HOD — स्वतःचा विभाग + Extra दिलेले विभाग (getVisibleDepartmentIds)
+$hodDeptIds = $isHod ? (getVisibleDepartmentIds() ?: [0]) : [];
 $sql = "SELECT wr.*, d.name_local AS dept_name,
           (SELECT GROUP_CONCAT(u2.name SEPARATOR ', ') FROM work_record_team wt2 JOIN users u2 ON u2.id = wt2.user_id WHERE wt2.work_record_id = wr.id) AS team_names
         FROM work_records wr
         JOIN departments d ON d.id = wr.department_id
-        WHERE " . ($isHod ? "wr.department_id = ?" : "EXISTS (SELECT 1 FROM work_record_team wt WHERE wt.work_record_id = wr.id AND wt.user_id = ?)");
-$params = [$isHod ? $user['department_id'] : $user['id']];
+        WHERE wr.organization_id = ? AND " . ($isHod ? "wr.department_id IN (" . implode(',', array_fill(0, count($hodDeptIds), '?')) . ")" : "EXISTS (SELECT 1 FROM work_record_team wt WHERE wt.work_record_id = wr.id AND wt.user_id = ?)");
+$params = array_merge([activeOrgId()], $isHod ? $hodDeptIds : [$user['id']]);
 if ($status !== 'all') { $sql .= " AND wr.status = ?"; $params[] = $status; }
 $sql .= " ORDER BY wr.work_date DESC LIMIT 100";
 $stmt = $pdo->prepare($sql);

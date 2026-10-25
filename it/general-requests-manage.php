@@ -1,8 +1,10 @@
 <?php
 require_once __DIR__ . '/../includes/auth.php';
 requireLogin('../');
-requirePermission('manage_it', '../');
+require_once __DIR__ . '/../includes/it-helpers.php';
 $user = currentUser();
+// IT विभागाचे सदस्य किंवा manage_it — Sidebar मध्येही हाच नियम (canManageItRequests)
+if (!canManageItRequests($pdo, $user)) { requirePermission('manage_it', '../'); }
 $orgId = activeOrgId();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -26,7 +28,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $otherPending = $pdo->prepare("SELECT COUNT(*) c FROM it_repair_tickets WHERE asset_id = ? AND status != 'resolved'");
                 $otherPending->execute([$assetId]);
                 if ((int)$otherPending->fetch()['c'] === 0) {
-                    $pdo->prepare("UPDATE it_assets SET status = 'working' WHERE id = ?")->execute([$assetId]);
+                    // बाद (scrapped) केलेलं Asset पुन्हा "चालू" होऊ नये
+                    $pdo->prepare("UPDATE it_assets SET status = 'working' WHERE id = ? AND organization_id = ? AND status != 'scrapped'")->execute([$assetId, $orgId]);
                 }
             }
             logActivity('IT तक्रार पूर्ण केली', 'it_repair_ticket', $requestId, '');

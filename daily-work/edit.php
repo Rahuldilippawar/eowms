@@ -31,7 +31,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $priority = $_POST['priority'] ?? 'normal';
     $actualCost = ($_POST['actual_cost'] ?? '') !== '' ? (float)$_POST['actual_cost'] : null;
 
-    if ($title) {
+    if (!in_array($priority, ['urgent', 'high', 'normal', 'low'], true) || !DateTime::createFromFormat('!Y-m-d', (string)$workDate)) {
+        $_SESSION['form_error'] = 'अवैध प्राधान्य किंवा तारीख.';
+    } elseif ($title) {
         $pdo->prepare("UPDATE work_records SET title = ?, description = ?, work_date = ?, priority = ?, actual_cost = ? WHERE id = ? AND organization_id = ?")
             ->execute([$title, $description, $workDate, $priority, $actualCost, $id, $orgId]);
         logActivity('स्वतःची कामाची नोंद Edit केली', 'work_record', $id, $title);

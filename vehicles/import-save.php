@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../includes/auth.php';
 requireLogin('../');
 require_once __DIR__ . '/../includes/vehicle-helpers.php';
+if (!canManageVehicles()) { requireRole(['super_admin'], '../'); } // वाहन यादी/नवीन वाहन प्रमाणेच
 $user = currentUser();
 $orgId = activeOrgId();
 

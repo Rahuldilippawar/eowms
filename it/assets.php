@@ -3,7 +3,7 @@ require_once __DIR__ . '/../includes/auth.php';
 requireLogin('../');
 require_once __DIR__ . '/../includes/it-helpers.php';
 $user = currentUser();
-requireItAccess($pdo, $user); // कमीत कमी IT विभागाशी काहीतरी संबंध हवा (Assistant/IT/Management)
+requireItAccess($pdo, $user, '../', true); // कमीत कमी IT विभागाशी काहीतरी संबंध हवा (Assistant/IT/Management)
 $orgId = activeOrgId();
 
 $labId = (int)($_GET['lab_id'] ?? 0);
@@ -22,7 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'toggle_power') {
         if (!$canEdit) { http_response_code(403); die('परवानगी नाही.'); }
         $assetId = (int)($_POST['asset_id'] ?? 0);
-        $newPower = $_POST['power_status'] ?? 'off';
+        $newPower = ($_POST['power_status'] ?? 'off') === 'on' ? 'on' : 'off';
         $pdo->prepare("UPDATE it_assets SET power_status = ?, power_status_updated_at = NOW(), power_status_updated_by = ? WHERE id = ? AND lab_id = ?")
             ->execute([$newPower, $user['id'], $assetId, $labId]);
         header('Location: assets.php?lab_id=' . $labId);
@@ -30,10 +30,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($action === 'delete') {
         if (!$canEdit) { http_response_code(403); die('परवानगी नाही.'); }
         $assetId = (int)($_POST['asset_id'] ?? 0);
-        $tagStmt = $pdo->prepare("SELECT asset_tag FROM it_assets WHERE id = ? AND lab_id = ?");
+        $tagStmt = $pdo->prepare("SELECT asset_tag, asset_type FROM it_assets WHERE id = ? AND lab_id = ?");
         $tagStmt->execute([$assetId, $labId]);
-        $tag = $tagStmt->fetch()['asset_tag'] ?? '';
+        $delAsset = $tagStmt->fetch();
+        $tag = $delAsset['asset_tag'] ?? '';
         $pdo->prepare("DELETE FROM it_assets WHERE id = ? AND lab_id = ?")->execute([$assetId, $labId]);
+        // Asset काढलं — त्याची "IT Asset Warranty" नूतनीकरण नोंदही काढतो
+        if ($delAsset) { syncItAssetWarranty($pdo, $assetId, $orgId, $labId, $tag, $delAsset['asset_type'], null); }
         logActivity('IT Asset काढलं', 'it_asset', $assetId, $tag);
         $_SESSION['flash'] = "'$tag' काढलं गेलं.";
         header('Location: assets.php?lab_id=' . $labId);
@@ -54,6 +57,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $warrantyExpiry = ($_POST['warranty_expiry'] ?? '') ?: null;
     $osLicense = trim($_POST['os_license'] ?? '');
     $licenseExpiry = ($_POST['license_expiry'] ?? '') ?: null;
+
+    // प्रकार व तारखा — फक्त वैध मूल्यं
+    $validDate = fn($d) => $d === null || (bool)DateTime::createFromFormat('!Y-m-d', $d);
+    if (!in_array($assetType, ['computer', 'monitor', 'keyboard', 'mouse', 'cpu', 'ups', 'smartboard', 'projector', 'printer', 'other'], true)
+        || !$validDate($purchaseDate) || !$validDate($warrantyExpiry) || !$validDate($licenseExpiry)) {
+        $_SESSION['flash'] = 'अवैध प्रकार किंवा तारीख — Asset जोडलं नाही.';
+        header('Location: assets.php?lab_id=' . $labId);
+        exit;
+    }
 
     $assetTag = itGenerateAssetTag($pdo, $orgId, $assetType);
     $pdo->prepare("

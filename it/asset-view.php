@@ -3,7 +3,7 @@ require_once __DIR__ . '/../includes/auth.php';
 requireLogin('../');
 require_once __DIR__ . '/../includes/it-helpers.php';
 $user = currentUser();
-requireItAccess($pdo, $user);
+requireItAccess($pdo, $user, '../', true); // Lab Assistant ला सुद्धा (canManageLabAssets ने ठरतं)
 $orgId = activeOrgId();
 
 $assetId = (int)($_GET['id'] ?? 0);
@@ -26,26 +26,39 @@ if (!empty($asset['workstation_no'])) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     if ($action === 'update_status' && $canEdit) {
-        $newStatus = $_POST['status'] ?? 'working';
-        $pdo->prepare("UPDATE it_assets SET status = ? WHERE id = ?")->execute([$newStatus, $assetId]);
-        logActivity('IT Asset स्थिती बदलली', 'it_asset', $assetId, $newStatus);
-        $_SESSION['flash'] = 'स्थिती अद्ययावत झाली.';
+        $newStatus = $_POST['status'] ?? '';
+        if (!in_array($newStatus, ['working', 'faulty', 'under_repair', 'scrapped'], true)) {
+            $_SESSION['flash'] = 'अवैध स्थिती — बदल झाला नाही.';
+        } else {
+            $pdo->prepare("UPDATE it_assets SET status = ? WHERE id = ? AND organization_id = ?")->execute([$newStatus, $assetId, $orgId]);
+            logActivity('IT Asset स्थिती बदलली', 'it_asset', $assetId, $newStatus);
+            $_SESSION['flash'] = 'स्थिती अद्ययावत झाली.';
+        }
     } elseif ($action === 'toggle_power' && $canEdit) {
-        $newPower = $_POST['power_status'] ?? 'off';
-        $pdo->prepare("UPDATE it_assets SET power_status = ?, power_status_updated_at = NOW(), power_status_updated_by = ? WHERE id = ?")
-            ->execute([$newPower, $user['id'], $assetId]);
+        $newPower = ($_POST['power_status'] ?? 'off') === 'on' ? 'on' : 'off';
+        $pdo->prepare("UPDATE it_assets SET power_status = ?, power_status_updated_at = NOW(), power_status_updated_by = ? WHERE id = ? AND organization_id = ?")
+            ->execute([$newPower, $user['id'], $assetId, $orgId]);
         $_SESSION['flash'] = 'Power Status बदललं.';
     } elseif ($action === 'delete' && $canEdit) {
         $pdo->prepare("DELETE FROM it_assets WHERE id = ? AND organization_id = ?")->execute([$assetId, $orgId]);
+        // Asset काढलं — त्याची "IT Asset Warranty" नूतनीकरण नोंदही काढतो
+        syncItAssetWarranty($pdo, $assetId, $orgId, $asset['lab_id'], $asset['asset_tag'], $asset['asset_type'], null);
         logActivity('IT Asset काढलं', 'it_asset', $assetId, $asset['asset_tag']);
         header('Location: assets.php?lab_id=' . $asset['lab_id']);
         exit;
     } elseif ($action === 'transfer' && (hasPermission('manage_it') || isManagementOrAbove())) {
         $toLabId = (int)($_POST['to_lab_id'] ?? 0);
-        if ($toLabId && $toLabId !== (int)$asset['lab_id']) {
+        // नवीन Lab याच संस्थेची व सक्रिय असावी
+        $toLabStmt = $pdo->prepare("SELECT id FROM it_labs WHERE id = ? AND organization_id = ? AND is_active = 1");
+        $toLabStmt->execute([$toLabId, $orgId]);
+        if (!$toLabStmt->fetch()) {
+            $_SESSION['flash'] = 'निवडलेली Lab सापडली नाही — Transfer झालं नाही.';
+        } elseif ($toLabId !== (int)$asset['lab_id']) {
             $pdo->prepare("INSERT INTO it_asset_transfers (asset_id, from_lab_id, to_lab_id, transferred_by, remarks) VALUES (?, ?, ?, ?, ?)")
                 ->execute([$assetId, $asset['lab_id'], $toLabId, $user['id'], trim($_POST['remarks'] ?? '')]);
-            $pdo->prepare("UPDATE it_assets SET lab_id = ? WHERE id = ?")->execute([$toLabId, $assetId]);
+            $pdo->prepare("UPDATE it_assets SET lab_id = ? WHERE id = ? AND organization_id = ?")->execute([$toLabId, $assetId, $orgId]);
+            // नवीन Lab च्या विभागानुसार Warranty नोंद अद्ययावत
+            syncItAssetWarranty($pdo, $assetId, $orgId, $toLabId, $asset['asset_tag'], $asset['asset_type'], $asset['warranty_expiry']);
             logActivity('IT Asset Transfer झालं', 'it_asset', $assetId, $asset['asset_tag']);
             $_SESSION['flash'] = 'Asset दुसऱ्या Lab मध्ये हलवलं गेलं.';
         }

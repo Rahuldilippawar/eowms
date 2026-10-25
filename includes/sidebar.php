@@ -162,14 +162,14 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
       <i class="fa-regular fa-square-check fa-fw"></i><span><?= h(t('nav_my_work')) ?></span>
     </a>
     <?php if (hasPermission('assign_tasks') || hasPermission('view_task_tracker')): ?>
-      <a href="<?= $rp ?>tasks/index.php" class="tree-node <?= $currentDir === 'tasks' && in_array($currentPage, ['index.php','assign.php']) ? 'active' : '' ?>">
+      <a href="<?= $rp ?>tasks/index.php" class="tree-node <?= $currentDir === 'tasks' && in_array($currentPage, ['index.php','assign.php','report.php']) ? 'active' : '' ?>">
         <i class="fa-solid fa-list-check fa-fw"></i><span><?= h(t('nav_task_assignment')) ?></span>
       </a>
-    <?php else: ?>
-      <a href="<?= $rp ?>tasks/my-tasks.php" class="tree-node <?= $currentDir === 'tasks' && $currentPage === 'my-tasks.php' ? 'active' : '' ?>">
-        <i class="fa-solid fa-list-check fa-fw"></i><span><?= h(t('nav_my_tasks')) ?></span>
-      </a>
     <?php endif; ?>
+    <?php // टास्क कोणालाही (HOD/Management सुद्धा) मिळू शकतो — म्हणून "माझे टास्क" नेहमी दिसतो ?>
+    <a href="<?= $rp ?>tasks/my-tasks.php" class="tree-node <?= $currentDir === 'tasks' && $currentPage === 'my-tasks.php' ? 'active' : '' ?>">
+      <i class="fa-solid fa-user-check fa-fw"></i><span><?= h(t('nav_my_tasks')) ?></span>
+    </a>
     <a href="<?= $rp ?>renewals/index.php" class="tree-node <?= $currentDir === 'renewals' ? 'active' : '' ?>">
       <i class="fa-solid fa-shield-halved fa-fw"></i><span><?= h(t('nav_renewals')) ?></span>
     </a>
@@ -402,24 +402,40 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
       $vehDeptCheck->execute([$user['department_id'] ?? 0]);
       $vehUserDeptCode = $vehDeptCheck->fetch()['code'] ?? null;
 
+      // वाहन यादी (vehicles/index.php) — तिथेच प्रत्येकाला परवानगी असलेली वाहनं दिसतात:
+      // Super Admin/manage_vehicles/Management/वाहतूक विभाग — सगळी; चालक — स्वतःला नेमलेली
       $myVeh = null;
-      if (!hasRole('super_admin') && $vehUserDeptCode === 'TRP') {
+      if (!hasRole('super_admin') && !hasPermission('manage_vehicles') && !isManagementOrAbove() && $vehUserDeptCode !== 'TRP') {
           try {
-              $myVehStmt = $pdo->prepare("SELECT id FROM vehicles WHERE organization_id = ? AND (driver_id = ? OR department_id = (SELECT id FROM departments WHERE organization_id = ? AND code = 'TRP')) ORDER BY id LIMIT 1");
-              $myVehStmt->execute([activeOrgId(), $user['id'], activeOrgId()]);
+              $myVehStmt = $pdo->prepare("SELECT id FROM vehicles WHERE organization_id = ? AND driver_id = ? LIMIT 1");
+              $myVehStmt->execute([activeOrgId(), $user['id']]);
               $myVeh = $myVehStmt->fetch();
           } catch (PDOException $e) { /* vehicles table not migrated yet */ }
       }
-      $showVehicles = hasRole('super_admin') || $myVeh;
+      $showVehicles = hasRole('super_admin') || hasPermission('manage_vehicles') || isManagementOrAbove() || $vehUserDeptCode === 'TRP' || $myVeh;
 
       $mtnDeptCheck = $pdo->prepare("SELECT has_issue_register FROM departments WHERE id = ?");
       $mtnDeptCheck->execute([$user['department_id'] ?? 0]);
       $userHasIssueRegister = !empty($mtnDeptCheck->fetch()['has_issue_register']);
-      $showMaintenance = $userHasIssueRegister || isManagementOrAbove() || hasRole('super_admin');
+      // देखभाल — maintenance/index.php व create.php चाच नियम (Issue Register असलेला विभाग किंवा manage_maintenance_settings)
+      $showMaintenance = $userHasIssueRegister || hasPermission('manage_maintenance_settings');
       $showDeadStock = !empty($user['department_id']) || isManagementOrAbove() || hasRole('super_admin');
       $showStore = ($vehUserDeptCode === 'STR') || hasPermission('manage_store') || isManagementOrAbove();
       $showCctv = ($vehUserDeptCode === 'CCTV') || hasPermission('manage_cctv') || isManagementOrAbove();
       $showIt = ($vehUserDeptCode === 'IT') || hasPermission('manage_it') || isManagementOrAbove();
+      // IT Requests व्यवस्थापन — पानावरचाच नियम (IT विभाग सदस्य किंवा manage_it)
+      require_once __DIR__ . '/it-helpers.php';
+      $showItRequestsManage = false;
+      $myItLabs = [];
+      try {
+          $showItRequestsManage = canManageItRequests($pdo, $user);
+          // Lab Assistant — फक्त स्वतःच्या Lab(s) चे Assets
+          if (!$showIt) {
+              $myLabStmt = $pdo->prepare("SELECT id, lab_name FROM it_labs WHERE organization_id = ? AND assistant_id = ? AND is_active = 1 ORDER BY lab_name");
+              $myLabStmt->execute([$activeOrgId, $user['id']]);
+              $myItLabs = $myLabStmt->fetchAll();
+          }
+      } catch (PDOException $e) { /* IT tables not migrated yet */ }
     ?>
     <?php if ($showVehicles || $showMaintenance || $showDeadStock): ?>
       <div class="nav-group-header" data-bs-toggle="collapse" data-bs-target="#navGroupAssets" aria-expanded="<?= navGroupExpanded('assets', $activeGroup) ?>">
@@ -427,12 +443,8 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
         <i class="fa-solid fa-chevron-right chevron"></i>
       </div>
       <div class="collapse nav-group-body <?= navGroupOpen('assets', $activeGroup) ?>" id="navGroupAssets">
-        <?php if (hasRole('super_admin')): ?>
+        <?php if ($showVehicles): ?>
           <a href="<?= $rp ?>vehicles/index.php" class="tree-node <?= $currentDir === 'vehicles' ? 'active' : '' ?>">
-            <i class="fa-solid fa-truck-fast fa-fw"></i><span>वाहन व्यवस्थापन</span>
-          </a>
-        <?php elseif ($myVeh): ?>
-          <a href="<?= $rp ?>vehicles/dashboard.php?id=<?= $myVeh['id'] ?>" class="tree-node <?= $currentDir === 'vehicles' ? 'active' : '' ?>">
             <i class="fa-solid fa-truck-fast fa-fw"></i><span>वाहन व्यवस्थापन</span>
           </a>
         <?php endif; ?>
@@ -456,7 +468,7 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
     <?php endif; ?>
 
     <!-- ==================== तांत्रिक विभाग ==================== -->
-    <?php if ($showCctv || $showIt): ?>
+    <?php if ($showCctv || $showIt || !empty($myItLabs)): ?>
       <div class="nav-group-header" data-bs-toggle="collapse" data-bs-target="#navGroupTechDept" aria-expanded="<?= navGroupExpanded('techdept', $activeGroup) ?>">
         <span class="label"><i class="fa-solid fa-server fa-fw"></i> तांत्रिक विभाग</span>
         <i class="fa-solid fa-chevron-right chevron"></i>
@@ -471,10 +483,17 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
           <a href="<?= $rp ?>it/index.php" class="tree-node <?= $currentDir === 'it' && $currentPage === 'index.php' ? 'active' : '' ?>">
             <i class="fa-solid fa-desktop fa-fw"></i><span>IT विभाग</span>
           </a>
+        <?php endif; ?>
+        <?php if ($showItRequestsManage): ?>
           <a href="<?= $rp ?>it/general-requests-manage.php" class="tree-node <?= $currentDir === 'it' && $currentPage === 'general-requests-manage.php' ? 'active' : '' ?>">
             <i class="fa-solid fa-headset fa-fw"></i><span>🖥️ IT Requests व्यवस्थापन</span>
           </a>
         <?php endif; ?>
+        <?php foreach ($myItLabs as $myLab): ?>
+          <a href="<?= $rp ?>it/assets.php?lab_id=<?= (int)$myLab['id'] ?>" class="tree-node <?= $currentDir === 'it' && in_array($currentPage, ['assets.php', 'asset-view.php', 'asset-edit.php']) ? 'active' : '' ?>">
+            <i class="fa-solid fa-desktop fa-fw"></i><span>माझी Lab — <?= h($myLab['lab_name']) ?></span>
+          </a>
+        <?php endforeach; ?>
       </div>
     <?php endif; ?>
 

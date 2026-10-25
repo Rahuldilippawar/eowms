@@ -15,23 +15,22 @@ $pageTitle = 'SOP Compliance अहवाल';
 $rootPath = '../';
 require_once __DIR__ . '/../includes/header.php';
 
-$sopsStmt = $pdo->prepare("SELECT * FROM sops WHERE organization_id = ? AND is_active = 1");
-$sopsStmt->execute([$orgId]);
-$sops = $sopsStmt->fetchAll();
+// सगळ्या SOP व त्यांचे नेमलेले विभाग — एकाच Query मध्ये; Score प्रत्येक जोडीसाठी काही Grouped Queries मध्येच मोजला जातो
+$pairsStmt = $pdo->prepare("
+    SELECT s.id AS sop_id, s.title, d.id AS dept_id, d.name_local, d.name
+    FROM sops s JOIN sop_department_assignments sda ON sda.sop_id = s.id JOIN departments d ON d.id = sda.department_id
+    WHERE s.organization_id = ? AND s.is_active = 1 AND d.organization_id = s.organization_id
+    ORDER BY s.title, d.name_local
+");
+$pairsStmt->execute([$orgId]);
 
 $rows = [];
-foreach ($sops as $sop) {
-    $assignedStmt = $pdo->prepare("
-        SELECT d.* FROM sop_department_assignments sda JOIN departments d ON d.id = sda.department_id
-        WHERE sda.sop_id = ?
-    ");
-    $assignedStmt->execute([$sop['id']]);
-    $depts = $assignedStmt->fetchAll();
-
-    foreach ($depts as $dept) {
-        $score = sopGetComplianceScore($pdo, $sop['id'], $dept['id'], 30);
-        $rows[] = ['sop' => $sop, 'dept' => $dept, 'score' => $score];
-    }
+foreach ($pairsStmt->fetchAll() as $p) {
+    $rows[] = [
+        'sop' => ['id' => $p['sop_id'], 'title' => $p['title']],
+        'dept' => ['id' => $p['dept_id'], 'name_local' => $p['name_local'], 'name' => $p['name']],
+        'score' => sopGetComplianceScore($pdo, $p['sop_id'], $p['dept_id'], 30),
+    ];
 }
 ?>
 

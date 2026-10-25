@@ -25,7 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $itDeptStmt->execute([$orgId]);
         $itHod = $itDeptStmt->fetch()['hod_id'] ?? null;
         if ($itHod) {
-            notifyUser($itHod, $orgId, 'नवीन IT तक्रार', "{$asset['asset_tag']} ({$asset['lab_name']}) — $issueDescription", '../it/general-requests-manage.php');
+            notifyUser($itHod, $orgId, 'नवीन IT तक्रार', "{$asset['asset_tag']} ({$asset['lab_name']}) — $issueDescription", 'it/general-requests-manage.php');
         }
 
         logActivity('IT तक्रार नोंदवली', 'it_repair_ticket', $ticketId, $asset['asset_tag']);

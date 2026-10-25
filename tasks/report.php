@@ -3,6 +3,7 @@ require_once __DIR__ . '/../includes/auth.php';
 requireLogin('../');
 $user = currentUser();
 $orgId = activeOrgId();
+requirePermission('view_task_tracker', '../'); // Tracker प्रमाणेच — Report सुद्धा
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     // ---------------- फॉर्म दाखवणे ----------------
@@ -103,7 +104,8 @@ $filterDeptId = isDeptScoped() ? $user['department_id'] : ($_POST['department_id
 $fromDate = ($_POST['from_date'] ?? '') ?: date('Y-m-01');
 $toDate = ($_POST['to_date'] ?? '') ?: date('Y-m-d');
 $filterStatus = $_POST['status'] ?? 'all';
-$cols = $_POST['cols'] ?? ['heading', 'details', 'remarks', 'cost', 'dept', 'person', 'priority', 'dates', 'status'];
+if (!in_array($filterStatus, ['all', 'pending', 'in_progress', 'completed', 'cancelled'], true)) { $filterStatus = 'all'; }
+$cols = (array)($_POST['cols'] ?? ['heading', 'details', 'remarks', 'cost', 'dept', 'person', 'priority', 'dates', 'status']);
 $colSet = array_flip($cols);
 
 $sql = "
@@ -120,7 +122,7 @@ $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $tasksData = $stmt->fetchAll();
 
-$statusLabels = ['pending' => 'प्रलंबित', 'in_progress' => 'सुरू आहे', 'completed' => 'पूर्ण'];
+$statusLabels = ['pending' => 'प्रलंबित', 'in_progress' => 'सुरू आहे', 'completed' => 'पूर्ण', 'cancelled' => 'रद्द'];
 $priorityLabels = ['low' => 'कमी', 'normal' => 'सर्वसाधारण', 'high' => 'जास्त', 'urgent' => 'तातडीचं'];
 $org = $pdo->query("SELECT * FROM organizations WHERE id = " . (int)$orgId)->fetch();
 $totalCost = array_sum(array_map(fn($t) => (float)($t['cost_incurred'] ?? 0), $tasksData));

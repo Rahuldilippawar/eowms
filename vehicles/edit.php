@@ -21,11 +21,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $campusId = ($_POST['campus_id'] ?? '') !== '' ? (int)$_POST['campus_id'] : null;
     $fuelType = $_POST['fuel_type'] ?? 'diesel';
     $currentOdometer = ($_POST['current_odometer'] ?? '') !== '' ? (float)$_POST['current_odometer'] : 0;
-    $isActive = (int)($_POST['is_active'] ?? 1);
+    $isActive = (int)($_POST['is_active'] ?? 1) === 1 ? 1 : 0;
 
     $renewalDates = [];
     foreach (['permit', 'puc', 'insurance', 'fitness', 'road_tax', 'green_tax', 'mv_tax'] as $f) {
-        $renewalDates[$f] = $_POST[$f . '_validity'] ?: null;
+        $renewalDates[$f] = ($_POST[$f . '_validity'] ?? '') ?: null;
+    }
+
+    // चालक/Campus याच संस्थेचे, इंधन-प्रकार व तारखा वैध असाव्यात
+    $inputError = vehicleValidateInput($pdo, $orgId, $driverId, $campusId, $fuelType, array_merge(array_values($renewalDates), [$dateOfRegistration]));
+    if ($inputError || $vehicleNumber === '') {
+        $_SESSION['form_error'] = $inputError ?: 'कृपया वाहन क्रमांक भरा.';
+        header('Location: index.php');
+        exit;
     }
 
     $update = $pdo->prepare("
