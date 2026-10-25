@@ -41,7 +41,9 @@ if ($liters <= 0) {
 $insert = $pdo->prepare("INSERT INTO vehicle_fuel_log (vehicle_id, fill_date, odometer_reading, liters, cost, fuel_station, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)");
 $insert->execute([$vehicleId, $fillDate, $odometer, $liters, $cost, $station, $user['id']]);
 
-recordBudgetTransaction($pdo, $orgId, $vehicle['department_id'], $cost, 'इंधन', 'vehicle_fuel', $vehicleId, $vehicle['vehicle_number'] . ' — ' . $liters . ' लिटर', $user['id']);
+// reference_id = इंधन-नोंदीचा ID (वाहनाचा नाही) — म्हणजे Edit/Delete झाल्यावर नेमका Row बदलता येतो
+$fuelLogId = (int)$pdo->lastInsertId();
+recordBudgetTransaction($pdo, $orgId, $vehicle['department_id'], $cost, 'इंधन', 'vehicle_fuel_log', $fuelLogId, $vehicle['vehicle_number'] . ' — ' . $liters . ' लिटर', $user['id'], $fillDate);
 
 if ($odometer > $vehicle['current_odometer']) {
     $pdo->prepare("UPDATE vehicles SET current_odometer = ? WHERE id = ?")->execute([$odometer, $vehicleId]);

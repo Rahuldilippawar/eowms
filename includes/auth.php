@@ -153,6 +153,11 @@ function requireLogin($rootPath = '') {
         if (in_array($currentDirForRestriction, $exemptDirs, true) && ($currentDirForRestriction !== '__root__' || in_array($currentPageForRestriction, $exemptRootPages, true))) {
             $isAllowedDir = true;
         }
+        // "माझं प्रोफाइल" (पासवर्ड/फोटो) आता staff/profile.php — स्वतःचं प्रोफाइल नेहमी उपलब्ध
+        if ($currentDirForRestriction === 'staff' && $currentPageForRestriction === 'profile.php'
+            && (empty($_GET['id']) || (int)$_GET['id'] === (int)(currentUser()['id'] ?? 0))) {
+            $isAllowedDir = true;
+        }
 
         if (!$isAllowedDir) {
             $firstModule = $registry[$restrictedModules[0]] ?? null;

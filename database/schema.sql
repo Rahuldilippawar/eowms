@@ -274,11 +274,11 @@ INSERT INTO permissions (permission_key, label, label_local, sort_order) VALUES
 ('manage_guests', 'Log and manage visitor/guest entries', 'पाहुणे नोंदणी व्यवस्थापन', 35),
 ('view_staff_track_own_campus', 'View staff profile/track record for ALL departments within own campus', 'स्वतःच्या Campus मधल्या सगळ्या विभागांचे Staff Profile/Track Record पाहणे', 32),
 ('view_staff_track_org_wide', 'View staff profile/track record across the ENTIRE organization', 'संपूर्ण संस्थेतल्या सगळ्यांचे Staff Profile/Track Record पाहणे', 33),
-('manage_checkout', 'Manage asset checkout/borrowing (issue, receive return)', 'Asset Checkout/Borrowing व्यवस्थापन', 37),
+('manage_checkout', 'Manage asset checkout/borrowing (issue, receive return)', 'Asset Issue/Return (उसनं) व्यवस्थापन', 37),
 ('manage_asset_allocations', 'Manage asset allocation types and records', 'Asset Allocation Registry व्यवस्थापन', 38),
 ('manage_room_booking', 'Manage bookable rooms', 'Room/Hall Booking व्यवस्थापन', 40),
 ('manage_grievances', 'View and resolve grievances', 'तक्रार निवारण व्यवस्थापन', 42),
-('manage_dept_finance', 'Record department material purchases and track payments', 'विभाग Material Purchase व Payment Tracking', 45),
+('manage_dept_finance', 'Record department material purchases and track payments', 'विभाग Finance — Material Purchase व Payment', 45),
 ('manage_gaushala', 'Manage Gaushala — cattle registry, health, milk, fodder, breeding, sponsorship', 'गौशाळा व्यवस्थापन', 44);
 
 INSERT INTO role_permissions (role_key, permission_key)
@@ -1189,16 +1189,18 @@ CREATE TABLE budget_transactions (
   department_id INT NOT NULL,
   financial_year INT NOT NULL,
   amount DECIMAL(12,2) NOT NULL,
-  category ENUM('नवीन खरेदी','देखभाल','इंधन','इतर') NOT NULL,
+  category ENUM('नवीन खरेदी','देखभाल','इंधन','नूतनीकरण','इतर') NOT NULL,
   source_module VARCHAR(50) NULL,
   reference_id INT NULL,
   description VARCHAR(255) NULL,
   created_by INT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  spend_date DATE NULL,
   FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
   FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE CASCADE,
   FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
-  INDEX idx_dept_fy (department_id, financial_year)
+  INDEX idx_dept_fy (department_id, financial_year),
+  INDEX idx_source_ref (source_module, reference_id)
 ) ENGINE=InnoDB;
 
 CREATE TABLE about_sections (
@@ -2433,6 +2435,8 @@ CREATE TABLE help_articles (
   FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
+-- जुना "Asset Checkout" Module — आता वापरात नाही (Data asset_items / asset_allocations मध्ये
+-- Migrate होतो — migration-module-merge.sql). Tables फक्त जुन्या Data साठी ठेवल्या आहेत.
 CREATE TABLE checkout_items (
   id INT AUTO_INCREMENT PRIMARY KEY,
   organization_id INT NOT NULL,
@@ -2471,6 +2475,8 @@ CREATE TABLE asset_allocation_types (
   name VARCHAR(150) NOT NULL,
   icon VARCHAR(60) DEFAULT 'fa-solid fa-box',
   is_active TINYINT(1) DEFAULT 1,
+  is_loan TINYINT(1) DEFAULT 0,
+  legacy_checkout_category VARCHAR(150) NULL,
   created_by INT NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
@@ -2489,24 +2495,55 @@ CREATE TABLE asset_allocation_fields (
   FOREIGN KEY (type_id) REFERENCES asset_allocation_types(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
+-- Issue / Return Register — प्रत्येक वस्तू (एकाच वेळी फक्त एकाकडे)
+CREATE TABLE asset_items (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  organization_id INT NOT NULL,
+  type_id INT NOT NULL,
+  campus_id INT NULL,
+  name VARCHAR(255) NOT NULL,
+  default_location VARCHAR(150) NULL,
+  is_active TINYINT(1) DEFAULT 1,
+  legacy_checkout_item_id INT NULL,
+  created_by INT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+  FOREIGN KEY (type_id) REFERENCES asset_allocation_types(id) ON DELETE CASCADE,
+  FOREIGN KEY (campus_id) REFERENCES campuses(id) ON DELETE SET NULL,
+  FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+  UNIQUE KEY uniq_legacy_checkout_item (legacy_checkout_item_id),
+  INDEX idx_org_type (organization_id, type_id)
+) ENGINE=InnoDB;
+
 CREATE TABLE asset_allocations (
   id INT AUTO_INCREMENT PRIMARY KEY,
   organization_id INT NOT NULL,
   type_id INT NOT NULL,
-  campus_id INT NOT NULL,
+  campus_id INT NULL,
   user_id INT NOT NULL,
+  item_id INT NULL,
   asset_label VARCHAR(150) NULL,
   custom_data TEXT NULL,
+  purpose VARCHAR(255) NULL,
   allocated_date DATE NOT NULL,
+  allocated_at DATETIME NULL,
+  due_at DATETIME NULL,
   unallocated_date DATE NULL,
+  returned_at DATETIME NULL,
+  returned_to INT NULL,
   unallocated_reason VARCHAR(255) NULL,
   allocated_by INT NOT NULL,
+  legacy_checkout_log_id INT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
   FOREIGN KEY (type_id) REFERENCES asset_allocation_types(id) ON DELETE CASCADE,
   FOREIGN KEY (campus_id) REFERENCES campuses(id) ON DELETE CASCADE,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-  FOREIGN KEY (allocated_by) REFERENCES users(id) ON DELETE CASCADE
+  FOREIGN KEY (allocated_by) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (item_id) REFERENCES asset_items(id) ON DELETE SET NULL,
+  FOREIGN KEY (returned_to) REFERENCES users(id) ON DELETE SET NULL,
+  UNIQUE KEY uniq_legacy_checkout_log (legacy_checkout_log_id),
+  INDEX idx_item_active (item_id, unallocated_date)
 ) ENGINE=InnoDB;
 
 CREATE TABLE bookable_rooms (

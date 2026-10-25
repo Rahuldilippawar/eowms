@@ -3,19 +3,23 @@ require_once __DIR__ . '/../includes/auth.php';
 requireLogin('../');
 requireMigratedTable($pdo, 'dept_material_purchases', '../');
 require_once __DIR__ . '/../includes/dept-finance-helpers.php';
+require_once __DIR__ . '/../includes/budget-helpers.php';
 $user = currentUser();
 $orgId = activeOrgId();
-$canManage = hasPermission('manage_dept_finance') || hasCategory('hod') || isManagementOrAbove();
-if (!$canManage) { http_response_code(403); die('परवानगी नाही.'); }
+$canManage = hasPermission('manage_dept_finance') || hasPermission('manage_budget') || hasCategory('hod') || isManagementOrAbove();
+// विभाग नेमलेला नसलेल्या (आणि Org-wide Permission नसलेल्या) व्यक्तीला — काहीच नाही ("सगळं" नाही)
+if (!$canManage || deptFinanceAccessibleDeptId($user) === 0) { http_response_code(403); die('परवानगी नाही.'); }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     $accessibleDeptId = deptFinanceAccessibleDeptId($user);
 
     if ($action === 'add_purchase') {
-        $deptId = $accessibleDeptId ?: (int)($_POST['department_id'] ?? 0);
-        // HOD स्वतःच्याच Department साठी जोडू शकतो, Management कोणत्याही
-        if ($accessibleDeptId && $accessibleDeptId != $deptId) { die('परवानगी नाही.'); }
+        // HOD स्वतःच्याच Department साठी जोडू शकतो, Management कोणत्याही (पण याच संस्थेचा)
+        $deptId = $accessibleDeptId ?? (int)($_POST['department_id'] ?? 0);
+        $deptOk = $pdo->prepare("SELECT id FROM departments WHERE id = ? AND organization_id = ?");
+        $deptOk->execute([$deptId, $orgId]);
+        if (!$deptOk->fetch()) { $deptId = 0; }
 
         $materialName = trim($_POST['material_name'] ?? '');
         $vendorName = trim($_POST['vendor_name'] ?? '');
@@ -28,6 +32,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $purchaseDate = ($_POST['purchase_date'] ?? '') ?: date('Y-m-d');
         $remarks = trim($_POST['remarks'] ?? '') ?: null;
         $campusId = (int)($_POST['campus_id'] ?? 0);
+        // College/School सुद्धा याच संस्थेचं असावं
+        $campusOk = $pdo->prepare("SELECT id FROM campuses WHERE id = ? AND organization_id = ?");
+        $campusOk->execute([$campusId, $orgId]);
+        if (!$campusOk->fetch()) { $campusId = 0; }
+        if ($purchaseDate && !strtotime($purchaseDate)) { $purchaseDate = date('Y-m-d'); }
 
         if ($materialName && $vendorName && $quantity > 0 && $rate > 0 && $deptId && $campusId) {
             $baseAmount = round($quantity * $rate, 2);
@@ -37,7 +46,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 INSERT INTO dept_material_purchases (organization_id, campus_id, department_id, material_name, vendor_name, vendor_contact, quantity, unit, rate, base_amount, transport_cost, gst_percent, gst_amount, total_amount, purchase_date, remarks, created_by)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ")->execute([$orgId, $campusId, $deptId, $materialName, $vendorName, $vendorContact, $quantity, $unit, $rate, $baseAmount, $transportCost, $gstPercent, $gstAmount, $totalAmount, $purchaseDate, $remarks, $user['id']]);
+            $newPurchaseId = (int)$pdo->lastInsertId();
+            // खर्च एकदाच — विभाग Finance (Budget) Ledger मध्ये, खरेदी-दिनांकाच्या आर्थिक वर्षात
+            recordBudgetTransaction($pdo, $orgId, $deptId, $totalAmount, 'नवीन खरेदी', 'material_purchase', $newPurchaseId, $materialName . ' — ' . $vendorName, $user['id'], $purchaseDate);
+            logActivity('Material Purchase नोंदवली', 'dept_material_purchase', $newPurchaseId, $materialName);
             $_SESSION['flash'] = 'खरेदी-नोंद जोडली गेली.';
+        } else {
+            $_SESSION['flash'] = 'नोंद जतन झाली नाही — विभाग/College व सगळी माहिती तपासा.';
         }
     } elseif ($action === 'add_payment') {
         $sourceId = (int)($_POST['source_id'] ?? 0);
@@ -52,7 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $checkStmt->execute([$sourceId, $orgId]);
         $srcDeptId = $checkStmt->fetch()['department_id'] ?? null;
 
-        if ($srcDeptId && $amount > 0 && (!$accessibleDeptId || $accessibleDeptId == $srcDeptId)) {
+        if ($srcDeptId && $amount > 0 && deptFinanceCanAccessDept($user, $srcDeptId)) {
             $pdo->prepare("INSERT INTO dept_payment_ledger (organization_id, department_id, source_type, source_id, amount, payment_date, payment_type, payment_mode, remarks, recorded_by) VALUES (?, ?, 'material_purchase', ?, ?, ?, ?, ?, ?, ?)")
                 ->execute([$orgId, $srcDeptId, $sourceId, $amount, $paymentDate, $paymentType, $paymentMode, $remarks, $user['id']]);
             $_SESSION['flash'] = 'Payment नोंदवलं गेलं.';
@@ -62,12 +77,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
 }
 
-$pageTitle = 'विभाग Material Purchase';
+$pageTitle = 'विभाग Finance — Material Purchase';
 $rootPath = '../';
 require_once __DIR__ . '/../includes/header.php';
 
 $accessibleDeptId = deptFinanceAccessibleDeptId($user);
-$filterDeptId = $accessibleDeptId ?: (int)($_GET['department_id'] ?? 0);
+$filterDeptId = $accessibleDeptId ?? (int)($_GET['department_id'] ?? 0);
 
 $sql = "
     SELECT dmp.*, d.name_local AS dept_name, c.name AS campus_name
@@ -87,7 +102,7 @@ $grandTotal = array_sum(array_column($purchases, 'total_amount'));
 $grandPaid = array_sum($paidTotals);
 $grandDue = $grandTotal - $grandPaid;
 
-if (!$accessibleDeptId) {
+if ($accessibleDeptId === null) {
     $deptsStmt = $pdo->prepare("SELECT id, name_local, name FROM departments WHERE organization_id = ? AND is_active = 1 ORDER BY name_local");
     $deptsStmt->execute([$orgId]);
     $allDepts = $deptsStmt->fetchAll();
@@ -99,9 +114,9 @@ $campuses = $campusesStmt->fetchAll();
 
 <div class="page-eyebrow"><?= h(activeOrgName()) ?></div>
 <div class="d-flex justify-content-between align-items-start mb-1">
-  <div class="page-title mb-0">🛒 विभाग Material Purchase</div>
+  <div class="page-title mb-0">🛒 विभाग Finance — Material Purchase</div>
   <div class="d-flex gap-2">
-    <a href="dashboard.php" style="font-size:12.5px;color:var(--rail);font-weight:600;text-decoration:none;align-self:center;">📊 Financial Dashboard →</a>
+    <a href="dashboard.php" style="font-size:12.5px;color:var(--rail);font-weight:600;text-decoration:none;align-self:center;">📊 Budget vs Actual Dashboard →</a>
     <button type="button" class="btn" style="background:var(--rail);color:#fff;border-radius:9px;font-size:13px;padding:9px 18px;font-weight:600;" data-bs-toggle="modal" data-bs-target="#addPurchaseModal">+ नवीन खरेदी</button>
   </div>
 </div>
@@ -111,7 +126,7 @@ $campuses = $campusesStmt->fetchAll();
   <?php unset($_SESSION['flash']); ?>
 <?php endif; ?>
 
-<?php if (!$accessibleDeptId): ?>
+<?php if ($accessibleDeptId === null): ?>
 <form method="GET" class="mb-3">
   <select name="department_id" class="form-select-custom" style="width:auto;" onchange="this.form.submit()">
     <option value="">-- सगळे विभाग --</option>
@@ -128,7 +143,7 @@ $campuses = $campusesStmt->fetchAll();
 
 <div class="panel">
   <table class="rtable">
-    <thead><tr><th>Material</th><th>Vendor</th><th>Qty×Rate</th><th>Transport+GST</th><th>एकूण</th><th>स्थिती</th><?php if (!$accessibleDeptId): ?><th>विभाग</th><?php endif; ?><th></th></tr></thead>
+    <thead><tr><th>Material</th><th>Vendor</th><th>Qty×Rate</th><th>Transport+GST</th><th>एकूण</th><th>स्थिती</th><?php if ($accessibleDeptId === null): ?><th>विभाग</th><?php endif; ?><th></th></tr></thead>
     <tbody>
       <?php if (empty($purchases)): ?><tr><td colspan="8" style="text-align:center;color:var(--text-dim);padding:24px;">अजून कुठलीही खरेदी-नोंद नाही</td></tr><?php endif; ?>
       <?php foreach ($purchases as $p):
@@ -146,7 +161,7 @@ $campuses = $campusesStmt->fetchAll();
             <span class="status-chip <?= $statusChip ?>"><?= $statusLabel ?></span>
             <?php if ($due > 0): ?><div style="font-size:10px;color:var(--rose);margin-top:2px;">Due: ₹<?= number_format($due, 0) ?></div><?php endif; ?>
           </td>
-          <?php if (!$accessibleDeptId): ?><td style="font-size:12px;color:var(--text-dim);"><?= h($p['dept_name']) ?></td><?php endif; ?>
+          <?php if ($accessibleDeptId === null): ?><td style="font-size:12px;color:var(--text-dim);"><?= h($p['dept_name']) ?></td><?php endif; ?>
           <td>
             <?php if ($due > 0): ?>
               <button type="button" class="btn btn-sm" style="border:1px solid var(--rail);color:var(--rail);border-radius:6px;font-size:10.5px;padding:4px 10px;" data-bs-toggle="modal" data-bs-target="#addPaymentModal"
@@ -183,7 +198,7 @@ $campuses = $campusesStmt->fetchAll();
           <div class="col-md-4"><label class="form-label-custom">एकूण किंमत (Auto)</label><input type="text" id="dmpTotal" class="form-control-custom" readonly style="background:var(--canvas);font-weight:700;"></div>
         </div>
         <div class="row g-2 mb-2">
-          <?php if (!$accessibleDeptId): ?>
+          <?php if ($accessibleDeptId === null): ?>
           <div class="col-md-4">
             <label class="form-label-custom">विभाग</label>
             <select name="department_id" class="form-select-custom" required>
@@ -203,6 +218,7 @@ $campuses = $campusesStmt->fetchAll();
         </div>
         <label class="form-label-custom">टिप्पणी</label>
         <input type="text" name="remarks" class="form-control-custom">
+        <div id="dmpBudgetInfo" style="display:none;margin-top:12px;border-radius:9px;padding:10px 14px;font-size:12.5px;"></div>
       </div>
       <div class="modal-footer" style="border-top:1px solid var(--line);">
         <button type="button" class="btn btn-sm" data-bs-dismiss="modal" style="border:1px solid var(--line);border-radius:7px;">रद्द करा</button>
@@ -251,7 +267,33 @@ function dmpCalc() {
   const gstAmt = base * gstPct / 100;
   const total = base + transport + gstAmt;
   document.getElementById('dmpTotal').value = '₹' + total.toLocaleString('en-IN', { maximumFractionDigits: 2 });
+  dmpBudgetCheck(total);
 }
+// नवीन खर्चाने विभागाचं शिल्लक Budget ओलांडलं जाईल का — आधीच इशारा
+var dmpBudgetTimer = null;
+function dmpBudgetCheck(total) {
+  clearTimeout(dmpBudgetTimer);
+  dmpBudgetTimer = setTimeout(function () {
+    var form = document.querySelector('#addPurchaseModal form');
+    var deptSel = form.querySelector('[name=department_id]');
+    var deptId = deptSel ? deptSel.value : '<?= (int)($accessibleDeptId ?? 0) ?>';
+    var date = form.querySelector('[name=purchase_date]').value;
+    var box = document.getElementById('dmpBudgetInfo');
+    if (!deptId || deptId === '0') { box.style.display = 'none'; return; }
+    fetch('budget-check.php?department_id=' + encodeURIComponent(deptId) + '&date=' + encodeURIComponent(date) + '&amount=' + total)
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (!d.ok || d.remaining === null) { box.style.display = 'none'; return; }
+        box.style.display = 'block';
+        box.style.background = d.exceeds ? '#F7E2E3' : '#DCEFEC';
+        box.style.color = d.exceeds ? 'var(--rose)' : 'var(--rail)';
+        box.textContent = (d.exceeds ? '⚠️ ही खरेदी विभागाचं शिल्लक Budget ओलांडेल — ' : '✅ ') + 'FY ' + d.fy + ' शिल्लक: ₹' + Math.round(d.remaining).toLocaleString('en-IN');
+      });
+  }, 300);
+}
+document.addEventListener('change', function (e) {
+  if (e.target.closest && e.target.closest('#addPurchaseModal') && (e.target.name === 'department_id' || e.target.name === 'purchase_date')) { dmpCalc(); }
+});
 </script>
 
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

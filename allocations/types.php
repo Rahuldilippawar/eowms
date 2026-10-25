@@ -5,6 +5,12 @@ requireRole(['super_admin'], '../');
 $user = currentUser();
 $orgId = activeOrgId();
 
+function typeBelongsToOrg($pdo, $typeId, $orgId) {
+    $st = $pdo->prepare("SELECT 1 FROM asset_allocation_types WHERE id = ? AND organization_id = ?");
+    $st->execute([$typeId, $orgId]);
+    return (bool)$st->fetchColumn();
+}
+
 function makeFieldKey($label) {
     $key = preg_replace('/[^a-zA-Z0-9]+/', '_', trim($label));
     return strtolower(trim($key, '_')) ?: 'field';
@@ -16,15 +22,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'add_type') {
         $name = trim($_POST['name'] ?? '');
         $icon = trim($_POST['icon'] ?? '') ?: 'fa-solid fa-box';
+        $isLoan = isset($_POST['is_loan']) ? 1 : 0;
         if ($name) {
-            $pdo->prepare("INSERT INTO asset_allocation_types (organization_id, name, icon, created_by) VALUES (?, ?, ?, ?)")
-                ->execute([$orgId, $name, $icon, $user['id']]);
+            $pdo->prepare("INSERT INTO asset_allocation_types (organization_id, name, icon, is_loan, created_by) VALUES (?, ?, ?, ?, ?)")
+                ->execute([$orgId, $name, $icon, $isLoan, $user['id']]);
             $_SESSION['flash'] = "'$name' Type तयार झाला — आता त्यात Fields जोडा.";
             header('Location: types.php?id=' . $pdo->lastInsertId());
             exit;
         }
     } elseif ($action === 'add_field') {
         $typeId = (int)($_POST['type_id'] ?? 0);
+        if (!typeBelongsToOrg($pdo, $typeId, $orgId)) { $typeId = 0; }
         $label = trim($_POST['field_label'] ?? '');
         $fieldType = in_array($_POST['field_type'] ?? '', ['text','number','dropdown','date','yesno'], true) ? $_POST['field_type'] : 'text';
         $options = trim($_POST['field_options'] ?? '');
@@ -43,14 +51,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($action === 'delete_field') {
         $fieldId = (int)($_POST['field_id'] ?? 0);
         $typeId = (int)($_POST['type_id'] ?? 0);
-        $pdo->prepare("DELETE FROM asset_allocation_fields WHERE id = ?")->execute([$fieldId]);
+        if (typeBelongsToOrg($pdo, $typeId, $orgId)) {
+            $pdo->prepare("DELETE FROM asset_allocation_fields WHERE id = ? AND type_id = ?")->execute([$fieldId, $typeId]);
+        }
         header('Location: types.php?id=' . $typeId);
         exit;
     } elseif ($action === 'delete_type') {
+        // History असलेला Type Delete केला तर सगळ्या Allocations (Cascade ने) नष्ट होतील —
+        // म्हणून History असेल तर नकार, फक्त निष्क्रिय करता येतो
         $typeId = (int)($_POST['type_id'] ?? 0);
-        $pdo->prepare("DELETE FROM asset_allocation_types WHERE id = ? AND organization_id = ?")->execute([$typeId, $orgId]);
-        $_SESSION['flash'] = 'Type काढला गेला.';
+        $histStmt = $pdo->prepare("SELECT (SELECT COUNT(*) FROM asset_allocations WHERE type_id = ?) + (SELECT COUNT(*) FROM asset_items WHERE type_id = ?)");
+        $histStmt->execute([$typeId, $typeId]);
+        if ((int)$histStmt->fetchColumn() > 0) {
+            $pdo->prepare("UPDATE asset_allocation_types SET is_active = 0 WHERE id = ? AND organization_id = ?")->execute([$typeId, $orgId]);
+            $_SESSION['flash'] = 'या Type ची History/वस्तू आहेत — Delete करता येत नाही. त्याऐवजी Type निष्क्रिय केला.';
+        } else {
+            $pdo->prepare("DELETE FROM asset_allocation_types WHERE id = ? AND organization_id = ?")->execute([$typeId, $orgId]);
+            $_SESSION['flash'] = 'Type काढला गेला.';
+        }
         header('Location: types.php');
+        exit;
+    } elseif ($action === 'toggle_active' || $action === 'toggle_loan') {
+        $typeId = (int)($_POST['type_id'] ?? 0);
+        $col = $action === 'toggle_active' ? 'is_active' : 'is_loan';
+        $pdo->prepare("UPDATE asset_allocation_types SET $col = 1 - $col WHERE id = ? AND organization_id = ?")->execute([$typeId, $orgId]);
+        header('Location: types.php?id=' . $typeId);
         exit;
     }
     header('Location: types.php');
@@ -83,7 +108,7 @@ $fieldTypeLabels = ['text' => '📝 Text', 'number' => '🔢 Number', 'dropdown'
   <div class="page-title mb-0">⚙️ Asset Allocation Types व्यवस्थापन</div>
   <div class="d-flex gap-2">
     <button type="button" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:12.5px;padding:8px 16px;" data-bs-toggle="modal" data-bs-target="#addTypeModal">+ नवीन Type</button>
-    <a href="index.php" style="font-size:12.5px;color:var(--rail);font-weight:600;text-decoration:none;align-self:center;">Allocations बघा →</a>
+    <a href="index.php" style="font-size:12.5px;color:var(--rail);font-weight:600;text-decoration:none;align-self:center;">Issue / Return Register →</a>
   </div>
 </div>
 <p style="font-size:12.5px;color:var(--text-dim);margin-bottom:24px;">उदा. "Xerox Machine" Type तयार करा, मग त्यासाठी "Model No.", "Toner Level %" सारखे Fields जोडा</p>
@@ -99,7 +124,7 @@ $fieldTypeLabels = ['text' => '📝 Text', 'number' => '🔢 Number', 'dropdown'
       <div class="panel-head"><div class="title">सगळे Types</div></div>
       <?php foreach ($types as $t): ?>
         <a href="?id=<?= $t['id'] ?>" style="display:flex;justify-content:space-between;align-items:center;padding:12px 18px;text-decoration:none;color:inherit;border-bottom:1px solid var(--line);<?= $selectedTypeId === (int)$t['id'] ? 'background:var(--rail-soft);' : '' ?>">
-          <span><i class="<?= h($t['icon']) ?> me-2" style="color:var(--rail);"></i><?= h($t['name']) ?></span>
+          <span style="<?= $t['is_active'] ? '' : 'opacity:.5;' ?>"><i class="<?= h($t['icon']) ?> me-2" style="color:var(--rail);"></i><?= h($t['name']) ?><?= $t['is_loan'] ? ' <span style="font-size:10px;color:var(--amber);">🔑 उसनं</span>' : '' ?><?= $t['is_active'] ? '' : ' <span style="font-size:10px;">(निष्क्रिय)</span>' ?></span>
         </a>
       <?php endforeach; ?>
       <?php if (empty($types)): ?><p style="font-size:12px;color:var(--text-dim);padding:14px 18px;">अजून कुठलाही Type नाही</p><?php endif; ?>
@@ -113,10 +138,18 @@ $fieldTypeLabels = ['text' => '📝 Text', 'number' => '🔢 Number', 'dropdown'
       <div class="panel">
         <div class="panel-head">
           <div class="title"><i class="<?= h($selectedType['icon']) ?> me-2"></i><?= h($selectedType['name']) ?> — Fields</div>
-          <form method="POST" onsubmit="return confirm('हा संपूर्ण Type (आणि त्यातले सगळे Allocations) काढायचे?')">
-            <input type="hidden" name="action" value="delete_type"><input type="hidden" name="type_id" value="<?= $selectedType['id'] ?>">
-            <button type="submit" style="border:none;background:none;color:var(--rose);font-size:11px;">🗑️ Type काढा</button>
-          </form>
+          <div class="d-flex gap-2">
+            <form method="POST"><input type="hidden" name="action" value="toggle_loan"><input type="hidden" name="type_id" value="<?= $selectedType['id'] ?>">
+              <button type="submit" style="border:none;background:none;color:var(--amber);font-size:11px;"><?= $selectedType['is_loan'] ? '🔑 उसनं-Type — कायमचं करा' : '🔑 उसनं (Loan) Type करा' ?></button>
+            </form>
+            <form method="POST"><input type="hidden" name="action" value="toggle_active"><input type="hidden" name="type_id" value="<?= $selectedType['id'] ?>">
+              <button type="submit" style="border:none;background:none;color:var(--text-dim);font-size:11px;"><?= $selectedType['is_active'] ? '⏸️ निष्क्रिय करा' : '▶️ सक्रिय करा' ?></button>
+            </form>
+            <form method="POST" onsubmit="return confirm('हा Type काढायचा? (History असेल तर फक्त निष्क्रिय होईल)')">
+              <input type="hidden" name="action" value="delete_type"><input type="hidden" name="type_id" value="<?= $selectedType['id'] ?>">
+              <button type="submit" style="border:none;background:none;color:var(--rose);font-size:11px;">🗑️ Type काढा</button>
+            </form>
+          </div>
         </div>
         <table class="rtable">
           <thead><tr><th>Field</th><th>प्रकार</th><th>Required</th><th></th></tr></thead>
@@ -170,7 +203,8 @@ $fieldTypeLabels = ['text' => '📝 Text', 'number' => '🔢 Number', 'dropdown'
         <label class="form-label-custom">नाव</label>
         <input type="text" name="name" class="form-control-custom mb-2" placeholder="उदा. Xerox Machine, Computer/PC" required>
         <label class="form-label-custom">Icon (FontAwesome Class, ऐच्छिक)</label>
-        <input type="text" name="icon" class="form-control-custom" placeholder="fa-solid fa-print">
+        <input type="text" name="icon" class="form-control-custom mb-2" placeholder="fa-solid fa-print">
+        <label style="font-size:12.5px;display:flex;align-items:center;gap:8px;"><input type="checkbox" name="is_loan" style="width:15px;height:15px;"> 🔑 अल्प-मुदतीचं उसनं (Projector, चावी, Camera — परत करायची मुदत असते)</label>
       </div>
       <div class="modal-footer" style="border-top:1px solid var(--line);">
         <button type="button" class="btn btn-sm" data-bs-dismiss="modal" style="border:1px solid var(--line);border-radius:7px;">रद्द करा</button>

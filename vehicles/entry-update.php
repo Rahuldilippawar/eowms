@@ -3,6 +3,7 @@ require_once __DIR__ . '/../includes/auth.php';
 requireLogin('../');
 requireRole(['super_admin'], '../');
 require_once __DIR__ . '/../includes/vehicle-helpers.php';
+require_once __DIR__ . '/../includes/budget-helpers.php';
 $user = currentUser();
 $orgId = activeOrgId();
 
@@ -49,6 +50,13 @@ if ($action === 'save') {
         }
         $update = $pdo->prepare("UPDATE vehicle_fuel_log SET fill_date=?, odometer_reading=?, liters=?, cost=? WHERE id=? AND vehicle_id=?");
         $update->execute([$_POST['fill_date'], (float)($_POST['odometer_reading'] ?? 0), (float)($_POST['liters'] ?? 0), ($_POST['cost'] ?? '') !== '' ? (float)$_POST['cost'] : null, $entryId, $vehicleId]);
+        // Budget मधला खर्च-Row सुद्धा दुरुस्त करतो
+        $fuelCost = ($_POST['cost'] ?? '') !== '' ? (float)$_POST['cost'] : null;
+        $vStmt = $pdo->prepare("SELECT v.* FROM vehicle_fuel_log f JOIN vehicles v ON v.id = f.vehicle_id WHERE f.id = ? AND v.organization_id = ?");
+        $vStmt->execute([$entryId, $orgId]);
+        if ($veh = $vStmt->fetch()) {
+            syncBudgetTransaction($pdo, $orgId, $veh['department_id'], $fuelCost, 'इंधन', 'vehicle_fuel_log', $entryId, $veh['vehicle_number'] . ' — ' . (float)($_POST['liters'] ?? 0) . ' लिटर', $user['id'], $_POST['fill_date']);
+        }
     } else {
         if (!$validDate($_POST['maintenance_date'] ?? '') || !$isNum($_POST['cost'] ?? '')) {
             $_SESSION['flash'] = 'तारीख किंवा रक्कम अवैध — बदल झाला नाही.';
@@ -57,6 +65,12 @@ if ($action === 'save') {
         }
         $update = $pdo->prepare("UPDATE vehicle_maintenance SET maintenance_date=?, type=?, cost=?, description=? WHERE id=? AND vehicle_id=?");
         $update->execute([$_POST['maintenance_date'], trim($_POST['type'] ?? ''), ($_POST['cost'] ?? '') !== '' ? (float)$_POST['cost'] : null, trim($_POST['description'] ?? ''), $entryId, $vehicleId]);
+        $mCost = ($_POST['cost'] ?? '') !== '' ? (float)$_POST['cost'] : null;
+        $vStmt = $pdo->prepare("SELECT v.* FROM vehicle_maintenance m JOIN vehicles v ON v.id = m.vehicle_id WHERE m.id = ? AND v.organization_id = ?");
+        $vStmt->execute([$entryId, $orgId]);
+        if ($veh = $vStmt->fetch()) {
+            syncBudgetTransaction($pdo, $orgId, $veh['department_id'], $mCost, 'इतर', 'vehicle_maintenance_log', $entryId, $veh['vehicle_number'] . ' — ' . trim($_POST['type'] ?? ''), $user['id'], $_POST['maintenance_date']);
+        }
     }
 
     // मीटर-वाचन बदललं असेल — वाहनाचं सध्याचं मीटर पुन्हा मोजतो

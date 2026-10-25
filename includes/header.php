@@ -153,3 +153,7 @@ if (hasRole('super_admin')) {
       <div class="alert alert-success" style="border-radius:10px;font-size:13.5px;"><?= h($_SESSION['flash']) ?></div>
       <?php unset($_SESSION['flash']); ?>
     <?php endif; ?>
+    <?php if (!empty($_SESSION['budget_warning'])): // विभाग Finance — नवीन खर्चाने Budget ओलांडलं ?>
+      <div class="alert alert-warning" style="border-radius:10px;font-size:13.5px;"><?= h($_SESSION['budget_warning']) ?></div>
+      <?php unset($_SESSION['budget_warning']); ?>
+    <?php endif; ?>

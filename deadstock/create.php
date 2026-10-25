@@ -64,7 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // फक्त खरोखर नवीन खरेदी असेल तरच Budget मधून वजा होतं — आधीपासून
         // अस्तित्वात असलेली मालमत्ता फक्त नोंदवली जातेय, तो नवीन खर्च नाही.
         if ($isNewPurchase) {
-            recordBudgetTransaction($pdo, $orgId, $departmentId, $purchaseCost, 'नवीन खरेदी', 'dead_stock', $newItemId, "$itemName ($itemCode)", $user['id']);
+            recordBudgetTransaction($pdo, $orgId, $departmentId, $purchaseCost, 'नवीन खरेदी', 'dead_stock', $newItemId, "$itemName ($itemCode)", $user['id'], $purchaseDate);
         }
 
         logActivity('Dead Stock नोंद जोडली', 'dead_stock_item', $newItemId, "$itemCode — $itemName");

@@ -28,7 +28,7 @@ $commonPages = [
     ['label' => 'Staff Directory', 'url' => 'staff/index.php', 'icon' => 'fa-solid fa-users', 'keywords' => 'staff directory कर्मचारी'],
     ['label' => 'Attendance', 'url' => 'staff/attendance.php', 'icon' => 'fa-solid fa-calendar-check', 'keywords' => 'attendance हजेरी'],
     ['label' => 'रजा अर्ज', 'url' => 'staff/leave-apply.php', 'icon' => 'fa-solid fa-plane-departure', 'keywords' => 'leave रजा'],
-    ['label' => 'Reports', 'url' => 'reports/index.php', 'icon' => 'fa-solid fa-chart-line', 'keywords' => 'reports अहवाल'],
+    ['label' => 'Reports', 'url' => 'daily-work/report.php', 'icon' => 'fa-solid fa-chart-line', 'keywords' => 'reports अहवाल'],
 ];
 foreach ($commonPages as $p) {
     if (mb_stripos($p['label'], $q) !== false || mb_stripos($p['keywords'], $q) !== false) {

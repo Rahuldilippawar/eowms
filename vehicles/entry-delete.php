@@ -3,6 +3,7 @@ require_once __DIR__ . '/../includes/auth.php';
 requireLogin('../');
 requireRole(['super_admin'], '../');
 require_once __DIR__ . '/../includes/vehicle-helpers.php';
+require_once __DIR__ . '/../includes/budget-helpers.php';
 $user = currentUser();
 $orgId = activeOrgId();
 
@@ -31,6 +32,11 @@ $vehicleId = (int)$req['vehicle_id'];
 $pdo->prepare("DELETE FROM {$tableMap[$entryType]} WHERE id = ? AND vehicle_id = ?")->execute([$entryId, $vehicleId]);
 if ($entryType !== 'maintenance') {
     vehicleRecomputeOdometer($pdo, $vehicleId);
+}
+// इंधन/देखभाल नोंद काढली — तिचा खर्च Budget मधून परत
+$budgetSourceMap = ['fuel' => 'vehicle_fuel_log', 'maintenance' => 'vehicle_maintenance_log'];
+if (isset($budgetSourceMap[$entryType])) {
+    reverseBudgetTransaction($pdo, $budgetSourceMap[$entryType], $entryId);
 }
 $pdo->prepare("UPDATE vehicle_correction_requests SET status='approved', reviewed_by=?, reviewed_at=NOW() WHERE id=?")->execute([$user['id'], $requestId]);
 
