@@ -14,7 +14,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $campusId = (int)($_POST['campus_id'] ?? 0);
         $roomType = trim($_POST['room_type'] ?? '') ?: null;
         $capacity = ($_POST['capacity'] ?? '') !== '' ? (int)$_POST['capacity'] : null;
-        if ($name && $campusId) {
+        // Campus याच संस्थेचा असावा
+        $campusCheck = $pdo->prepare("SELECT id FROM campuses WHERE id = ? AND organization_id = ?");
+        $campusCheck->execute([$campusId, $orgId]);
+        if (!$campusCheck->fetch()) {
+            $_SESSION['flash'] = '⚠️ निवडलेलं College/Campus सापडलं नाही.';
+        } elseif ($name) {
             $pdo->prepare("INSERT INTO bookable_rooms (organization_id, campus_id, name, room_type, capacity, created_by) VALUES (?, ?, ?, ?, ?, ?)")
                 ->execute([$orgId, $campusId, $name, $roomType, $capacity, $user['id']]);
             $_SESSION['flash'] = 'नवीन Room जोडलं गेलं.';
@@ -25,31 +30,61 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $startTime = $_POST['start_time'] ?? '';
         $endTime = $_POST['end_time'] ?? '';
 
-        if ($roomId && $purpose && $startTime && $endTime && strtotime($endTime) > strtotime($startTime)) {
-            // Conflict-Check — याच वेळी दुसरं कोणी Book केलंय का
-            $conflictStmt = $pdo->prepare("
-                SELECT COUNT(*) c FROM room_bookings
-                WHERE room_id = ? AND status = 'confirmed' AND start_time < ? AND end_time > ?
-            ");
-            $conflictStmt->execute([$roomId, $endTime, $startTime]);
-            if ($conflictStmt->fetch()['c'] > 0) {
-                $_SESSION['flash'] = '⚠️ या वेळेत हे Room आधीच Book झालेलं आहे — दुसरी वेळ निवडा.';
-            } else {
-                $pdo->prepare("INSERT INTO room_bookings (room_id, booked_by, purpose, start_time, end_time) VALUES (?, ?, ?, ?, ?)")
-                    ->execute([$roomId, $user['id'], $purpose, $startTime, $endTime]);
-                $_SESSION['flash'] = 'Booking झालं.';
-            }
-        } else {
+        // वेळ — datetime-local (Y-m-d\TH:i) स्वरूपात; शेवट सुरुवातीनंतर व सुरुवात भूतकाळात नसावी
+        $parseTime = function ($t) {
+            $d = DateTime::createFromFormat('Y-m-d\TH:i', $t) ?: DateTime::createFromFormat('Y-m-d H:i:s', $t) ?: DateTime::createFromFormat('Y-m-d H:i', $t);
+            return $d ? $d->format('Y-m-d H:i:s') : null;
+        };
+        $startTime = $parseTime($startTime);
+        $endTime = $parseTime($endTime);
+
+        // Room याच संस्थेचं व सक्रिय असावं
+        $roomCheck = $pdo->prepare("SELECT id FROM bookable_rooms WHERE id = ? AND organization_id = ? AND is_active = 1");
+        $roomCheck->execute([$roomId, $orgId]);
+        $roomOk = (bool)$roomCheck->fetch();
+
+        if (!$roomOk) {
+            $_SESSION['flash'] = '⚠️ निवडलेलं Room सापडलं नाही.';
+        } elseif (!$purpose || !$startTime || !$endTime || $endTime <= $startTime) {
             $_SESSION['flash'] = '⚠️ कृपया सगळी माहिती बरोबर भरा — End Time, Start Time नंतरचं हवं.';
+        } elseif ($startTime < date('Y-m-d H:i:00')) {
+            $_SESSION['flash'] = '⚠️ मागच्या (भूतकाळातील) वेळेसाठी Booking करता येत नाही.';
+        } else {
+            // Conflict-Check व Insert एकाच Transaction मध्ये — Room-Row Lock (FOR UPDATE) मुळे एकाच वेळी दोघांचं Booking होत नाही
+            $pdo->beginTransaction();
+            try {
+                $pdo->prepare("SELECT id FROM bookable_rooms WHERE id = ? FOR UPDATE")->execute([$roomId]);
+                $conflictStmt = $pdo->prepare("
+                    SELECT COUNT(*) c FROM room_bookings
+                    WHERE room_id = ? AND status = 'confirmed' AND start_time < ? AND end_time > ?
+                    FOR UPDATE
+                ");
+                $conflictStmt->execute([$roomId, $endTime, $startTime]);
+                if ($conflictStmt->fetch()['c'] > 0) {
+                    $pdo->rollBack();
+                    $_SESSION['flash'] = '⚠️ या वेळेत हे Room आधीच Book झालेलं आहे — दुसरी वेळ निवडा.';
+                } else {
+                    $pdo->prepare("INSERT INTO room_bookings (room_id, booked_by, purpose, start_time, end_time) VALUES (?, ?, ?, ?, ?)")
+                        ->execute([$roomId, $user['id'], $purpose, $startTime, $endTime]);
+                    $pdo->commit();
+                    $_SESSION['flash'] = 'Booking झालं.';
+                }
+            } catch (PDOException $e) {
+                if ($pdo->inTransaction()) { $pdo->rollBack(); }
+                $_SESSION['flash'] = '⚠️ Booking करता आलं नाही — पुन्हा प्रयत्न करा.';
+            }
         }
     } elseif ($action === 'cancel_booking') {
         $bookingId = (int)($_POST['booking_id'] ?? 0);
-        $checkStmt = $pdo->prepare("SELECT booked_by FROM room_bookings WHERE id = ?");
-        $checkStmt->execute([$bookingId]);
+        // फक्त याच संस्थेच्या Room चं Booking
+        $checkStmt = $pdo->prepare("SELECT rb.booked_by FROM room_bookings rb JOIN bookable_rooms br ON br.id = rb.room_id WHERE rb.id = ? AND br.organization_id = ? AND rb.status = 'confirmed'");
+        $checkStmt->execute([$bookingId, $orgId]);
         $booking = $checkStmt->fetch();
         if ($booking && ((int)$booking['booked_by'] === (int)$user['id'] || $canManageRooms)) {
             $pdo->prepare("UPDATE room_bookings SET status = 'cancelled' WHERE id = ?")->execute([$bookingId]);
             $_SESSION['flash'] = 'Booking रद्द झालं.';
+        } else {
+            $_SESSION['flash'] = '⚠️ Booking सापडलं नाही किंवा रद्द करण्याची परवानगी नाही.';
         }
     } elseif ($action === 'delete_room' && $canManageRooms) {
         $roomId = (int)($_POST['room_id'] ?? 0);
@@ -65,6 +100,7 @@ $rootPath = '../';
 require_once __DIR__ . '/../includes/header.php';
 
 $selectedDate = $_GET['date'] ?? date('Y-m-d');
+if (!DateTime::createFromFormat('!Y-m-d', (string)$selectedDate)) { $selectedDate = date('Y-m-d'); }
 
 $roomsStmt = $pdo->prepare("SELECT br.*, c.name AS campus_name FROM bookable_rooms br JOIN campuses c ON c.id = br.campus_id WHERE br.organization_id = ? AND br.is_active = 1 ORDER BY br.name");
 $roomsStmt->execute([$orgId]);
