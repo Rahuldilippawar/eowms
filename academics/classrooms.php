@@ -5,9 +5,14 @@ $user = currentUser();
 $orgId = activeOrgId();
 $isMgmt = isManagementOrAbove() || hasRole('super_admin');
 $canManage = $isMgmt || hasCategory('hod') || hasPermission('manage_academics');
-if (!$canManage) { http_response_code(403); die('परवानगी नाही.'); }
+// नेमलेले शिक्षक (HOD नसलेले) — फक्त "माझे वर्ग" पाहू शकतात
+$myClassStmt = $pdo->prepare("SELECT COUNT(*) FROM classroom_staff cs JOIN virtual_classrooms vc ON vc.id = cs.classroom_id WHERE cs.user_id = ? AND vc.organization_id = ?");
+$myClassStmt->execute([$user['id'], $orgId]);
+$isTeacherOnly = !$canManage && (int)$myClassStmt->fetchColumn() > 0;
+if (!$canManage && !$isTeacherOnly) { http_response_code(403); die('परवानगी नाही.'); }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!$canManage) { http_response_code(403); die('परवानगी नाही.'); }
     $campusId = (int)($_POST['campus_id'] ?? 0);
     $departmentId = (int)($_POST['department_id'] ?? 0);
     $name = trim($_POST['name'] ?? '');
@@ -40,7 +45,8 @@ $sql = "
     WHERE vc.organization_id = ? AND vc.is_active = 1
 ";
 $params = [$orgId];
-if (!$isMgmt) { $sql .= " AND vc.department_id = ?"; $params[] = $user['department_id'] ?? 0; }
+if ($isTeacherOnly) { $sql .= " AND vc.id IN (SELECT classroom_id FROM classroom_staff WHERE user_id = ?)"; $params[] = $user['id']; }
+elseif (!$isMgmt) { $sql .= " AND vc.department_id = ?"; $params[] = $user['department_id'] ?? 0; }
 $sql .= " ORDER BY vc.academic_year DESC, vc.name";
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
@@ -57,8 +63,13 @@ $deptsForClassroom = $deptStmt->fetchAll();
 
 <div class="page-eyebrow"><?= h(activeOrgName()) ?></div>
 <div class="d-flex justify-content-between align-items-start mb-1">
-  <div class="page-title mb-0">🏫 Virtual Classrooms</div>
-  <a href="students.php" style="font-size:12.5px;color:var(--rail);font-weight:600;text-decoration:none;align-self:center;"><i class="fa-solid fa-arrow-left me-1"></i>विद्यार्थी Master</a>
+  <div class="page-title mb-0">🏫 <?= $isTeacherOnly ? 'माझे वर्ग / My Classrooms' : 'Virtual Classrooms' ?></div>
+  <div class="d-flex gap-3" style="align-self:center;">
+    <a href="teacher-feedback.php" style="font-size:12.5px;color:var(--rail);font-weight:600;text-decoration:none;"><i class="fa-solid fa-star me-1"></i>विद्यार्थी Feedback</a>
+    <?php if (!$isTeacherOnly): ?>
+    <a href="students.php" style="font-size:12.5px;color:var(--rail);font-weight:600;text-decoration:none;"><i class="fa-solid fa-arrow-left me-1"></i>विद्यार्थी Master</a>
+    <?php endif; ?>
+  </div>
 </div>
 
 <?php if (!empty($_SESSION['flash'])): ?>
@@ -66,6 +77,7 @@ $deptsForClassroom = $deptStmt->fetchAll();
   <?php unset($_SESSION['flash']); ?>
 <?php endif; ?>
 
+<?php if (!$isTeacherOnly): ?>
 <div class="panel mb-3">
   <div class="panel-head"><div class="title">नवीन Classroom तयार करा</div></div>
   <form method="POST" style="padding:18px 24px;">
@@ -93,6 +105,7 @@ $deptsForClassroom = $deptStmt->fetchAll();
     </div>
   </form>
 </div>
+<?php endif; ?>
 
 <div class="row g-3">
   <?php if (empty($classrooms)): ?><div class="col-12"><div class="panel" style="padding:30px;text-align:center;color:var(--text-dim);">अजून कुठलाही Classroom तयार केलेला नाही</div></div><?php endif; ?>

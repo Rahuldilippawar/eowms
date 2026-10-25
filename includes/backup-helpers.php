@@ -148,13 +148,6 @@ function buildOrgBackup($pdo, $orgId) {
         'student_notifications' => safeFetchAll($pdo, "
             SELECT sn.* FROM student_notifications sn JOIN students s ON s.id = sn.student_id WHERE s.organization_id = ?", [$orgId]),
         'events' => safeFetchAll($pdo, "SELECT * FROM events WHERE organization_id = ?", [$orgId]),
-        'teacher_timetable' => safeFetchAll($pdo, "SELECT * FROM teacher_timetable WHERE organization_id = ?", [$orgId]),
-        'substitute_assignments' => safeFetchAll($pdo, "SELECT * FROM substitute_assignments WHERE organization_id = ?", [$orgId]),
-        'syllabus_trackers' => safeFetchAll($pdo, "SELECT * FROM syllabus_trackers WHERE organization_id = ?", [$orgId]),
-        'teacher_qualifications' => safeFetchAll($pdo, "
-            SELECT tq.* FROM teacher_qualifications tq JOIN users u ON u.id = tq.teacher_id WHERE u.organization_id = ?", [$orgId]),
-        'class_teacher_assignments' => safeFetchAll($pdo, "SELECT * FROM class_teacher_assignments WHERE organization_id = ?", [$orgId]),
-        'exam_duty_allocations' => safeFetchAll($pdo, "SELECT * FROM exam_duty_allocations WHERE organization_id = ?", [$orgId]),
         'teacher_feedback' => safeFetchAll($pdo, "
             SELECT tf.* FROM teacher_feedback tf JOIN users u ON u.id = tf.teacher_id WHERE u.organization_id = ?", [$orgId]),
         'event_tasks' => safeFetchAll($pdo, "

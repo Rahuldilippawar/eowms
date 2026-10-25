@@ -58,7 +58,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     } elseif ($action === 'toggle') {
         $studentId = (int)($_POST['student_id'] ?? 0);
-        $pdo->prepare("UPDATE students SET is_active = NOT is_active WHERE id = ? AND organization_id = ?")->execute([$studentId, $orgId]);
+        // HOD ला फक्त स्वतःच्या विभागातले विद्यार्थी
+        if ($isMgmt) {
+            $pdo->prepare("UPDATE students SET is_active = NOT is_active WHERE id = ? AND organization_id = ?")->execute([$studentId, $orgId]);
+        } else {
+            $pdo->prepare("UPDATE students SET is_active = NOT is_active WHERE id = ? AND organization_id = ? AND department_id = ?")->execute([$studentId, $orgId, (int)($user['department_id'] ?? 0)]);
+        }
         $_SESSION['flash'] = 'स्थिती बदलली.';
     }
     header('Location: students.php');

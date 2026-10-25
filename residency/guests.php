@@ -1,9 +1,15 @@
 <?php
 require_once __DIR__ . '/../includes/auth.php';
 requireLogin('../');
-requirePermission('manage_residency_all_depts', '../');
 $user = currentUser();
 $orgId = activeOrgId();
+// रहिवासी विभाग (RES) चे कर्मचारी किंवा सर्व-विभाग परवानगी असलेले — index.php प्रमाणेच
+$resDeptStmt = $pdo->prepare("SELECT code FROM departments WHERE id = ?");
+$resDeptStmt->execute([$user['department_id'] ?? 0]);
+if (!hasPermission('manage_residency_all_depts') && ($resDeptStmt->fetch()['code'] ?? null) !== 'RES') {
+    http_response_code(403);
+    die('तुम्हाला ही माहिती पाहण्याची परवानगी नाही.');
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
@@ -17,7 +23,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $arrivalDate = ($_POST['arrival_date'] ?? '') ?: date('Y-m-d');
         $expectedDeparture = ($_POST['expected_departure_date'] ?? '') ?: null;
 
-        if ($locationId && $guestName) {
+        $locChk = $pdo->prepare("SELECT COUNT(*) FROM maintenance_locations WHERE id = ? AND organization_id = ? AND is_residential = 1");
+        $locChk->execute([$locationId, $orgId]);
+        if ($hostOccupantId) {
+            $hostChk = $pdo->prepare("SELECT COUNT(*) FROM residency_occupants WHERE id = ? AND organization_id = ?");
+            $hostChk->execute([$hostOccupantId, $orgId]);
+            if (!(int)$hostChk->fetchColumn()) { $hostOccupantId = null; }
+        }
+        if ($locationId && $guestName && (int)$locChk->fetchColumn() > 0) {
             $pdo->prepare("
                 INSERT INTO residency_guests (organization_id, location_id, host_occupant_id, guest_name, guest_contact, relation, purpose, arrival_date, expected_departure_date, created_by)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -38,7 +51,7 @@ $pageTitle = 'पाहुणे-नोंदणी';
 $rootPath = '../';
 require_once __DIR__ . '/../includes/header.php';
 
-$locStmt = $pdo->prepare("SELECT ml.*, b.name AS building_name FROM maintenance_locations ml LEFT JOIN buildings b ON b.id = ml.building_id WHERE ml.organization_id = ? AND ml.is_active = 1 ORDER BY b.name, ml.name");
+$locStmt = $pdo->prepare("SELECT ml.*, b.name AS building_name FROM maintenance_locations ml LEFT JOIN buildings b ON b.id = ml.building_id WHERE ml.organization_id = ? AND ml.is_active = 1 AND ml.is_residential = 1 ORDER BY b.name, ml.name");
 $locStmt->execute([$orgId]);
 $locations = $locStmt->fetchAll();
 

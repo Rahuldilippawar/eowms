@@ -9,11 +9,11 @@ $pageTitle = 'Occupancy Analytics';
 $rootPath = '../';
 require_once __DIR__ . '/../includes/header.php';
 
-$totalRoomsStmt = $pdo->prepare("SELECT COUNT(*) c FROM maintenance_locations WHERE organization_id = ? AND is_active = 1");
+$totalRoomsStmt = $pdo->prepare("SELECT COUNT(*) c FROM maintenance_locations WHERE organization_id = ? AND is_active = 1 AND is_residential = 1");
 $totalRoomsStmt->execute([$orgId]);
 $totalRooms = (int)$totalRoomsStmt->fetch()['c'];
 
-$occupiedRoomsStmt = $pdo->prepare("SELECT COUNT(DISTINCT location_id) c FROM residency_occupants WHERE organization_id = ? AND status = 'active'");
+$occupiedRoomsStmt = $pdo->prepare("SELECT COUNT(DISTINCT ro.location_id) c FROM residency_occupants ro JOIN maintenance_locations ml ON ml.id = ro.location_id AND ml.is_active = 1 AND ml.is_residential = 1 WHERE ro.organization_id = ? AND ro.status = 'active'");
 $occupiedRoomsStmt->execute([$orgId]);
 $occupiedRooms = (int)$occupiedRoomsStmt->fetch()['c'];
 $vacantRooms = max(0, $totalRooms - $occupiedRooms);
@@ -40,7 +40,7 @@ $buildingStmt = $pdo->prepare("
       COUNT(DISTINCT ml.id) AS total_rooms,
       COUNT(DISTINCT ro.location_id) AS occupied_rooms
     FROM buildings b
-    LEFT JOIN maintenance_locations ml ON ml.building_id = b.id AND ml.is_active = 1
+    LEFT JOIN maintenance_locations ml ON ml.building_id = b.id AND ml.is_active = 1 AND ml.is_residential = 1
     LEFT JOIN residency_occupants ro ON ro.location_id = ml.id AND ro.status = 'active'
     WHERE b.organization_id = ?
     GROUP BY b.id, b.name

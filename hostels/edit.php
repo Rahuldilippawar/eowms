@@ -8,21 +8,25 @@ $id = (int)($_GET['id'] ?? $_POST['id'] ?? 0);
 $orgId = activeOrgId();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Hostel याच संस्थेचं आहे याची खात्री — नाहीतर दुसऱ्या संस्थेचा Staff-Allocation पुसला जाऊ शकतो
+    $ownChk = $pdo->prepare("SELECT id FROM hostels WHERE id = ? AND organization_id = ?");
+    $ownChk->execute([$id, $orgId]);
+    if (!$ownChk->fetch()) { http_response_code(404); die(t('s430')); }
     $name = trim($_POST['name'] ?? '');
     $campusId = (int)($_POST['campus_id'] ?? 0);
     $capacity = ($_POST['capacity'] ?? '') !== '' ? (int)$_POST['capacity'] : null;
     $isActive = (int)($_POST['is_active'] ?? 1);
-    $staffIds = $_POST['staff_ids'] ?? [];
+    $staffIds = is_array($_POST['staff_ids'] ?? null) ? $_POST['staff_ids'] : [];
 
     $stmt = $pdo->prepare("UPDATE hostels SET name=?, campus_id=?, capacity=?, is_active=? WHERE id=? AND organization_id=?");
     $stmt->execute([$name, $campusId, $capacity, $isActive, $id, $orgId]);
 
     // Reset and re-save staff allocation — simplest reliable way to keep it in sync with checkboxes
-    $pdo->prepare("DELETE FROM hostel_staff WHERE hostel_id = ?")->execute([$id]);
+    $pdo->prepare("DELETE hs FROM hostel_staff hs JOIN hostels h ON h.id = hs.hostel_id WHERE hs.hostel_id = ? AND h.organization_id = ?")->execute([$id, $orgId]);
     if (!empty($staffIds)) {
-        $insert = $pdo->prepare("INSERT INTO hostel_staff (hostel_id, user_id) VALUES (?, ?)");
+        $insert = $pdo->prepare("INSERT INTO hostel_staff (hostel_id, user_id) SELECT ?, id FROM users WHERE id = ? AND organization_id = ?");
         foreach ($staffIds as $staffId) {
-            $insert->execute([$id, (int)$staffId]);
+            $insert->execute([$id, (int)$staffId, $orgId]);
         }
     }
 

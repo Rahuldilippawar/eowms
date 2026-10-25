@@ -91,7 +91,6 @@ $dirToGroup = [
     'staff' => 'staff',
     'hostels' => 'hostel', 'residency' => 'hostel',
     'meditation' => 'activities', 'music' => 'activities', 'academics' => 'activities', 'sop' => 'activities',
-    'teaching' => 'activities',
     'events' => 'activities', 'guests' => 'activities',
     'checkout' => 'facilities', 'allocations' => 'facilities', 'room-booking' => 'facilities',
     'messages' => 'communication', 'grievances' => 'communication',
@@ -275,9 +274,17 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
     <?php
       $resDeptCheck = $pdo->prepare("SELECT code FROM departments WHERE id = ?");
       $resDeptCheck->execute([$user['department_id'] ?? 0]);
-      $userIsResDept = ($resDeptCheck->fetch()['code'] ?? null) === 'RES';
+      $userDeptCodeNav = $resDeptCheck->fetch()['code'] ?? null;
+      $userIsResDept = $userDeptCodeNav === 'RES';
       $showHostel = hasPermission('manage_hostels');
-      $showResidency = $userIsResDept || isManagementOrAbove() || hasRole('super_admin');
+      // वसतिगृह विभागाचे (HOS) कर्मचारी — hostels/index.php उघडत नाही, पण Dashboard/हजेरी वापरतात
+      $hosDeptHostels = [];
+      if (!$showHostel && $userDeptCodeNav === 'HOS') {
+          $hosStmt = $pdo->prepare("SELECT id, name FROM hostels WHERE organization_id = ? AND is_active = 1 ORDER BY name");
+          $hosStmt->execute([$activeOrgId]);
+          $hosDeptHostels = $hosStmt->fetchAll();
+      }
+      $showResidency = $userIsResDept || hasPermission('manage_residency_all_depts'); // residency/index.php ची परवानगी तीच
     ?>
     <div class="nav-group-header" data-bs-toggle="collapse" data-bs-target="#navGroupHostel" aria-expanded="<?= navGroupExpanded('hostel', $activeGroup) ?>">
       <span class="label"><i class="fa-solid fa-house-user fa-fw"></i> वसतिगृह व रहिवासी</span>
@@ -292,6 +299,11 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
           <i class="fa-solid fa-house-user fa-fw"></i><span><?= h(t('nav_hostel_management')) ?></span>
         </a>
       <?php endif; ?>
+      <?php foreach ($hosDeptHostels as $hosNav): ?>
+        <a href="<?= $rp ?>hostels/dashboard.php?id=<?= (int)$hosNav['id'] ?>" class="tree-node <?= $currentDir === 'hostels' && (int)($_GET['id'] ?? $_GET['hostel_id'] ?? 0) === (int)$hosNav['id'] ? 'active' : '' ?>">
+          <i class="fa-solid fa-house-user fa-fw"></i><span><?= h($hosNav['name']) ?></span>
+        </a>
+      <?php endforeach; ?>
       <?php if ($showResidency): ?>
         <a href="<?= $rp ?>residency/index.php" class="tree-node <?= $currentDir === 'residency' && $currentPage !== 'my-residency.php' ? 'active' : '' ?>">
           <i class="fa-solid fa-house-chimney-user fa-fw"></i><span>रहिवासी विभाग</span>
@@ -323,12 +335,15 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
         <a href="<?= $rp ?>academics/students.php" class="tree-node <?= $currentDir === 'academics' ? 'active' : '' ?>">
           <i class="fa-solid fa-chalkboard-user fa-fw"></i><span>🎓 Virtual Classroom</span>
         </a>
-      <?php endif; ?>
-      <?php if (($user['teaching_mode'] ?? '') === 'Teaching' || isManagementOrAbove() || hasRole('super_admin') || hasPermission('manage_teaching_academics')): ?>
-        <a href="<?= $rp ?>teaching/index.php" class="tree-node <?= $currentDir === 'teaching' ? 'active' : '' ?>">
-          <i class="fa-solid fa-person-chalkboard fa-fw"></i><span>👨‍🏫 Teaching Module</span>
+      <?php else:
+        // नेमलेले शिक्षक (HOD नसलेले) — फक्त स्वतःचे वर्ग
+        $myClassNavStmt = $pdo->prepare("SELECT COUNT(*) FROM classroom_staff cs JOIN virtual_classrooms vc ON vc.id = cs.classroom_id WHERE cs.user_id = ? AND vc.organization_id = ? AND vc.is_active = 1");
+        $myClassNavStmt->execute([$user['id'], $activeOrgId]);
+        if ((int)$myClassNavStmt->fetchColumn() > 0): ?>
+        <a href="<?= $rp ?>academics/classrooms.php" class="tree-node <?= $currentDir === 'academics' ? 'active' : '' ?>">
+          <i class="fa-solid fa-chalkboard-user fa-fw"></i><span>🎓 माझे वर्ग / My Classrooms</span>
         </a>
-      <?php endif; ?>
+      <?php endif; endif; ?>
       <?php if (!empty($user['department_id']) || isManagementOrAbove() || hasRole('super_admin')): ?>
         <a href="<?= $rp ?>sop/checklist.php" class="tree-node <?= $currentDir === 'sop' && $currentPage === 'checklist.php' ? 'active' : '' ?>">
           <i class="fa-solid fa-list-check fa-fw"></i><span>SOP Checklist</span>

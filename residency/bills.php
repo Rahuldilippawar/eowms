@@ -72,7 +72,7 @@ $locStmt = $pdo->prepare("
     SELECT ml.*, b.name AS building_name,
       (SELECT COUNT(*) FROM residency_occupants WHERE location_id = ml.id AND occupant_type = 'staff' AND status = 'active') AS staff_count
     FROM maintenance_locations ml LEFT JOIN buildings b ON b.id = ml.building_id
-    WHERE ml.organization_id = ? AND ml.is_active = 1
+    WHERE ml.organization_id = ? AND ml.is_active = 1 AND ml.is_residential = 1
     ORDER BY b.name, ml.name
 ");
 $locStmt->execute([$orgId]);

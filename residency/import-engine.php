@@ -135,7 +135,7 @@ function residencyImportExecute($pdo, $orgId, $userId, $rows, $filename) {
         foreach ($sStmt->fetchAll() as $s) { if ($s['email']) { $staffByEmail[mb_strtolower(trim($s['email']))] = $s['id']; } }
 
         $buildingInsert = $pdo->prepare("INSERT INTO buildings (organization_id, campus_id, import_batch_id, name, created_by) VALUES (?, ?, ?, ?, ?)");
-        $roomInsert = $pdo->prepare("INSERT INTO maintenance_locations (organization_id, campus_id, building_id, import_batch_id, floor, name, location_code, is_active, created_by) VALUES (?, ?, ?, ?, 0, ?, ?, 1, ?)");
+        $roomInsert = $pdo->prepare("INSERT INTO maintenance_locations (organization_id, campus_id, building_id, import_batch_id, floor, name, location_code, is_active, is_residential, created_by) VALUES (?, ?, ?, ?, 0, ?, ?, 1, 1, ?)");
         $occInsert = $pdo->prepare("INSERT INTO residency_occupants (organization_id, location_id, import_batch_id, occupant_type, user_id, name, relation, moved_in_date, status, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', ?)");
 
         $buildingsCreated = 0; $roomsCreated = 0; $occupantsCreated = 0;
@@ -167,6 +167,9 @@ function residencyImportExecute($pdo, $orgId, $userId, $rows, $filename) {
             $occInsert->execute([$orgId, $locationId, $batchId, $r['occupant_type'], $userId2, $r['name'], $r['relation'], $movedInDate, $userId]);
             $occupantsCreated++;
         }
+
+        // ज्या जागांमध्ये रहिवासी Import झाले — त्या निवासी खोल्या
+        $pdo->prepare("UPDATE maintenance_locations SET is_residential = 1 WHERE id IN (SELECT location_id FROM residency_occupants WHERE import_batch_id = ?)")->execute([$batchId]);
 
         $pdo->prepare("UPDATE residency_import_batches SET buildings_created = ?, rooms_created = ?, occupants_created = ? WHERE id = ?")
             ->execute([$buildingsCreated, $roomsCreated, $occupantsCreated, $batchId]);

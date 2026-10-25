@@ -3,6 +3,12 @@ require_once __DIR__ . '/../includes/auth.php';
 requireLogin('../');
 $orgId = activeOrgId();
 header('Content-Type: application/json; charset=utf-8');
+// पाहुणे Check-in करू शकणारेच (guests/index.php प्रमाणेच) — नाहीतर कोणीही Mobile वरून माहिती शोधू शकेल
+if (!hasPermission('manage_guests') && !isManagementOrAbove()) {
+    http_response_code(403);
+    echo json_encode(['found' => false, 'error' => 'परवानगी नाही']);
+    exit;
+}
 
 $mobile = trim($_GET['mobile'] ?? '');
 if (strlen($mobile) < 10) { echo json_encode(['found' => false]); exit; }

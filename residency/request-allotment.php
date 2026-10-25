@@ -6,10 +6,24 @@ $orgId = activeOrgId();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $buildingId = ($_POST['preferred_building_id'] ?? '') !== '' ? (int)$_POST['preferred_building_id'] : null;
-    $familySize = (int)($_POST['family_size'] ?? 1);
+    $familySize = max(1, (int)($_POST['family_size'] ?? 1));
     $reason = trim($_POST['reason'] ?? '');
+    if ($buildingId) {
+        $bChk = $pdo->prepare("SELECT COUNT(*) FROM buildings WHERE id = ? AND organization_id = ?");
+        $bChk->execute([$buildingId, $orgId]);
+        if (!(int)$bChk->fetchColumn()) { $buildingId = null; }
+    }
+    // आधीच कुठे राहत असेल, किंवा आधीची विनंती प्रलंबित असेल — नवीन विनंती नाही
+    $housedStmt = $pdo->prepare("SELECT COUNT(*) FROM residency_occupants WHERE user_id = ? AND status = 'active'");
+    $housedStmt->execute([$user['id']]);
+    $pendingStmt = $pdo->prepare("SELECT COUNT(*) FROM residency_allotment_requests WHERE requested_by = ? AND organization_id = ? AND status IN ('pending','waitlisted')");
+    $pendingStmt->execute([$user['id'], $orgId]);
 
-    if ($reason) {
+    if ((int)$housedStmt->fetchColumn() > 0) {
+        $_SESSION['form_error'] = 'तुम्हाला आधीच निवासस्थान दिलेलं आहे — खोली बदलायची असल्यास रहिवासी विभागाशी संपर्क करा.';
+    } elseif ((int)$pendingStmt->fetchColumn() > 0) {
+        $_SESSION['form_error'] = 'तुमची एक विनंती आधीच प्रलंबित/प्रतीक्षा-यादीत आहे.';
+    } elseif ($reason) {
         $pdo->prepare("INSERT INTO residency_allotment_requests (organization_id, requested_by, preferred_building_id, family_size, reason) VALUES (?, ?, ?, ?, ?)")
             ->execute([$orgId, $user['id'], $buildingId, $familySize, $reason]);
         logActivity('निवास वाटप-विनंती केली', 'residency_allotment_request', $pdo->lastInsertId());
@@ -35,7 +49,7 @@ $roomsStmt = $pdo->prepare("
     SELECT ml.id, ml.name AS room_name, ml.capacity, b.name AS building_name,
       (SELECT COUNT(*) FROM residency_occupants WHERE location_id = ml.id AND status = 'active') AS occupied
     FROM maintenance_locations ml LEFT JOIN buildings b ON b.id = ml.building_id
-    WHERE ml.organization_id = ? AND ml.is_active = 1
+    WHERE ml.organization_id = ? AND ml.is_active = 1 AND ml.is_residential = 1
     ORDER BY b.name, ml.name
 ");
 $roomsStmt->execute([$orgId]);

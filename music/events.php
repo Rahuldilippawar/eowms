@@ -18,7 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     if ($action === 'add_event') {
         $title = trim($_POST['title'] ?? '');
-        $eventType = $_POST['event_type'] ?? 'other';
+        $eventType = in_array($_POST['event_type'] ?? '', ['concert', 'competition', 'annual_function', 'other'], true) ? $_POST['event_type'] : 'other';
         $eventDate = $_POST['event_date'] ?? '';
         $venue = trim($_POST['venue'] ?? '');
         $description = trim($_POST['description'] ?? '');

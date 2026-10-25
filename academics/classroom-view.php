@@ -26,6 +26,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'allocate_student' && $canManageRoster) {
         $studentId = (int)($_POST['student_id'] ?? 0);
+        // विद्यार्थी याच संस्था/College/विभागाचा व Active असला पाहिजे
+        $studChk = $pdo->prepare("SELECT id FROM students WHERE id = ? AND organization_id = ? AND campus_id = ? AND department_id = ? AND is_active = 1");
+        $studChk->execute([$studentId, $orgId, $classroom['campus_id'], $classroom['department_id']]);
+        if (!$studChk->fetch()) {
+            $_SESSION['flash'] = 'अवैध विद्यार्थी — या Classroom च्या College/विभागातला नाही.';
+            header('Location: classroom-view.php?id=' . $classroomId);
+            exit;
+        }
         try {
             $pdo->prepare("INSERT INTO classroom_students (classroom_id, student_id, allocated_by) VALUES (?, ?, ?)")->execute([$classroomId, $studentId, $user['id']]);
             $_SESSION['flash'] = 'विद्यार्थी जोडला गेला.';
@@ -39,7 +47,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($action === 'assign_teacher' && $canManageRoster) {
         $teacherId = (int)($_POST['teacher_id'] ?? 0);
         $subjectName = trim($_POST['subject_name'] ?? '');
-        if ($teacherId && $subjectName) {
+        $teacherChk = $pdo->prepare("SELECT id FROM users WHERE id = ? AND organization_id = ? AND is_active = 1");
+        $teacherChk->execute([$teacherId, $orgId]);
+        if ($teacherId && $subjectName && $teacherChk->fetch()) {
             $pdo->prepare("INSERT INTO classroom_staff (classroom_id, user_id, subject_name, assigned_by) VALUES (?, ?, ?, ?)")->execute([$classroomId, $teacherId, $subjectName, $user['id']]);
             notifyUser($teacherId, $orgId, 'नवीन Classroom नेमणूक', "{$classroom['name']} — $subjectName", 'academics/classroom-view.php?id=' . $classroomId);
             $_SESSION['flash'] = 'शिक्षक नेमले गेले.';

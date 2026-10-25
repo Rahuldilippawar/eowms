@@ -13,7 +13,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt->execute([$student['id']]);
     $row = $stmt->fetch();
 
-    if (!password_verify($currentPassword, $row['password_hash'])) {
+    if (!$row || !password_verify($currentPassword, $row['password_hash'])) {
         $error = 'सध्याचा Password चुकीचा आहे.';
     } elseif (strlen($newPassword) < 6) {
         $error = 'नवीन Password किमान 6 अक्षरांचा असावा.';
@@ -22,6 +22,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         $newHash = password_hash($newPassword, PASSWORD_DEFAULT);
         $pdo->prepare("UPDATE students SET password_hash = ?, must_change_password = 0 WHERE id = ?")->execute([$newHash, $student['id']]);
+        // Session मध्येही बदलतो — नाहीतर header.php पुन्हा इथेच पाठवत राहतो
+        $_SESSION['student']['must_change_password'] = 0;
         $_SESSION['flash'] = 'Password यशस्वीरित्या बदलला गेला.';
         header('Location: dashboard.php');
         exit;

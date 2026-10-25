@@ -27,6 +27,20 @@ function requireStudentLogin($rootPath = '') {
         header('Location: ' . $rootPath . 'login.php');
         exit;
     }
+    // दर मिनिटाला एकदा — विद्यार्थी Deactivate झाला असेल तर Session संपवतो
+    if (time() - (int)($_SESSION['student_checked_at'] ?? 0) >= 60) {
+        global $pdo;
+        $chk = $pdo->prepare("SELECT is_active, must_change_password FROM students WHERE id = ?");
+        $chk->execute([$_SESSION['student']['id']]);
+        $row = $chk->fetch();
+        if (!$row || !(int)$row['is_active']) {
+            unset($_SESSION['student'], $_SESSION['student_checked_at']);
+            header('Location: ' . $rootPath . 'login.php?inactive=1');
+            exit;
+        }
+        $_SESSION['student']['must_change_password'] = (int)$row['must_change_password'];
+        $_SESSION['student_checked_at'] = time();
+    }
 }
 
 // notifyStudent() / notifyClassroomStudents() — includes/classroom-helpers.php मध्ये आहेत (वर require केलं आहे).

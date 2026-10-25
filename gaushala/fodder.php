@@ -26,7 +26,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canManage) {
         $txnDate = ($_POST['transaction_date'] ?? '') ?: date('Y-m-d');
         $remarks = trim($_POST['remarks'] ?? '') ?: null;
 
-        $typeCheckStmt = $pdo->prepare("SELECT current_stock FROM gaushala_fodder_types WHERE id = ? AND organization_id = ?");
+        // Stock एकाच वेळी दोघांनी बदलला तरी चुकू नये — Transaction + Row Lock
+        $pdo->beginTransaction();
+        $typeCheckStmt = $pdo->prepare("SELECT current_stock FROM gaushala_fodder_types WHERE id = ? AND organization_id = ? FOR UPDATE");
         $typeCheckStmt->execute([$typeId, $orgId]);
         $typeRow = $typeCheckStmt->fetch();
 
@@ -36,11 +38,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canManage) {
             } else {
                 $pdo->prepare("INSERT INTO gaushala_fodder_transactions (fodder_type_id, transaction_type, quantity, transaction_date, remarks, recorded_by) VALUES (?, ?, ?, ?, ?, ?)")
                     ->execute([$typeId, $txnType, $quantity, $txnDate, $remarks, $user['id']]);
-                $newStock = $txnType === 'in' ? $typeRow['current_stock'] + $quantity : $typeRow['current_stock'] - $quantity;
-                $pdo->prepare("UPDATE gaushala_fodder_types SET current_stock = ? WHERE id = ?")->execute([$newStock, $typeId]);
+                $pdo->prepare("UPDATE gaushala_fodder_types SET current_stock = current_stock " . ($txnType === 'in' ? '+' : '-') . " ? WHERE id = ?")->execute([$quantity, $typeId]);
                 $_SESSION['flash'] = 'नोंद जतन झाली.';
             }
         }
+        $pdo->commit();
     }
     header('Location: fodder.php');
     exit;

@@ -22,6 +22,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $endTime = $_POST['end_time'] ?? '';
         $purpose = trim($_POST['purpose'] ?? '');
 
+        // खोली याच संस्थेची, तारीख/वेळ योग्य — संपण्याची वेळ सुरुवातीनंतरच
+        $locChk = $pdo->prepare("SELECT COUNT(*) FROM maintenance_locations WHERE id = ? AND organization_id = ? AND is_active = 1");
+        $locChk->execute([$locationId, $orgId]);
+        $validTimes = preg_match('/^\d{4}-\d{2}-\d{2}$/', $bookingDate) && preg_match('/^\d{2}:\d{2}(:\d{2})?$/', $startTime) && preg_match('/^\d{2}:\d{2}(:\d{2})?$/', $endTime);
+        if (!(int)$locChk->fetchColumn() || !$validTimes || strtotime($endTime) <= strtotime($startTime)) {
+            $_SESSION['form_error'] = 'कृपया योग्य खोली, दिनांक व वेळ निवडा — संपण्याची वेळ सुरू होण्याच्या वेळेनंतर हवी.';
+            header('Location: room-booking.php');
+            exit;
+        }
+
         // वेळेचा संघर्ष (Conflict) आहे का तपासतो
         $conflictStmt = $pdo->prepare("
             SELECT COUNT(*) c FROM music_room_bookings

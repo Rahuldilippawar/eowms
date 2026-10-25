@@ -4,6 +4,7 @@ requireLogin('../');
 $user = currentUser();
 
 $id = (int)($_GET['id'] ?? $_POST['id'] ?? 0);
+$orgId = activeOrgId();
 
 $deptCodeCheck = $pdo->prepare("SELECT code FROM departments WHERE id = ?");
 $deptCodeCheck->execute([$user['department_id'] ?? 0]);
@@ -14,6 +15,12 @@ if (!hasPermission('manage_hostel_students') && $userDeptCode !== 'HOS') {
     die(t('s471'));
 }
 
+// विद्यार्थी याच संस्थेच्या Hostel चा असला पाहिजे
+$ownStmt = $pdo->prepare("SELECT hs.id, hs.hostel_id, hs.is_active FROM hostel_students hs JOIN hostels h ON h.id = hs.hostel_id WHERE hs.id = ? AND h.organization_id = ?");
+$ownStmt->execute([$id, $orgId]);
+$ownRow = $ownStmt->fetch();
+if (!$ownRow) { http_response_code(404); die(t('s473')); }
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $name = trim($_POST['name'] ?? '');
     $school = trim($_POST['school_name'] ?? '') ?: null;
@@ -21,8 +28,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $district = trim($_POST['district'] ?? '') ?: null;
     $gender = $_POST['gender'] ?? null;
     $admissionDate = ($_POST['admission_date'] ?? '') ?: null;
-    $isActive = (int)($_POST['is_active'] ?? 1);
-    $hostelId = (int)($_POST['hostel_id'] ?? 0);
+    $isActive = (int)($_POST['is_active'] ?? 1) ? 1 : 0;
+    $hostelId = (int)$ownRow['hostel_id'];
+    if (!in_array($gender, ['मुलगा', 'मुलगी'], true)) { $gender = null; }
     $dateOfBirth = ($_POST['date_of_birth'] ?? '') ?: null;
 
     $photoPath = null;
@@ -40,6 +48,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $stmt = $pdo->prepare("UPDATE hostel_students SET name=?, school_name=?, class_grade=?, district=?, gender=?, admission_date=?, is_active=?, date_of_birth=?, photo_path=COALESCE(?, photo_path) WHERE id=?");
     $stmt->execute([$name, $school, $classGrade, $district, $gender, $admissionDate, $isActive, $dateOfBirth, $photoPath, $id]);
+    // Inactive केलं — खोलीचं वाटपही संपवतो (बेड रिकामा दिसावा)
+    if (!$isActive) {
+        $pdo->prepare("UPDATE hostel_room_allocations SET status = 'vacated', vacated_date = CURDATE() WHERE student_id = ? AND status = 'active'")->execute([$id]);
+    }
 
     $_SESSION['flash'] = t('s472');
     header('Location: dashboard.php?id=' . $hostelId);

@@ -21,6 +21,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canManageThis) {
         $title = trim($_POST['title'] ?? '');
         $assignedTo = ($_POST['assigned_to'] ?? '') !== '' ? (int)$_POST['assigned_to'] : null;
         $dueDate = ($_POST['due_date'] ?? '') ?: null;
+        if ($assignedTo) {
+            $aChk = $pdo->prepare("SELECT COUNT(*) FROM users WHERE id = ? AND organization_id = ?");
+            $aChk->execute([$assignedTo, $orgId]);
+            if (!(int)$aChk->fetchColumn()) { $assignedTo = null; }
+        }
         if ($title) {
             $pdo->prepare("INSERT INTO event_tasks (event_id, title, assigned_to, due_date) VALUES (?, ?, ?, ?)")->execute([$eventId, $title, $assignedTo, $dueDate]);
             if ($assignedTo) { notifyUser($assignedTo, $orgId, '🎉 कार्यक्रमाचं काम नेमून दिलं', "{$event['name']} — $title", 'events/view.php?id=' . $eventId); }
@@ -28,6 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canManageThis) {
     } elseif ($action === 'update_task_status') {
         $taskId = (int)($_POST['task_id'] ?? 0);
         $status = $_POST['status'] ?? 'pending';
+        if (!in_array($status, ['pending', 'in_progress', 'done'], true)) { header('Location: view.php?id=' . $eventId); exit; }
         $pdo->prepare("UPDATE event_tasks SET status = ? WHERE id = ? AND event_id = ?")->execute([$status, $taskId, $eventId]);
         if ($status === 'done') { $_SESSION['celebrate_task'] = true; }
     } elseif ($action === 'add_budget_item') {
@@ -51,13 +57,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canManageThis) {
             }
         }
     } elseif ($action === 'update_status') {
-        $newStatus = $_POST['new_status'] ?? 'planned';
-        $actualAmount = ($_POST['budget_actual'] ?? '') !== '' ? (float)$_POST['budget_actual'] : null;
+        $newStatus = in_array($_POST['new_status'] ?? '', ['planned', 'ongoing', 'completed', 'cancelled'], true) ? $_POST['new_status'] : $event['status'];
+        // खर्चाचं Field रिकामं ठेवलं तर आधीची रक्कम तशीच ठेवतो (पुसत नाही)
+        $actualAmount = ($_POST['budget_actual'] ?? '') !== '' ? (float)$_POST['budget_actual'] : $event['budget_actual'];
         $pdo->prepare("UPDATE events SET status = ?, budget_actual = ? WHERE id = ? AND organization_id = ?")->execute([$newStatus, $actualAmount, $eventId, $orgId]);
     } elseif ($action === 'mark_attendance') {
         $attendeeType = $_POST['attendee_type'] ?? 'staff';
         if ($attendeeType === 'staff' && !empty($_POST['user_id'])) {
-            $pdo->prepare("INSERT INTO event_attendance (event_id, attendee_type, user_id, marked_by) VALUES (?, 'staff', ?, ?)")->execute([$eventId, (int)$_POST['user_id'], $user['id']]);
+            // एकाच कर्मचाऱ्याची दुहेरी नोंद नको; कर्मचारी याच संस्थेचा असावा
+            $attChk = $pdo->prepare("SELECT (SELECT COUNT(*) FROM users WHERE id = ? AND organization_id = ?) AS in_org, (SELECT COUNT(*) FROM event_attendance WHERE event_id = ? AND user_id = ?) AS dup");
+            $attChk->execute([(int)$_POST['user_id'], $orgId, $eventId, (int)$_POST['user_id']]);
+            $attRow = $attChk->fetch();
+            if ((int)$attRow['in_org'] && !(int)$attRow['dup']) {
+                $pdo->prepare("INSERT IGNORE INTO event_attendance (event_id, attendee_type, user_id, marked_by) VALUES (?, 'staff', ?, ?)")->execute([$eventId, (int)$_POST['user_id'], $user['id']]);
+            } elseif ((int)$attRow['dup']) {
+                $_SESSION['flash'] = 'या कर्मचाऱ्याची उपस्थिती आधीच नोंदलेली आहे.';
+            }
         } elseif ($attendeeType === 'guest' && !empty($_POST['guest_name'])) {
             $pdo->prepare("INSERT INTO event_attendance (event_id, attendee_type, guest_name, marked_by) VALUES (?, 'guest', ?, ?)")->execute([$eventId, trim($_POST['guest_name']), $user['id']]);
         }
@@ -66,8 +81,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canManageThis) {
         $pdo->prepare("DELETE FROM event_attendance WHERE id = ? AND event_id = ?")->execute([$attId, $eventId]);
     } elseif ($action === 'set_recurring') {
         $isRecurring = isset($_POST['is_recurring']) ? 1 : 0;
-        $pattern = $isRecurring ? ($_POST['recurrence_pattern'] ?? 'yearly') : null;
+        $pattern = $isRecurring ? (($_POST['recurrence_pattern'] ?? '') === 'monthly' ? 'monthly' : 'yearly') : null;
         $pdo->prepare("UPDATE events SET is_recurring = ?, recurrence_pattern = ? WHERE id = ? AND organization_id = ?")->execute([$isRecurring, $pattern, $eventId, $orgId]);
+    } elseif ($action === 'edit_event' && $canManage) {
+        $name = trim($_POST['name'] ?? '');
+        $eventDate = $_POST['event_date'] ?? '';
+        $responsibleUserId = ($_POST['responsible_user_id'] ?? '') !== '' ? (int)$_POST['responsible_user_id'] : null;
+        if ($responsibleUserId) {
+            $rChk = $pdo->prepare("SELECT COUNT(*) FROM users WHERE id = ? AND organization_id = ?");
+            $rChk->execute([$responsibleUserId, $orgId]);
+            if (!(int)$rChk->fetchColumn()) { $responsibleUserId = null; }
+        }
+        if ($name && preg_match('/^\d{4}-\d{2}-\d{2}$/', $eventDate)) {
+            $pdo->prepare("UPDATE events SET name = ?, description = ?, event_date = ?, start_time = ?, end_time = ?, venue = ?, responsible_user_id = ?, budget_estimated = ? WHERE id = ? AND organization_id = ?")
+                ->execute([$name, trim($_POST['description'] ?? ''), $eventDate, ($_POST['start_time'] ?? '') ?: null, ($_POST['end_time'] ?? '') ?: null,
+                    trim($_POST['venue'] ?? '') ?: null, $responsibleUserId, ($_POST['budget_estimated'] ?? '') !== '' ? (float)$_POST['budget_estimated'] : null, $eventId, $orgId]);
+            if ($responsibleUserId && $responsibleUserId !== (int)$event['responsible_user_id']) {
+                notifyUser($responsibleUserId, $orgId, '🎉 नवीन कार्यक्रमाची जबाबदारी', "$name — " . date('d M Y', strtotime($eventDate)), 'events/view.php?id=' . $eventId);
+            }
+            logActivity('कार्यक्रम बदलला', 'events', $eventId, $name);
+            $_SESSION['flash'] = 'कार्यक्रम Update झाला.';
+        }
+    } elseif ($action === 'delete_event' && $canManage) {
+        $pdo->prepare("DELETE FROM events WHERE id = ? AND organization_id = ?")->execute([$eventId, $orgId]);
+        logActivity('कार्यक्रम काढला', 'events', $eventId, $event['name']);
+        $_SESSION['flash'] = 'कार्यक्रम काढला गेला.';
+        header('Location: index.php');
+        exit;
     }
     header('Location: view.php?id=' . $eventId);
     exit;
@@ -109,6 +149,42 @@ $taskStatusLabels = ['pending' => '⏳ बाकी', 'in_progress' => '🔄 स
   <a href="index.php" style="font-size:12.5px;color:var(--rail);font-weight:600;text-decoration:none;align-self:center;"><i class="fa-solid fa-arrow-left me-1"></i>सर्व कार्यक्रम</a>
 </div>
 <p style="font-size:12.5px;color:var(--text-dim);margin-bottom:20px;">📅 <?= date('d M Y', strtotime($event['event_date'])) ?><?= $event['venue'] ? ' · 📍 ' . h($event['venue']) : '' ?><?= $event['responsible_name'] ? ' · 👤 ' . h($event['responsible_name']) : '' ?></p>
+
+<?php if (!empty($_SESSION['flash'])): ?>
+  <div class="alert alert-success" style="border-radius:10px;font-size:13px;"><?= h($_SESSION['flash']) ?></div>
+  <?php unset($_SESSION['flash']); ?>
+<?php endif; ?>
+
+<?php if ($canManage): ?>
+<details class="panel mb-4" style="padding:12px 20px;">
+  <summary style="cursor:pointer;font-size:13px;font-weight:600;">✏️ कार्यक्रम बदला / काढा</summary>
+  <form method="POST" class="mt-3">
+    <input type="hidden" name="action" value="edit_event">
+    <div class="row g-2">
+      <div class="col-md-5"><label class="form-label-custom">नाव</label><input type="text" name="name" class="form-control-custom" value="<?= h($event['name']) ?>" required></div>
+      <div class="col-md-3"><label class="form-label-custom">दिनांक</label><input type="date" name="event_date" class="form-control-custom" value="<?= h($event['event_date']) ?>" required></div>
+      <div class="col-md-2"><label class="form-label-custom">सुरू</label><input type="time" name="start_time" class="form-control-custom" value="<?= h($event['start_time']) ?>"></div>
+      <div class="col-md-2"><label class="form-label-custom">संपेल</label><input type="time" name="end_time" class="form-control-custom" value="<?= h($event['end_time']) ?>"></div>
+      <div class="col-md-4"><label class="form-label-custom">ठिकाण</label><input type="text" name="venue" class="form-control-custom" value="<?= h($event['venue']) ?>"></div>
+      <div class="col-md-4"><label class="form-label-custom">जबाबदार व्यक्ती</label>
+        <select name="responsible_user_id" class="form-select-custom">
+          <option value="">-- नाही --</option>
+          <?php foreach ($allStaffForTask as $st): ?><option value="<?= $st['id'] ?>" <?= (int)$event['responsible_user_id'] === (int)$st['id'] ? 'selected' : '' ?>><?= h($st['name']) ?></option><?php endforeach; ?>
+        </select>
+      </div>
+      <div class="col-md-4"><label class="form-label-custom">अंदाजित Budget</label><input type="number" step="0.01" name="budget_estimated" class="form-control-custom" value="<?= h($event['budget_estimated']) ?>"></div>
+      <div class="col-12"><label class="form-label-custom">माहिती</label><textarea name="description" class="form-control-custom" rows="2"><?= h($event['description']) ?></textarea></div>
+    </div>
+    <div class="d-flex justify-content-between mt-2">
+      <button type="submit" form="eventDeleteForm" class="btn btn-sm" style="border:1px solid var(--rose);color:var(--rose);border-radius:7px;font-size:12px;">🗑️ कार्यक्रम काढा</button>
+      <button type="submit" class="btn btn-sm" style="background:var(--rail);color:#fff;border-radius:7px;font-size:12px;padding:6px 18px;">जतन करा</button>
+    </div>
+  </form>
+  <form method="POST" id="eventDeleteForm" onsubmit="return confirm('हा कार्यक्रम व त्याची सगळी कामं, Budget, उपस्थिती, Photos काढायचे?');">
+    <input type="hidden" name="action" value="delete_event">
+  </form>
+</details>
+<?php endif; ?>
 
 <?php if ($canManageThis): ?>
 <div class="panel mb-4">

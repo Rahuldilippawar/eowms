@@ -17,7 +17,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canManage) {
         $method = in_array($_POST['breeding_method'] ?? '', ['Natural', 'Artificial Insemination'], true) ? $_POST['breeding_method'] : 'Natural';
         $expectedCalving = ($_POST['expected_calving_date'] ?? '') ?: null;
         $remarks = trim($_POST['remarks'] ?? '') ?: null;
-        if ($cattleId && $breedingDate) {
+        // गाय याच संस्थेची, Active मादी असली पाहिजे
+        $cowChk = $pdo->prepare("SELECT COUNT(*) FROM gaushala_cattle WHERE id = ? AND organization_id = ? AND status = 'active' AND gender = 'Female'");
+        $cowChk->execute([$cattleId, $orgId]);
+        if ($cattleId && $breedingDate && (int)$cowChk->fetchColumn() > 0) {
             $pdo->prepare("INSERT INTO gaushala_breeding_records (cattle_id, breeding_date, breeding_method, expected_calving_date, remarks, recorded_by) VALUES (?, ?, ?, ?, ?, ?)")
                 ->execute([$cattleId, $breedingDate, $method, $expectedCalving, $remarks, $user['id']]);
             $_SESSION['flash'] = 'प्रजनन-नोंद जोडली गेली.';
@@ -25,13 +28,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canManage) {
     } elseif ($action === 'record_calving') {
         $breedingId = (int)($_POST['breeding_id'] ?? 0);
         $actualCalvingDate = ($_POST['actual_calving_date'] ?? '') ?: date('Y-m-d');
-        $status = $_POST['calving_status'] ?? 'delivered';
+        $status = in_array($_POST['calving_status'] ?? '', ['delivered', 'miscarriage'], true) ? $_POST['calving_status'] : 'delivered';
         $createNewCalf = isset($_POST['create_calf']);
 
-        $breedingStmt = $pdo->prepare("SELECT gb.*, gc.campus_id, gc.breed AS mother_breed, gc.color AS mother_color FROM gaushala_breeding_records gb JOIN gaushala_cattle gc ON gc.id = gb.cattle_id WHERE gb.id = ?");
-        $breedingStmt->execute([$breedingId]);
+        $breedingStmt = $pdo->prepare("SELECT gb.*, gc.campus_id, gc.breed AS mother_breed, gc.color AS mother_color FROM gaushala_breeding_records gb JOIN gaushala_cattle gc ON gc.id = gb.cattle_id WHERE gb.id = ? AND gc.organization_id = ?");
+        $breedingStmt->execute([$breedingId, $orgId]);
         $breeding = $breedingStmt->fetch();
 
+        if (!$breeding) { header('Location: breeding.php'); exit; }
         $newCalfId = null;
         if ($breeding && $createNewCalf && $status === 'delivered') {
             $calfTag = trim($_POST['calf_tag_number'] ?? '') ?: null;
