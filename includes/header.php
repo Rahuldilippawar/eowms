@@ -149,9 +149,11 @@ if (hasRole('super_admin')) {
   <script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async></script>
 
   <div class="content">
-    <?php if (!empty($_SESSION['flash'])): ?>
-      <div class="alert alert-success" style="border-radius:10px;font-size:13.5px;"><?= h($_SESSION['flash']) ?></div>
-      <?php unset($_SESSION['flash']); ?>
+    <?php if (!empty($_SESSION['flash'])):
+      // बरीच Pages चुकीचे संदेशही 'flash' मधूनच पाठवतात — असा संदेश हिरव्या ऐवजी पिवळ्या Banner मध्ये
+      $flashIsError = !empty($_SESSION['flash_error']) || preg_match('/^(⚠️|❌)|अवैध|त्रुटी|सापडल[ाीे] नाही|झाल[ाेंी]* नाही|झाले नाहीत|करता येत नाही|बदलता येत नाही|परवानगी नाही|आवश्यक आहे/u', $_SESSION['flash']); ?>
+      <div class="alert <?= $flashIsError ? 'alert-warning' : 'alert-success' ?>" style="border-radius:10px;font-size:13.5px;"><?= h($_SESSION['flash']) ?></div>
+      <?php unset($_SESSION['flash'], $_SESSION['flash_error']); ?>
     <?php endif; ?>
     <?php if (!empty($_SESSION['budget_warning'])): // विभाग Finance — नवीन खर्चाने Budget ओलांडलं ?>
       <div class="alert alert-warning" style="border-radius:10px;font-size:13.5px;"><?= h($_SESSION['budget_warning']) ?></div>

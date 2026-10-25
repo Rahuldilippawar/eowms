@@ -27,6 +27,7 @@ if (!$req) {
 $entryType = $req['entry_type'];
 $entryId = (int)$req['entry_id'];
 $vehicleId = (int)$req['vehicle_id'];
+$oldReading = vehicleEntryReading($pdo, $req['entry_type'], (int)$req['entry_id']);
 
 if ($action === 'save') {
     $validDate = fn($d) => (bool)DateTime::createFromFormat('!Y-m-d', (string)$d);
@@ -75,7 +76,7 @@ if ($action === 'save') {
 
     // मीटर-वाचन बदललं असेल — वाहनाचं सध्याचं मीटर पुन्हा मोजतो
     if ($entryType !== 'maintenance') {
-        vehicleRecomputeOdometer($pdo, $vehicleId);
+        vehicleRecomputeOdometer($pdo, $vehicleId, $oldReading);
     }
 
     $pdo->prepare("UPDATE vehicle_correction_requests SET status='approved', reviewed_by=?, reviewed_at=NOW() WHERE id=?")->execute([$user['id'], $requestId]);

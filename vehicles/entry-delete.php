@@ -28,10 +28,11 @@ if (!$req || !isset($tableMap[$req['entry_type']])) {
 $entryType = $req['entry_type'];
 $entryId = (int)$req['entry_id'];
 $vehicleId = (int)$req['vehicle_id'];
+$oldReading = vehicleEntryReading($pdo, $req['entry_type'], (int)$req['entry_id']);
 
 $pdo->prepare("DELETE FROM {$tableMap[$entryType]} WHERE id = ? AND vehicle_id = ?")->execute([$entryId, $vehicleId]);
 if ($entryType !== 'maintenance') {
-    vehicleRecomputeOdometer($pdo, $vehicleId);
+    vehicleRecomputeOdometer($pdo, $vehicleId, $oldReading);
 }
 // इंधन/देखभाल नोंद काढली — तिचा खर्च Budget मधून परत
 $budgetSourceMap = ['fuel' => 'vehicle_fuel_log', 'maintenance' => 'vehicle_maintenance_log'];

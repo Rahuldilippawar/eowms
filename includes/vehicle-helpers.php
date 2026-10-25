@@ -58,7 +58,7 @@ function vehicleRenewalFieldLabel($field) {
  * ट्रिप/इंधन नोंद दुरुस्त/डिलीट केल्यावर — वाहनाचं "सध्याचं मीटर" उरलेल्या
  * नोंदींमधल्या सर्वात मोठ्या वाचनावरून पुन्हा मोजतो (नोंदच नसेल तर बदलत नाही).
  */
-function vehicleRecomputeOdometer($pdo, $vehicleId) {
+function vehicleRecomputeOdometer($pdo, $vehicleId, $oldReading = null) {
     $stmt = $pdo->prepare("
         SELECT MAX(r) m FROM (
             SELECT GREATEST(COALESCE(end_odometer, 0), COALESCE(start_odometer, 0)) r FROM vehicle_trips WHERE vehicle_id = ?
@@ -68,9 +68,31 @@ function vehicleRecomputeOdometer($pdo, $vehicleId) {
     ");
     $stmt->execute([$vehicleId, $vehicleId]);
     $max = $stmt->fetch()['m'] ?? null;
+    $curStmt = $pdo->prepare("SELECT current_odometer FROM vehicles WHERE id = ?");
+    $curStmt->execute([$vehicleId]);
+    $current = (float)$curStmt->fetchColumn();
+    // दुरुस्त/डिलीट झालेली नोंद सध्याच्या मीटरपेक्षा कमी होती — म्हणजे सध्याचं मीटर
+    // त्या नोंदीवरून आलेलं नाही (उदा. वाहन-Form मध्ये हाताने टाकलेलं), ते कमी करत नाही
+    if ($oldReading !== null && (float)$oldReading < $current) {
+        $max = max($current, (float)$max);
+    }
     if ($max !== null) {
         $pdo->prepare("UPDATE vehicles SET current_odometer = ? WHERE id = ?")->execute([$max, $vehicleId]);
     }
+}
+
+/** ट्रिप/इंधन नोंदीचं मीटर-वाचन (दुरुस्ती आधी लक्षात ठेवण्यासाठी) */
+function vehicleEntryReading($pdo, $entryType, $entryId) {
+    if ($entryType === 'trip') {
+        $stmt = $pdo->prepare("SELECT GREATEST(COALESCE(end_odometer, 0), COALESCE(start_odometer, 0)) FROM vehicle_trips WHERE id = ?");
+    } elseif ($entryType === 'fuel') {
+        $stmt = $pdo->prepare("SELECT odometer_reading FROM vehicle_fuel_log WHERE id = ?");
+    } else {
+        return null;
+    }
+    $stmt->execute([$entryId]);
+    $r = $stmt->fetchColumn();
+    return $r === false ? null : (float)$r;
 }
 
 /** वाहन यादी/नवीन वाहन/Import — Super Admin किंवा manage_vehicles Permission (सगळीकडे हाच नियम) */
