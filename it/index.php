@@ -27,7 +27,7 @@ try {
     $pendingTicketsStmt->execute([$orgId]);
     $pendingTickets = (int)$pendingTicketsStmt->fetch()['c'];
     try {
-        $pendingGeneralStmt = $pdo->prepare("SELECT COUNT(*) c FROM it_general_requests WHERE organization_id = ? AND status NOT IN ('resolved','closed')");
+        $pendingGeneralStmt = $pdo->prepare("SELECT COUNT(*) c FROM work_requests WHERE organization_id = ? AND category = 'it' AND status IN ('pending','in_progress')");
         $pendingGeneralStmt->execute([$orgId]);
         $pendingTickets += (int)$pendingGeneralStmt->fetch()['c'];
     } catch (PDOException $e) { /* table not migrated yet */ }
