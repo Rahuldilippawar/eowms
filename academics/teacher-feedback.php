@@ -16,6 +16,11 @@ $teacherStmt->execute($teacherParams);
 $allTeachers = $canManage ? $teacherStmt->fetchAll() : [];
 $allowedIds = array_map('intval', array_column($allTeachers, 'id'));
 
+// शिक्षक (कुठल्यातरी Classroom मध्ये नेमलेले) किंवा व्यवस्थापकच
+$isTeacherStmt = $pdo->prepare("SELECT COUNT(*) FROM classroom_staff cs JOIN virtual_classrooms vc ON vc.id = cs.classroom_id WHERE cs.user_id = ? AND vc.organization_id = ?");
+$isTeacherStmt->execute([$user['id'], $orgId]);
+if (!$canManage && !(int)$isTeacherStmt->fetchColumn()) { http_response_code(403); die('परवानगी नाही.'); }
+
 $viewTeacherId = $canManage && !empty($_GET['teacher_id']) ? (int)$_GET['teacher_id'] : (int)$user['id'];
 if ($viewTeacherId !== (int)$user['id'] && !in_array($viewTeacherId, $allowedIds, true)) { http_response_code(403); die('परवानगी नाही.'); }
 
