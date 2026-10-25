@@ -16,6 +16,10 @@ export interface CurrentUser {
   organizations: OrganizationSummary[]
   /** Permission keys in the current organization — UI hints only; the API enforces them. */
   permissions: string[]
+  /** Modules the organization switched off (menu entries are hidden). */
+  disabled_modules?: string[]
+  /** Imported or reset accounts must set their own password first. */
+  must_change_password?: boolean
 }
 
 export interface LoginInput {

@@ -1,6 +1,6 @@
 import * as Dialog from '@radix-ui/react-dialog'
 import * as Dropdown from '@radix-ui/react-dropdown-menu'
-import { LogOut, Menu, UserCircle, X } from 'lucide-react'
+import { KeyRound, LogOut, Menu, UserCircle, UserRound, X } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Outlet, useNavigate } from 'react-router-dom'
@@ -88,6 +88,20 @@ export function AppLayout() {
               >
                 <div className="px-3 py-2 text-xs text-slate-500">{user?.email}</div>
                 <Dropdown.Separator className="my-1 h-px bg-slate-200 dark:bg-slate-700" />
+                <Dropdown.Item
+                  onSelect={() => navigate('/my/profile')}
+                  className="flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm outline-none data-[highlighted]:bg-slate-100 dark:data-[highlighted]:bg-slate-800"
+                >
+                  <UserRound aria-hidden className="size-4" />
+                  {t('nav.myProfile')}
+                </Dropdown.Item>
+                <Dropdown.Item
+                  onSelect={() => navigate('/account/password')}
+                  className="flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm outline-none data-[highlighted]:bg-slate-100 dark:data-[highlighted]:bg-slate-800"
+                >
+                  <KeyRound aria-hidden className="size-4" />
+                  {t('account.changePassword')}
+                </Dropdown.Item>
                 <Dropdown.Item
                   onSelect={() => void onLogout()}
                   className="flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm outline-none data-[highlighted]:bg-slate-100 dark:data-[highlighted]:bg-slate-800"

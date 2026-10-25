@@ -1,6 +1,6 @@
 # Dynamic Multi-Organization ERP — Phase 1 Plan
 
-Status: **approved**. Phase 1 (setup & architecture) is in `erp/` — see `erp/README.md`.
+Status: **approved**, phases 1–5 done (see `erp/README.md`). Old-app parity: [`PARITY.md`](PARITY.md).
 
 ## 1. What exists today (inspection result)
 
@@ -81,20 +81,28 @@ erp/
    departments, users, roles/permissions/scopes schema; login/logout, password reset, rate
    limiting, activation; TenantScope + policies; cross-tenant tests with manipulated ids.
 3. **Organizations, institutions, departments, users, roles UI** — full CRUD + role editor.
-4. **Dashboard, employees, students, attendance, leave.**
-5. **Daily work, tasks, notifications, performance reports.**
+4. **Dashboard, employees, students, attendance, leave.** ✅
+5. **Daily work, tasks, notifications, performance reports.** ✅
+   - **5A. Parity for people, attendance and work** (old-app features of modules already moved):
+     HR profile fields, photo, documents, family, achievements, staff import, ID cards with QR
+     verification, module on/off per organization, own profile + forced password change;
+     holidays + weekly offs, per-employee shifts, leave balances, monthly grid / calendar,
+     attendance certificate, movement and salary reports, biometric devices (ZKTeco push), daily
+     crons (mark absent, pattern alert, birthdays); student fields + import; daily-work team,
+     photos, custom fields and import; task cost. Split into two PRs (5A-1, 5A-2).
 6. **Correspondence, approval engine, signature events, PDF + QR verification.**
 7. **Renewals and financial reports.**
-8. **Hostel, transport, fuel, maintenance tickets.**
-9. **Assets, inventory ledger, purchasing, vendors.**
+8. **Hostel, residency, transport, fuel, maintenance, work requests, grievances.**
+9. **Assets, inventory ledger, purchasing, vendors, IT, CCTV.**
 10. **Global search, reports/exports, audit log viewer, backup / reset / restore.**
 11. **Security review, test completion, docs, staging deploy verification, old-data importer,
-    cutover plan.**
+    cutover plan, PWA / push / WebAuthn.**
+12. **Announcements, documents, SOS, messages, suggestions, help, guests, room booking, events, SOP.**
+13. **Gaushala, music, meditation / satsang.**
+14. **Academics (virtual classrooms) and the student portal.**
 
-Modules that exist today but are not in the master prompt (gaushala, music, meditation,
-events, guests, room booking, SOP, residency, SOS, biometric devices) are **not dropped**:
-they stay in the old app until cutover and get their own phase(s) after phase 11, or the owner
-decides which to retire.
+Every old module is mapped in [`PARITY.md`](PARITY.md): the owner asked that the whole old app
+moves to the ERP, so nothing is retired without the owner saying so.
 
 ## 4. Risks and constraints
 

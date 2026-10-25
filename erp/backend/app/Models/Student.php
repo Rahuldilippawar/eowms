@@ -13,12 +13,12 @@ class Student extends Model
 
     protected $fillable = [
         'organization_id', 'institution_id', 'department_id', 'student_code', 'name', 'class_name', 'section',
-        'gender', 'date_of_birth', 'admission_date', 'guardian_name', 'guardian_phone', 'is_active',
+        'gender', 'date_of_birth', 'admission_date', 'guardian_name', 'guardian_phone', 'is_active', 'custom',
     ];
 
     protected function casts(): array
     {
-        return ['date_of_birth' => 'date', 'admission_date' => 'date', 'is_active' => 'boolean'];
+        return ['date_of_birth' => 'date', 'admission_date' => 'date', 'is_active' => 'boolean', 'custom' => 'array'];
     }
 
     public function institution(): BelongsTo

@@ -115,3 +115,31 @@ Rules behind these endpoints: [`WORK-AND-TASKS.md`](WORK-AND-TASKS.md).
 | GET | `/performance` | `performance.view` (+ `performance.export` for `format=csv`) | Query `from, to, department_id?, institution_id?, search?, page` |
 
 `GET /dashboard` adds `my_open_tasks`, `tasks_to_verify` and `overdue_tasks` (needs `tasks.view`).
+
+## Phase 5A-1 — staff profiles, import, ID cards, custom fields, modules
+
+Rules: [`PEOPLE.md`](PEOPLE.md).
+
+| Method | Path | Permission | Notes |
+|---|---|---|---|
+| POST | `/auth/change-password` | signed in | `current_password, password, password_confirmation`; clears a forced change; 10/min |
+| GET / PUT | `/me/profile` | own employee record | PUT: `whatsapp, local_address, permanent_address, blood_group, emergency_contact_*` only |
+| GET / PUT | `/employees/{id}/profile` | view: in scope or self · edit: `employees.edit` | HR fields + `custom`; response has `can`, `documents`, `family_members`, `achievements`, and `private` (masked) when allowed |
+| PUT | `/employees/{id}/private` | `employees.sensitive` in scope | Aadhaar / bank are replaced only when sent |
+| POST | `/employees/{id}/private/reveal` | `employees.sensitive` in scope or self | Full numbers; audited; 20/min |
+| GET / POST | `/employees/{id}/photo` | view / edit or self | jpg, png, webp ≤ 2 MB, ≥ 100×100 |
+| POST | `/employees/{id}/documents` | edit or self | multipart `document_type, title?, file` (pdf/jpg/png ≤ 5 MB) |
+| GET / DELETE | `/employee-documents/{id}` | view / edit or own upload | Download is audited |
+| POST / PUT / DELETE | `/employees/{id}/family[/{member}]` | edit or self | `name, relation, date_of_birth?, phone?, lives_on_campus?` |
+| POST / DELETE | `/employees/{id}/achievements[/{id}]` | `employees.edit` | `title, description?, achieved_on?` |
+| GET | `/employees/import/template` | `employees.create` | CSV |
+| POST | `/employees/import/preview`, `/employees/import` | `employees.create` | multipart `file`; import is all or nothing (422 with `rows` when any row fails) |
+| POST | `/employees/id-cards` | `employees.view` | `ids[]` or `department_id` |
+| POST | `/employees/bulk-move` | `employees.edit` | `employee_ids[], department_id, reason?` |
+| GET | `/public/employees/{token}`, `/public/employees/{token}/photo` | public, 30/min | ID-card check |
+| GET | `/custom-fields/active?entity=` | signed in | Fields of one form |
+| GET / POST / PUT | `/custom-fields[/{id}]` | `organizations.edit` (organization scope) | `entity, key, label, type, options?, is_required, sort_order, is_active` |
+| GET / PUT | `/organization/modules` | PUT: `organizations.edit` (organization scope) | `disabled: []` |
+
+`/auth/me` now includes `disabled_modules` and `must_change_password`. Student and work-entry forms
+accept `custom` (their organization-defined fields).

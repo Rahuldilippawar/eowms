@@ -16,11 +16,13 @@ import { splitServerErrors } from '@/features/admin/serverErrors'
 import { fetchMyEmployee } from '@/features/attendance/api'
 import { useAuth } from '@/features/auth/AuthProvider'
 import { addDays, formatDate, todayYmd } from '@/lib/format'
+import { CustomFieldInputs } from '@/features/people/CustomFieldInputs'
+import type { CustomValues } from '@/features/people/profileApi'
 import { deleteWork, fetchMyOpenTasks, fetchMyWork, saveWork, type WorkEntry, type WorkInput, type WorkStatus } from './api'
 import { WorkStatusBadge } from './WorkStatusBadge'
 
-const FIELDS = ['work_date', 'title', 'description', 'hours', 'status', 'task_id'] as const
-const blank = (date: string): Form => ({ work_date: date, title: '', description: '', hours: '', status: 'completed', task_id: '' })
+const FIELDS = ['custom', 'work_date', 'title', 'description', 'hours', 'status', 'task_id'] as const
+const blank = (date: string): Form => ({ work_date: date, title: '', description: '', hours: '', status: 'completed', task_id: '', custom: {} })
 
 interface Form {
   work_date: string
@@ -29,6 +31,7 @@ interface Form {
   hours: string
   status: WorkStatus
   task_id: string
+  custom: CustomValues
 }
 
 function WorkForm({ editing, onDone, today, editDays }: { editing: WorkEntry | null; onDone: () => void; today: string; editDays: number }) {
@@ -39,7 +42,7 @@ function WorkForm({ editing, onDone, today, editDays }: { editing: WorkEntry | n
   const tasks = useQuery({ queryKey: ['my-open-tasks', user?.current_organization?.id], queryFn: fetchMyOpenTasks })
   const [v, setV] = useState<Form>(() =>
     editing
-      ? { work_date: editing.work_date, title: editing.title, description: editing.description ?? '', hours: editing.hours?.toString() ?? '', status: editing.status, task_id: editing.task?.id.toString() ?? '' }
+      ? { work_date: editing.work_date, title: editing.title, description: editing.description ?? '', hours: editing.hours?.toString() ?? '', status: editing.status, task_id: editing.task?.id.toString() ?? '', custom: editing.custom ?? {} }
       : blank(today),
   )
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -54,6 +57,7 @@ function WorkForm({ editing, onDone, today, editDays }: { editing: WorkEntry | n
         hours: v.hours === '' ? null : Number(v.hours),
         status: v.status,
         task_id: v.task_id ? Number(v.task_id) : null,
+        custom: v.custom,
       }
       return saveWork(editing?.id ?? null, input)
     },
@@ -137,6 +141,7 @@ function WorkForm({ editing, onDone, today, editDays }: { editing: WorkEntry | n
           <Textarea id="w-desc" value={v.description} maxLength={5000} onChange={(e) => setV({ ...v, description: e.target.value })} />
         </Field>
       </div>
+      <CustomFieldInputs entity="work_entry" values={v.custom} onChange={(custom) => setV({ ...v, custom })} errors={errors} />
       <div className="flex gap-2 sm:col-span-2">
         <Button type="submit" disabled={save.isPending}>
           {save.isPending ? <Spinner label={t('common.saving')} /> : t('common.save')}

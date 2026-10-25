@@ -65,7 +65,9 @@
     "confirmPassword": "पासवर्ड पुन्हा लिहा",
     "resetSubmit": "पासवर्ड बदला",
     "saving": "जतन होत आहे…",
-    "requestNewLink": "नवीन लिंक मागवा"
+    "requestNewLink": "नवीन लिंक मागवा",
+    "passwordRule": "किमान 8 अक्षरे, त्यात एक अक्षर आणि एक अंक.",
+    "passwordMismatch": "दोन्ही पासवर्ड जुळत नाहीत."
   },
   "nav": {
     "dashboard": "डॅशबोर्ड",
@@ -89,7 +91,9 @@
     "myWork": "माझे काम",
     "tasks": "कामे (टास्क)",
     "performance": "कामगिरी",
-    "teamWork": "टीमचे दैनंदिन काम"
+    "teamWork": "टीमचे दैनंदिन काम",
+    "myProfile": "माझे प्रोफाइल",
+    "customFields": "सानुकूल फील्ड्स"
   },
   "dashboard": {
     "welcome": "नमस्कार, {{name}}",
@@ -168,7 +172,8 @@
   "form": {
     "required": "हे आवश्यक आहे",
     "codeFormat": "फक्त अक्षरं, अंक, - आणि _",
-    "saved": "जतन झालं"
+    "saved": "जतन झालं",
+    "choose": "निवडा"
   },
   "admin": {
     "role": "भूमिका",
@@ -229,7 +234,8 @@
     "export": "Export करणे",
     "approve": "मंजूर करणे",
     "manage_types": "प्रकार व्यवस्थापन",
-    "review": "आढावा घेणे"
+    "review": "आढावा घेणे",
+    "sensitive": "खाजगी माहिती पाहणे / बदलणे"
   },
   "modules": {
     "organizations": "संस्था",
@@ -525,5 +531,190 @@
     "overdueHint_one": "{{count}} मुदत संपलेले",
     "overdueHint_other": "{{count}} मुदत संपलेली",
     "note": "ज्यांची मुदत या कालावधीत आहे ती कामे मोजली जातात; रद्द कामे वगळली आहेत. \"वेळेत\" म्हणजे मुदतीपर्यंत बंद झालेली कामे, एकूण मुदतीतील कामांपैकी."
+  },
+  "account": {
+    "changePassword": "पासवर्ड बदला",
+    "currentPassword": "सध्याचा पासवर्ड",
+    "newPassword": "नवीन पासवर्ड",
+    "confirmPassword": "नवीन पासवर्ड पुन्हा",
+    "savePassword": "पासवर्ड जतन करा",
+    "passwordChanged": "पासवर्ड बदलला. इतर उपकरणांवरून लॉगआउट झाले.",
+    "mustChange": "ॲप वापरण्यापूर्वी कृपया स्वतःचा पासवर्ड ठेवा."
+  },
+  "profile": {
+    "fields": {
+      "secondary_designation": "दुसरे पद",
+      "employment_type": "नोकरीचा प्रकार",
+      "staff_group": "गट",
+      "teaching_mode": "शिक्षक / शिक्षकेतर",
+      "father_name": "वडिलांचे नाव",
+      "mother_name": "आईचे नाव",
+      "gender": "लिंग",
+      "date_of_birth": "जन्मतारीख",
+      "marital_status": "वैवाहिक स्थिती",
+      "blood_group": "रक्तगट",
+      "whatsapp": "व्हॉट्सअ‍ॅप क्रमांक",
+      "local_address": "सध्याचा पत्ता",
+      "permanent_address": "कायमचा पत्ता",
+      "religion": "धर्म",
+      "caste": "जात",
+      "caste_validity_no": "जात वैधता क्र.",
+      "is_disabled": "दिव्यांग",
+      "emergency_contact_name": "आपत्कालीन संपर्क व्यक्ती",
+      "emergency_contact_relation": "त्यांचे नाते",
+      "emergency_contact_phone": "आपत्कालीन फोन",
+      "left_date": "सेवा सोडल्याची तारीख"
+    },
+    "choices": {
+      "employment_type": {
+        "permanent": "कायम",
+        "probation": "परिवीक्षा",
+        "contract": "करार",
+        "temporary": "तात्पुरते",
+        "part_time": "अर्धवेळ",
+        "honorary": "मानद",
+        "volunteer": "स्वयंसेवक"
+      },
+      "teaching_mode": {
+        "teaching": "शिक्षक",
+        "non_teaching": "शिक्षकेतर"
+      },
+      "gender": {
+        "female": "स्त्री",
+        "male": "पुरुष",
+        "other": "इतर"
+      },
+      "marital_status": {
+        "single": "अविवाहित",
+        "married": "विवाहित",
+        "widowed": "विधवा / विधुर",
+        "divorced": "घटस्फोटित"
+      }
+    },
+    "tabs": {
+      "personal": "वैयक्तिक",
+      "private": "खाजगी",
+      "documents": "कागदपत्रे",
+      "family": "कुटुंब",
+      "achievements": "यश / पुरस्कार"
+    },
+    "sections": "प्रोफाइल विभाग",
+    "notFound": "हा कर्मचारी उपलब्ध नाही किंवा तुम्हाला दिसू शकत नाही.",
+    "selfHint": "तुम्ही तुमचे संपर्क तपशील व आपत्कालीन संपर्क बदलू शकता; बाकी माहिती कार्यालय ठेवते.",
+    "privateHint": "आधार व बँक क्रमांक कूटबद्ध साठवले जातात व अर्धवट दाखवले जातात. पूर्ण क्रमांक पाहिल्याची नोंद ऑडिट लॉगमध्ये होते.",
+    "reveal": "पूर्ण क्रमांक दाखवा",
+    "private": {
+      "aadhaar": "आधार",
+      "bank_account": "बँक खाते",
+      "newAadhaar": "नवीन आधार क्रमांक",
+      "newBankAccount": "नवीन बँक खाते क्रमांक",
+      "keep": "बदल नसेल तर रिकामे ठेवा",
+      "ifsc": "IFSC",
+      "bank_name": "बँक",
+      "bank_branch": "शाखा",
+      "ration_card": "रेशन कार्ड",
+      "uan": "PF UAN",
+      "esic": "ESIC क्र.",
+      "salary": "मासिक पगार (₹)",
+      "pf_applicable": "PF लागू",
+      "esic_applicable": "ESIC लागू",
+      "pt_applicable": "व्यवसाय कर लागू"
+    },
+    "docTypes": {
+      "aadhaar": "आधार",
+      "pan": "पॅन",
+      "photo_id": "ओळखपत्र",
+      "education": "शैक्षणिक",
+      "experience": "अनुभव",
+      "appointment": "नियुक्ती पत्र",
+      "medical": "वैद्यकीय",
+      "bank": "बँक",
+      "other": "इतर"
+    },
+    "docType": "कागदपत्र प्रकार",
+    "docTitle": "शीर्षक (ऐच्छिक)",
+    "upload": "अपलोड करा",
+    "uploaded": "कागदपत्र अपलोड झाले.",
+    "noDocuments": "अजून कागदपत्रे नाहीत.",
+    "noFamily": "कुटुंबातील सदस्य जोडलेले नाहीत.",
+    "relation": "नाते",
+    "livesOnCampus": "परिसरात राहतात",
+    "addMember": "सदस्य जोडा",
+    "noAchievements": "यशाची नोंद नाही.",
+    "achievement": "यश / पुरस्कार",
+    "addAchievement": "जोडा",
+    "changePhoto": "फोटो बदला",
+    "photoOf": "{{name}} यांचा फोटो",
+    "photoSaved": "फोटो जतन झाला.",
+    "photoTooBig": "फोटो 2 MB पेक्षा मोठा आहे.",
+    "idCard": "ओळखपत्र"
+  },
+  "idCards": {
+    "title": "ओळखपत्रे",
+    "pick": "व्यक्ती निवडा (ऐच्छिक — नाहीतर पूर्ण विभाग)",
+    "showPicked_one": "{{count}} व्यक्तीचे ओळखपत्र दाखवा",
+    "showPicked_other": "{{count}} व्यक्तींची ओळखपत्रे दाखवा",
+    "showDepartment": "विभागाची ओळखपत्रे दाखवा",
+    "print": "प्रिंट करा",
+    "emergency": "आपत्कालीन",
+    "qr": "{{name}} यांचा पडताळणी QR कोड",
+    "moveTo": "या विभागात हलवा",
+    "move_one": "{{count}} व्यक्तीला हलवा",
+    "move_other": "{{count}} व्यक्तींना हलवा",
+    "moved_one": "{{count}} व्यक्ती हलवली.",
+    "moved_other": "{{count}} व्यक्ती हलवल्या."
+  },
+  "import": {
+    "employeesTitle": "कर्मचारी आयात (CSV)",
+    "step1": "टेम्पलेट डाउनलोड करा आणि प्रत्येक व्यक्तीसाठी एक ओळ भरा.",
+    "template": "CSV टेम्पलेट",
+    "step2": "फाइल निवडा: आधी प्रत्येक ओळ तपासली जाते, अजून काहीही जतन होत नाही.",
+    "step3": "एकाही ओळीत चूक नसेल तेव्हा सर्व ओळी एकदम आयात करा.",
+    "chooseFile": "CSV फाइल",
+    "checking": "तपासत आहे…",
+    "line": "ओळ",
+    "problems": "चुका",
+    "ok": "ठीक",
+    "summaryOk": "{{total}} ओळी, सर्व ठीक.",
+    "summaryBad": "{{total}} ओळी, {{bad}} मध्ये चुका — फाइलमध्ये दुरुस्त करून पुन्हा निवडा.",
+    "run_one": "{{count}} ओळ आयात करा",
+    "run_other": "{{count}} ओळी आयात करा",
+    "done_one": "{{count}} कर्मचारी आयात झाला.",
+    "done_other": "{{count}} कर्मचारी आयात झाले."
+  },
+  "settings": {
+    "modules": "विभाग (मॉड्युल्स)",
+    "modulesHint": "ही संस्था वापरत नसलेले विभाग बंद करा. ते मेनूतून जातात व सर्व्हर ते नाकारतो; माहिती तशीच राहते.",
+    "fieldsHint": "तुमच्या फॉर्मवरील अतिरिक्त फील्ड्स. त्यांची मूल्ये सर्व्हरवर तपासली जातात व प्रत्येक नोंदीसोबत ठेवली जातात.",
+    "form": "फॉर्म",
+    "entities": {
+      "employee": "कर्मचारी प्रोफाइल",
+      "student": "विद्यार्थी",
+      "work_entry": "दैनंदिन कामाची नोंद"
+    },
+    "newField": "नवीन फील्ड",
+    "editField": "फील्ड बदला",
+    "noFields": "अजून फील्ड्स नाहीत.",
+    "label": "नाव",
+    "key": "की (a-z, 0-9, _)",
+    "keyRule": "अक्षराने सुरुवात करा; फक्त a-z, 0-9 आणि _ वापरा.",
+    "type": "प्रकार",
+    "order": "क्रम",
+    "options": "पर्याय (प्रत्येक ओळीत एक)",
+    "required": "आवश्यक",
+    "types": {
+      "text": "मजकूर",
+      "textarea": "मोठा मजकूर",
+      "number": "संख्या",
+      "date": "तारीख",
+      "select": "पर्याय यादी",
+      "checkbox": "हो / नाही"
+    }
+  },
+  "verify": {
+    "title": "ओळखपत्र पडताळणी",
+    "active": "सध्या येथे कार्यरत",
+    "inactive": "आता येथे कार्यरत नाही",
+    "notFound": "हे ओळखपत्र पडताळता आले नाही."
   }
 }

@@ -14,12 +14,12 @@ class WorkEntry extends Model
 
     protected $fillable = [
         'organization_id', 'employee_id', 'institution_id', 'department_id', 'work_date', 'title', 'description',
-        'hours', 'status', 'task_id', 'reviewed_by', 'reviewed_at', 'review_remarks', 'created_by', 'updated_by',
+        'hours', 'status', 'task_id', 'reviewed_by', 'reviewed_at', 'review_remarks', 'created_by', 'updated_by', 'custom',
     ];
 
     protected function casts(): array
     {
-        return ['work_date' => 'date:Y-m-d', 'hours' => 'decimal:2', 'reviewed_at' => 'datetime'];
+        return ['work_date' => 'date:Y-m-d', 'hours' => 'decimal:2', 'reviewed_at' => 'datetime', 'custom' => 'array'];
     }
 
     public function employee(): BelongsTo

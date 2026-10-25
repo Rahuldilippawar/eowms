@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\RequireModule;
 use App\Http\Middleware\RequirePermission;
 use App\Http\Middleware\SetAccessContext;
 use App\Http\Middleware\SetLocaleFromRequest;
@@ -22,7 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->statefulApi();
         $middleware->throttleApi();
         $middleware->api(append: [SetLocaleFromRequest::class]);
-        $middleware->alias(['permission' => RequirePermission::class]);
+        $middleware->alias(['permission' => RequirePermission::class, 'module' => RequireModule::class]);
         // The access context must exist before route-model binding runs, so
         // bound models are already limited to the current organization.
         $middleware->prependToPriorityList(

@@ -28,6 +28,12 @@ import { TaskDetailPage } from '@/features/tasks/TaskDetailPage'
 import { TasksPage } from '@/features/tasks/TasksPage'
 import { MyWorkPage } from '@/features/work/MyWorkPage'
 import { TeamWorkPage } from '@/features/work/TeamWorkPage'
+import { CustomFieldsPage } from '@/features/admin/CustomFieldsPage'
+import { ChangePasswordPage } from '@/features/auth/ChangePasswordPage'
+import { EmployeeImportPage } from '@/features/people/EmployeeImportPage'
+import { EmployeeProfilePage } from '@/features/people/EmployeeProfilePage'
+import { IdCardsPage } from '@/features/people/IdCardsPage'
+import { VerifyEmployeePage } from '@/features/people/VerifyEmployeePage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 
 const guard = (permission: string, page: ReactNode) => <RequirePermission permission={permission}>{page}</RequirePermission>
@@ -40,6 +46,7 @@ export function AppRoutes() {
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
       </Route>
+      <Route path="/verify/employee/:token" element={<VerifyEmployeePage />} />
       <Route element={<RequireAuth />}>
         <Route element={<AppLayout />}>
           <Route index element={<DashboardPage />} />
@@ -54,6 +61,12 @@ export function AppRoutes() {
           <Route path="work" element={guard('daily_work.view', <TeamWorkPage />)} />
           <Route path="attendance" element={guard('attendance.view', <TeamAttendancePage />)} />
           <Route path="employees" element={guard('employees.view', <EmployeesPage />)} />
+          <Route path="employees/import" element={guard('employees.create', <EmployeeImportPage />)} />
+          <Route path="employees/id-cards" element={guard('employees.view', <IdCardsPage />)} />
+          <Route path="employees/:id" element={<EmployeeProfilePage />} />
+          <Route path="my/profile" element={<EmployeeProfilePage mine />} />
+          <Route path="account/password" element={<ChangePasswordPage />} />
+          <Route path="organization/fields" element={guard('organizations.edit', <CustomFieldsPage />)} />
           <Route path="students" element={guard('students.view', <StudentsPage />)} />
           <Route path="leave-types" element={guard('leave.manage_types', <LeaveTypesPage />)} />
           <Route path="institutions" element={guard('institutions.view', <InstitutionsPage />)} />

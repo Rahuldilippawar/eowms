@@ -28,6 +28,7 @@ class StudentResource extends JsonResource
             'guardian_name' => $this->guardian_name,
             'guardian_phone' => $this->guardian_phone,
             'is_active' => $this->is_active,
+            'custom' => $this->custom ?? (object) [],
         ];
     }
 }

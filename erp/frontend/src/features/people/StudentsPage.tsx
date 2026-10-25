@@ -15,9 +15,10 @@ import { useAuth } from '@/features/auth/AuthProvider'
 import { ActiveToggle } from '@/features/org/ActiveToggle'
 import { fetchDepartmentOptions, fetchInstitutionOptions } from '@/features/org/api'
 import { ListPage, type Column } from '@/features/org/ListPage'
+import { CustomFieldInputs } from './CustomFieldInputs'
 import { createStudent, fetchStudents, setStudentActive, updateStudent, type Student, type StudentInput } from './api'
 
-const FIELDS = ['student_code', 'name', 'institution_id', 'department_id', 'class_name', 'section', 'gender', 'date_of_birth', 'admission_date', 'guardian_name', 'guardian_phone'] as const
+const FIELDS = ['custom', 'student_code', 'name', 'institution_id', 'department_id', 'class_name', 'section', 'gender', 'date_of_birth', 'admission_date', 'guardian_name', 'guardian_phone'] as const
 
 function initial(s?: Student): StudentInput {
   return {
@@ -32,6 +33,7 @@ function initial(s?: Student): StudentInput {
     admission_date: s?.admission_date ?? '',
     guardian_name: s?.guardian_name ?? '',
     guardian_phone: s?.guardian_phone ?? '',
+    custom: s?.custom ?? {},
   }
 }
 
@@ -165,6 +167,7 @@ function StudentDialog({ open, onOpenChange, student }: { open: boolean; onOpenC
         <Field id="s-gphone" label={t('people.guardianPhone')} error={errors.guardian_phone}>
           <Input id="s-gphone" type="tel" value={v.guardian_phone ?? ''} onChange={set('guardian_phone')} />
         </Field>
+        <CustomFieldInputs entity="student" values={v.custom ?? {}} onChange={(custom) => setV({ ...v, custom })} errors={errors} />
       </div>
     </Modal>
   )

@@ -27,6 +27,7 @@ class WorkEntryResource extends JsonResource
             'reviewed_at' => $this->reviewed_at?->toIso8601String(),
             'reviewer' => $this->whenLoaded('reviewer', fn () => $this->reviewer ? ['id' => $this->reviewer->id, 'name' => $this->reviewer->name] : null),
             'review_remarks' => $this->review_remarks,
+            'custom' => $this->custom ?? (object) [],
             'can_edit' => app(WorkService::class)->editable($this->resource, $request->user()),
         ];
     }

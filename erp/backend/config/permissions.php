@@ -14,7 +14,7 @@ return [
         'users' => ['view', 'create', 'edit', 'activate', 'reset_password'],
         'roles' => ['view', 'create', 'edit', 'delete', 'assign'],
         'audit' => ['view', 'export'],
-        'employees' => ['view', 'create', 'edit', 'activate', 'export'],
+        'employees' => ['view', 'create', 'edit', 'activate', 'export', 'sensitive'],
         'students' => ['view', 'create', 'edit', 'activate', 'export'],
         'attendance' => ['view', 'create', 'edit', 'approve', 'export'],
         'leave' => ['view', 'approve', 'manage_types'],

@@ -7,6 +7,7 @@ import { Spinner } from '@/components/ui/Spinner'
 import { useToast } from '@/components/ui/Toast'
 import { CURRENT_USER_KEY, useAuth } from '@/features/auth/AuthProvider'
 import { fetchOrganization, updateOrganization, type OrganizationInput } from './api'
+import { ModulesSection } from './ModulesSection'
 import { OrganizationFields } from './OrganizationForm'
 import { emptyOrganization, ORG_FIELDS, toOrganizationPayload } from './organizationDefaults'
 import { splitServerErrors } from './serverErrors'
@@ -68,6 +69,7 @@ export function OrganizationSettingsPage() {
           {save.isPending ? <Spinner label={t('common.saving')} /> : t('common.save')}
         </Button>
       </form>
+      <ModulesSection />
     </div>
   )
 }
