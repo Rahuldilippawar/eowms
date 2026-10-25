@@ -109,4 +109,6 @@ jobs:
             assets/audio/**
             backups/**
             update-staging/**
+            docs/**
+            erp/**
             README.md
