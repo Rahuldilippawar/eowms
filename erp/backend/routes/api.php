@@ -16,6 +16,9 @@ use App\Http\Controllers\Api\V1\HolidayController;
 use App\Http\Controllers\Api\V1\InstitutionController;
 use App\Http\Controllers\Api\V1\LeaveBalanceController;
 use App\Http\Controllers\Api\V1\LeaveController;
+use App\Http\Controllers\Api\V1\LetterController;
+use App\Http\Controllers\Api\V1\LetterRegisterController;
+use App\Http\Controllers\Api\V1\LetterSettingsController;
 use App\Http\Controllers\Api\V1\MeController;
 use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\OrganizationController;
@@ -23,6 +26,7 @@ use App\Http\Controllers\Api\V1\OrganizationModulesController;
 use App\Http\Controllers\Api\V1\PasswordResetController;
 use App\Http\Controllers\Api\V1\PerformanceController;
 use App\Http\Controllers\Api\V1\PermissionController;
+use App\Http\Controllers\Api\V1\PublicSignatureController;
 use App\Http\Controllers\Api\V1\PublicVerifyController;
 use App\Http\Controllers\Api\V1\RoleController;
 use App\Http\Controllers\Api\V1\StudentController;
@@ -45,6 +49,7 @@ Route::post('/auth/login', [AuthController::class, 'login'])
 Route::middleware('throttle:30,1')->group(function () {
     Route::get('/public/employees/{token}', [PublicVerifyController::class, 'employee']);
     Route::get('/public/employees/{token}/photo', [PublicVerifyController::class, 'photo']);
+    Route::get('/public/signatures/{code}', [PublicSignatureController::class, 'show']);
 });
 
 Route::middleware('throttle:password-reset')->group(function () {
@@ -155,6 +160,35 @@ Route::middleware(['auth:sanctum', SetAccessContext::class, EnsurePasswordChange
     Route::post('/work/{entry}/review', [WorkController::class, 'review'])->middleware('permission:daily_work.review')->middleware('module:daily_work');
 
     // Tasks: visibility and who may act are decided per task (TaskService), not by a single permission.
+    // Correspondence (Phase 6).
+    Route::middleware('module:letters')->group(function () {
+        Route::get('/letters', [LetterController::class, 'index']);
+        Route::get('/letters/options', [LetterController::class, 'options']);
+        Route::get('/letters/recipients', [LetterController::class, 'recipients'])->middleware('throttle:60,1');
+        Route::get('/letters/register', LetterRegisterController::class)->middleware('permission:letters.view');
+        Route::post('/letters', [LetterController::class, 'store']);
+        Route::get('/letters/{letter}', [LetterController::class, 'show']);
+        Route::put('/letters/{letter}', [LetterController::class, 'update']);
+        Route::post('/letters/{letter}/{action}', [LetterController::class, 'send'])->whereIn('action', ['submit', 'forward']);
+        Route::post('/letters/{letter}/return', [LetterController::class, 'sendBack']);
+        Route::post('/letters/{letter}/remarks', [LetterController::class, 'remark']);
+        Route::post('/letters/{letter}/reassign', [LetterController::class, 'reassign']);
+        Route::post('/letters/{letter}/dispatch', [LetterController::class, 'recordDispatch']);
+        Route::post('/letters/{letter}/sign', [LetterController::class, 'sign'])->middleware('throttle:10,1');
+        Route::post('/letters/{letter}/attachments', [LetterController::class, 'attach']);
+        Route::get('/letters/{letter}/attachments/{attachment}', [LetterController::class, 'attachment']);
+
+        Route::middleware('permission:letters.manage')->prefix('letter-settings')->group(function () {
+            Route::get('/categories', [LetterSettingsController::class, 'categories']);
+            Route::post('/categories', [LetterSettingsController::class, 'storeCategory']);
+            Route::post('/categories/defaults', [LetterSettingsController::class, 'seedCategories']);
+            Route::put('/categories/{category}', [LetterSettingsController::class, 'updateCategory']);
+            Route::get('/workflows', [LetterSettingsController::class, 'workflows']);
+            Route::post('/workflows', [LetterSettingsController::class, 'storeWorkflow']);
+            Route::put('/workflows/{workflow}', [LetterSettingsController::class, 'updateWorkflow']);
+        });
+    });
+
     Route::get('/tasks', [TaskController::class, 'index'])->middleware('module:tasks');
     Route::get('/tasks/assignable', [TaskController::class, 'assignable'])->middleware('module:tasks');
     Route::post('/tasks', [TaskController::class, 'store'])->middleware('module:tasks');

@@ -21,5 +21,6 @@ return [
         'daily_work' => ['view', 'review', 'export', 'import'],
         'tasks' => ['view', 'create', 'edit'],
         'performance' => ['view', 'export'],
+        'letters' => ['view', 'manage', 'export'],
     ],
 ];

@@ -97,7 +97,8 @@
     "devices": "Attendance machines",
     "holidays": "Holidays",
     "leaveBalances": "Leave balances",
-    "salaryReport": "Salary report"
+    "salaryReport": "Salary report",
+    "letters": "Correspondence"
   },
   "dashboard": {
     "welcome": "Hello, {{name}}",
@@ -240,7 +241,7 @@
     "manage_types": "Manage types",
     "review": "Review",
     "sensitive": "See / edit private data",
-    "manage": "Holidays, shifts, machines",
+    "manage": "Manage",
     "balances": "Allocate leave",
     "import": "Import"
   },
@@ -257,7 +258,8 @@
     "leave": "Leave",
     "daily_work": "Daily work",
     "tasks": "Tasks",
-    "performance": "Performance reports"
+    "performance": "Performance reports",
+    "letters": "Correspondence"
   },
   "attendance": {
     "notMarked": "Not marked",
@@ -423,7 +425,12 @@
       "celebration_birthday": "Today is {{employee}}'s birthday.",
       "celebration_birthday_self": "Happy birthday, {{employee}}!",
       "celebration_anniversary": "{{employee}} completes {{years}} years with us today.",
-      "celebration_anniversary_self": "Congratulations on {{years}} years with us, {{employee}}!"
+      "celebration_anniversary_self": "Congratulations on {{years}} years with us, {{employee}}!",
+      "letter_received": "{{by}} sent you file {{file_number}}: {{subject}}",
+      "letter_returned": "{{by}} sent file {{file_number}} back to you: {{subject}}",
+      "letter_completed": "{{by}} signed and closed your file {{file_number}}: {{subject}}",
+      "letter_overdue_holder": "File {{file_number}} has been waiting with you for {{days}} days: {{subject}}",
+      "letter_overdue": "File {{file_number}} has not moved for {{days}} days: {{subject}}"
     }
   },
   "work": {
@@ -878,5 +885,191 @@
     "unknownPins": "Punches with an unknown PIN",
     "unknownHint": "Set these PINs on the right employee profiles (Attendance tab).",
     "allMatched": "Every punch matched an employee."
+  },
+  "permissionLabels": {
+    "attendance.manage": "Holidays, shifts, machines",
+    "letters.manage": "Categories, workflows, reassign files",
+    "letters.view": "See files of their departments",
+    "letters.export": "Registers as CSV"
+  },
+  "letters": {
+    "new": "New file",
+    "boxes": "Files",
+    "box": {
+      "with_me": "With me",
+      "created": "Created by me",
+      "all": "All I can see"
+    },
+    "status": {
+      "draft": "Draft",
+      "in_progress": "On the way",
+      "returned": "Sent back",
+      "completed": "Signed and closed"
+    },
+    "searchHint": "Subject, file, outward or reference no.",
+    "none": "No files.",
+    "noneWithMe": "No file is waiting for you.",
+    "fromName": "From {{name}}",
+    "withName": "With {{name}}",
+    "withSince": "With {{name}} since {{date}}",
+    "registerTitle": "Inward / outward register",
+    "settingsTitle": "Letter categories and workflows",
+    "editDraft": "Edit draft {{number}}",
+    "subject": "Subject",
+    "category": "Category",
+    "workflow": "Approval workflow",
+    "noWorkflow": "None: I choose who gets it",
+    "referenceNo": "Reference no.",
+    "description": "Text",
+    "budgetExpense": "Budget expense",
+    "budgetCategory": "Expense type",
+    "budget": {
+      "purchase": "New purchase",
+      "maintenance": "Maintenance",
+      "fuel": "Fuel",
+      "other": "Other"
+    },
+    "requestedAmount": "Amount asked (₹)",
+    "amountRule": "Enter an amount above 0.",
+    "saveDraft": "Save draft",
+    "draftHint": "A file stays a draft until you send it; only drafts can be changed. The outward number is given when you send it.",
+    "change": "Change",
+    "searchPerson": "Search by name, code or designation",
+    "choosePerson": "Choose {{name}}",
+    "noPerson": "No matching active colleague.",
+    "choosePersonFirst": "Choose who gets the file.",
+    "passwordRequired": "Enter your password to sign.",
+    "action": {
+      "submit": "Send",
+      "forward": "Send on",
+      "return": "Send back",
+      "sign": "Sign and close",
+      "dispatch": "Record dispatch",
+      "reassign": "Give to someone else"
+    },
+    "confirm": {
+      "submit": "Send the file",
+      "forward": "Send the file on",
+      "return": "Send the file back",
+      "sign": "Sign and close the file",
+      "dispatch": "Record dispatch",
+      "reassign": "Give the file to someone else"
+    },
+    "done": {
+      "submit": "File sent",
+      "forward": "File sent on",
+      "return": "File sent back",
+      "sign": "Signed: the file is closed",
+      "dispatch": "Dispatch recorded",
+      "reassign": "File given to someone else"
+    },
+    "nextStep": "Next step: {{step}} → {{name}}",
+    "nobodySet": "nobody set",
+    "noNextStep": "This is the last step: sign and close instead.",
+    "sendTo": "Send to",
+    "dispatchMode": "Sent by",
+    "trackingNo": "Tracking no.",
+    "dispatch": {
+      "post": "Post",
+      "courier": "Courier",
+      "speed_post": "Speed post",
+      "email": "Email",
+      "hand": "By hand",
+      "other": "Other"
+    },
+    "signHint": "Your password confirms that it is you. The signature seals the file: its numbers, text, amount and attachments.",
+    "approvedAmount": "Approved amount (₹)",
+    "addRemark": "Add a remark",
+    "addRemarkButton": "Add remark",
+    "attachments": "Attachments",
+    "noAttachments": "No attachments.",
+    "attachFile": "Attach a file",
+    "attached": "File attached",
+    "notFound": "This file was not found, or you cannot see it.",
+    "print": "Print / PDF",
+    "outwardShort": "Outward no.",
+    "details": "Details",
+    "createdBy": "Created by",
+    "createdOn": "Created on",
+    "requested": "asked",
+    "approved": "approved",
+    "dispatched": "Dispatched",
+    "inwardNumbers": "Inward numbers",
+    "workflowNamed": "Workflow: {{name}}",
+    "currentStep": "current step",
+    "signatures": "Signatures",
+    "changedAfterSigning": "Changed after signing!",
+    "movements": "Movement register",
+    "movement": {
+      "created": "created the file",
+      "submitted": "sent it to {{name}}",
+      "forwarded": "sent it on to {{name}}",
+      "returned": "sent it back to {{name}}",
+      "remark": "added a remark",
+      "reassigned": "gave it to {{name}}",
+      "dispatched": "recorded the dispatch",
+      "attached": "attached a file",
+      "completed": "signed and closed it"
+    },
+    "printOrPdf": "Print or save as PDF",
+    "fileNumber": "File no.",
+    "qrLabel": "QR code to check signature {{code}}",
+    "signedDigitally": "Signed digitally on",
+    "notSignedYet": "Not signed yet.",
+    "backToFile": "Back to the file",
+    "register": {
+      "outward": "Outward",
+      "inward": "Inward",
+      "outwardNo": "Outward no.",
+      "inwardNo": "Inward no."
+    },
+    "financialYear": "Financial year",
+    "registerEmpty": "Nothing in this register for the year.",
+    "sentTo": "Sent to",
+    "from": "From",
+    "settings": {
+      "categories": "Letter categories",
+      "addDefaults": "Add the usual categories",
+      "seeded_one": "{{count}} category added.",
+      "seeded_other": "{{count}} categories added.",
+      "clickToHide": "Click to hide from new files",
+      "clickToShow": "Click to offer again",
+      "newCategory": "New category",
+      "add": "Add",
+      "workflows": "Approval workflows",
+      "newWorkflow": "New workflow",
+      "editWorkflow": "Edit workflow",
+      "workflowHint": "A file with a workflow goes through its steps in order; only the last step can sign. A step whose person cannot be found (e.g. a department without a head) stops the file with a message.",
+      "inUse_one": "{{count}} file is on its way through this workflow; it continues with the new steps.",
+      "inUse_other": "{{count}} files are on their way through this workflow; they continue with the new steps.",
+      "suggestFor": "Suggest for category",
+      "stepN": "Step {{n}}",
+      "moveUp": "Move step {{n}} up",
+      "moveDown": "Move step {{n}} down",
+      "removeStep": "Remove step {{n}}",
+      "stepName": "Step name",
+      "approver": "Who approves",
+      "approverTypes": {
+        "origin_department_head": "Head of the file's own department",
+        "department_head": "Head of a chosen department",
+        "user": "A named person"
+      },
+      "person": "Person",
+      "addStep": "Add a step"
+    }
+  },
+  "signatureCheck": {
+    "title": "Signature check",
+    "notFound": "This code is not valid, or no such signature exists.",
+    "valid": "Genuine: the file is as it was signed",
+    "changed": "Warning: the file changed after it was signed",
+    "signedBy": "Signed by",
+    "organization": "Organization",
+    "when": "Date and time",
+    "method": "Identity check",
+    "methods": {
+      "password": "Password"
+    },
+    "code": "Verification code"
   }
 }

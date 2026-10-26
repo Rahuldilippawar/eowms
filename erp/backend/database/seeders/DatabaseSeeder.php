@@ -3,11 +3,13 @@
 namespace Database\Seeders;
 
 use App\Enums\InstitutionType;
+use App\Models\ApprovalWorkflow;
 use App\Models\CustomField;
 use App\Models\Department;
 use App\Models\Employee;
 use App\Models\Holiday;
 use App\Models\Institution;
+use App\Models\LetterCategory;
 use App\Models\Organization;
 use App\Models\Role;
 use App\Models\RoleAssignment;
@@ -67,6 +69,19 @@ class DatabaseSeeder extends Seeder
 
         foreach ([['2026-01-26', 'प्रजासत्ताक दिन'], ['2026-08-15', 'स्वातंत्र्य दिन'], ['2026-10-02', 'गांधी जयंती'], ['2026-11-09', 'दिवाळी']] as [$date, $name]) {
             Holiday::firstOrCreate(['organization_id' => $trust->id, 'institution_id' => null, 'holiday_date' => $date], ['name' => $name]);
+        }
+
+        // Correspondence: the usual categories, the HOD heads Physics, and a two-step approval.
+        foreach (LetterCategory::DEFAULTS as $name) {
+            LetterCategory::firstOrCreate(['organization_id' => $trust->id, 'name' => $name]);
+        }
+        $physics->forceFill(['head_user_id' => $hod->id])->save();
+        $workflow = ApprovalWorkflow::firstOrCreate(['organization_id' => $trust->id, 'module' => 'letters', 'name' => 'विभाग-प्रमुख → प्राचार्य']);
+        if (! $workflow->steps()->exists()) {
+            $workflow->steps()->createMany([
+                ['step_order' => 1, 'name' => 'विभाग-प्रमुखाकडे', 'approver_type' => 'origin_department_head'],
+                ['step_order' => 2, 'name' => 'प्राचार्यांकडे (अंतिम मंजुरी)', 'approver_type' => 'user', 'user_id' => $principal->id],
+            ]);
         }
 
         // A sample task from the HOD to the teacher.

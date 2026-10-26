@@ -63,16 +63,19 @@ Legend: ✅ in the ERP · 🟡 partly (gaps listed) · ⏳ scheduled (phase) · 
 | Notifications page, mark all read | ✅ | |
 | Cron: overdue tasks | ✅ | `erp:task-reminders` |
 
-## Correspondence and approvals (⏳ 6)
+## Correspondence and approvals (✅ 6)
 
-| Old module / page | Notes |
-|---|---|
-| Letters: create, view, inward / outward numbers, register + export, print | |
-| Letter categories, seed default categories and workflows | |
-| Workflow templates (create / edit) with steps | Generic approval engine, reused by other modules |
-| Sign & approve (password / fingerprint), signature verification | Signature events with hash; PDF with QR, public verify page |
-| Attachments | Private storage |
-| Cron: overdue letters | |
+| Old module / page | Status | Notes |
+|---|---|---|
+| Letters: create, view, inward / outward numbers, register + export, print | ✅ 6 | Gap-free numbers per financial year; print → browser PDF with QR |
+| Letter categories, seed default categories and workflows | ✅ 6 | 18 default categories; workflows are built in the settings page (no guessed "top management") |
+| Workflow templates (create / edit) with steps | ✅ 6 | Generic approval engine (`module` column) for later modules |
+| Sign & approve (password / fingerprint), signature verification | 🟡 6 | Password ✅ with SHA-256 seal + public check; fingerprint → ⏳ 11 (WebAuthn) |
+| Budget deduction on approval | ⏳ 7 | Approved amount recorded now; deducted with department finance |
+| Attachments | ✅ 6 | Private storage, audited downloads, sealed by the signature |
+| Reassign (super admin), dispatch details, remarks, seen-by-holder | ✅ 6 | |
+| Sister-organization recipients | ❓ | Old app could send to a sister organization; ERP files stay inside one organization — owner to decide |
+| Cron: overdue letters | ✅ 6 | `erp:letter-reminders` (3-day reminder, 7-day escalation to the department head) |
 
 ## Renewals and finance (⏳ 7)
 

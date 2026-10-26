@@ -97,7 +97,8 @@
     "devices": "हजेरी मशीन",
     "holidays": "सुट्ट्या",
     "leaveBalances": "रजा शिल्लक",
-    "salaryReport": "पगार अहवाल"
+    "salaryReport": "पगार अहवाल",
+    "letters": "पत्रव्यवहार"
   },
   "dashboard": {
     "welcome": "नमस्कार, {{name}}",
@@ -240,7 +241,7 @@
     "manage_types": "प्रकार व्यवस्थापन",
     "review": "आढावा घेणे",
     "sensitive": "खाजगी माहिती पाहणे / बदलणे",
-    "manage": "सुट्ट्या, शिफ्ट, मशीन",
+    "manage": "व्यवस्थापन",
     "balances": "रजा वाटप",
     "import": "आयात"
   },
@@ -257,7 +258,8 @@
     "leave": "रजा",
     "daily_work": "दैनंदिन काम",
     "tasks": "कामे (टास्क)",
-    "performance": "कामगिरी अहवाल"
+    "performance": "कामगिरी अहवाल",
+    "letters": "पत्रव्यवहार"
   },
   "attendance": {
     "notMarked": "नोंद नाही",
@@ -423,7 +425,12 @@
       "celebration_birthday": "आज {{employee}} यांचा वाढदिवस आहे.",
       "celebration_birthday_self": "वाढदिवसाच्या हार्दिक शुभेच्छा, {{employee}}!",
       "celebration_anniversary": "{{employee}} आज आपल्यासोबत {{years}} वर्षे पूर्ण करत आहेत.",
-      "celebration_anniversary_self": "{{years}} वर्षांच्या सेवेबद्दल अभिनंदन, {{employee}}!"
+      "celebration_anniversary_self": "{{years}} वर्षांच्या सेवेबद्दल अभिनंदन, {{employee}}!",
+      "letter_received": "{{by}} यांनी तुम्हाला फाईल {{file_number}} पाठवली: {{subject}}",
+      "letter_returned": "{{by}} यांनी फाईल {{file_number}} तुम्हाला परत पाठवली: {{subject}}",
+      "letter_completed": "{{by}} यांनी तुमची फाईल {{file_number}} सही करून पूर्ण केली: {{subject}}",
+      "letter_overdue_holder": "फाईल {{file_number}} {{days}} दिवसांपासून तुमच्याकडे प्रलंबित आहे: {{subject}}",
+      "letter_overdue": "फाईल {{file_number}} {{days}} दिवसांपासून पुढे गेलेली नाही: {{subject}}"
     }
   },
   "work": {
@@ -878,5 +885,191 @@
     "unknownPins": "अनोळखी PIN चे पंच",
     "unknownHint": "हे PIN योग्य कर्मचाऱ्याच्या प्रोफाइलवर (हजेरी टॅब) टाका.",
     "allMatched": "प्रत्येक पंच कर्मचाऱ्याशी जुळला."
+  },
+  "permissionLabels": {
+    "attendance.manage": "सुट्ट्या, शिफ्ट, मशीन",
+    "letters.manage": "प्रकार, कार्यप्रवाह, फाईल पुन्हा नेमणे",
+    "letters.view": "आपल्या विभागांच्या फाईल्स पाहणे",
+    "letters.export": "रजिस्टर CSV"
+  },
+  "letters": {
+    "new": "नवीन फाईल",
+    "boxes": "फाईल्स",
+    "box": {
+      "with_me": "माझ्याकडे",
+      "created": "मी तयार केलेल्या",
+      "all": "मला दिसणाऱ्या सर्व"
+    },
+    "status": {
+      "draft": "मसुदा",
+      "in_progress": "प्रक्रियेत",
+      "returned": "परत आली",
+      "completed": "सही करून पूर्ण"
+    },
+    "searchHint": "विषय, फाईल, जावक किंवा संदर्भ क्र.",
+    "none": "फाईल्स नाहीत.",
+    "noneWithMe": "तुमच्याकडे एकही फाईल प्रलंबित नाही.",
+    "fromName": "{{name}} यांच्याकडून",
+    "withName": "सध्या {{name}} यांच्याकडे",
+    "withSince": "{{date}} पासून {{name}} यांच्याकडे",
+    "registerTitle": "आवक / जावक रजिस्टर",
+    "settingsTitle": "पत्र-प्रकार व कार्यप्रवाह",
+    "editDraft": "मसुदा {{number}} बदला",
+    "subject": "विषय",
+    "category": "पत्र-प्रकार",
+    "workflow": "मंजुरीचा कार्यप्रवाह",
+    "noWorkflow": "नाही: कोणाला पाठवायचे ते मी निवडेन",
+    "referenceNo": "संदर्भ क्र.",
+    "description": "मजकूर",
+    "budgetExpense": "Budget खर्च",
+    "budgetCategory": "खर्चाचा प्रकार",
+    "budget": {
+      "purchase": "नवीन खरेदी",
+      "maintenance": "देखभाल",
+      "fuel": "इंधन",
+      "other": "इतर"
+    },
+    "requestedAmount": "मागणी रक्कम (₹)",
+    "amountRule": "0 पेक्षा जास्त रक्कम लिहा.",
+    "saveDraft": "मसुदा जतन करा",
+    "draftHint": "पाठवेपर्यंत फाईल मसुदा राहते; फक्त मसुदा बदलता येतो. पाठवताना जावक क्रमांक मिळतो.",
+    "change": "बदला",
+    "searchPerson": "नाव, कोड किंवा पदनामाने शोधा",
+    "choosePerson": "{{name}} निवडा",
+    "noPerson": "जुळणारा सक्रिय सहकारी नाही.",
+    "choosePersonFirst": "फाईल कोणाला द्यायची ते निवडा.",
+    "passwordRequired": "सही करण्यासाठी तुमचा पासवर्ड टाका.",
+    "action": {
+      "submit": "पाठवा",
+      "forward": "पुढे पाठवा",
+      "return": "परत पाठवा",
+      "sign": "सही करून पूर्ण करा",
+      "dispatch": "रवानगी नोंदवा",
+      "reassign": "दुसऱ्याला द्या"
+    },
+    "confirm": {
+      "submit": "फाईल पाठवा",
+      "forward": "फाईल पुढे पाठवा",
+      "return": "फाईल परत पाठवा",
+      "sign": "फाईलवर सही करून पूर्ण करा",
+      "dispatch": "रवानगी नोंदवा",
+      "reassign": "फाईल दुसऱ्याला द्या"
+    },
+    "done": {
+      "submit": "फाईल पाठवली",
+      "forward": "फाईल पुढे पाठवली",
+      "return": "फाईल परत पाठवली",
+      "sign": "सही झाली: फाईल पूर्ण",
+      "dispatch": "रवानगी नोंदवली",
+      "reassign": "फाईल दुसऱ्याला दिली"
+    },
+    "nextStep": "पुढची पायरी: {{step}} → {{name}}",
+    "nobodySet": "कोणीही नेमलेले नाही",
+    "noNextStep": "ही शेवटची पायरी आहे: सही करून पूर्ण करा.",
+    "sendTo": "कोणाला पाठवायची",
+    "dispatchMode": "कसे पाठवले",
+    "trackingNo": "Tracking क्र.",
+    "dispatch": {
+      "post": "टपाल",
+      "courier": "कुरिअर",
+      "speed_post": "स्पीड पोस्ट",
+      "email": "ईमेल",
+      "hand": "हस्ते",
+      "other": "इतर"
+    },
+    "signHint": "तुमचा पासवर्ड ओळख पडताळतो. सही फाईलवर शिक्कामोर्तब करते: क्रमांक, मजकूर, रक्कम आणि जोडपत्रे.",
+    "approvedAmount": "मंजूर रक्कम (₹)",
+    "addRemark": "टिप्पणी जोडा",
+    "addRemarkButton": "टिप्पणी जोडा",
+    "attachments": "जोडपत्रे",
+    "noAttachments": "जोडपत्रे नाहीत.",
+    "attachFile": "फाईल जोडा",
+    "attached": "फाईल जोडली",
+    "notFound": "ही फाईल सापडली नाही, किंवा ती पाहण्याची परवानगी नाही.",
+    "print": "छपाई / PDF",
+    "outwardShort": "जावक क्र.",
+    "details": "तपशील",
+    "createdBy": "तयार करणारे",
+    "createdOn": "तयार केल्याचा दिनांक",
+    "requested": "मागणी",
+    "approved": "मंजूर",
+    "dispatched": "रवानगी",
+    "inwardNumbers": "आवक क्रमांक",
+    "workflowNamed": "कार्यप्रवाह: {{name}}",
+    "currentStep": "सध्याची पायरी",
+    "signatures": "सह्या",
+    "changedAfterSigning": "सही झाल्यानंतर बदल झाला!",
+    "movements": "हालचाल नोंद",
+    "movement": {
+      "created": "यांनी फाईल तयार केली",
+      "submitted": "यांनी {{name}} यांना पाठवली",
+      "forwarded": "यांनी {{name}} यांना पुढे पाठवली",
+      "returned": "यांनी {{name}} यांना परत पाठवली",
+      "remark": "यांनी टिप्पणी जोडली",
+      "reassigned": "यांनी {{name}} यांना दिली",
+      "dispatched": "यांनी रवानगी नोंदवली",
+      "attached": "यांनी फाईल जोडली",
+      "completed": "यांनी सही करून पूर्ण केली"
+    },
+    "printOrPdf": "छापा किंवा PDF म्हणून जतन करा",
+    "fileNumber": "फाईल क्र.",
+    "qrLabel": "सही {{code}} तपासण्यासाठी QR कोड",
+    "signedDigitally": "डिजिटल सही:",
+    "notSignedYet": "अजून सही झालेली नाही.",
+    "backToFile": "फाईलकडे परत",
+    "register": {
+      "outward": "जावक",
+      "inward": "आवक",
+      "outwardNo": "जावक क्र.",
+      "inwardNo": "आवक क्र."
+    },
+    "financialYear": "आर्थिक वर्ष",
+    "registerEmpty": "या वर्षी या रजिस्टरमध्ये नोंद नाही.",
+    "sentTo": "कोणाला पाठवले",
+    "from": "कोणाकडून",
+    "settings": {
+      "categories": "पत्र-प्रकार",
+      "addDefaults": "नेहमीचे पत्र-प्रकार जोडा",
+      "seeded_one": "{{count}} पत्र-प्रकार जोडला.",
+      "seeded_other": "{{count}} पत्र-प्रकार जोडले.",
+      "clickToHide": "नवीन फाईल्समधून लपवण्यासाठी क्लिक करा",
+      "clickToShow": "पुन्हा दाखवण्यासाठी क्लिक करा",
+      "newCategory": "नवीन पत्र-प्रकार",
+      "add": "जोडा",
+      "workflows": "मंजुरीचे कार्यप्रवाह",
+      "newWorkflow": "नवीन कार्यप्रवाह",
+      "editWorkflow": "कार्यप्रवाह बदला",
+      "workflowHint": "कार्यप्रवाह असलेली फाईल पायऱ्यांनुसार जाते; फक्त शेवटची पायरी सही करू शकते. ज्या पायरीसाठी व्यक्ती ठरत नाही (उदा. विभागाला प्रमुख नाही) तिथे फाईल संदेशासह थांबते.",
+      "inUse_one": "या कार्यप्रवाहातून {{count}} फाईल जात आहे; ती नवीन पायऱ्यांनुसार पुढे जाईल.",
+      "inUse_other": "या कार्यप्रवाहातून {{count}} फाईल्स जात आहेत; त्या नवीन पायऱ्यांनुसार पुढे जातील.",
+      "suggestFor": "या पत्र-प्रकारासाठी सुचवा",
+      "stepN": "पायरी {{n}}",
+      "moveUp": "पायरी {{n}} वर न्या",
+      "moveDown": "पायरी {{n}} खाली न्या",
+      "removeStep": "पायरी {{n}} काढा",
+      "stepName": "पायरीचे नाव",
+      "approver": "कोण मंजूर करतात",
+      "approverTypes": {
+        "origin_department_head": "फाईलच्या स्वतःच्या विभागाचे प्रमुख",
+        "department_head": "निवडलेल्या विभागाचे प्रमुख",
+        "user": "ठराविक व्यक्ती"
+      },
+      "person": "व्यक्ती",
+      "addStep": "पायरी जोडा"
+    }
+  },
+  "signatureCheck": {
+    "title": "सही पडताळणी",
+    "notFound": "हा कोड वैध नाही, किंवा अशी सही अस्तित्वात नाही.",
+    "valid": "खरी: फाईल सहीच्या वेळी होती तशीच आहे",
+    "changed": "सावधान: सहीनंतर फाईलमध्ये बदल झाला",
+    "signedBy": "सही करणारे",
+    "organization": "संस्था",
+    "when": "दिनांक व वेळ",
+    "method": "ओळख पडताळणी",
+    "methods": {
+      "password": "पासवर्ड"
+    },
+    "code": "पडताळणी कोड"
   }
 }

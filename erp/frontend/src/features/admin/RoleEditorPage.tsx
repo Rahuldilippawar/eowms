@@ -132,7 +132,7 @@ export function RoleEditorPage() {
                               })
                             }
                           />
-                          {t(`actions.${p.action}`, p.action)}
+                          {t([`permissionLabels.${p.key}`, `actions.${p.action}`], p.action)}
                           <span className="font-mono text-xs text-slate-400">{p.key}</span>
                         </label>
                         {granted ? (

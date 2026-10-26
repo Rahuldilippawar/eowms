@@ -14,3 +14,5 @@ Schedule::command('erp:task-reminders')->hourly()->withoutOverlapping();
 Schedule::command('erp:mark-absent')->hourly()->withoutOverlapping();
 Schedule::command('erp:attendance-alerts')->dailyAt('03:30')->withoutOverlapping();
 Schedule::command('erp:celebrations')->hourly()->withoutOverlapping();
+// Correspondence: files that have not moved (09:00 India time).
+Schedule::command('erp:letter-reminders')->dailyAt('03:30')->withoutOverlapping();

@@ -33,6 +33,13 @@ import { PerformancePage } from '@/features/performance/PerformancePage'
 import { TaskDetailPage } from '@/features/tasks/TaskDetailPage'
 import { TasksPage } from '@/features/tasks/TasksPage'
 import { MyWorkPage } from '@/features/work/MyWorkPage'
+import { LetterDetailPage } from '@/features/letters/LetterDetailPage'
+import { LetterFormPage } from '@/features/letters/LetterFormPage'
+import { LetterPrintPage } from '@/features/letters/LetterPrintPage'
+import { LetterRegisterPage } from '@/features/letters/LetterRegisterPage'
+import { LetterSettingsPage } from '@/features/letters/LetterSettingsPage'
+import { LettersPage } from '@/features/letters/LettersPage'
+import { VerifySignaturePage } from '@/features/letters/VerifySignaturePage'
 import { TeamWorkPage } from '@/features/work/TeamWorkPage'
 import { WorkImportPage } from '@/features/work/WorkImportPage'
 import { CustomFieldsPage } from '@/features/admin/CustomFieldsPage'
@@ -54,6 +61,7 @@ export function AppRoutes() {
         <Route path="/reset-password" element={<ResetPasswordPage />} />
       </Route>
       <Route path="/verify/employee/:token" element={<VerifyEmployeePage />} />
+      <Route path="/verify/signature/:code" element={<VerifySignaturePage />} />
       <Route element={<RequireAuth />}>
         <Route element={<AppLayout />}>
           <Route index element={<DashboardPage />} />
@@ -66,6 +74,13 @@ export function AppRoutes() {
           <Route path="notifications" element={<NotificationsPage />} />
           <Route path="performance" element={<PerformancePage />} />
           <Route path="work" element={guard('daily_work.view', <TeamWorkPage />)} />
+          <Route path="letters" element={<LettersPage />} />
+          <Route path="letters/new" element={<LetterFormPage />} />
+          <Route path="letters/register" element={guard('letters.view', <LetterRegisterPage />)} />
+          <Route path="letters/settings" element={guard('letters.manage', <LetterSettingsPage />)} />
+          <Route path="letters/:id" element={<LetterDetailPage />} />
+          <Route path="letters/:id/edit" element={<LetterFormPage />} />
+          <Route path="letters/:id/print" element={<LetterPrintPage />} />
           <Route path="work/import" element={guard('daily_work.import', <WorkImportPage />)} />
           <Route path="attendance" element={guard('attendance.view', <TeamAttendancePage />)} />
           <Route path="employees" element={guard('employees.view', <EmployeesPage />)} />
