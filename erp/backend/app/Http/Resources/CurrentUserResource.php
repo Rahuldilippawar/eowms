@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Models\User;
+use App\Models\Vehicle;
 use App\Support\Access\AccessContext;
 use App\Support\Access\Modules;
 use Illuminate\Http\Request;
@@ -41,6 +42,9 @@ class CurrentUserResource extends JsonResource
                 ->map(fn ($o) => ['id' => $o->id, 'name' => $o->name, 'short_name' => $o->short_name])->values()),
             'permissions' => $this->when($isCurrentUser, fn () => $context->permissionKeys()),
             'disabled_modules' => $this->when($isCurrentUser, fn () => Modules::disabled($context->organization())),
+            // Drivers reach their own vehicle without the vehicles permissions.
+            'drives_vehicle' => $this->when($isCurrentUser, fn () => $context->organization() !== null
+                && Vehicle::query()->where('driver_user_id', $this->id)->where('is_active', true)->exists()),
             'must_change_password' => (bool) $this->must_change_password,
         ];
     }

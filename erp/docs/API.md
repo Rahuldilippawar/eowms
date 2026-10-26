@@ -240,3 +240,34 @@ Rules: [`RENEWALS.md`](RENEWALS.md). All under the `renewals` module switch.
 | POST / GET | `/renewals/{id}/attachments[/{attachment}]` | manage / view | `file` ≤ 10 MB, `title?` |
 | GET | `/renewals/calendar?month=Y-m`, `/renewals/costs` | `renewals.view` | |
 | GET / POST | `/renewals/import/template`, `/renewals/import/preview`, `/renewals/import` | `renewals.manage` | CSV; all rows or none |
+
+## Phase 8a — vehicles, maintenance register
+
+Rules: [`VEHICLES.md`](VEHICLES.md). Under the `vehicles` and `maintenance` module switches.
+
+| Method | Path | Permission | Notes |
+|---|---|---|---|
+| GET | `/vehicles?status=active\|inactive\|all&department_id&search&format=csv?` | `vehicles.view` or driver | Scoped list (+ the vehicles one drives); `next_document`, `next_service` |
+| POST / PUT | `/vehicles[/{id}]` | `vehicles.manage` in scope | `department_id, vehicle_number, vehicle_type?, model?, registration_date?, chassis_no?, engine_no?, vehicle_class?, passenger_capacity?, driver_user_id?, fuel_type, current_odometer? (create only), documents: {permit?, puc?, insurance?, fitness?, road_tax?, green_tax?, mv_tax?}` |
+| GET | `/vehicles/{id}` | view or driver | `documents`, `stats`, `trend`, latest `trips` / `fuel` / `services`, `pending_corrections`, `can_log`, `can_manage` |
+| POST | `/vehicles/{id}/active` | manage | `is_active` (also switches the document renewal items) |
+| POST | `/vehicles/{id}/trips` | driver, `vehicles.log` or manage | `trip_date, from_location, to_location, start_time?, end_time?, start_odometer, end_odometer, purpose?` |
+| POST | `/vehicles/{id}/fuel` | same | `fill_date, odometer_reading, liters, cost?, fuel_station?` |
+| POST | `/vehicles/{id}/services` | same | `service_date, type, description?, cost?, odometer_reading?, next_due_date?, next_due_km?, vendor?` |
+| PUT / DELETE | `/vehicles/{id}/entries/{trip\|fuel\|service}/{entry}` | manage | Same fields as when logging |
+| POST | `/vehicles/{id}/entries/{type}/{entry}/corrections` | can log | `request_type (edit\|delete), reason` |
+| GET | `/vehicle-corrections?status=pending\|approved\|rejected\|all` | manager (scope) or own requests | With the entry as it is now and `can_review` |
+| POST | `/vehicle-corrections/{id}/review` | `vehicles.manage` | `decision (approve\|reject), note?, changes?` (edit requests: the corrected fields) |
+| GET | `/vehicles/{id}/report?from&to&format=csv?` | view or driver (+ export for CSV) | Totals and every entry in the period |
+| GET / POST | `/vehicles/import/template`, `/vehicles/import/preview`, `/vehicles/import` | `vehicles.manage` | CSV; all rows or none |
+| GET / POST / PUT | `/maintenance/buildings[/{id}]` | view / manage | `name, institution_id?` |
+| GET | `/maintenance/locations?building_id&search&include_inactive` | `maintenance.view` | Counts within the viewer's scope; `meta.log_departments` |
+| POST / PUT | `/maintenance/locations[/{id}]` | `maintenance.manage` | `name, location_code, building_id?, floor?, capacity?, is_residential?, is_active?` |
+| GET | `/maintenance/locations/{id}` | view | History and total cost |
+| GET | `/maintenance/logs?location_id&department_id&work_type&from&to&search&page&format=csv?` | view (+ export for CSV) | |
+| POST | `/maintenance/logs` | `maintenance.log` in scope, register department | `location_id, department_id, item_description, work_type, work_date, cost?, remarks?` |
+| GET / PUT / DELETE | `/maintenance/logs/{id}` | view / manage | No delete once paid |
+| POST | `/maintenance/logs/{id}/payments` | manage | `amount, payment_date, payment_type, payment_mode?, remarks?` |
+| GET / PUT | `/maintenance/departments[/{id}]` | manage | `has_maintenance_register` |
+| GET | `/maintenance/report?from&to` | view | `by_department`, `by_location`, `by_work_type` |
+

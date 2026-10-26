@@ -1,4 +1,4 @@
-import { BarChart3, CalendarHeart, Fingerprint, IndianRupee, Scale, SlidersHorizontal, UserRound, Building, ClipboardPen, Mail, RefreshCw, ShoppingCart, Wallet, ListChecks, NotebookPen, Building2, CalendarClock, CalendarDays, ClipboardCheck, ClipboardList, GraduationCap, IdCard, KeyRound, LayoutDashboard, Network, Plane, Settings, Users, type LucideIcon } from 'lucide-react'
+import { BarChart3, Bus, FilePenLine, PieChart, Wrench, CalendarHeart, Fingerprint, IndianRupee, Scale, SlidersHorizontal, UserRound, Building, ClipboardPen, Mail, RefreshCw, ShoppingCart, Wallet, ListChecks, NotebookPen, Building2, CalendarClock, CalendarDays, ClipboardCheck, ClipboardList, GraduationCap, IdCard, KeyRound, LayoutDashboard, Network, Plane, Settings, Users, type LucideIcon } from 'lucide-react'
 
 export interface NavItem {
   to: string
@@ -9,6 +9,8 @@ export interface NavItem {
   superAdminOnly?: boolean
   /** Hidden when the organization switched this module off. */
   module?: string
+  /** Also shown to someone who drives an active vehicle. */
+  orDriver?: boolean
 }
 
 export interface NavSection {
@@ -53,6 +55,15 @@ export const NAVIGATION: NavSection[] = [
       { to: '/finance/budgets', labelKey: 'nav.budgets', icon: Wallet, permission: 'finance.view', module: 'finance' },
       { to: '/finance/purchases', labelKey: 'nav.purchases', icon: ShoppingCart, permission: 'finance.view', module: 'finance' },
       { to: '/renewals', labelKey: 'nav.renewals', icon: RefreshCw, permission: 'renewals.view', module: 'renewals' },
+    ],
+  },
+  {
+    titleKey: 'nav.operations',
+    items: [
+      { to: '/vehicles', labelKey: 'nav.vehicles', icon: Bus, permission: 'vehicles.view', module: 'vehicles', orDriver: true },
+      { to: '/vehicles/corrections', labelKey: 'nav.vehicleCorrections', icon: FilePenLine, permission: 'vehicles.manage', module: 'vehicles' },
+      { to: '/maintenance', labelKey: 'nav.maintenance', icon: Wrench, permission: 'maintenance.view', module: 'maintenance' },
+      { to: '/maintenance/report', labelKey: 'nav.maintenanceReport', icon: PieChart, permission: 'maintenance.view', module: 'maintenance' },
     ],
   },
   {

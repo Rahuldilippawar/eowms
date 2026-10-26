@@ -160,7 +160,15 @@ Dev accounts (password `password`): `admin@example.com` (super admin), `orgadmin
   and export, and the 90 → 0 day reminder schedule. Rules: [`docs/RENEWALS.md`](docs/RENEWALS.md).
 - Tests: 137 backend, 66 frontend, 41 end-to-end.
 
+### Phase 8a — done (vehicles, maintenance register)
+- Vehicles with their permit / PUC / insurance / tax dates as renewal items, trips, fuel and
+  services (costs charged to the department budget), driver self-service, correction requests,
+  service-due reminders by date and odometer, period report, CSV import / export.
+- Maintenance register: buildings, locations, work logged by register departments, payments,
+  location history, report. Rules: [`docs/VEHICLES.md`](docs/VEHICLES.md).
+- Tests: 144 backend, 69 frontend, 45 end-to-end.
+
 ### Not yet (later phases)
-- Hostel, residency, transport, maintenance, requests (Phase 8) and the other business modules (see
+- Hostel, residency, work requests, grievances (rest of Phase 8) and the other business modules (see
   [`../docs/erp/PARITY.md`](../docs/erp/PARITY.md)); email / push delivery of notifications.
 - Reports, deployment to Hostinger.

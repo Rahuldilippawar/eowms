@@ -18,6 +18,8 @@ export interface CurrentUser {
   permissions: string[]
   /** Modules the organization switched off (menu entries are hidden). */
   disabled_modules?: string[]
+  /** Drives an active vehicle (reaches it without the vehicles permissions). */
+  drives_vehicle?: boolean
   /** Imported or reset accounts must set their own password first. */
   must_change_password?: boolean
 }
