@@ -15,6 +15,9 @@ use App\Http\Controllers\Api\V1\FinanceController;
 use App\Http\Controllers\Api\V1\GrievanceController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\HolidayController;
+use App\Http\Controllers\Api\V1\HostelAttendanceController;
+use App\Http\Controllers\Api\V1\HostelController;
+use App\Http\Controllers\Api\V1\HostelResidentController;
 use App\Http\Controllers\Api\V1\InstitutionController;
 use App\Http\Controllers\Api\V1\LeaveBalanceController;
 use App\Http\Controllers\Api\V1\LeaveController;
@@ -269,6 +272,36 @@ Route::middleware(['auth:sanctum', SetAccessContext::class, EnsurePasswordChange
         Route::put('/grievances/{grievance}', [GrievanceController::class, 'update']);
         Route::post('/grievances/{grievance}/comments', [GrievanceController::class, 'comment']);
         Route::post('/grievances/{grievance}/reopen', [GrievanceController::class, 'reopen']);
+    });
+
+    // Hostels (Phase 8c). Hostel staff reach their own hostel without hostels.view; HostelAccess decides.
+    Route::middleware('module:hostels')->group(function () {
+        Route::get('/hostels', [HostelController::class, 'index']);
+        Route::post('/hostels', [HostelController::class, 'store'])->middleware('permission:hostels.manage');
+        Route::get('/hostels/residents/import/template', [HostelResidentController::class, 'importTemplate']);
+        Route::get('/hostels/{hostel}', [HostelController::class, 'show']);
+        Route::put('/hostels/{hostel}', [HostelController::class, 'update'])->middleware('permission:hostels.manage');
+        Route::put('/hostels/{hostel}/staff', [HostelController::class, 'setStaff'])->middleware('permission:hostels.manage');
+        Route::post('/hostels/{hostel}/rooms', [HostelController::class, 'saveRoom'])->middleware('permission:hostels.manage');
+        Route::put('/hostels/{hostel}/rooms/{room}', [HostelController::class, 'saveRoom'])->middleware('permission:hostels.manage');
+        Route::get('/hostels/{hostel}/residents', [HostelResidentController::class, 'index']);
+        Route::post('/hostels/{hostel}/residents', [HostelResidentController::class, 'store']);
+        Route::post('/hostels/{hostel}/residents/import/preview', [HostelResidentController::class, 'importPreview']);
+        Route::post('/hostels/{hostel}/residents/import', [HostelResidentController::class, 'import']);
+        Route::get('/hostels/{hostel}/attendance', [HostelAttendanceController::class, 'sheet']);
+        Route::post('/hostels/{hostel}/attendance', [HostelAttendanceController::class, 'save']);
+        Route::get('/hostel-residents/{resident}', [HostelResidentController::class, 'show']);
+        Route::put('/hostel-residents/{resident}', [HostelResidentController::class, 'update']);
+        Route::post('/hostel-residents/{resident}/allocate', [HostelResidentController::class, 'allocate']);
+        Route::post('/hostel-residents/{resident}/vacate', [HostelResidentController::class, 'vacate']);
+        Route::post('/hostel-residents/{resident}/out', [HostelResidentController::class, 'goOut']);
+        Route::post('/hostel-residents/{resident}/returned', [HostelResidentController::class, 'returned']);
+        Route::put('/hostel-residents/{resident}/health', [HostelResidentController::class, 'saveHealth']);
+        Route::post('/hostel-residents/{resident}/incidents', [HostelResidentController::class, 'addIncident']);
+        Route::post('/hostel-residents/{resident}/fees', [HostelResidentController::class, 'addFee']);
+        Route::post('/hostel-fees/{fee}/payments', [HostelResidentController::class, 'payFee']);
+        Route::post('/hostel-residents/{resident}/depart', [HostelResidentController::class, 'depart']);
+        Route::put('/hostel-residents/{resident}/alumnus', [HostelResidentController::class, 'updateAlumnus']);
     });
 
     // Correspondence (Phase 6).

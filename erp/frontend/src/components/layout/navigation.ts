@@ -1,4 +1,4 @@
-import { BarChart3, Bus, Hammer, MessageSquareWarning, FilePenLine, PieChart, Wrench, CalendarHeart, Fingerprint, IndianRupee, Scale, SlidersHorizontal, UserRound, Building, ClipboardPen, Mail, RefreshCw, ShoppingCart, Wallet, ListChecks, NotebookPen, Building2, CalendarClock, CalendarDays, ClipboardCheck, ClipboardList, GraduationCap, IdCard, KeyRound, LayoutDashboard, Network, Plane, Settings, Users, type LucideIcon } from 'lucide-react'
+import { BarChart3, BedDouble, Bus, Hammer, MessageSquareWarning, FilePenLine, PieChart, Wrench, CalendarHeart, Fingerprint, IndianRupee, Scale, SlidersHorizontal, UserRound, Building, ClipboardPen, Mail, RefreshCw, ShoppingCart, Wallet, ListChecks, NotebookPen, Building2, CalendarClock, CalendarDays, ClipboardCheck, ClipboardList, GraduationCap, IdCard, KeyRound, LayoutDashboard, Network, Plane, Settings, Users, type LucideIcon } from 'lucide-react'
 
 export interface NavItem {
   to: string
@@ -9,8 +9,8 @@ export interface NavItem {
   superAdminOnly?: boolean
   /** Hidden when the organization switched this module off. */
   module?: string
-  /** Also shown to someone who drives an active vehicle. */
-  orDriver?: boolean
+  /** Also shown when this flag of the signed-in user is set (drivers, hostel staff). */
+  orFlag?: 'drives_vehicle' | 'hostel_staff'
 }
 
 export interface NavSection {
@@ -62,8 +62,9 @@ export const NAVIGATION: NavSection[] = [
   {
     titleKey: 'nav.operations',
     items: [
-      { to: '/vehicles', labelKey: 'nav.vehicles', icon: Bus, permission: 'vehicles.view', module: 'vehicles', orDriver: true },
+      { to: '/vehicles', labelKey: 'nav.vehicles', icon: Bus, permission: 'vehicles.view', module: 'vehicles', orFlag: 'drives_vehicle' },
       { to: '/vehicles/corrections', labelKey: 'nav.vehicleCorrections', icon: FilePenLine, permission: 'vehicles.manage', module: 'vehicles' },
+      { to: '/hostels', labelKey: 'nav.hostels', icon: BedDouble, permission: 'hostels.view', module: 'hostels', orFlag: 'hostel_staff' },
       { to: '/maintenance', labelKey: 'nav.maintenance', icon: Hammer, permission: 'maintenance.view', module: 'maintenance' },
       { to: '/maintenance/report', labelKey: 'nav.maintenanceReport', icon: PieChart, permission: 'maintenance.view', module: 'maintenance' },
     ],

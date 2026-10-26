@@ -20,6 +20,8 @@ export interface CurrentUser {
   disabled_modules?: string[]
   /** Drives an active vehicle (reaches it without the vehicles permissions). */
   drives_vehicle?: boolean
+  /** Staff of an active hostel (reaches it without the hostels permissions). */
+  hostel_staff?: boolean
   /** Imported or reset accounts must set their own password first. */
   must_change_password?: boolean
 }

@@ -292,3 +292,24 @@ Rules: [`REQUESTS.md`](REQUESTS.md). Under the `requests` and `grievances` modul
 | GET / PUT | `/grievances/{id}` | as above / handler or assignee | `status, resolution (to resolve), assigned_to? (handler)` |
 | POST | `/grievances/{id}/comments`, `/grievances/{id}/reopen` | sender, handler, assignee / sender | `comment` / `reason` |
 
+## Phase 8c — hostels
+
+Rules: [`HOSTELS.md`](HOSTELS.md). Under the `hostels` module switch. "care" = the hostel's staff, `hostels.care` or `hostels.manage` over its department.
+
+| Method | Path | Permission | Notes |
+|---|---|---|---|
+| GET | `/hostels` | `hostels.view` scope or hostel staff | With residents, beds, out now, late returns |
+| POST / PUT | `/hostels[/{id}]` | `hostels.manage` in scope | `name, department_id, gender (boys\|girls\|mixed), capacity?, is_active?` |
+| GET | `/hostels/{id}` | as above | Dashboard: `staff`, `rooms`, `stats` (today's roll calls, out, fees due), `can_manage`, `can_care` |
+| PUT | `/hostels/{id}/staff` | manage | `staff: [{user_id, role?}]` (replaces the list) |
+| POST / PUT | `/hostels/{id}/rooms[/{room}]` | manage | `room_number, capacity, is_active?` |
+| GET / POST | `/hostels/{id}/residents[?status=active\|out\|left&search&format=csv]` | care (+ export for CSV) | `name, school_name?, class_grade?, district?, gender?, date_of_birth?, admission_date?, guardian_name?, guardian_phone?` |
+| GET / POST | `/hostels/residents/import/template`, `/hostels/{id}/residents/import/preview`, `/hostels/{id}/residents/import` | care | CSV; all rows or none |
+| GET / POST | `/hostels/{id}/attendance?session&date` | care | Sheet / `entries: [{resident_id, status (present\|absent\|on_leave), remark?}]` |
+| GET / PUT | `/hostel-residents/{id}` | care | Detail with beds, out-passes, health, incidents, fees, alumni record, last 30 days |
+| POST | `/hostel-residents/{id}/allocate`, `/vacate` | care | `room_id, bed_label?` |
+| POST | `/hostel-residents/{id}/out`, `/returned` | care | `leave_date, expected_return_date?, reason?, escort_name?` / `actual_return_date?` |
+| PUT / POST | `/hostel-residents/{id}/health`, `/incidents` | care | Health profile / `incident_date, description, action_taken?` |
+| POST | `/hostel-residents/{id}/fees`, `/hostel-fees/{fee}/payments` | care | `fee_period, amount_due, due_date?` / `amount, payment_mode, paid_on?, remarks?` |
+| POST / PUT | `/hostel-residents/{id}/depart`, `/alumnus` | care | `departure_date, departure_reason?, current_status?, contact_number?, notes?` |
+

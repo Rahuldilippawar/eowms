@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Models\Hostel;
 use App\Models\User;
 use App\Models\Vehicle;
 use App\Support\Access\AccessContext;
@@ -45,6 +46,9 @@ class CurrentUserResource extends JsonResource
             // Drivers reach their own vehicle without the vehicles permissions.
             'drives_vehicle' => $this->when($isCurrentUser, fn () => $context->organization() !== null
                 && Vehicle::query()->where('driver_user_id', $this->id)->where('is_active', true)->exists()),
+            // Hostel staff (wardens) reach their own hostel without the hostels permissions.
+            'hostel_staff' => $this->when($isCurrentUser, fn () => $context->organization() !== null
+                && Hostel::query()->where('is_active', true)->whereHas('staff', fn ($q) => $q->where('user_id', $this->id))->exists()),
             'must_change_password' => (bool) $this->must_change_password,
         ];
     }

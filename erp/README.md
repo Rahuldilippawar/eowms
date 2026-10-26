@@ -175,7 +175,13 @@ Dev accounts (password `password`): `admin@example.com` (super admin), `orgadmin
   Rules: [`docs/REQUESTS.md`](docs/REQUESTS.md).
 - Tests: 150 backend, 74 frontend, 51 end-to-end.
 
+### Phase 8c — done (hostels)
+- Hostels with wardens, rooms and beds, residents (import, departure into alumni), three daily
+  roll calls with a missed-roll-call reminder, out-passes, health, fees and the hostel dashboard.
+  Rules: [`docs/HOSTELS.md`](docs/HOSTELS.md).
+- Tests: 153 backend, 76 frontend, 53 end-to-end.
+
 ### Not yet (later phases)
-- Hostel and residency (rest of Phase 8) and the other business modules (see
+- Residency (rest of Phase 8) and the other business modules (see
   [`../docs/erp/PARITY.md`](../docs/erp/PARITY.md)); email / push delivery of notifications.
 - Reports, deployment to Hostinger.

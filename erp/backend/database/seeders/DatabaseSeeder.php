@@ -10,6 +10,11 @@ use App\Models\Department;
 use App\Models\DepartmentBudget;
 use App\Models\Employee;
 use App\Models\Holiday;
+use App\Models\Hostel;
+use App\Models\HostelAllocation;
+use App\Models\HostelResident;
+use App\Models\HostelRoom;
+use App\Models\HostelStaff;
 use App\Models\Institution;
 use App\Models\LetterCategory;
 use App\Models\MaintenanceLocation;
@@ -53,6 +58,7 @@ class DatabaseSeeder extends Seeder
         $this->department($trust, $school, 'Primary Section', 'PRI');
         $transport = $this->department($trust, null, 'Transport', 'TRP');
         $maintenance = $this->department($trust, null, 'Maintenance', 'MNT');
+        $hostelDept = $this->department($trust, null, 'Hostel', 'HOS');
 
         $hospital = $this->organization('Sanjeevani Hospital Trust', 'SHT', 'SHT');
         $this->department($hospital, null, 'Nursing', 'NUR');
@@ -64,6 +70,7 @@ class DatabaseSeeder extends Seeder
         $this->user('hospital.admin@example.com', 'Org Admin (SHT)', $hospital, 'org_admin');
         $teacher = $this->user('teacher@example.com', 'Physics Teacher', $trust, 'staff', departments: [$physics->id]);
         $driver = $this->user('driver@example.com', 'Bus Driver', $trust, 'staff', departments: [$transport->id]);
+        $warden = $this->user('warden@example.com', 'Hostel Warden', $trust, 'staff', departments: [$hostelDept->id]);
 
         // People records (linked to the accounts above where they log in).
         $ePrincipal = $this->employee($trust, $principal, 'EMP-001', 'Principal (SAC)', 'Principal', $college->departments()->where('code', 'LIB')->first() ?? $physics);
@@ -72,6 +79,7 @@ class DatabaseSeeder extends Seeder
         $this->employee($trust, $staff, 'EMP-004', 'IT Staff', 'System Administrator', $it);
         $this->employee($trust, $admin, 'EMP-005', 'Org Admin (SET)', 'Administrator', $it);
         $this->employee($trust, $driver, 'EMP-006', 'Bus Driver', 'Driver', $transport);
+        $this->employee($trust, $warden, 'EMP-007', 'Hostel Warden', 'Warden', $hostelDept);
         $eTeacher->fill(['gender' => 'female', 'date_of_birth' => '1991-07-12', 'blood_group' => 'B+', 'employment_type' => 'permanent', 'teaching_mode' => 'teaching'])->save();
         // Organization-defined fields, as the old app's community fields became.
         foreach ([['ashram_resident', 'आश्रमात राहतात', 'checkbox', null], ['naam_dharak', 'नामधारक', 'checkbox', null], ['food_preference', 'आहार', 'select', ['शाकाहारी', 'सात्विक']]] as $i => [$key, $label, $type, $options]) {
@@ -119,6 +127,17 @@ class DatabaseSeeder extends Seeder
             MaintenanceLocation::firstOrCreate(['organization_id' => $trust->id, 'location_code' => $code], [
                 'institution_id' => $college->id, 'building_id' => $main->id, 'name' => $name, 'floor' => $floor,
             ]);
+        }
+
+        // A boys' hostel looked after by the warden, with two rooms and two residents.
+        $hostel = Hostel::firstOrCreate(['organization_id' => $trust->id, 'name' => 'Boys Hostel A'], ['department_id' => $hostelDept->id, 'gender' => 'boys', 'capacity' => 8, 'created_by' => $admin->id]);
+        HostelStaff::firstOrCreate(['hostel_id' => $hostel->id, 'user_id' => $warden->id], ['role' => 'warden']);
+        $rooms = collect(['101', '102'])->map(fn ($n) => HostelRoom::firstOrCreate(['hostel_id' => $hostel->id, 'room_number' => $n], ['capacity' => 4]));
+        foreach ([['Suraj Kamble', 'ZP School No. 2', '7th', 'Thane'], ['Rohit Pawar', 'ZP School No. 2', '6th', 'Palghar']] as $i => [$name, $school, $class, $district]) {
+            $resident = HostelResident::firstOrCreate(['hostel_id' => $hostel->id, 'name' => $name], [
+                'school_name' => $school, 'class_grade' => $class, 'district' => $district, 'gender' => 'male', 'admission_date' => '2026-06-15', 'guardian_phone' => '98765432'.($i + 10),
+            ]);
+            HostelAllocation::firstOrCreate(['resident_id' => $resident->id, 'vacated_on' => null], ['room_id' => $rooms[0]->id, 'bed_label' => 'B'.($i + 1), 'allocated_on' => '2026-06-15']);
         }
 
         // A sample task from the HOD to the teacher.

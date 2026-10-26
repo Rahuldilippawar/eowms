@@ -21,3 +21,5 @@ Schedule::command('erp:renewal-reminders')->dailyAt('02:30')->withoutOverlapping
 Schedule::command('erp:vehicle-service-due')->dailyAt('02:40')->withoutOverlapping();
 // Work requests past their SLA and grievances past their deadline.
 Schedule::command('erp:escalate-tickets')->hourly()->withoutOverlapping();
+// Hostel roll calls not taken today: 20:00 India time.
+Schedule::command('erp:hostel-attendance-check')->dailyAt('14:30')->withoutOverlapping();
