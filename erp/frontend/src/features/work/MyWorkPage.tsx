@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { EmptyState, ErrorState, LoadingState } from '@/components/data/ListStates'
+import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Field } from '@/components/ui/Field'
@@ -15,14 +16,15 @@ import { useToast } from '@/components/ui/Toast'
 import { splitServerErrors } from '@/features/admin/serverErrors'
 import { fetchMyEmployee } from '@/features/attendance/api'
 import { useAuth } from '@/features/auth/AuthProvider'
-import { addDays, formatDate, todayYmd } from '@/lib/format'
+import { addDays, formatDate, formatMoney, todayYmd } from '@/lib/format'
 import { CustomFieldInputs } from '@/features/people/CustomFieldInputs'
 import type { CustomValues } from '@/features/people/profileApi'
-import { deleteWork, fetchMyOpenTasks, fetchMyWork, saveWork, type WorkEntry, type WorkInput, type WorkStatus } from './api'
+import { deleteWork, fetchMyOpenTasks, fetchMyWork, saveWork, type Colleague, type WorkEntry, type WorkInput, type WorkStatus } from './api'
+import { TeamPicker, WorkPhotos } from './WorkExtras'
 import { WorkStatusBadge } from './WorkStatusBadge'
 
-const FIELDS = ['custom', 'work_date', 'title', 'description', 'hours', 'status', 'task_id'] as const
-const blank = (date: string): Form => ({ work_date: date, title: '', description: '', hours: '', status: 'completed', task_id: '', custom: {} })
+const FIELDS = ['custom', 'work_date', 'title', 'description', 'hours', 'status', 'task_id', 'requested_by', 'estimated_cost', 'actual_cost', 'team_employee_ids'] as const
+const blank = (date: string): Form => ({ work_date: date, title: '', description: '', hours: '', status: 'completed', task_id: '', requested_by: '', estimated_cost: '', actual_cost: '', team: [], custom: {} })
 
 interface Form {
   work_date: string
@@ -31,8 +33,15 @@ interface Form {
   hours: string
   status: WorkStatus
   task_id: string
+  requested_by: string
+  estimated_cost: string
+  actual_cost: string
+  team: Colleague[]
   custom: CustomValues
 }
+
+const money = (s: string) => (s.trim() === '' ? null : Number(s))
+const badMoney = (s: string) => s.trim() !== '' && (Number.isNaN(Number(s)) || Number(s) < 0)
 
 function WorkForm({ editing, onDone, today, editDays }: { editing: WorkEntry | null; onDone: () => void; today: string; editDays: number }) {
   const { t } = useTranslation()
@@ -42,7 +51,19 @@ function WorkForm({ editing, onDone, today, editDays }: { editing: WorkEntry | n
   const tasks = useQuery({ queryKey: ['my-open-tasks', user?.current_organization?.id], queryFn: fetchMyOpenTasks })
   const [v, setV] = useState<Form>(() =>
     editing
-      ? { work_date: editing.work_date, title: editing.title, description: editing.description ?? '', hours: editing.hours?.toString() ?? '', status: editing.status, task_id: editing.task?.id.toString() ?? '', custom: editing.custom ?? {} }
+      ? {
+          work_date: editing.work_date,
+          title: editing.title,
+          description: editing.description ?? '',
+          hours: editing.hours?.toString() ?? '',
+          status: editing.status,
+          task_id: editing.task?.id.toString() ?? '',
+          requested_by: editing.requested_by ?? '',
+          estimated_cost: editing.estimated_cost?.toString() ?? '',
+          actual_cost: editing.actual_cost?.toString() ?? '',
+          team: editing.team ?? [],
+          custom: editing.custom ?? {},
+        }
       : blank(today),
   )
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -57,6 +78,10 @@ function WorkForm({ editing, onDone, today, editDays }: { editing: WorkEntry | n
         hours: v.hours === '' ? null : Number(v.hours),
         status: v.status,
         task_id: v.task_id ? Number(v.task_id) : null,
+        requested_by: v.requested_by.trim() || null,
+        estimated_cost: money(v.estimated_cost),
+        actual_cost: money(v.actual_cost),
+        team_employee_ids: v.team.map((c) => c.id),
         custom: v.custom,
       }
       return saveWork(editing?.id ?? null, input)
@@ -82,6 +107,8 @@ function WorkForm({ editing, onDone, today, editDays }: { editing: WorkEntry | n
     if (!v.work_date) local.work_date = t('form.required')
     const h = Number(v.hours)
     if (v.hours !== '' && (Number.isNaN(h) || h < 0.25 || h > 24 || Math.round(h * 4) !== h * 4)) local.hours = t('work.hoursRule')
+    if (badMoney(v.estimated_cost)) local.estimated_cost = t('work.costRule')
+    if (badMoney(v.actual_cost)) local.actual_cost = t('work.costRule')
     setErrors(local)
     if (Object.keys(local).length === 0) save.mutate()
   }
@@ -141,6 +168,20 @@ function WorkForm({ editing, onDone, today, editDays }: { editing: WorkEntry | n
           <Textarea id="w-desc" value={v.description} maxLength={5000} onChange={(e) => setV({ ...v, description: e.target.value })} />
         </Field>
       </div>
+      <Field id="w-requested" label={t('work.requestedBy')} error={errors.requested_by}>
+        <Input id="w-requested" value={v.requested_by} maxLength={255} onChange={(e) => setV({ ...v, requested_by: e.target.value })} />
+      </Field>
+      <div className="grid grid-cols-2 gap-3">
+        <Field id="w-est" label={t('work.estimatedCost')} error={errors.estimated_cost}>
+          <Input id="w-est" type="number" inputMode="decimal" min={0} step="0.01" value={v.estimated_cost} aria-invalid={!!errors.estimated_cost || undefined} onChange={(e) => setV({ ...v, estimated_cost: e.target.value })} />
+        </Field>
+        <Field id="w-act" label={t('work.actualCost')} error={errors.actual_cost}>
+          <Input id="w-act" type="number" inputMode="decimal" min={0} step="0.01" value={v.actual_cost} aria-invalid={!!errors.actual_cost || undefined} onChange={(e) => setV({ ...v, actual_cost: e.target.value })} />
+        </Field>
+      </div>
+      <div className="sm:col-span-2">
+        <TeamPicker value={v.team} onChange={(team) => setV({ ...v, team })} error={errors.team_employee_ids} />
+      </div>
       <CustomFieldInputs entity="work_entry" values={v.custom} onChange={(custom) => setV({ ...v, custom })} errors={errors} />
       <div className="flex gap-2 sm:col-span-2">
         <Button type="submit" disabled={save.isPending}>
@@ -156,7 +197,7 @@ function WorkForm({ editing, onDone, today, editDays }: { editing: WorkEntry | n
   )
 }
 
-export function WorkEntryCard({ entry, actions, showEmployee = false }: { entry: WorkEntry; actions?: React.ReactNode; showEmployee?: boolean }) {
+export function WorkEntryCard({ entry, actions, showEmployee = false, photosEditable = false }: { entry: WorkEntry; actions?: React.ReactNode; showEmployee?: boolean; photosEditable?: boolean }) {
   const { t } = useTranslation()
   return (
     <li className="flex flex-col gap-2 py-3 sm:flex-row sm:items-start sm:justify-between">
@@ -166,9 +207,19 @@ export function WorkEntryCard({ entry, actions, showEmployee = false }: { entry:
           {entry.title}
         </p>
         {entry.description ? <p className="whitespace-pre-line text-slate-600 dark:text-slate-400">{entry.description}</p> : null}
+        {entry.requested_by || entry.team?.length ? (
+          <p className="text-xs text-slate-500">
+            {entry.requested_by ? t('work.requestedByName', { name: entry.requested_by }) : null}
+            {entry.requested_by && entry.team?.length ? ' · ' : null}
+            {entry.team?.length ? t('work.withTeam', { names: entry.team.map((c) => c.name).join(', ') }) : null}
+          </p>
+        ) : null}
         <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
           <WorkStatusBadge status={entry.status} />
           {entry.hours !== null ? <span>{t('work.hoursCount', { count: entry.hours })}</span> : null}
+          {entry.estimated_cost != null ? <span>{t('work.estimatedCostValue', { amount: formatMoney(entry.estimated_cost) })}</span> : null}
+          {entry.actual_cost != null ? <span>{t('work.actualCostValue', { amount: formatMoney(entry.actual_cost) })}</span> : null}
+          {entry.is_imported ? <Badge tone="slate">{t('work.imported')}</Badge> : null}
           {entry.task ? (
             <Link to={`/tasks/${entry.task.id}`} className="text-brand-700 hover:underline">
               {entry.task.code}
@@ -182,6 +233,7 @@ export function WorkEntryCard({ entry, actions, showEmployee = false }: { entry:
             </span>
           ) : null}
         </div>
+        <WorkPhotos entry={entry} editable={photosEditable} />
       </div>
       {actions ? <div className="flex shrink-0 gap-2">{actions}</div> : null}
     </li>
@@ -240,6 +292,7 @@ export function MyWorkPage() {
                 <WorkEntryCard
                   key={e.id}
                   entry={e}
+                  photosEditable={e.can_edit}
                   actions={
                     e.can_edit ? (
                       <>

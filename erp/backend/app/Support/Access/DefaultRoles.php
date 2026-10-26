@@ -23,9 +23,9 @@ final class DefaultRoles
             'org_admin' => ['name' => 'Organization Admin', 'scope' => PermissionScope::Organization, 'permissions' => '*'],
             'principal' => ['name' => 'Principal', 'scope' => PermissionScope::Institutions, 'permissions' => [
                 ...$structureRead, 'departments.edit', 'users.view',
-                'employees.view', 'students.view', 'students.create', 'students.edit', 'students.activate',
+                'employees.view', 'students.view', 'students.create', 'students.edit', 'students.activate', 'students.export',
                 'attendance.view', 'attendance.approve', 'attendance.export', 'attendance.manage', 'leave.view', 'leave.approve', 'leave.balances',
-                'daily_work.view', 'daily_work.review', 'daily_work.export', 'tasks.view', 'tasks.create', 'tasks.edit',
+                'daily_work.view', 'daily_work.review', 'daily_work.export', 'daily_work.import', 'tasks.view', 'tasks.create', 'tasks.edit',
                 'performance.view', 'performance.export',
             ]],
             'hod' => ['name' => 'Head of Department', 'scope' => PermissionScope::Departments, 'permissions' => [

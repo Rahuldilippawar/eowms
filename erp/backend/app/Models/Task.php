@@ -19,12 +19,12 @@ class Task extends Model
     protected $fillable = [
         'organization_id', 'code', 'title', 'description', 'priority', 'due_date', 'assignee_employee_id',
         'institution_id', 'department_id', 'assigned_by', 'status', 'submitted_at', 'completed_at', 'completed_by',
-        'cancelled_at', 'updated_by',
+        'cancelled_at', 'updated_by', 'cost_incurred',
     ];
 
     protected function casts(): array
     {
-        return ['due_date' => 'date:Y-m-d', 'submitted_at' => 'datetime', 'completed_at' => 'datetime', 'cancelled_at' => 'datetime'];
+        return ['due_date' => 'date:Y-m-d', 'submitted_at' => 'datetime', 'completed_at' => 'datetime', 'cancelled_at' => 'datetime', 'cost_incurred' => 'decimal:2'];
     }
 
     public function assignee(): BelongsTo

@@ -1,7 +1,8 @@
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Download } from 'lucide-react'
+import { Download, Upload } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router-dom'
 import { EmptyState, ErrorState, LoadingState } from '@/components/data/ListStates'
 import { Pagination } from '@/components/data/Pagination'
 import { Button } from '@/components/ui/Button'
@@ -101,12 +102,20 @@ export function TeamWorkPage() {
     <div className="mx-auto max-w-5xl space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">{t('nav.teamWork')}</h1>
-        {can('daily_work.export') ? (
-          <a href={workCsvUrl({ from, to, search: debounced, reviewed })} className="inline-flex items-center gap-2 text-sm font-medium text-brand-700 hover:underline">
-            <Download aria-hidden className="size-4" />
-            {t('attendance.downloadCsv')}
-          </a>
-        ) : null}
+        <div className="flex flex-wrap items-center gap-4">
+          {can('daily_work.import') ? (
+            <Link to="/work/import" className="inline-flex items-center gap-2 text-sm font-medium text-brand-700 hover:underline">
+              <Upload aria-hidden className="size-4" />
+              {t('work.importTitle')}
+            </Link>
+          ) : null}
+          {can('daily_work.export') ? (
+            <a href={workCsvUrl({ from, to, search: debounced, reviewed })} className="inline-flex items-center gap-2 text-sm font-medium text-brand-700 hover:underline">
+              <Download aria-hidden className="size-4" />
+              {t('attendance.downloadCsv')}
+            </a>
+          ) : null}
+        </div>
       </div>
       <div className="flex flex-wrap items-end gap-3">
         <Field id="tw-from" label={t('leave.from')}>

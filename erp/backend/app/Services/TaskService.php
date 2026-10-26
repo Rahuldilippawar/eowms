@@ -188,7 +188,8 @@ final class TaskService
         });
     }
 
-    public function transition(Task $task, string $action, ?string $note, User $actor): Task
+    /** A cost is recorded only when the work is handed in or accepted; null keeps the earlier one. */
+    public function transition(Task $task, string $action, ?string $note, User $actor, int|float|string|null $cost = null): Task
     {
         abort_unless(isset(self::TRANSITIONS[$action]), 404);
         [$from, $to, $who] = self::TRANSITIONS[$action];
@@ -196,7 +197,7 @@ final class TaskService
             throw ValidationException::withMessages(['note' => [__('tasks.note_required')]]);
         }
 
-        $task = DB::transaction(function () use ($task, $action, $from, $to, $who, $note, $actor) {
+        $task = DB::transaction(function () use ($task, $action, $from, $to, $who, $note, $actor, $cost) {
             $task = $this->lock($task);
             $allowed = $who === 'assignee' ? self::isAssignee($actor, $task) : self::isManager($actor, $task);
             abort_unless($allowed, 403, __('tasks.not_allowed'));
@@ -214,6 +215,9 @@ final class TaskService
                 'cancel' => $task->cancelled_at = now(),
                 default => null,
             };
+            if ($cost !== null && in_array($action, ['submit', 'complete'], true)) {
+                $task->cost_incurred = $cost;
+            }
             $task->save();
             $this->log($task, $actor, self::LOG_TYPE[$action], $previous, $to, $note);
             AuditLogger::recordChanges('tasks', $action, $task, $before, $note);

@@ -48,18 +48,18 @@ Legend: ✅ in the ERP · 🟡 partly (gaps listed) · ⏳ scheduled (phase) · 
 | Biometric devices, PIN mapping, ZKTeco push (`iclock/cdata`, `getrequest`, `devicecmd`) | ✅ 5A-2a | Registered serials only; punch log → attendance |
 | Cron: mark absent daily, attendance pattern alert, biometric processing | ✅ 5A-2a | Scheduler commands; punches applied on arrival |
 | Cron: birthday / work-anniversary wishes, wish post | 🟡 5A-2a | In-app wishes ✅; colleagues' wish posts → ⏳ 12 (with announcements) |
-| Students master + bulk import | 🟡 | Bulk import → ⏳ 5A. Roll no, admission no, year of study, academic year, parent mobile → ⏳ 5A |
+| Students master + bulk import | ✅ 5A-2b | Roll no, admission no, year of study, academic year, mobile, email; CSV import + export. Student login → ⏳ 14 |
 
 ## Work (phase 5 → gaps in 5A)
 
 | Old module / page | Status | Gaps |
 |---|---|---|
 | Daily work entry, my work, edit, status, report, CSV | ✅ | |
-| Daily work team members, before / after photos, requested by, cost | ⏳ 5A | |
+| Daily work team members, before / after photos, requested by, cost | ✅ 5A-2b | Photos private; team mates may see them |
 | Custom fields per organization (daily work) | ✅ 5A-1 | Also on employee and student forms |
-| Import old work records + template | ⏳ 5A | |
+| Import old work records + template | ✅ 5A-2b | Matched by employee code; all rows or none |
 | Daily work print report, material usage report | ⏳ 9 | Material usage needs the store ledger |
-| Tasks: assign, my tasks, verify / reopen, report | ✅ | Old `cost_incurred` → ⏳ 5A |
+| Tasks: assign, my tasks, verify / reopen, report | ✅ | `cost_incurred` ✅ 5A-2b |
 | Notifications page, mark all read | ✅ | |
 | Cron: overdue tasks | ✅ | `erp:task-reminders` |
 

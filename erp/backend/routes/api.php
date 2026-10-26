@@ -116,6 +116,10 @@ Route::middleware(['auth:sanctum', SetAccessContext::class, EnsurePasswordChange
 
     Route::get('/students', [StudentController::class, 'index'])->middleware('permission:students.view')->middleware('module:students');
     Route::post('/students', [StudentController::class, 'store'])->middleware('permission:students.create')->middleware('module:students');
+    Route::get('/students/export', [StudentController::class, 'export'])->middleware('permission:students.export')->middleware('module:students');
+    Route::get('/students/import/template', [StudentController::class, 'importTemplate'])->middleware('permission:students.create')->middleware('module:students');
+    Route::post('/students/import/preview', [StudentController::class, 'importPreview'])->middleware('permission:students.create')->middleware('module:students');
+    Route::post('/students/import', [StudentController::class, 'import'])->middleware('permission:students.create')->middleware('module:students');
     Route::get('/students/{student}', [StudentController::class, 'show'])->middleware('permission:students.view')->middleware('module:students');
     Route::put('/students/{student}', [StudentController::class, 'update'])->middleware('permission:students.edit')->middleware('module:students');
     Route::post('/students/{student}/active', [StudentController::class, 'setActive'])->middleware('permission:students.activate')->middleware('module:students');
@@ -137,10 +141,17 @@ Route::middleware(['auth:sanctum', SetAccessContext::class, EnsurePasswordChange
     Route::post('/me/work', [WorkController::class, 'store'])->middleware('module:daily_work');
     Route::put('/me/work/{entry}', [WorkController::class, 'update'])->middleware('module:daily_work');
     Route::delete('/me/work/{entry}', [WorkController::class, 'destroy'])->middleware('module:daily_work');
+    Route::post('/me/work/{entry}/photos/{kind}', [WorkController::class, 'uploadPhoto'])->whereIn('kind', ['before', 'after'])->middleware('module:daily_work');
+    Route::delete('/me/work/{entry}/photos/{kind}', [WorkController::class, 'deletePhoto'])->whereIn('kind', ['before', 'after'])->middleware('module:daily_work');
+    Route::get('/work/{entry}/photos/{kind}', [WorkController::class, 'photo'])->whereIn('kind', ['before', 'after'])->middleware('module:daily_work');
+    Route::get('/me/work/colleagues', [WorkController::class, 'colleagues'])->middleware(['module:daily_work', 'throttle:60,1']);
     Route::get('/me/tasks/open', [WorkController::class, 'myTasks'])->middleware('module:tasks');
     Route::get('/me/performance', [PerformanceController::class, 'me'])->middleware('module:performance');
     Route::get('/work', [WorkController::class, 'index'])->middleware('permission:daily_work.view')->middleware('module:daily_work');
     Route::get('/work/export', [WorkController::class, 'export'])->middleware('permission:daily_work.export')->middleware('module:daily_work');
+    Route::get('/work/import/template', [WorkController::class, 'importTemplate'])->middleware('permission:daily_work.import')->middleware('module:daily_work');
+    Route::post('/work/import/preview', [WorkController::class, 'importPreview'])->middleware('permission:daily_work.import')->middleware('module:daily_work');
+    Route::post('/work/import', [WorkController::class, 'import'])->middleware('permission:daily_work.import')->middleware('module:daily_work');
     Route::post('/work/{entry}/review', [WorkController::class, 'review'])->middleware('permission:daily_work.review')->middleware('module:daily_work');
 
     // Tasks: visibility and who may act are decided per task (TaskService), not by a single permission.

@@ -14,6 +14,26 @@ All rules run on the server; the app only shows what the API allows.
   employee gets a notification. `daily_work.view` shows the team list; `daily_work.export` adds the CSV
   (UTF-8 with BOM, formula cells neutralised, export written to the audit log).
 
+### Team, requester, cost and photos (Phase 5A-2b)
+
+- **Done together with**: up to 20 active colleagues of the organization (never oneself). The
+  employee finds them with `/me/work/colleagues?search=` (name, code and department only). Leaving
+  `team_employee_ids` out of an update keeps the team as it is.
+- **Requested by** (free text) and **estimated / actual cost** (₹, 0 or more) are optional and appear
+  in the CSV export.
+- **Before / after photo**: JPEG, PNG or WebP up to 5 MB, private storage, only while the entry can be
+  edited. The photo is served to the employee, their team mates and anyone whose `daily_work.view`
+  scope reaches the employee; anyone else gets 404. Deleting the entry deletes its photos.
+
+### Old work records (import)
+
+`daily_work.import` brings the old app's records in from CSV: `date, employee_code, title` (required),
+`description, hours, status, requested_by, team_codes, estimated_cost, actual_cost`. The employee must
+be within the importer's scope; colleagues in `team_codes` (comma separated) must be active. Old dates
+are allowed (the edit window does not apply), future dates are not, status defaults to completed.
+Every row is checked first, then all rows are written or none (up to 5,000). Imported entries are
+marked "Old record" and can no longer be edited by the employee once outside the window.
+
 ## Tasks
 
 | Who | Can |
@@ -38,6 +58,8 @@ open / in_progress / submitted ──cancel──▶ cancelled   (reason require
 - A due date cannot be in the past when a task is created. A task is **overdue** when it is still
   open, in progress or submitted after its due date.
 - Codes are `TSK-00001`, unique per organization.
+- **Money spent** (`cost_incurred`, ₹) can be given when the assignee marks the task done or the
+  manager closes it; leaving it out keeps the earlier amount (Phase 5A-2b).
 
 ## Notifications
 

@@ -33,6 +33,7 @@ class TaskResource extends JsonResource
             'submitted_at' => $this->submitted_at?->toIso8601String(),
             'completed_at' => $this->completed_at?->toIso8601String(),
             'cancelled_at' => $this->cancelled_at?->toIso8601String(),
+            'cost_incurred' => $this->cost_incurred === null ? null : (float) $this->cost_incurred,
             'created_at' => $this->created_at?->toIso8601String(),
             'actions' => $request->user() ? TaskService::actionsFor($request->user(), $this->resource) : [],
             'updates' => $this->whenLoaded('updates', fn () => $this->updates->map(fn (TaskUpdate $u) => [

@@ -6,13 +6,14 @@ import { Link, useParams } from 'react-router-dom'
 import { EmptyState, ErrorState, LoadingState } from '@/components/data/ListStates'
 import { Button } from '@/components/ui/Button'
 import { Field } from '@/components/ui/Field'
+import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import { Spinner } from '@/components/ui/Spinner'
 import { Textarea } from '@/components/ui/Textarea'
 import { useToast } from '@/components/ui/Toast'
 import { parseApiError } from '@/lib/api'
 import { actionErrorMessage } from '@/lib/forms'
-import { formatDate } from '@/lib/format'
+import { formatDate, formatMoney } from '@/lib/format'
 import { commentTask, fetchTask, taskTransition, type Task, type TaskAction } from './api'
 import { OverdueFlag, PriorityLabel, TaskStatusBadge } from './TaskBadges'
 import { TaskDialog } from './TaskDialog'
@@ -21,6 +22,8 @@ type Transition = Exclude<TaskAction, 'edit' | 'comment'>
 const ORDER: Transition[] = ['start', 'submit', 'complete', 'reopen', 'cancel']
 /** Reopen and cancel must say why; submit may add a note. */
 const NOTE: Record<Transition, 'none' | 'optional' | 'required'> = { start: 'none', submit: 'optional', complete: 'optional', reopen: 'required', cancel: 'required' }
+/** The money spent can be recorded when the work is handed in or accepted. */
+const WITH_COST: Transition[] = ['submit', 'complete']
 
 function TransitionButton({ task, action }: { task: Task; action: Transition }) {
   const { t } = useTranslation()
@@ -28,6 +31,7 @@ function TransitionButton({ task, action }: { task: Task; action: Transition }) 
   const queryClient = useQueryClient()
   const [open, setOpen] = useState(false)
   const [note, setNote] = useState('')
+  const [cost, setCost] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -36,16 +40,21 @@ function TransitionButton({ task, action }: { task: Task; action: Transition }) 
       setError(t('tasks.noteRequired'))
       return
     }
+    if (cost.trim() !== '' && (Number.isNaN(Number(cost)) || Number(cost) < 0)) {
+      setError(t('work.costRule'))
+      return
+    }
     setBusy(true)
     setError(null)
     try {
-      const saved = await taskTransition(task.id, action, note.trim())
+      const saved = await taskTransition(task.id, action, note.trim(), cost.trim() === '' ? null : Number(cost))
       queryClient.setQueryData(['task', task.id], saved)
       void queryClient.invalidateQueries({ queryKey: ['tasks'] })
       void queryClient.invalidateQueries({ queryKey: ['dashboard'] })
       toast.success(t(`tasks.done.${action}`))
       setOpen(false)
       setNote('')
+      setCost('')
     } catch (e) {
       setError(actionErrorMessage(e, t('common.actionFailed')))
     } finally {
@@ -83,6 +92,13 @@ function TransitionButton({ task, action }: { task: Task; action: Transition }) 
         <Field id={`tn-${action}`} label={NOTE[action] === 'required' ? t('tasks.reason') : t('tasks.noteOptional')} error={error ?? undefined}>
           <Textarea id={`tn-${action}`} rows={3} maxLength={1000} value={note} aria-invalid={!!error || undefined} onChange={(e) => setNote(e.target.value)} />
         </Field>
+        {WITH_COST.includes(action) ? (
+          <div className="mt-3">
+            <Field id={`tc-${action}`} label={t('tasks.costIncurred')}>
+              <Input id={`tc-${action}`} type="number" inputMode="decimal" min={0} step="0.01" value={cost} placeholder={task.cost_incurred != null ? String(task.cost_incurred) : undefined} onChange={(e) => setCost(e.target.value)} />
+            </Field>
+          </div>
+        ) : null}
       </Modal>
     </>
   )
@@ -175,6 +191,12 @@ export function TaskDetailPage() {
           <dt className="text-slate-500">{t('tasks.dueDate')}</dt>
           <dd className="font-medium">{formatDate(task.due_date)}</dd>
         </div>
+        {task.cost_incurred != null ? (
+          <div>
+            <dt className="text-slate-500">{t('tasks.costIncurred')}</dt>
+            <dd className="font-medium">{formatMoney(task.cost_incurred)}</dd>
+          </div>
+        ) : null}
         {task.description ? (
           <div className="sm:col-span-3">
             <dt className="text-slate-500">{t('work.details')}</dt>

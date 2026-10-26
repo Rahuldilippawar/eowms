@@ -30,6 +30,7 @@ export interface Task {
   submitted_at: string | null
   completed_at: string | null
   cancelled_at: string | null
+  cost_incurred?: number | null
   created_at: string
   actions: TaskAction[]
   updates?: TaskUpdate[]
@@ -66,6 +67,6 @@ export const fetchTask = async (id: number): Promise<Task> => (await api.get(`/t
 export const fetchAssignable = async (): Promise<Assignable[]> => (await api.get('/tasks/assignable')).data.data
 export const createTask = async (input: TaskInput): Promise<Task> => (await api.post('/tasks', input)).data.data
 export const updateTask = async (id: number, input: Partial<TaskInput>): Promise<Task> => (await api.put(`/tasks/${id}`, input)).data.data
-export const taskTransition = async (id: number, action: Exclude<TaskAction, 'edit' | 'comment'>, note: string): Promise<Task> =>
-  (await api.post(`/tasks/${id}/${action}`, { note: note || undefined })).data.data
+export const taskTransition = async (id: number, action: Exclude<TaskAction, 'edit' | 'comment'>, note: string, cost?: number | null): Promise<Task> =>
+  (await api.post(`/tasks/${id}/${action}`, { note: note || undefined, cost_incurred: cost ?? undefined })).data.data
 export const commentTask = async (id: number, body: string): Promise<Task> => (await api.post(`/tasks/${id}/comments`, { body })).data.data

@@ -241,7 +241,8 @@
     "review": "आढावा घेणे",
     "sensitive": "खाजगी माहिती पाहणे / बदलणे",
     "manage": "सुट्ट्या, शिफ्ट, मशीन",
-    "balances": "रजा वाटप"
+    "balances": "रजा वाटप",
+    "import": "आयात"
   },
   "modules": {
     "organizations": "संस्था",
@@ -380,7 +381,14 @@
     "primaryDepartment": "मुख्य विभाग",
     "reportingOfficer": "वरिष्ठ अधिकारी",
     "section": "तुकडी",
-    "studentCode": "विद्यार्थी कोड"
+    "studentCode": "विद्यार्थी कोड",
+    "rollNo": "रोल नं.",
+    "admissionNo": "प्रवेश क्रमांक",
+    "yearOfStudy": "शिक्षणाचे वर्ष",
+    "yearN": "वर्ष {{n}}",
+    "academicYear": "शैक्षणिक वर्ष",
+    "academicYearRule": "2026-27 असे लिहा.",
+    "studentMobile": "विद्यार्थ्याचा मोबाइल"
   },
   "notifications": {
     "title": "सूचना",
@@ -448,7 +456,34 @@
     "reviewedToast": "आढावा नोंदवला.",
     "reviewState": "आढावा",
     "reviewed": "आढावा झाला",
-    "notReviewed": "आढावा बाकी"
+    "notReviewed": "आढावा बाकी",
+    "team": "सोबत काम करणारे",
+    "teamSearch": "नाव किंवा कोडने सहकारी शोधा",
+    "addMember": "{{name}} जोडा",
+    "removeMember": "{{name}} काढा",
+    "noColleagues": "जुळणारा सक्रिय सहकारी नाही.",
+    "requestedBy": "कोणी सांगितले",
+    "requestedByName": "सांगणारे: {{name}}",
+    "withTeam": "सोबत: {{names}}",
+    "estimatedCost": "अंदाजे खर्च (₹)",
+    "actualCost": "प्रत्यक्ष खर्च (₹)",
+    "costRule": "0 किंवा जास्त रक्कम लिहा.",
+    "estimatedCostValue": "अंदाज {{amount}}",
+    "actualCostValue": "खर्च {{amount}}",
+    "imported": "जुनी नोंद",
+    "importTitle": "जुन्या कामाच्या नोंदी आयात",
+    "importNote": "प्रत्येक ओळ employee_code ने कर्मचाऱ्याशी जुळवली जाते. जुन्या तारखा चालतात, पुढील तारखा नाहीत. team_codes मध्ये सहकाऱ्यांचे कोड स्वल्पविरामाने द्या.",
+    "photo": {
+      "before": "आधी",
+      "after": "नंतर",
+      "none": "फोटो नाही",
+      "saved": "फोटो जतन झाला",
+      "alt": "{{kind}} फोटो: {{title}}",
+      "upload": "{{kind}}: फोटो जोडा",
+      "remove": "{{kind}}: फोटो काढा"
+    },
+    "importDone_one": "{{count}} कामाची नोंद आयात झाली.",
+    "importDone_other": "{{count}} कामाच्या नोंदी आयात झाल्या."
   },
   "tasks": {
     "status": {
@@ -526,7 +561,8 @@
     "sendComment": "पाठवा",
     "reason": "कारण",
     "noteOptional": "टीप (ऐच्छिक)",
-    "noteRequired": "कृपया थोडक्यात कारण लिहा."
+    "noteRequired": "कृपया थोडक्यात कारण लिहा.",
+    "costIncurred": "झालेला खर्च (₹)"
   },
   "performance": {
     "mine": "माझी आकडेवारी",
@@ -695,7 +731,10 @@
     "run_one": "{{count}} ओळ आयात करा",
     "run_other": "{{count}} ओळी आयात करा",
     "done_one": "{{count}} कर्मचारी आयात झाला.",
-    "done_other": "{{count}} कर्मचारी आयात झाले."
+    "done_other": "{{count}} कर्मचारी आयात झाले.",
+    "studentsTitle": "विद्यार्थी आयात",
+    "studentsDone_one": "{{count}} विद्यार्थी आयात झाला.",
+    "studentsDone_other": "{{count}} विद्यार्थी आयात झाले."
   },
   "settings": {
     "modules": "विभाग (मॉड्युल्स)",

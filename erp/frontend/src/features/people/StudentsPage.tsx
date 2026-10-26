@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Plus } from 'lucide-react'
+import { Download, Plus, Upload } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router-dom'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Field } from '@/components/ui/Field'
@@ -16,9 +17,12 @@ import { ActiveToggle } from '@/features/org/ActiveToggle'
 import { fetchDepartmentOptions, fetchInstitutionOptions } from '@/features/org/api'
 import { ListPage, type Column } from '@/features/org/ListPage'
 import { CustomFieldInputs } from './CustomFieldInputs'
-import { createStudent, fetchStudents, setStudentActive, updateStudent, type Student, type StudentInput } from './api'
+import { createStudent, fetchStudents, setStudentActive, studentsCsvUrl, updateStudent, type Student, type StudentInput } from './api'
 
-const FIELDS = ['custom', 'student_code', 'name', 'institution_id', 'department_id', 'class_name', 'section', 'gender', 'date_of_birth', 'admission_date', 'guardian_name', 'guardian_phone'] as const
+const FIELDS = [
+  'custom', 'student_code', 'name', 'institution_id', 'department_id', 'class_name', 'section', 'gender', 'date_of_birth', 'admission_date', 'guardian_name', 'guardian_phone',
+  'roll_no', 'admission_no', 'year_of_study', 'academic_year', 'mobile', 'email',
+] as const
 
 function initial(s?: Student): StudentInput {
   return {
@@ -33,6 +37,12 @@ function initial(s?: Student): StudentInput {
     admission_date: s?.admission_date ?? '',
     guardian_name: s?.guardian_name ?? '',
     guardian_phone: s?.guardian_phone ?? '',
+    roll_no: s?.roll_no ?? '',
+    admission_no: s?.admission_no ?? '',
+    year_of_study: s?.year_of_study ?? null,
+    academic_year: s?.academic_year ?? '',
+    mobile: s?.mobile ?? '',
+    email: s?.email ?? '',
     custom: s?.custom ?? {},
   }
 }
@@ -70,6 +80,11 @@ function StudentDialog({ open, onOpenChange, student }: { open: boolean; onOpenC
         admission_date: n(v.admission_date),
         guardian_name: n(v.guardian_name),
         guardian_phone: n(v.guardian_phone),
+        roll_no: n(v.roll_no),
+        admission_no: n(v.admission_no),
+        academic_year: n(v.academic_year),
+        mobile: n(v.mobile),
+        email: n(v.email),
       }
       return student ? updateStudent(student.id, input) : createStudent(input)
     },
@@ -90,6 +105,8 @@ function StudentDialog({ open, onOpenChange, student }: { open: boolean; onOpenC
     if (!v.student_code.trim()) local.student_code = t('form.required')
     if (!v.name.trim()) local.name = t('form.required')
     if (!v.institution_id) local.institution_id = t('form.required')
+    if (v.academic_year?.trim() && !/^\d{4}-\d{2}$/.test(v.academic_year.trim())) local.academic_year = t('people.academicYearRule')
+    if (v.email?.trim() && !/^[^\s@]+@[^\s@]+$/.test(v.email.trim())) local.email = t('auth.errors.emailInvalid')
     setErrors(local)
     if (Object.keys(local).length === 0) save.mutate()
   }
@@ -150,6 +167,25 @@ function StudentDialog({ open, onOpenChange, student }: { open: boolean; onOpenC
         <Field id="s-section" label={t('people.section')} error={errors.section}>
           <Input id="s-section" value={v.section ?? ''} onChange={set('section')} />
         </Field>
+        <Field id="s-roll" label={t('people.rollNo')} error={errors.roll_no}>
+          <Input id="s-roll" value={v.roll_no ?? ''} onChange={set('roll_no')} />
+        </Field>
+        <Field id="s-adm" label={t('people.admissionNo')} error={errors.admission_no}>
+          <Input id="s-adm" value={v.admission_no ?? ''} onChange={set('admission_no')} />
+        </Field>
+        <Field id="s-year" label={t('people.yearOfStudy')} error={errors.year_of_study}>
+          <Select id="s-year" value={v.year_of_study ?? ''} onChange={(e) => setV({ ...v, year_of_study: e.target.value ? Number(e.target.value) : null })}>
+            <option value="">—</option>
+            {[1, 2, 3, 4, 5, 6].map((y) => (
+              <option key={y} value={y}>
+                {t('people.yearN', { n: y })}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <Field id="s-ay" label={t('people.academicYear')} error={errors.academic_year}>
+          <Input id="s-ay" value={v.academic_year ?? ''} placeholder="2026-27" aria-invalid={!!errors.academic_year || undefined} onChange={set('academic_year')} />
+        </Field>
         <Field id="s-gender" label={t('people.gender')} error={errors.gender}>
           <Select id="s-gender" value={v.gender ?? ''} onChange={(e) => setV({ ...v, gender: (e.target.value || null) as StudentInput['gender'] })}>
             <option value="">—</option>
@@ -167,6 +203,12 @@ function StudentDialog({ open, onOpenChange, student }: { open: boolean; onOpenC
         <Field id="s-gphone" label={t('people.guardianPhone')} error={errors.guardian_phone}>
           <Input id="s-gphone" type="tel" value={v.guardian_phone ?? ''} onChange={set('guardian_phone')} />
         </Field>
+        <Field id="s-mobile" label={t('people.studentMobile')} error={errors.mobile}>
+          <Input id="s-mobile" type="tel" value={v.mobile ?? ''} onChange={set('mobile')} />
+        </Field>
+        <Field id="s-email" label={t('auth.email')} error={errors.email}>
+          <Input id="s-email" type="email" value={v.email ?? ''} aria-invalid={!!errors.email || undefined} onChange={set('email')} />
+        </Field>
         <CustomFieldInputs entity="student" values={v.custom ?? {}} onChange={(custom) => setV({ ...v, custom })} errors={errors} />
       </div>
     </Modal>
@@ -183,6 +225,8 @@ export function StudentsPage() {
     { key: 'code', header: t('people.studentCode'), cell: (s) => <span className="font-mono text-xs">{s.student_code}</span> },
     { key: 'institution', header: t('org.institution'), cell: (s) => s.institution.name },
     { key: 'class', header: t('people.className'), cell: (s) => [s.class_name, s.section].filter(Boolean).join(' / ') || '—' },
+    { key: 'roll', header: t('people.rollNo'), cell: (s) => s.roll_no ?? '—' },
+    { key: 'year', header: t('people.academicYear'), cell: (s) => s.academic_year ?? '—' },
     { key: 'status', header: t('org.status'), cell: (s) => <Badge tone={s.is_active ? 'green' : 'slate'}>{s.is_active ? t('org.active') : t('org.inactive')}</Badge> },
   ]
   const canEdit = can('students.edit')
@@ -198,17 +242,31 @@ export function StudentsPage() {
         emptyMessage={t('people.noStudents')}
         cardTitle={(s) => s.name}
         toolbar={
-          can('students.create') ? (
-            <Button
-              onClick={() => {
-                setEditing(undefined)
-                setOpen(true)
-              }}
-            >
-              <Plus aria-hidden className="size-4" />
-              {t('people.newStudent')}
-            </Button>
-          ) : null
+          <>
+            {can('students.export') ? (
+              <a href={studentsCsvUrl()} className="inline-flex min-h-10 items-center gap-2 text-sm font-medium text-brand-700 hover:underline">
+                <Download aria-hidden className="size-4" />
+                {t('attendance.downloadCsv')}
+              </a>
+            ) : null}
+            {can('students.create') ? (
+              <Link to="/students/import" className="inline-flex min-h-10 items-center gap-2 text-sm font-medium text-brand-700 hover:underline">
+                <Upload aria-hidden className="size-4" />
+                {t('import.studentsTitle')}
+              </Link>
+            ) : null}
+            {can('students.create') ? (
+              <Button
+                onClick={() => {
+                  setEditing(undefined)
+                  setOpen(true)
+                }}
+              >
+                <Plus aria-hidden className="size-4" />
+                {t('people.newStudent')}
+              </Button>
+            ) : null}
+          </>
         }
         actions={
           canEdit || canToggle
