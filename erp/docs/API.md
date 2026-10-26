@@ -207,3 +207,20 @@ Rules: [`CORRESPONDENCE.md`](CORRESPONDENCE.md). All under the `letters` module 
 | GET / POST / PUT | `/letter-settings/categories[/{id}]`, `POST /letter-settings/categories/defaults` | `letters.manage` (organization scope) | |
 | GET / POST / PUT | `/letter-settings/workflows[/{id}]` | `letters.manage` (organization scope) | `name, letter_category_id?, is_active, steps[{name, approver_type, department_id?, user_id?}]` |
 | GET | `/public/signatures/{code}` | public, 30 per minute | Signer, organization, file / outward no., time, method, `intact` |
+
+## Phase 7a — department budgets, purchases, payments
+
+Rules: [`FINANCE.md`](FINANCE.md). All under the `finance` module switch.
+
+| Method | Path | Permission | Notes |
+|---|---|---|---|
+| GET | `/finance/budgets?fy` | `finance.view` | One row per department in scope: allocated, spent, remaining, `by_category`, `by_source`, purchases billed / paid; `meta.can_allocate` |
+| PUT | `/finance/budgets` | `finance.budget` reaching the department | `department_id, fy, allocated_amount` |
+| GET | `/finance/budget-check?department_id&date&amount` | `finance.view` or `finance.manage` reaching the department | `remaining` (null = no budget), `exceeds` |
+| GET | `/finance/transactions?fy&department_id&format=csv?` | `finance.view` (+ `finance.export` for CSV) | The ledger |
+| GET | `/finance/purchases?fy&status=pending\|partial\|paid&search&page&format=csv?` | `finance.view` (+ export) | |
+| POST / PUT | `/finance/purchases[/{id}]` | `finance.manage` reaching the department | `department_id, material_name, vendor_name, vendor_contact?, quantity, unit?, rate, transport_cost?, gst_percent?, purchase_date, remarks?` |
+| GET / DELETE | `/finance/purchases/{id}` | view / manage | Delete only without payments |
+| POST | `/finance/purchases/{id}/payments` | `finance.manage` | `amount ≤ due, payment_date, payment_type=advance\|partial\|final, payment_mode?, remarks?` |
+
+Signing a budget letter (`POST /letters/{id}/sign`) now charges its approved amount to the creator's department.

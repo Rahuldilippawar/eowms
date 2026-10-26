@@ -71,17 +71,21 @@ Legend: ✅ in the ERP · 🟡 partly (gaps listed) · ⏳ scheduled (phase) · 
 | Letter categories, seed default categories and workflows | ✅ 6 | 18 default categories; workflows are built in the settings page (no guessed "top management") |
 | Workflow templates (create / edit) with steps | ✅ 6 | Generic approval engine (`module` column) for later modules |
 | Sign & approve (password / fingerprint), signature verification | 🟡 6 | Password ✅ with SHA-256 seal + public check; fingerprint → ⏳ 11 (WebAuthn) |
-| Budget deduction on approval | ⏳ 7 | Approved amount recorded now; deducted with department finance |
+| Budget deduction on approval | ✅ 7a | Charged to the department budget when signed |
 | Attachments | ✅ 6 | Private storage, audited downloads, sealed by the signature |
 | Reassign (super admin), dispatch details, remarks, seen-by-holder | ✅ 6 | |
 | Sister-organization recipients | ❓ | Old app could send to a sister organization; ERP files stay inside one organization — owner to decide |
 | Cron: overdue letters | ✅ 6 | `erp:letter-reminders` (3-day reminder, 7-day escalation to the department head) |
 
-## Renewals and finance (⏳ 7)
+## Renewals and finance (7)
 
-Renewals (items, renew, history, attachments, calendar, cost analysis, payment track, import, report,
-reminders cron), department finance (budget allocation, budget check, material purchase, payment
-ledger, dashboard, report, export), budget module.
+| Old module / page | Status | Notes |
+|---|---|---|
+| Department finance: budget allocation, budget check, dashboard, report, export | ✅ 7a | One ledger per source record, financial year of the spend's date |
+| Material purchase (GST, transport) + payment ledger | ✅ 7a | Payments never exceed what is due |
+| Budget module (overview per department) | ✅ 7a | Budgets page with use bar and spend by source |
+| Budget deduction on letter approval | ✅ 7a | Charged on signing |
+| Renewals: items, renew, history, attachments, calendar, cost analysis, payment track, import, report, reminders cron | ⏳ 7b | |
 
 ## Hostel, residency, transport, maintenance, requests (⏳ 8)
 

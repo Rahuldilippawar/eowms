@@ -2,14 +2,12 @@
 
 namespace App\Http\Controllers\Api\V1;
 
-use App\Enums\PermissionScope;
 use App\Http\Controllers\Controller;
-use App\Models\Department;
 use App\Models\Letter;
 use App\Models\LetterInwardNumber;
 use App\Services\AttendanceRules;
 use App\Support\Access\AccessContext;
-use App\Support\Access\ResolvedScope;
+use App\Support\Access\ScopeDepartments;
 use App\Support\Audit\AuditLogger;
 use App\Support\Export\Csv;
 use App\Support\Numbering\NumberSequence;
@@ -38,7 +36,7 @@ class LetterRegisterController extends Controller
         $fy = (int) ($f['fy'] ?? $currentFy);
         $csv = ($f['format'] ?? null) === 'csv';
         abort_if($csv && ! $context->can('letters.export'), 403, __('auth.forbidden'));
-        $departments = $this->departmentIds($context->scope('letters.view'));
+        $departments = ScopeDepartments::ids($context->scope('letters.view'));
         if (! empty($f['department_id'])) {
             $departments = $departments === null ? [(int) $f['department_id']] : array_values(array_intersect($departments, [(int) $f['department_id']]));
         }
@@ -88,16 +86,5 @@ class LetterRegisterController extends Controller
         }
 
         return response()->json(['data' => $rows->values(), 'meta' => ['fy' => $fy, 'current_fy' => $currentFy]]);
-    }
-
-    /** @return list<int>|null null = every department of the organization */
-    private function departmentIds(?ResolvedScope $scope): ?array
-    {
-        return match ($scope?->scope) {
-            PermissionScope::Organization => null,
-            PermissionScope::Institutions => Department::query()->whereIn('institution_id', $scope->institutionIds ?: [0])->pluck('id')->all(),
-            PermissionScope::Departments => $scope->departmentIds,
-            default => [],
-        };
     }
 }

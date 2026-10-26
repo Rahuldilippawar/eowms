@@ -6,6 +6,7 @@ use App\Enums\InstitutionType;
 use App\Models\ApprovalWorkflow;
 use App\Models\CustomField;
 use App\Models\Department;
+use App\Models\DepartmentBudget;
 use App\Models\Employee;
 use App\Models\Holiday;
 use App\Models\Institution;
@@ -19,6 +20,8 @@ use App\Models\TaskUpdate;
 use App\Models\User;
 use App\Support\Access\DefaultRoles;
 use App\Support\Access\PermissionCatalog;
+use App\Support\Numbering\NumberSequence;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
@@ -83,6 +86,10 @@ class DatabaseSeeder extends Seeder
                 ['step_order' => 2, 'name' => 'प्राचार्यांकडे (अंतिम मंजुरी)', 'approver_type' => 'user', 'user_id' => $principal->id],
             ]);
         }
+
+        // A budget for Physics in the current financial year.
+        [$fy] = NumberSequence::financialYear(CarbonImmutable::now('Asia/Kolkata'));
+        DepartmentBudget::firstOrCreate(['organization_id' => $trust->id, 'department_id' => $physics->id, 'fy_start_year' => $fy], ['allocated_amount' => 200000]);
 
         // A sample task from the HOD to the teacher.
         $task = Task::firstOrCreate(['organization_id' => $trust->id, 'title' => 'Prepare the physics lab inventory'], [

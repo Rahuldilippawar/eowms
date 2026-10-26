@@ -9,6 +9,7 @@ use App\Models\LetterMovement;
 use App\Models\LetterSignature;
 use App\Models\User;
 use App\Services\AttendanceRules;
+use App\Services\Finance\BudgetLedger;
 use App\Services\Notifier;
 use App\Support\Access\AccessContext;
 use App\Support\Audit\AuditLogger;
@@ -268,6 +269,11 @@ final class LetterService
             $signature->content_hash = self::contentHash($letter, $signature);
             $signature->save();
             AuditLogger::record('letters', 'sign', $letter, null, ['code' => $signature->verification_code, 'hash' => $signature->content_hash]);
+            // An approved budget request is charged to the requesting department's budget.
+            if ($letter->is_budget_expense && $letter->department_id !== null) {
+                app(BudgetLedger::class)->record($letter->department()->firstOrFail(), (float) $letter->approved_amount, $letter->budget_category ?? 'other',
+                    'letter', $letter->id, "{$letter->subject} ({$letter->file_number})", $this->today()->toDateString(), $actor->id);
+            }
 
             return $signature;
         });

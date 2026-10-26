@@ -98,7 +98,10 @@
     "holidays": "Holidays",
     "leaveBalances": "Leave balances",
     "salaryReport": "Salary report",
-    "letters": "Correspondence"
+    "letters": "Correspondence",
+    "finance": "Finance",
+    "budgets": "Department budgets",
+    "purchases": "Material purchases"
   },
   "dashboard": {
     "welcome": "Hello, {{name}}",
@@ -243,7 +246,8 @@
     "sensitive": "See / edit private data",
     "manage": "Manage",
     "balances": "Allocate leave",
-    "import": "Import"
+    "import": "Import",
+    "budget": "Set budgets"
   },
   "modules": {
     "organizations": "Organizations",
@@ -259,7 +263,8 @@
     "daily_work": "Daily work",
     "tasks": "Tasks",
     "performance": "Performance reports",
-    "letters": "Correspondence"
+    "letters": "Correspondence",
+    "finance": "Department finance"
   },
   "attendance": {
     "notMarked": "Not marked",
@@ -890,7 +895,11 @@
     "attendance.manage": "Holidays, shifts, machines",
     "letters.manage": "Categories, workflows, reassign files",
     "letters.view": "See files of their departments",
-    "letters.export": "Registers as CSV"
+    "letters.export": "Registers as CSV",
+    "finance.view": "See budgets and purchases",
+    "finance.manage": "Record purchases and payments",
+    "finance.budget": "Set department budgets",
+    "finance.export": "Finance CSV"
   },
   "letters": {
     "new": "New file",
@@ -1071,5 +1080,64 @@
       "password": "Password"
     },
     "code": "Verification code"
+  },
+  "finance": {
+    "allocated": "Budget",
+    "spent": "Spent",
+    "remaining": "Left",
+    "notSet": "not set",
+    "over": "Over by {{amount}}",
+    "used": "{{percent}}% used",
+    "setBudget": "Set budget",
+    "setBudgetFor": "Set the budget of {{name}}",
+    "allocateTitle": "Budget of {{name}} for {{year}}",
+    "budgetHint": "Every purchase, approved budget letter (and later fuel, maintenance and renewal payments) is charged to its department, in the financial year (April–March) of its own date.",
+    "noDepartments": "No departments to show.",
+    "nothingSpent": "Nothing spent yet.",
+    "purchasesPaid": "purchases paid {{paid}} of {{billed}}",
+    "ledgerCsv": "Ledger CSV",
+    "source": {
+      "material_purchase": "Purchases",
+      "letter": "Approved letters",
+      "renewal_payment": "Renewals"
+    },
+    "newPurchase": "New purchase",
+    "editPurchase": "Edit purchase",
+    "purchaseDate": "Purchase date",
+    "material": "Material",
+    "vendor": "Vendor",
+    "vendorContact": "Vendor contact",
+    "quantity": "Quantity",
+    "unit": "Unit",
+    "rate": "Rate (₹)",
+    "gstPercent": "GST %",
+    "transport": "Transport (₹)",
+    "total": "Total",
+    "paid": "Paid",
+    "due": "Due",
+    "totalLine": "{{base}} + GST {{gst}} + transport {{transport}} = {{total}}",
+    "overBudget": "This takes the department over its budget (left: {{remaining}}). You can still save it.",
+    "status": {
+      "pending": "Not paid",
+      "partial": "Partly paid",
+      "paid": "Paid"
+    },
+    "paymentStatus": "Payment",
+    "searchHint": "Material or vendor",
+    "noPurchases": "No purchases in this year.",
+    "dueAmount": "{{amount}} due",
+    "noPayments": "No payments yet.",
+    "payAmount": "Amount (₹)",
+    "paymentTypeLabel": "Type",
+    "paymentType": {
+      "advance": "Advance",
+      "partial": "Part",
+      "final": "Final"
+    },
+    "paymentMode": "Paid by",
+    "paymentModeHint": "Cash, cheque, UPI…",
+    "recordPayment": "Record payment",
+    "paymentSaved": "Payment recorded",
+    "deleted": "Purchase deleted"
   }
 }

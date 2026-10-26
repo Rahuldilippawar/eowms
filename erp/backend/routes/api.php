@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\V1\DepartmentController;
 use App\Http\Controllers\Api\V1\EmployeeController;
 use App\Http\Controllers\Api\V1\EmployeeProfileController;
 use App\Http\Controllers\Api\V1\EmployeeToolsController;
+use App\Http\Controllers\Api\V1\FinanceController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\HolidayController;
 use App\Http\Controllers\Api\V1\InstitutionController;
@@ -19,6 +20,7 @@ use App\Http\Controllers\Api\V1\LeaveController;
 use App\Http\Controllers\Api\V1\LetterController;
 use App\Http\Controllers\Api\V1\LetterRegisterController;
 use App\Http\Controllers\Api\V1\LetterSettingsController;
+use App\Http\Controllers\Api\V1\MaterialPurchaseController;
 use App\Http\Controllers\Api\V1\MeController;
 use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\OrganizationController;
@@ -160,6 +162,20 @@ Route::middleware(['auth:sanctum', SetAccessContext::class, EnsurePasswordChange
     Route::post('/work/{entry}/review', [WorkController::class, 'review'])->middleware('permission:daily_work.review')->middleware('module:daily_work');
 
     // Tasks: visibility and who may act are decided per task (TaskService), not by a single permission.
+    // Department finance (Phase 7).
+    Route::middleware('module:finance')->prefix('finance')->group(function () {
+        Route::get('/budgets', [FinanceController::class, 'budgets'])->middleware('permission:finance.view');
+        Route::put('/budgets', [FinanceController::class, 'allocate'])->middleware('permission:finance.budget');
+        Route::get('/budget-check', [FinanceController::class, 'check']);
+        Route::get('/transactions', [FinanceController::class, 'transactions'])->middleware('permission:finance.view');
+        Route::get('/purchases', [MaterialPurchaseController::class, 'index'])->middleware('permission:finance.view');
+        Route::post('/purchases', [MaterialPurchaseController::class, 'store'])->middleware('permission:finance.manage');
+        Route::get('/purchases/{purchase}', [MaterialPurchaseController::class, 'show'])->middleware('permission:finance.view');
+        Route::put('/purchases/{purchase}', [MaterialPurchaseController::class, 'update'])->middleware('permission:finance.manage');
+        Route::delete('/purchases/{purchase}', [MaterialPurchaseController::class, 'destroy'])->middleware('permission:finance.manage');
+        Route::post('/purchases/{purchase}/payments', [MaterialPurchaseController::class, 'pay'])->middleware('permission:finance.manage');
+    });
+
     // Correspondence (Phase 6).
     Route::middleware('module:letters')->group(function () {
         Route::get('/letters', [LetterController::class, 'index']);

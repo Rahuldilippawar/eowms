@@ -1,4 +1,4 @@
-import { BarChart3, CalendarHeart, Fingerprint, IndianRupee, Scale, SlidersHorizontal, UserRound, Building, ClipboardPen, Mail, ListChecks, NotebookPen, Building2, CalendarClock, CalendarDays, ClipboardCheck, ClipboardList, GraduationCap, IdCard, KeyRound, LayoutDashboard, Network, Plane, Settings, Users, type LucideIcon } from 'lucide-react'
+import { BarChart3, CalendarHeart, Fingerprint, IndianRupee, Scale, SlidersHorizontal, UserRound, Building, ClipboardPen, Mail, ShoppingCart, Wallet, ListChecks, NotebookPen, Building2, CalendarClock, CalendarDays, ClipboardCheck, ClipboardList, GraduationCap, IdCard, KeyRound, LayoutDashboard, Network, Plane, Settings, Users, type LucideIcon } from 'lucide-react'
 
 export interface NavItem {
   to: string
@@ -45,6 +45,13 @@ export const NAVIGATION: NavSection[] = [
       { to: '/holidays', labelKey: 'nav.holidays', icon: CalendarHeart, module: 'attendance' },
       { to: '/attendance/devices', labelKey: 'nav.devices', icon: Fingerprint, permission: 'attendance.manage', module: 'attendance' },
       { to: '/reports/salary', labelKey: 'nav.salaryReport', icon: IndianRupee, permission: 'employees.sensitive', module: 'attendance' },
+    ],
+  },
+  {
+    titleKey: 'nav.finance',
+    items: [
+      { to: '/finance/budgets', labelKey: 'nav.budgets', icon: Wallet, permission: 'finance.view', module: 'finance' },
+      { to: '/finance/purchases', labelKey: 'nav.purchases', icon: ShoppingCart, permission: 'finance.view', module: 'finance' },
     ],
   },
   {
