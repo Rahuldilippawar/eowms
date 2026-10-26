@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\V1\EmployeeController;
 use App\Http\Controllers\Api\V1\EmployeeProfileController;
 use App\Http\Controllers\Api\V1\EmployeeToolsController;
 use App\Http\Controllers\Api\V1\FinanceController;
+use App\Http\Controllers\Api\V1\GrievanceController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\HolidayController;
 use App\Http\Controllers\Api\V1\InstitutionController;
@@ -29,6 +30,7 @@ use App\Http\Controllers\Api\V1\OrganizationModulesController;
 use App\Http\Controllers\Api\V1\PasswordResetController;
 use App\Http\Controllers\Api\V1\PerformanceController;
 use App\Http\Controllers\Api\V1\PermissionController;
+use App\Http\Controllers\Api\V1\PublicRequestController;
 use App\Http\Controllers\Api\V1\PublicSignatureController;
 use App\Http\Controllers\Api\V1\PublicVerifyController;
 use App\Http\Controllers\Api\V1\RenewalController;
@@ -39,6 +41,7 @@ use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\VehicleController;
 use App\Http\Controllers\Api\V1\VehicleCorrectionController;
 use App\Http\Controllers\Api\V1\WorkController;
+use App\Http\Controllers\Api\V1\WorkRequestController;
 use App\Http\Middleware\EnsurePasswordChanged;
 use App\Http\Middleware\SetAccessContext;
 use Illuminate\Support\Facades\Route;
@@ -56,6 +59,9 @@ Route::middleware('throttle:30,1')->group(function () {
     Route::get('/public/employees/{token}', [PublicVerifyController::class, 'employee']);
     Route::get('/public/employees/{token}/photo', [PublicVerifyController::class, 'photo']);
     Route::get('/public/signatures/{code}', [PublicSignatureController::class, 'show']);
+    Route::get('/public/requests/{organization}', [PublicRequestController::class, 'form']);
+    Route::post('/public/requests/{organization}', [PublicRequestController::class, 'submit']);
+    Route::post('/public/requests/{organization}/track', [PublicRequestController::class, 'track']);
 });
 
 Route::middleware('throttle:password-reset')->group(function () {
@@ -237,6 +243,31 @@ Route::middleware(['auth:sanctum', SetAccessContext::class, EnsurePasswordChange
         Route::get('/departments', [MaintenanceController::class, 'departments'])->middleware('permission:maintenance.manage');
         Route::put('/departments/{department}', [MaintenanceController::class, 'setDepartment'])->middleware('permission:maintenance.manage');
         Route::get('/report', [MaintenanceController::class, 'report'])->middleware('permission:maintenance.view');
+    });
+
+    // Work requests (Phase 8b). Anyone raises and follows their own; the controller decides per request.
+    Route::middleware('module:requests')->group(function () {
+        Route::get('/requests', [WorkRequestController::class, 'index']);
+        Route::post('/requests', [WorkRequestController::class, 'store']);
+        Route::get('/requests/report', [WorkRequestController::class, 'report'])->middleware('permission:requests.view');
+        Route::get('/requests/{workRequest}', [WorkRequestController::class, 'show']);
+        Route::get('/requests/{workRequest}/assignees', [WorkRequestController::class, 'assignees']);
+        Route::post('/requests/{workRequest}/status', [WorkRequestController::class, 'status']);
+        Route::post('/requests/{workRequest}/assign', [WorkRequestController::class, 'assign']);
+        Route::post('/requests/{workRequest}/comments', [WorkRequestController::class, 'comment']);
+        Route::post('/requests/{workRequest}/cancel', [WorkRequestController::class, 'cancel']);
+        Route::post('/requests/{workRequest}/close', [WorkRequestController::class, 'close']);
+        Route::post('/requests/{workRequest}/reopen', [WorkRequestController::class, 'reopen']);
+    });
+
+    // Grievances (Phase 8b).
+    Route::middleware('module:grievances')->group(function () {
+        Route::get('/grievances', [GrievanceController::class, 'index']);
+        Route::post('/grievances', [GrievanceController::class, 'store'])->middleware('throttle:10,1');
+        Route::get('/grievances/{grievance}', [GrievanceController::class, 'show']);
+        Route::put('/grievances/{grievance}', [GrievanceController::class, 'update']);
+        Route::post('/grievances/{grievance}/comments', [GrievanceController::class, 'comment']);
+        Route::post('/grievances/{grievance}/reopen', [GrievanceController::class, 'reopen']);
     });
 
     // Correspondence (Phase 6).

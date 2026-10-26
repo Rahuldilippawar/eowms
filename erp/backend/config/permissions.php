@@ -26,5 +26,7 @@ return [
         'renewals' => ['view', 'manage', 'export'],
         'vehicles' => ['view', 'log', 'manage', 'export'],
         'maintenance' => ['view', 'log', 'manage', 'export'],
+        'requests' => ['view', 'manage', 'export'],
+        'grievances' => ['manage'],
     ],
 ];
