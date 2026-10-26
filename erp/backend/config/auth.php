@@ -119,13 +119,17 @@ return [
     | Login throttling
     |--------------------------------------------------------------------------
     | Attempts per minute. Keep the defaults in production; the end-to-end
-    | test server raises them because it signs in many times in a row.
+    | test server raises them because it signs in many times in a row and
+    | one test user makes far more requests a minute than a person would.
     */
 
     'login_throttle' => [
         'per_email' => (int) env('LOGIN_THROTTLE_PER_EMAIL', 5),
         'per_ip' => (int) env('LOGIN_THROTTLE_PER_IP', 20),
     ],
+
+    // General API requests per minute per signed-in user (or IP for guests).
+    'api_per_minute' => (int) env('API_THROTTLE_PER_MINUTE', 120),
 
     'password_reset_throttle' => [
         'per_email' => (int) env('PASSWORD_RESET_THROTTLE_PER_EMAIL', 3),

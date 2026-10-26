@@ -23,9 +23,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // General API limit: 120 requests/minute per user (or IP for guests).
+        // General API limit: 120 requests/minute per user (or IP for guests) by default (config/auth.php).
         RateLimiter::for('api', function (Request $request) {
-            return Limit::perMinute(120)->by($request->user()?->id ?: $request->ip());
+            return Limit::perMinute(config('auth.api_per_minute'))->by($request->user()?->id ?: $request->ip());
         });
 
         // Password-reset requests per minute per email+IP and per IP (config/auth.php).
