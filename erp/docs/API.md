@@ -271,3 +271,24 @@ Rules: [`VEHICLES.md`](VEHICLES.md). Under the `vehicles` and `maintenance` modu
 | GET / PUT | `/maintenance/departments[/{id}]` | manage | `has_maintenance_register` |
 | GET | `/maintenance/report?from&to` | view | `by_department`, `by_location`, `by_work_type` |
 
+## Phase 8b — work requests, public form, grievances
+
+Rules: [`REQUESTS.md`](REQUESTS.md). Under the `requests` and `grievances` module switches.
+
+| Method | Path | Permission | Notes |
+|---|---|---|---|
+| GET | `/requests?status=open\|overdue\|all\|pending…&mine&assigned=me&category&priority&department_id&search&page&format=csv?` | own / assigned / `requests.view` scope (+ export for CSV) | `meta.counts` |
+| GET | `/requests/departments` | signed in | Departments that can receive a request |
+| POST | `/requests` | signed in | `category, sub_category (IT), department_id (optional for IT), title, work_description, location?, priority, requester_contact?` |
+| GET | `/requests/{id}` | as above | Detail with `actions`, `comments`, `seen_by`, `can_handle`, `can_assign`, `is_requester`, `can_reopen` |
+| GET | `/requests/{id}/assignees`, POST `/requests/{id}/assign` | `requests.manage` over the department | `user_id` |
+| POST | `/requests/{id}/status` | assignee or manager | `status (pending\|in_progress\|completed), remark (required to complete), cost_incurred?` |
+| POST | `/requests/{id}/comments` | requester, assignee, manager | `comment` |
+| POST | `/requests/{id}/cancel`, `/close`, `/reopen` | requester | `reason` / `rating 1–5, feedback?` / `reason` (within 7 days) |
+| GET | `/requests/report?from&to&department_id` | `requests.view` | `by_status`, `by_category`, `by_department` |
+| GET / POST | `/public/requests/{orgCode}` | public (honeypot `website`, 5 an hour per address) | Form data / `requester_name, requester_contact, department_id, category?, location?, work_description` |
+| POST | `/public/requests/{orgCode}/track` | public | `code, contact` (both must match) |
+| GET / POST | `/grievances[?status&mine]` | own / assigned / `grievances.manage` | `category?, description, is_anonymous` |
+| GET / PUT | `/grievances/{id}` | as above / handler or assignee | `status, resolution (to resolve), assigned_to? (handler)` |
+| POST | `/grievances/{id}/comments`, `/grievances/{id}/reopen` | sender, handler, assignee / sender | `comment` / `reason` |
+

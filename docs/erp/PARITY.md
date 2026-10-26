@@ -94,9 +94,9 @@ Legend: ✅ in the ERP · 🟡 partly (gaps listed) · ⏳ scheduled (phase) · 
 |---|---|---|
 | Vehicles: vehicles, trips, fuel, maintenance, correction requests, dashboard, import, report, service-due cron | ✅ 8a | Documents are renewal items; fuel / service costs charged to the budget; drivers log their own vehicle; report prints to PDF from the browser |
 | Maintenance log: locations (buildings / rooms), log, location history, payment track, settings, report | ✅ 8a | Register departments switched on in settings; costs charged to the budget; payments in the finance ledger |
-| Work requests (requests, my requests, actions, comments, views, advance report) + public request form + track request | ⏳ 8b | Public form: rate limit + honeypot (as fixed in the old app) |
-| Grievances (complaints) with comments | ⏳ 8b | |
-| Tickets escalation cron | ⏳ 8b | |
+| Work requests (requests, my requests, actions, comments, views, advance report) + public request form + track request | ✅ 8b | Public form: rate limit + honeypot; the tracker needs code and phone together; IT requests are a category of the same register |
+| Grievances (complaints) with comments | ✅ 8b | Anonymous grievances keep only a keyed hash of the sender |
+| Tickets escalation cron | ✅ 8b | Hourly; one summary per person |
 | Hostels: hostels, rooms, room / bed allocation, students + import, attendance, leave / out-pass, health, fees, alumni, dashboard, bulk import | ⏳ 8c | |
 | Residency: buildings, layout, rooms + items, occupants, allotment requests, transfers, inspections, bills (rent / electricity) + shares + report, guests, occupancy analytics, staff directory (resident / non-resident), data import engine with preview / history, link unlinked | ⏳ 8d | Uses the 8a buildings and residential locations |
 

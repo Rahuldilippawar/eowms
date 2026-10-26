@@ -29,13 +29,14 @@ final class DefaultRoles
                 'performance.view', 'performance.export', 'letters.view', 'letters.export',
                 'finance.view', 'finance.manage', 'finance.export', 'renewals.view', 'renewals.manage', 'renewals.export',
                 'vehicles.view', 'vehicles.log', 'vehicles.manage', 'vehicles.export', 'maintenance.view', 'maintenance.log', 'maintenance.manage', 'maintenance.export',
+                'requests.view', 'requests.manage', 'requests.export', 'grievances.manage',
             ]],
             'hod' => ['name' => 'Head of Department', 'scope' => PermissionScope::Departments, 'permissions' => [
                 ...$structureRead, 'users.view', 'employees.view', 'students.view',
                 'attendance.view', 'attendance.create', 'attendance.approve', 'leave.view', 'leave.approve',
                 'daily_work.view', 'daily_work.review', 'tasks.view', 'tasks.create', 'performance.view', 'letters.view',
                 'finance.view', 'finance.manage', 'renewals.view', 'renewals.manage',
-                'vehicles.view', 'vehicles.log', 'maintenance.view', 'maintenance.log',
+                'vehicles.view', 'vehicles.log', 'maintenance.view', 'maintenance.log', 'requests.view', 'requests.manage',
             ]],
             'staff' => ['name' => 'Staff', 'scope' => PermissionScope::Departments, 'permissions' => ['organizations.view', 'departments.view']],
         ];
