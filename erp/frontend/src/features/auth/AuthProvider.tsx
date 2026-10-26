@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createContext, useContext, type ReactNode } from 'react'
+import { setOrgTimeZone } from '@/lib/format'
 import {
   fetchCurrentUser,
   login as loginRequest,
@@ -53,6 +54,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   })
 
   const user = me.data ?? null
+  // Set during render so pages rendered with this user already count "today" in the organization's day.
+  setOrgTimeZone(user?.current_organization?.timezone)
 
   const value: AuthContextValue = {
     user,

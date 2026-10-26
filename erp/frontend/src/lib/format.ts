@@ -20,13 +20,29 @@ export function formatMoney(n: number | null | undefined): string {
   return new Intl.NumberFormat(locale(), { style: 'currency', currency: 'INR', minimumFractionDigits: Number.isInteger(n) ? 0 : 2, maximumFractionDigits: 2 }).format(n)
 }
 
-/** Today's date in the browser's timezone as YYYY-MM-DD (the server re-checks). */
+let orgTimeZone: string | null = null
+
+/** Set from the signed-in user's current organization; "today" then follows its day. */
+export function setOrgTimeZone(timeZone: string | null | undefined) {
+  orgTimeZone = timeZone || null
+}
+
+/** Today's date as YYYY-MM-DD in the organization's time zone (else the browser's); the server re-checks. */
 export function todayYmd(): string {
+  if (orgTimeZone) {
+    try {
+      return new Intl.DateTimeFormat('en-CA', { timeZone: orgTimeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
+    } catch {
+      // Unknown time zone name: fall back to the browser's day.
+    }
+  }
   const d = new Date()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-export function monthYm(d = new Date()): string {
+/** YYYY-MM of the given date, or of today (as todayYmd). */
+export function monthYm(d?: Date): string {
+  if (!d) return todayYmd().slice(0, 7)
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
 }
 
