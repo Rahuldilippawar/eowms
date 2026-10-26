@@ -2,8 +2,8 @@
 
 namespace App\Http\Resources;
 
-use App\Models\User;
 use App\Models\Hostel;
+use App\Models\User;
 use App\Models\Vehicle;
 use App\Support\Access\AccessContext;
 use App\Support\Access\Modules;
