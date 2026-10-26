@@ -43,5 +43,6 @@ test('a renewal is created, paid (charged to the budget) and renewed', async ({ 
 
   // The payment shows on the Physics budget as a renewal spend.
   await go(page, isMobile, 'Department budgets')
-  await expect(page.getByRole('listitem').filter({ hasText: 'Physics' })).toContainText(/Renewals ₹[\d,]+/)
+  await expect(page.getByRole('heading', { name: 'Department budgets' })).toBeVisible()
+  await expect(page.getByRole('listitem').filter({ hasText: 'Physics' }).filter({ hasText: 'Budget:' })).toContainText(/Renewals ₹[\d,]+/)
 })

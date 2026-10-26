@@ -35,7 +35,9 @@ test('a purchase is charged to the department budget and paid in parts', async (
 
   // The department budget shows the spend.
   await go(page, isMobile, 'Department budgets')
-  const physics = page.getByRole('listitem').filter({ hasText: 'Physics' })
+  // Wait for the budgets page: the purchases list also has rows that mention Physics.
+  await expect(page.getByRole('heading', { name: 'Department budgets' })).toBeVisible()
+  const physics = page.getByRole('listitem').filter({ hasText: 'Physics' }).filter({ hasText: 'Budget:' })
   await expect(physics).toContainText('₹2,00,000')
   await expect(physics).toContainText('Purchases')
 })
