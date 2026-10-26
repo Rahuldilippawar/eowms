@@ -186,3 +186,24 @@ Rules: [`PEOPLE.md`](PEOPLE.md) (students), [`WORK-AND-TASKS.md`](WORK-AND-TASKS
 
 Work entries now return `requested_by, estimated_cost, actual_cost, team[], has_before_photo,
 has_after_photo, is_imported`; tasks return `cost_incurred`.
+
+## Phase 6 — correspondence, approval workflows, signatures
+
+Rules: [`CORRESPONDENCE.md`](CORRESPONDENCE.md). All under the `letters` module switch.
+
+| Method | Path | Permission | Notes |
+|---|---|---|---|
+| GET | `/letters?box=with_me\|created\|all&status&letter_category_id&search&page` | signed in (sees what they may) | `meta.with_me` = files waiting with the caller |
+| GET | `/letters/options`, `/letters/recipients?search` | signed in | Active categories and workflows; colleagues to send to |
+| POST / PUT | `/letters[/{id}]` | creator (PUT: drafts only) | `subject, description, reference_no, letter_category_id, priority, approval_workflow_id, is_budget_expense, budget_category, requested_amount` |
+| GET | `/letters/{id}` | can see the file | Detail with `actions`, `steps`, `movements`, `attachments`, `inward_numbers`, `signatures` (`intact`) |
+| POST | `/letters/{id}/submit`, `/letters/{id}/forward` | creator (draft) / holder | `to_user_id` when there is no workflow, `remark` |
+| POST | `/letters/{id}/return` | holder | `remark` (required) |
+| POST | `/letters/{id}/remarks`, `/letters/{id}/attachments`, `/letters/{id}/dispatch` | creator or holder (dispatch: also `letters.manage`) | Attachments: `file` ≤ 10 MB |
+| GET | `/letters/{id}/attachments/{attachment}` | can see the file | Audited |
+| POST | `/letters/{id}/sign` | holder at the last step | `password, remark?, approved_amount?`; 10 per minute |
+| POST | `/letters/{id}/reassign` | `letters.manage` reaching the file | `to_user_id, remark?` |
+| GET | `/letters/register?type=outward\|inward&fy&department_id&format=csv?` | `letters.view` (+ `letters.export` for CSV) | Financial year = start year |
+| GET / POST / PUT | `/letter-settings/categories[/{id}]`, `POST /letter-settings/categories/defaults` | `letters.manage` (organization scope) | |
+| GET / POST / PUT | `/letter-settings/workflows[/{id}]` | `letters.manage` (organization scope) | `name, letter_category_id?, is_active, steps[{name, approver_type, department_id?, user_id?}]` |
+| GET | `/public/signatures/{code}` | public, 30 per minute | Signer, organization, file / outward no., time, method, `intact` |

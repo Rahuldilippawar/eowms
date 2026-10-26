@@ -140,7 +140,15 @@ Dev accounts (password `password`): `admin@example.com` (super admin), `orgadmin
 - Shared CSV import screen (check first, then all rows or none) for staff, students and work.
 - Tests: 124 backend, 53 frontend, 35 end-to-end.
 
+### Phase 6 — done (correspondence and approvals)
+- Files with file / outward / inward numbers, a movement register, remarks, attachments and dispatch.
+- Generic approval workflows (department heads or named people), sending back one step, reassign.
+- Sign and close with a password; a SHA-256 seal; printable page with a QR code to a public check
+  that shows whether the file changed after signing. Inward / outward registers with CSV.
+- Daily reminders for files that do not move. Rules: [`docs/CORRESPONDENCE.md`](docs/CORRESPONDENCE.md).
+- Tests: 130 backend, 59 frontend, 37 end-to-end.
+
 ### Not yet (later phases)
-- Correspondence, approvals and PDF/QR (Phase 6) and the other business modules (see
+- Renewals and finance (Phase 7) and the other business modules (see
   [`../docs/erp/PARITY.md`](../docs/erp/PARITY.md)); email / push delivery of notifications.
 - Reports, deployment to Hostinger.

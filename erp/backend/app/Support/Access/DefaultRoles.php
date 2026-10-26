@@ -26,12 +26,12 @@ final class DefaultRoles
                 'employees.view', 'students.view', 'students.create', 'students.edit', 'students.activate', 'students.export',
                 'attendance.view', 'attendance.approve', 'attendance.export', 'attendance.manage', 'leave.view', 'leave.approve', 'leave.balances',
                 'daily_work.view', 'daily_work.review', 'daily_work.export', 'daily_work.import', 'tasks.view', 'tasks.create', 'tasks.edit',
-                'performance.view', 'performance.export',
+                'performance.view', 'performance.export', 'letters.view', 'letters.export',
             ]],
             'hod' => ['name' => 'Head of Department', 'scope' => PermissionScope::Departments, 'permissions' => [
                 ...$structureRead, 'users.view', 'employees.view', 'students.view',
                 'attendance.view', 'attendance.create', 'attendance.approve', 'leave.view', 'leave.approve',
-                'daily_work.view', 'daily_work.review', 'tasks.view', 'tasks.create', 'performance.view',
+                'daily_work.view', 'daily_work.review', 'tasks.view', 'tasks.create', 'performance.view', 'letters.view',
             ]],
             'staff' => ['name' => 'Staff', 'scope' => PermissionScope::Departments, 'permissions' => ['organizations.view', 'departments.view']],
         ];
