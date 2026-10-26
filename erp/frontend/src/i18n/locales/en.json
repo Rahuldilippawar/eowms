@@ -101,7 +101,8 @@
     "letters": "Correspondence",
     "finance": "Finance",
     "budgets": "Department budgets",
-    "purchases": "Material purchases"
+    "purchases": "Material purchases",
+    "renewals": "Renewals"
   },
   "dashboard": {
     "welcome": "Hello, {{name}}",
@@ -264,7 +265,8 @@
     "tasks": "Tasks",
     "performance": "Performance reports",
     "letters": "Correspondence",
-    "finance": "Department finance"
+    "finance": "Department finance",
+    "renewals": "Renewals"
   },
   "attendance": {
     "notMarked": "Not marked",
@@ -435,7 +437,10 @@
       "letter_returned": "{{by}} sent file {{file_number}} back to you: {{subject}}",
       "letter_completed": "{{by}} signed and closed your file {{file_number}}: {{subject}}",
       "letter_overdue_holder": "File {{file_number}} has been waiting with you for {{days}} days: {{subject}}",
-      "letter_overdue": "File {{file_number}} has not moved for {{days}} days: {{subject}}"
+      "letter_overdue": "File {{file_number}} has not moved for {{days}} days: {{subject}}",
+      "renewal_due": "{{item}} expires in {{days}} days ({{expiry_date}}).",
+      "renewal_today": "{{item}} expires today.",
+      "renewal_expired": "{{item}} expired {{days}} days ago ({{expiry_date}}): renew it."
     }
   },
   "work": {
@@ -899,7 +904,10 @@
     "finance.view": "See budgets and purchases",
     "finance.manage": "Record purchases and payments",
     "finance.budget": "Set department budgets",
-    "finance.export": "Finance CSV"
+    "finance.export": "Finance CSV",
+    "renewals.view": "See renewals",
+    "renewals.manage": "Add, renew and pay renewals",
+    "renewals.export": "Renewals CSV"
   },
   "letters": {
     "new": "New file",
@@ -1139,5 +1147,66 @@
     "recordPayment": "Record payment",
     "paymentSaved": "Payment recorded",
     "deleted": "Purchase deleted"
+  },
+  "renewals": {
+    "status": {
+      "expired": "Expired",
+      "due_soon": "Due within 30 days",
+      "active": "Valid",
+      "inactive": "Not tracked"
+    },
+    "daysLeft_one": "{{count}} day left",
+    "daysLeft_other": "{{count}} days left",
+    "expiredAgo_one": "Expired {{count}} day ago",
+    "expiredAgo_other": "Expired {{count}} days ago",
+    "expiresToday": "Expires today",
+    "allActive": "All tracked",
+    "new": "New renewal",
+    "edit": "Edit renewal",
+    "itemName": "Name",
+    "itemType": "Type",
+    "itemTypeHint": "e.g. Fire NOC, Vehicle insurance",
+    "regulatoryBody": "Regulatory body",
+    "issuedOn": "Issued on",
+    "expiresOn": "Expires on",
+    "cost": "Renewal cost (₹)",
+    "monthly": "Paid every month (rent, AMC instalments…)",
+    "monthlyAmount": "Monthly amount (₹)",
+    "startMonth": "From month",
+    "responsible": "Responsible person",
+    "expiryHint": "To move the expiry date forward, use Renew so the old cycle is kept in the history.",
+    "calendar": "Expiry calendar",
+    "costs": "Cost analysis",
+    "importTitle": "Import renewals",
+    "importDone_one": "{{count}} renewal imported.",
+    "importDone_other": "{{count}} renewals imported.",
+    "searchHint": "Name, type, reference or vendor",
+    "none": "Nothing to renew here.",
+    "notFound": "This renewal was not found, or you cannot see it.",
+    "renew": "Renew",
+    "renewTitle": "Renew {{name}}",
+    "currentExpiry": "Now expires on {{date}}",
+    "newExpiry": "New expiry date",
+    "newReference": "New reference no. (optional)",
+    "laterExpiry": "Choose a date after the current expiry.",
+    "renewed": "Renewed",
+    "deactivate": "Stop tracking",
+    "activate": "Track again",
+    "payments": "Payments",
+    "cycleLine": "This cycle: {{paid}} paid, {{due}} still due.",
+    "cyclePaid": "This cycle: {{paid}} paid.",
+    "monthlyLine_one": "{{amount}} a month · {{count}} month not paid yet.",
+    "monthlyLine_other": "{{amount}} a month · {{count}} months not paid yet.",
+    "months": "Months",
+    "forMonth": "For month",
+    "documents": "Documents",
+    "forCycle": "cycle ending {{date}}",
+    "history": "Earlier cycles",
+    "historyLine": "{{old}} → {{next}}, renewed by {{name}}",
+    "nothingThisMonth": "Nothing expires this month.",
+    "costsHint": "Cost of each cycle by the year it expires, and what was actually paid in each year.",
+    "noCosts": "No costs recorded yet.",
+    "yearTotal": "Total {{total}} · paid {{paid}}",
+    "cycles": "Cycles"
   }
 }

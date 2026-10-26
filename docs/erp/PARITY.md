@@ -85,7 +85,8 @@ Legend: ✅ in the ERP · 🟡 partly (gaps listed) · ⏳ scheduled (phase) · 
 | Material purchase (GST, transport) + payment ledger | ✅ 7a | Payments never exceed what is due |
 | Budget module (overview per department) | ✅ 7a | Budgets page with use bar and spend by source |
 | Budget deduction on letter approval | ✅ 7a | Charged on signing |
-| Renewals: items, renew, history, attachments, calendar, cost analysis, payment track, import, report, reminders cron | ⏳ 7b | |
+| Renewals: items, renew, history, attachments, calendar, cost analysis, payment track, import, report, reminders cron | ✅ 7b | Email reminders → ⏳ 11 (with email / push delivery); in-app now |
+| Vehicle-linked renewals (RTO, insurance per vehicle) | ⏳ 8 | Comes with the vehicles module |
 
 ## Hostel, residency, transport, maintenance, requests (⏳ 8)
 

@@ -36,6 +36,11 @@ import { MyWorkPage } from '@/features/work/MyWorkPage'
 import { BudgetsPage } from '@/features/finance/BudgetsPage'
 import { PurchasesPage } from '@/features/finance/PurchasesPage'
 import { LetterDetailPage } from '@/features/letters/LetterDetailPage'
+import { RenewalCalendarPage } from '@/features/renewals/RenewalCalendarPage'
+import { RenewalCostsPage } from '@/features/renewals/RenewalCostsPage'
+import { RenewalDetailPage } from '@/features/renewals/RenewalDetailPage'
+import { RenewalImportPage } from '@/features/renewals/RenewalImportPage'
+import { RenewalsPage } from '@/features/renewals/RenewalsPage'
 import { LetterFormPage } from '@/features/letters/LetterFormPage'
 import { LetterPrintPage } from '@/features/letters/LetterPrintPage'
 import { LetterRegisterPage } from '@/features/letters/LetterRegisterPage'
@@ -78,6 +83,11 @@ export function AppRoutes() {
           <Route path="work" element={guard('daily_work.view', <TeamWorkPage />)} />
           <Route path="finance/budgets" element={guard('finance.view', <BudgetsPage />)} />
           <Route path="finance/purchases" element={guard('finance.view', <PurchasesPage />)} />
+          <Route path="renewals" element={guard('renewals.view', <RenewalsPage />)} />
+          <Route path="renewals/calendar" element={guard('renewals.view', <RenewalCalendarPage />)} />
+          <Route path="renewals/costs" element={guard('renewals.view', <RenewalCostsPage />)} />
+          <Route path="renewals/import" element={guard('renewals.manage', <RenewalImportPage />)} />
+          <Route path="renewals/:id" element={guard('renewals.view', <RenewalDetailPage />)} />
           <Route path="letters" element={<LettersPage />} />
           <Route path="letters/new" element={<LetterFormPage />} />
           <Route path="letters/register" element={guard('letters.view', <LetterRegisterPage />)} />

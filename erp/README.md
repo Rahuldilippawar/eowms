@@ -154,7 +154,13 @@ Dev accounts (password `password`): `admin@example.com` (super admin), `orgadmin
 - Rules: [`docs/FINANCE.md`](docs/FINANCE.md).
 - Tests: 133 backend, 62 frontend, 39 end-to-end.
 
+### Phase 7b — done (renewals)
+- Renewal items with status from the expiry date, renew with history, payments per cycle or per
+  month (charged to the department budget), private documents, calendar, cost analysis, CSV import
+  and export, and the 90 → 0 day reminder schedule. Rules: [`docs/RENEWALS.md`](docs/RENEWALS.md).
+- Tests: 137 backend, 66 frontend, 41 end-to-end.
+
 ### Not yet (later phases)
-- Renewals (Phase 7b) and the other business modules (see
+- Hostel, residency, transport, maintenance, requests (Phase 8) and the other business modules (see
   [`../docs/erp/PARITY.md`](../docs/erp/PARITY.md)); email / push delivery of notifications.
 - Reports, deployment to Hostinger.

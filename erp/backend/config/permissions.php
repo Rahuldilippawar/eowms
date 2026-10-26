@@ -23,5 +23,6 @@ return [
         'performance' => ['view', 'export'],
         'letters' => ['view', 'manage', 'export'],
         'finance' => ['view', 'manage', 'budget', 'export'],
+        'renewals' => ['view', 'manage', 'export'],
     ],
 ];
