@@ -14,6 +14,7 @@ use App\Models\LeaveRequest;
 use App\Models\LeaveType;
 use App\Services\AttendanceRules;
 use App\Services\AttendanceService;
+use App\Services\LeaveBalances;
 use App\Services\LeaveService;
 use App\Services\Notifier;
 use App\Support\Access\LeaveAccess;
@@ -116,7 +117,7 @@ class MeController extends Controller
             ->where('employee_id', $employee->id)->orderByDesc('start_date')->limit(100)->get());
     }
 
-    public function applyLeave(Request $request): LeaveRequestResource
+    public function applyLeave(Request $request, LeaveBalances $balances): LeaveRequestResource
     {
         $employee = $this->activeEmployeeOrFail();
         $data = $request->validate([
@@ -127,6 +128,11 @@ class MeController extends Controller
             'attachment' => ['nullable', 'file', 'max:5120', 'mimes:pdf,jpg,jpeg,png'],
         ]);
         LeaveService::assertNoOverlap($employee, $data['start_date'], $data['end_date']);
+        $days = LeaveService::days($employee, $data['start_date'], $data['end_date']);
+        if ($days === 0.0) {
+            throw ValidationException::withMessages(['start_date' => [__('leave.no_working_days')]]);
+        }
+        $balances->assertEnough($employee, LeaveType::query()->findOrFail($data['leave_type_id']), $data['start_date'], $data['end_date']);
 
         $path = null;
         if ($request->hasFile('attachment')) {
@@ -142,7 +148,7 @@ class MeController extends Controller
             'department_id' => $employee->department_id,
             'start_date' => $data['start_date'],
             'end_date' => $data['end_date'],
-            'days' => LeaveService::days($data['start_date'], $data['end_date']),
+            'days' => $days,
             'reason' => $data['reason'],
             'attachment_path' => $path,
             'attachment_name' => $path ? mb_substr($request->file('attachment')->getClientOriginalName(), 0, 255) : null,
@@ -172,6 +178,15 @@ class MeController extends Controller
         AuditLogger::recordChanges('leave', 'cancel', $leave, $before);
 
         return new LeaveRequestResource($leave->load(['leaveType', 'reviewer']));
+    }
+
+    /** Own leave balance per type for a calendar year. */
+    public function leaveBalances(Request $request, LeaveBalances $balances): JsonResponse
+    {
+        $employee = $this->employeeOrFail();
+        $year = (int) ($request->validate(['year' => ['nullable', 'integer', 'min:2000', 'max:2100']])['year'] ?? AttendanceRules::for($employee->organization)->now()->year);
+
+        return response()->json(['data' => $balances->forEmployee($employee, $year), 'year' => $year]);
     }
 
     public function leaveTypes(): JsonResponse

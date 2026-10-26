@@ -7,6 +7,11 @@ import { RoleEditorPage } from '@/features/admin/RoleEditorPage'
 import { RolesPage } from '@/features/admin/RolesPage'
 import { UserDetailPage } from '@/features/admin/UserDetailPage'
 import { UsersPage } from '@/features/admin/UsersPage'
+import { CertificatePage } from '@/features/attendance/CertificatePage'
+import { DevicesPage } from '@/features/attendance/DevicesPage'
+import { HolidaysPage } from '@/features/attendance/HolidaysPage'
+import { SalaryReportPage } from '@/features/attendance/SalaryReportPage'
+import { LeaveBalancesPage } from '@/features/leave/Balances'
 import { MyAttendancePage } from '@/features/attendance/MyAttendancePage'
 import { TeamAttendancePage } from '@/features/attendance/TeamAttendancePage'
 import { ForgotPasswordPage } from '@/features/auth/ForgotPasswordPage'
@@ -68,6 +73,12 @@ export function AppRoutes() {
           <Route path="account/password" element={<ChangePasswordPage />} />
           <Route path="organization/fields" element={guard('organizations.edit', <CustomFieldsPage />)} />
           <Route path="students" element={guard('students.view', <StudentsPage />)} />
+          <Route path="holidays" element={<HolidaysPage />} />
+          <Route path="leave-balances" element={guard('leave.view', <LeaveBalancesPage />)} />
+          <Route path="attendance/certificate/:id" element={<CertificatePage />} />
+          <Route path="my/attendance/certificate" element={<CertificatePage mine />} />
+          <Route path="attendance/devices" element={guard('attendance.manage', <DevicesPage />)} />
+          <Route path="reports/salary" element={guard('employees.sensitive', <SalaryReportPage />)} />
           <Route path="leave-types" element={guard('leave.manage_types', <LeaveTypesPage />)} />
           <Route path="institutions" element={guard('institutions.view', <InstitutionsPage />)} />
           <Route path="departments" element={guard('departments.view', <DepartmentsPage />)} />

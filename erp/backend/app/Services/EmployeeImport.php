@@ -9,7 +9,7 @@ use App\Models\User;
 use App\Support\Access\AccessContext;
 use App\Support\Access\Reach;
 use App\Support\Audit\AuditLogger;
-use Carbon\CarbonImmutable;
+use App\Support\Forms\Dates;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
@@ -72,7 +72,7 @@ final class EmployeeImport
             foreach (['joining_date', 'date_of_birth'] as $f) {
                 $data[$f] = null;
                 if (($row[$f] ?? '') !== '') {
-                    $data[$f] = self::date($row[$f]);
+                    $data[$f] = Dates::parse($row[$f]);
                     if ($data[$f] === null) {
                         $errors[$f] = __('import.bad_date');
                     }
@@ -129,22 +129,5 @@ final class EmployeeImport
 
             return count($created);
         });
-    }
-
-    private static function date(string $value): ?string
-    {
-        foreach (['Y-m-d', 'd/m/Y', 'j/n/Y', 'd-m-Y', 'j-n-Y', 'd.m.Y'] as $format) {
-            try {
-                $d = CarbonImmutable::createFromFormat('!'.$format, $value);
-            } catch (\Throwable) {
-                continue;
-            }
-            // Round-trip check rejects overflow such as 31/02/2026.
-            if ($d !== false && $d !== null && $d->format($format) === $value) {
-                return $d->toDateString();
-            }
-        }
-
-        return null;
     }
 }

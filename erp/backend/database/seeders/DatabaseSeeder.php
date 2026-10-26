@@ -6,6 +6,7 @@ use App\Enums\InstitutionType;
 use App\Models\CustomField;
 use App\Models\Department;
 use App\Models\Employee;
+use App\Models\Holiday;
 use App\Models\Institution;
 use App\Models\Organization;
 use App\Models\Role;
@@ -62,6 +63,10 @@ class DatabaseSeeder extends Seeder
         // Organization-defined fields, as the old app's community fields became.
         foreach ([['ashram_resident', 'आश्रमात राहतात', 'checkbox', null], ['naam_dharak', 'नामधारक', 'checkbox', null], ['food_preference', 'आहार', 'select', ['शाकाहारी', 'सात्विक']]] as $i => [$key, $label, $type, $options]) {
             CustomField::firstOrCreate(['organization_id' => $trust->id, 'entity' => 'employee', 'key' => $key], ['label' => $label, 'type' => $type, 'options' => $options, 'sort_order' => $i]);
+        }
+
+        foreach ([['2026-01-26', 'प्रजासत्ताक दिन'], ['2026-08-15', 'स्वातंत्र्य दिन'], ['2026-10-02', 'गांधी जयंती'], ['2026-11-09', 'दिवाळी']] as [$date, $name]) {
+            Holiday::firstOrCreate(['organization_id' => $trust->id, 'institution_id' => null, 'holiday_date' => $date], ['name' => $name]);
         }
 
         // A sample task from the HOD to the teacher.

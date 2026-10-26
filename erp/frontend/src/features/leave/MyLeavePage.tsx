@@ -16,6 +16,7 @@ import { useAuth } from '@/features/auth/AuthProvider'
 import { actionErrorMessage } from '@/lib/forms'
 import { formatDate, todayYmd } from '@/lib/format'
 import { applyLeave, attachmentUrl, cancelLeave, fetchActiveLeaveTypes, fetchMyLeave, type LeaveRequest } from './api'
+import { MyBalances } from './Balances'
 import { RequestStatus } from './LeaveStatus'
 
 const MAX_FILE = 5 * 1024 * 1024
@@ -186,6 +187,7 @@ export function MyLeavePage() {
   return (
     <div className="mx-auto max-w-4xl space-y-5">
       <h1 className="text-2xl font-semibold">{t('nav.myLeave')}</h1>
+      <MyBalances />
       <ApplyForm />
       <section className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
         <h2 className="mb-2 font-semibold">{t('leave.history')}</h2>

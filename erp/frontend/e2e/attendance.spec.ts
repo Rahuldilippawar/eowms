@@ -16,19 +16,22 @@ test('teacher checks in and applies for leave; their HOD approves it', async ({ 
   await go(page, isMobile, 'My attendance')
   const checkIn = page.getByRole('button', { name: 'Check in' })
   const checkOut = page.getByRole('button', { name: 'Check out' })
-  // Enabled once today's record has loaded (the teacher never checks out here, so one of the two is usable).
-  await expect(checkIn.or(checkOut)).toBeEnabled()
-  if (await checkIn.isVisible()) {
+  // Once today's record has loaded: check in if still possible. Another spec (or a machine punch) may
+  // already have checked the teacher in, or in and out.
+  await expect(checkIn.and(page.locator(':enabled')).or(checkOut).or(page.getByText(/^In: /)).first()).toBeVisible()
+  if ((await checkIn.isVisible()) && (await checkIn.isEnabled())) {
     await checkIn.click()
     await expect(page.getByText('Checked in.')).toBeVisible()
   }
-  await expect(checkOut).toBeVisible()
+  await expect(page.getByText(/^In: /)).toBeVisible()
   const today = await (await apiGet(page, '/api/v1/me/attendance')).json()
   expect(today.data.some((r: { check_in_at: string | null }) => r.check_in_at)).toBe(true)
 
   // A future range unique to this project and run, so overlap checks never trip.
   const start = new Date()
   start.setDate(start.getDate() + 30 + (testInfo.project.name === 'mobile' ? 400 : 0) + (Number(suffix) % 300))
+  // Wednesday–Thursday: two working days (Sunday is the weekly off; other specs add Tuesday holidays).
+  start.setDate(start.getDate() + ((3 - start.getDay() + 7) % 7))
   const end = new Date(start)
   end.setDate(end.getDate() + 1)
 

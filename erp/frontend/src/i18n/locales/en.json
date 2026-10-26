@@ -93,7 +93,11 @@
     "performance": "Performance",
     "teamWork": "Team work log",
     "myProfile": "My profile",
-    "customFields": "Custom fields"
+    "customFields": "Custom fields",
+    "devices": "Attendance machines",
+    "holidays": "Holidays",
+    "leaveBalances": "Leave balances",
+    "salaryReport": "Salary report"
   },
   "dashboard": {
     "welcome": "Hello, {{name}}",
@@ -235,7 +239,9 @@
     "approve": "Approve",
     "manage_types": "Manage types",
     "review": "Review",
-    "sensitive": "See / edit private data"
+    "sensitive": "See / edit private data",
+    "manage": "Holidays, shifts, machines",
+    "balances": "Allocate leave"
   },
   "modules": {
     "organizations": "Organizations",
@@ -294,7 +300,9 @@
     "downloadCsv": "Download CSV",
     "tabs": {
       "day": "Day",
-      "report": "Report"
+      "report": "Report",
+      "grid": "Month grid",
+      "movement": "In / out"
     },
     "pendingCorrections": "Attendance corrections"
   },
@@ -401,7 +409,13 @@
       "leave_decided_rejected": "{{by}} rejected your {{type}}, {{start_date}} – {{end_date}}.",
       "correction_decided_approved": "{{by}} approved your attendance correction for {{work_date}}.",
       "correction_decided_rejected": "{{by}} rejected your attendance correction for {{work_date}}.",
-      "work_reviewed": "{{by}} reviewed your work “{{title}}” ({{work_date}})."
+      "work_reviewed": "{{by}} reviewed your work “{{title}}” ({{work_date}}).",
+      "attendance_pattern_late": "{{employee}} was late {{count}} times in the last {{days}} days.",
+      "attendance_pattern_absent": "{{employee}} was absent {{count}} times in the last {{days}} days.",
+      "celebration_birthday": "Today is {{employee}}'s birthday.",
+      "celebration_birthday_self": "Happy birthday, {{employee}}!",
+      "celebration_anniversary": "{{employee}} completes {{years}} years with us today.",
+      "celebration_anniversary_self": "Congratulations on {{years}} years with us, {{employee}}!"
     }
   },
   "work": {
@@ -596,7 +610,8 @@
       "private": "Private",
       "documents": "Documents",
       "family": "Family",
-      "achievements": "Achievements"
+      "achievements": "Achievements",
+      "attendance": "Attendance"
     },
     "sections": "Profile sections",
     "notFound": "This employee does not exist or you cannot see them.",
@@ -716,5 +731,113 @@
     "active": "Currently working here",
     "inactive": "Not working here any more",
     "notFound": "This card could not be verified."
+  },
+  "grid": {
+    "legend": "Codes",
+    "hours": "Hours",
+    "nextDay": "next day",
+    "codes": {
+      "P": "Present",
+      "L": "Late",
+      "H": "Half day",
+      "A": "Absent",
+      "LV": "Leave",
+      "WO": "Weekly off",
+      "HO": "Holiday",
+      "none": "No record"
+    },
+    "sources": {
+      "self": "self",
+      "manual": "marked",
+      "correction": "correction",
+      "leave": "leave",
+      "biometric": "machine",
+      "system": "auto"
+    }
+  },
+  "certificate": {
+    "title": "Attendance certificate",
+    "body": "This is to certify that {{name}} ({{code}}), {{designation}}, {{department}}, has the following attendance from {{from}} to {{to}}:",
+    "issuedOn": "Issued on",
+    "signature": "Signature and seal",
+    "rows": {
+      "working_days": "Working days",
+      "present": "Present (incl. late)",
+      "late": "Late",
+      "half_day": "Half days",
+      "leave": "Leave",
+      "absent": "Absent",
+      "unmarked": "No record",
+      "holiday": "Holidays",
+      "weekly_off": "Weekly offs"
+    }
+  },
+  "holidays": {
+    "new": "New holiday",
+    "edit": "Edit holiday",
+    "appliesTo": "Applies to",
+    "wholeOrganization": "Whole organization",
+    "year": "Year",
+    "none": "No holidays in this year.",
+    "import": "Import CSV",
+    "imported": "{{created}} added, {{skipped}} already there."
+  },
+  "rules": {
+    "title": "Attendance rules",
+    "hint": "Apply to everyone unless an employee has their own shift.",
+    "timezone": "Timezone",
+    "workStart": "Work starts",
+    "workEnd": "Work ends",
+    "grace": "Late after (minutes)",
+    "halfDay": "Half day below (hours)",
+    "maxShift": "Longest shift (hours)",
+    "editDays": "Daily work can be changed for (days)",
+    "weeklyOffs": "Weekly offs",
+    "days": {
+      "1": "Mon",
+      "2": "Tue",
+      "3": "Wed",
+      "4": "Thu",
+      "5": "Fri",
+      "6": "Sat",
+      "7": "Sun"
+    },
+    "effective": "Works {{start}}–{{end}}, late after {{grace}} min, half day below {{half}} h.",
+    "offsList": "Weekly off: {{days}}.",
+    "noOffs": "No weekly off.",
+    "overrideHint": "Leave a field empty to follow the organization rule.",
+    "ownOffs": "Own weekly offs",
+    "biometricPin": "Machine PIN"
+  },
+  "balances": {
+    "mine": "My leave balance {{year}}",
+    "noLimit": "No limit",
+    "usedOnly": "{{used}} taken",
+    "detail": "{{allocated}} given · {{used}} taken · {{pending}} pending",
+    "hint": "Big number: days left. Small: taken + pending / given. Leave counts working days only (weekly offs and holidays are skipped).",
+    "allocateTitle": "Days given",
+    "allocateFor": "Days given to {{name}} for {{type}}",
+    "daysGiven": "Days for the year"
+  },
+  "salary": {
+    "hint": "Pay days = days in month − absent − unpaid leave − working days with no record − half of each half day. Pay = monthly salary × pay days ÷ days in month. PF, ESIC and tax are not deducted here.",
+    "monthly": "Monthly salary",
+    "present": "Present",
+    "paidLeave": "Paid leave",
+    "unpaid": "Unpaid days",
+    "payDays": "Pay days",
+    "pay": "Pay"
+  },
+  "devices": {
+    "new": "Add machine",
+    "edit": "Edit machine",
+    "serial": "Serial number",
+    "none": "No machines yet.",
+    "lastSeen": "Last contact",
+    "never": "never",
+    "hint": "Set the machine's cloud / ADMS server to this site ({{url}}) and add its serial number here. Punches are matched to staff by the Machine PIN on their profile.",
+    "unknownPins": "Punches with an unknown PIN",
+    "unknownHint": "Set these PINs on the right employee profiles (Attendance tab).",
+    "allMatched": "Every punch matched an employee."
   }
 }

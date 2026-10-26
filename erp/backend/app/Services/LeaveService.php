@@ -10,17 +10,15 @@ use App\Models\User;
 use App\Support\Access\AccessContext;
 use App\Support\Access\Reach;
 use App\Support\Audit\AuditLogger;
-use Carbon\CarbonImmutable;
-use Carbon\CarbonPeriod;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 final class LeaveService
 {
-    /** Calendar days, inclusive (no holiday calendar yet — see docs/ATTENDANCE.md). */
-    public static function days(string $start, string $end): float
+    /** Working days in the range: weekly offs and holidays are not counted (erp/docs/ATTENDANCE.md). */
+    public static function days(Employee $employee, string $start, string $end): float
     {
-        return (float) (CarbonImmutable::parse($start)->diffInDays(CarbonImmutable::parse($end)) + 1);
+        return (float) count(WorkCalendar::workingDays($employee, $start, $end));
     }
 
     /** @throws ValidationException when the dates overlap a requested or approved leave */
@@ -84,8 +82,7 @@ final class LeaveService
     private function markLeaveDays(LeaveRequest $request, int $actorId): void
     {
         $employee = $request->employee;
-        foreach (CarbonPeriod::create($request->start_date, $request->end_date) as $day) {
-            $date = $day->toDateString();
+        foreach (WorkCalendar::workingDays($employee, $request->start_date->toDateString(), $request->end_date->toDateString()) as $date) {
             $record = AttendanceRecord::query()->where(['employee_id' => $employee->id, 'work_date' => $date])->lockForUpdate()->first();
             if ($record?->check_in_at) {
                 continue;

@@ -19,7 +19,7 @@ final class AttendanceService
 {
     public function checkIn(Employee $employee): AttendanceRecord
     {
-        $rules = AttendanceRules::for($employee->organization);
+        $rules = AttendanceRules::forEmployee($employee);
         $now = $rules->now();
         $date = $rules->workDate($now);
 
@@ -60,7 +60,7 @@ final class AttendanceService
 
     public function checkOut(Employee $employee): AttendanceRecord
     {
-        $rules = AttendanceRules::for($employee->organization);
+        $rules = AttendanceRules::forEmployee($employee);
         $now = $rules->now();
 
         return DB::transaction(function () use ($employee, $rules, $now) {

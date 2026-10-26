@@ -42,19 +42,71 @@ values.
 
 ## Leave
 
-- Days are counted as **calendar days, inclusive** (Mon–Tue = 2). There is no holiday or weekly-off
-  calendar yet, so a range that covers a Sunday counts the Sunday; this changes when the holiday
-  calendar arrives.
+- Days are counted as **working days**: weekly offs (the employee's own, else the organization's) and
+  holidays of the whole organization or the employee's institution are skipped. A range with no
+  working day is refused.
+- **Balance** per leave type and calendar year: allocated (set per employee with `leave.balances`, else
+  the type's days per year) minus approved and pending working days in that year. A request that
+  needs more than is left is refused. Unpaid types with 0 days per year (leave without pay) have no
+  limit.
 - A request cannot overlap the employee's own requested or approved leave.
 - **Who decides:** the employee's reporting officer, or anyone with `leave.approve` whose scope
   covers the employee. Nobody decides their own request.
-- **On approval** each leave day gets an attendance record with status `leave`, except days the
-  employee actually checked in (those are kept as worked).
+- **On approval** each working day of the leave gets an attendance record with status `leave`, except
+  days the employee actually checked in (those are kept as worked).
 - An employee can cancel their own request while it is still pending. An approved request is not
   cancelled from self-service yet; an attendance marker corrects the days if plans change.
 - **Attachments** (PDF / JPG / PNG, up to 5 MB) are stored on the private disk, outside the web
   root, and are downloaded only through `GET /leave-requests/{id}/attachment`, which checks that the
   caller may see the request.
+
+## Holidays, weekly offs and shifts (Phase 5A-2)
+
+- **Holidays**: everyone sees the calendar; `attendance.manage` adds holidays for institutions in scope
+  (organization-wide ones need organization scope), one by one or by CSV
+  (`holiday_date, name, institution_code`; existing dates are skipped).
+- **Organization rule** (`Organization settings → Attendance rules`, `organizations.edit`): timezone,
+  work start / end, late grace, half-day threshold, longest shift, weekly offs (default Sunday) and the
+  daily-work edit window.
+- **Employee shift** (profile → Attendance, `attendance.manage` in scope): own start / end, grace,
+  half-day threshold and weekly offs; empty fields follow the organization rule. Late and half day on
+  check-in / check-out use the employee's own rule.
+
+## Biometric machines (ZKTeco push / ADMS)
+
+- Register each machine's serial number (`attendance.manage`, organization scope) and point the
+  machine's cloud server to the site; it calls `/iclock/cdata`. Set each employee's **Machine PIN**.
+- Machines have no credentials: only registered, active serial numbers are accepted, everything else
+  gets a plain `OK` and is ignored. The endpoint is rate-limited.
+- Punch times are the machine's local time, read in the organization's timezone. The earliest punch of
+  the day is the check-in and the latest the check-out (late / half day by the employee's rule); a
+  punch on a day already marked absent or leave turns it into a worked day. Every punch is stored once
+  (machines resend logs); punches whose PIN matches nobody are listed on the machines page.
+- Night shifts across midnight are not split from machine punches yet: punches count on their own
+  calendar date.
+
+## Daily jobs
+
+Run by the scheduler (`php artisan schedule:run` every minute, see `WORK-AND-TASKS.md`); each is safe
+to run again.
+
+| Command | When | What |
+|---|---|---|
+| `erp:mark-absent` | hourly (for yesterday) | Absent for every active employee with a working day and no record at all |
+| `erp:attendance-alerts` | daily | Reporting officer is told about 3+ late arrivals or 2+ absences in the last 7 days (once a week) |
+| `erp:celebrations` | hourly | Birthday and work-anniversary wishes to the person and their reporting officer (once a year) |
+
+## Reports
+
+- **Month grid** (`attendance.view`): a code per employee and day — P present, L late, H half day,
+  A absent, LV leave, WO weekly off, HO holiday, `-` working day with no record; CSV with
+  `attendance.export`.
+- **In / out register** (old movement report): times and hours per day, up to 92 days; CSV.
+- **Attendance certificate**: printable totals for a period, for oneself or for an employee in scope.
+- **Salary report** (`employees.sensitive` + `attendance.view`): pay days = days in month − absent −
+  unpaid leave − working days with no record − half of each half day; pay = monthly salary × pay days
+  ÷ days in month. Days still to come are not deducted. PF, ESIC and tax are not computed. Every view
+  or download is audited.
 
 ## Dashboard
 

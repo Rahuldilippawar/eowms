@@ -1,4 +1,4 @@
-import { BarChart3, SlidersHorizontal, UserRound, Building, ClipboardPen, ListChecks, NotebookPen, Building2, CalendarClock, CalendarDays, ClipboardCheck, ClipboardList, GraduationCap, IdCard, KeyRound, LayoutDashboard, Network, Plane, Settings, Users, type LucideIcon } from 'lucide-react'
+import { BarChart3, CalendarHeart, Fingerprint, IndianRupee, Scale, SlidersHorizontal, UserRound, Building, ClipboardPen, ListChecks, NotebookPen, Building2, CalendarClock, CalendarDays, ClipboardCheck, ClipboardList, GraduationCap, IdCard, KeyRound, LayoutDashboard, Network, Plane, Settings, Users, type LucideIcon } from 'lucide-react'
 
 export interface NavItem {
   to: string
@@ -37,9 +37,13 @@ export const NAVIGATION: NavSection[] = [
     items: [
       { to: '/employees', labelKey: 'nav.employees', icon: IdCard, permission: 'employees.view' },
       { to: '/students', labelKey: 'nav.students', icon: GraduationCap, permission: 'students.view' },
-      { to: '/attendance', labelKey: 'nav.teamAttendance', icon: CalendarDays, permission: 'attendance.view' },
+      { to: '/attendance', labelKey: 'nav.teamAttendance', icon: CalendarDays, permission: 'attendance.view', module: 'attendance' },
       { to: '/work', labelKey: 'nav.teamWork', icon: ClipboardPen, permission: 'daily_work.view' },
       { to: '/leave-types', labelKey: 'nav.leaveTypes', icon: ClipboardList, permission: 'leave.manage_types' },
+      { to: '/leave-balances', labelKey: 'nav.leaveBalances', icon: Scale, permission: 'leave.view', module: 'leave' },
+      { to: '/holidays', labelKey: 'nav.holidays', icon: CalendarHeart, module: 'attendance' },
+      { to: '/attendance/devices', labelKey: 'nav.devices', icon: Fingerprint, permission: 'attendance.manage', module: 'attendance' },
+      { to: '/reports/salary', labelKey: 'nav.salaryReport', icon: IndianRupee, permission: 'employees.sensitive', module: 'attendance' },
     ],
   },
   {

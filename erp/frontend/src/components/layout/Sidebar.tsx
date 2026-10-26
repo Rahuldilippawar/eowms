@@ -24,7 +24,7 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
               <li key={item.to}>
                 <NavLink
                   to={item.to}
-                  end={item.to === '/' || item.to === '/organization' || item.to === '/employees'}
+                  end={['/', '/organization', '/employees', '/attendance'].includes(item.to)}
                   onClick={onNavigate}
                   className={({ isActive }) =>
                     cn(

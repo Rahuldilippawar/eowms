@@ -57,7 +57,11 @@ test('forgot password gives the same answer for any email', async ({ page }) => 
   await page.addInitScript(() => localStorage.setItem('erp.language', 'en'))
   await page.goto('/login')
   await page.getByRole('link', { name: 'Forgot password?' }).click()
+  // Wait for the reset form: filling too early hits the login form's Email box, which then unmounts.
+  const sendLink = page.getByRole('button', { name: 'Send link' })
+  await expect(sendLink).toBeVisible()
   await page.getByLabel('Email').fill('nobody-here@example.com')
-  await page.getByRole('button', { name: 'Send link' }).click()
-  await expect(page.getByRole('status')).toContainText('If an active account exists')
+  await sendLink.click()
+  // An error (e.g. rate limit) would show as an alert; fail with its text rather than a missing status.
+  await expect(page.getByRole('status').or(page.getByRole('alert'))).toContainText('If an active account exists')
 })
