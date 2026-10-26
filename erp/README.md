@@ -148,7 +148,13 @@ Dev accounts (password `password`): `admin@example.com` (super admin), `orgadmin
 - Daily reminders for files that do not move. Rules: [`docs/CORRESPONDENCE.md`](docs/CORRESPONDENCE.md).
 - Tests: 130 backend, 59 frontend, 37 end-to-end.
 
+### Phase 7a — done (department finance)
+- Department budgets per financial year, one spend ledger (purchases, approved budget letters).
+- Material purchases with GST / transport, payments in parts, over-budget warnings, CSV.
+- Rules: [`docs/FINANCE.md`](docs/FINANCE.md).
+- Tests: 133 backend, 62 frontend, 39 end-to-end.
+
 ### Not yet (later phases)
-- Renewals and finance (Phase 7) and the other business modules (see
+- Renewals (Phase 7b) and the other business modules (see
   [`../docs/erp/PARITY.md`](../docs/erp/PARITY.md)); email / push delivery of notifications.
 - Reports, deployment to Hostinger.

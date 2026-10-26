@@ -66,4 +66,4 @@ scope; CSV with `letters.export` (audited).
 ## Budget requests
 
 A file can be marked as a budget expense (type and amount asked). The approved amount is recorded on
-signing; deducting it from the department budget comes with the finance phase (7).
+signing and charged to the creator's department budget at the same moment (see `FINANCE.md`).

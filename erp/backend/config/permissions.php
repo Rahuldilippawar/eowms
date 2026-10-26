@@ -22,5 +22,6 @@ return [
         'tasks' => ['view', 'create', 'edit'],
         'performance' => ['view', 'export'],
         'letters' => ['view', 'manage', 'export'],
+        'finance' => ['view', 'manage', 'budget', 'export'],
     ],
 ];

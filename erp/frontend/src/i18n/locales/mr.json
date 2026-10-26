@@ -98,7 +98,10 @@
     "holidays": "सुट्ट्या",
     "leaveBalances": "रजा शिल्लक",
     "salaryReport": "पगार अहवाल",
-    "letters": "पत्रव्यवहार"
+    "letters": "पत्रव्यवहार",
+    "finance": "वित्त",
+    "budgets": "विभाग Budget",
+    "purchases": "साहित्य खरेदी"
   },
   "dashboard": {
     "welcome": "नमस्कार, {{name}}",
@@ -243,7 +246,8 @@
     "sensitive": "खाजगी माहिती पाहणे / बदलणे",
     "manage": "व्यवस्थापन",
     "balances": "रजा वाटप",
-    "import": "आयात"
+    "import": "आयात",
+    "budget": "Budget ठरवणे"
   },
   "modules": {
     "organizations": "संस्था",
@@ -259,7 +263,8 @@
     "daily_work": "दैनंदिन काम",
     "tasks": "कामे (टास्क)",
     "performance": "कामगिरी अहवाल",
-    "letters": "पत्रव्यवहार"
+    "letters": "पत्रव्यवहार",
+    "finance": "विभाग वित्त"
   },
   "attendance": {
     "notMarked": "नोंद नाही",
@@ -890,7 +895,11 @@
     "attendance.manage": "सुट्ट्या, शिफ्ट, मशीन",
     "letters.manage": "प्रकार, कार्यप्रवाह, फाईल पुन्हा नेमणे",
     "letters.view": "आपल्या विभागांच्या फाईल्स पाहणे",
-    "letters.export": "रजिस्टर CSV"
+    "letters.export": "रजिस्टर CSV",
+    "finance.view": "Budget व खरेदी पाहणे",
+    "finance.manage": "खरेदी व Payment नोंदवणे",
+    "finance.budget": "विभागाचे Budget ठरवणे",
+    "finance.export": "वित्त CSV"
   },
   "letters": {
     "new": "नवीन फाईल",
@@ -1071,5 +1080,64 @@
       "password": "पासवर्ड"
     },
     "code": "पडताळणी कोड"
+  },
+  "finance": {
+    "allocated": "Budget",
+    "spent": "खर्च",
+    "remaining": "शिल्लक",
+    "notSet": "ठरवलेले नाही",
+    "over": "{{amount}} ने ओलांडले",
+    "used": "{{percent}}% वापर",
+    "setBudget": "Budget ठरवा",
+    "setBudgetFor": "{{name}} चे Budget ठरवा",
+    "allocateTitle": "{{name}} चे {{year}} साठी Budget",
+    "budgetHint": "प्रत्येक खरेदी, मंजूर Budget-पत्र (आणि पुढे इंधन, देखभाल, नूतनीकरण Payment) त्या विभागाच्या, त्या दिनांकाच्या आर्थिक वर्षाच्या (एप्रिल–मार्च) Budget मधून वजा होते.",
+    "noDepartments": "दाखवण्यासाठी विभाग नाहीत.",
+    "nothingSpent": "अजून खर्च नाही.",
+    "purchasesPaid": "खरेदी: {{billed}} पैकी {{paid}} दिले",
+    "ledgerCsv": "खर्च-नोंद CSV",
+    "source": {
+      "material_purchase": "खरेदी",
+      "letter": "मंजूर पत्रे",
+      "renewal_payment": "नूतनीकरण"
+    },
+    "newPurchase": "नवीन खरेदी",
+    "editPurchase": "खरेदी बदला",
+    "purchaseDate": "खरेदी दिनांक",
+    "material": "साहित्य",
+    "vendor": "विक्रेता",
+    "vendorContact": "विक्रेता संपर्क",
+    "quantity": "संख्या",
+    "unit": "एकक",
+    "rate": "दर (₹)",
+    "gstPercent": "GST %",
+    "transport": "वाहतूक (₹)",
+    "total": "एकूण",
+    "paid": "दिले",
+    "due": "बाकी",
+    "totalLine": "{{base}} + GST {{gst}} + वाहतूक {{transport}} = {{total}}",
+    "overBudget": "यामुळे विभागाचे Budget ओलांडले जाईल (शिल्लक: {{remaining}}). तरीही जतन करता येईल.",
+    "status": {
+      "pending": "न दिलेले",
+      "partial": "अंशतः दिलेले",
+      "paid": "पूर्ण दिलेले"
+    },
+    "paymentStatus": "Payment",
+    "searchHint": "साहित्य किंवा विक्रेता",
+    "noPurchases": "या वर्षी खरेदी नाही.",
+    "dueAmount": "{{amount}} बाकी",
+    "noPayments": "अजून Payment नाही.",
+    "payAmount": "रक्कम (₹)",
+    "paymentTypeLabel": "प्रकार",
+    "paymentType": {
+      "advance": "आगाऊ",
+      "partial": "अंशतः",
+      "final": "अंतिम"
+    },
+    "paymentMode": "कसे दिले",
+    "paymentModeHint": "रोख, चेक, UPI…",
+    "recordPayment": "Payment नोंदवा",
+    "paymentSaved": "Payment नोंदवले",
+    "deleted": "खरेदी काढली"
   }
 }

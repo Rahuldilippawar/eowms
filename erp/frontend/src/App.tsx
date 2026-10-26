@@ -33,6 +33,8 @@ import { PerformancePage } from '@/features/performance/PerformancePage'
 import { TaskDetailPage } from '@/features/tasks/TaskDetailPage'
 import { TasksPage } from '@/features/tasks/TasksPage'
 import { MyWorkPage } from '@/features/work/MyWorkPage'
+import { BudgetsPage } from '@/features/finance/BudgetsPage'
+import { PurchasesPage } from '@/features/finance/PurchasesPage'
 import { LetterDetailPage } from '@/features/letters/LetterDetailPage'
 import { LetterFormPage } from '@/features/letters/LetterFormPage'
 import { LetterPrintPage } from '@/features/letters/LetterPrintPage'
@@ -74,6 +76,8 @@ export function AppRoutes() {
           <Route path="notifications" element={<NotificationsPage />} />
           <Route path="performance" element={<PerformancePage />} />
           <Route path="work" element={guard('daily_work.view', <TeamWorkPage />)} />
+          <Route path="finance/budgets" element={guard('finance.view', <BudgetsPage />)} />
+          <Route path="finance/purchases" element={guard('finance.view', <PurchasesPage />)} />
           <Route path="letters" element={<LettersPage />} />
           <Route path="letters/new" element={<LetterFormPage />} />
           <Route path="letters/register" element={guard('letters.view', <LetterRegisterPage />)} />
