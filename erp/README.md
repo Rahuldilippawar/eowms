@@ -186,7 +186,7 @@ Dev accounts (password `password`): `admin@example.com` (super admin), `orgadmin
   room changes, items, inspections, monthly bills split among room-mates, guests, the on / off
   campus directory, occupancy figures, and a CSV import that can be undone.
   Rules: [`docs/RESIDENCY.md`](docs/RESIDENCY.md).
-- Tests: 155 backend, 79 frontend, E2E_COUNT end-to-end.
+- Tests: 155 backend, 79 frontend, 57 end-to-end.
 
 ### Not yet (later phases)
 - The other business modules (Phases 9–14, see

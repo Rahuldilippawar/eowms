@@ -1,17 +1,14 @@
 import { expect, test, type Page } from '@playwright/test'
-import { signIn } from './helpers'
+import { orgDate, signIn } from './helpers'
 
 async function go(page: Page, isMobile: boolean, link: string) {
   if (isMobile) await page.getByRole('button', { name: 'Open menu' }).click()
   await page.getByRole('link', { name: link, exact: true }).click()
 }
-const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 
 test('a vehicle with its insurance date, fuel charged; the driver logs a trip and a correction is approved', async ({ page, browser, isMobile }, testInfo) => {
   const suffix = `${Date.now().toString().slice(-6)}${testInfo.project.name === 'mobile' ? 'M' : 'D'}`
   const number = `E2E${suffix}`
-  const soon = new Date()
-  soon.setDate(soon.getDate() + 10)
 
   await signIn(page, 'orgadmin@example.com')
   await go(page, isMobile, 'Vehicles')
@@ -22,7 +19,7 @@ test('a vehicle with its insurance date, fuel charged; the driver logs a trip an
   await form.getByLabel('Department').selectOption({ label: 'Transport' })
   await form.getByLabel('Type').fill('Van')
   await form.getByLabel('Odometer now (km)').fill('100')
-  await form.getByLabel('Insurance valid till').fill(ymd(soon))
+  await form.getByLabel('Insurance valid till').fill(orgDate(10))
   await form.getByRole('button', { name: 'Save' }).click()
 
   await expect(page.getByRole('heading', { name: number })).toBeVisible()

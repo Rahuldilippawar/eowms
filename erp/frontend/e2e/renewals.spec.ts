@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { signIn } from './helpers'
+import { orgDate, signIn } from './helpers'
 
 async function go(page: Page, isMobile: boolean, link: string) {
   if (isMobile) await page.getByRole('button', { name: 'Open menu' }).click()
@@ -8,11 +8,6 @@ async function go(page: Page, isMobile: boolean, link: string) {
 
 test('a renewal is created, paid (charged to the budget) and renewed', async ({ page, isMobile }, testInfo) => {
   const name = `E2E fire NOC ${Date.now().toString().slice(-6)} ${testInfo.project.name}`
-  const soon = new Date()
-  soon.setDate(soon.getDate() + 10)
-  const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-  const later = new Date(soon)
-  later.setFullYear(later.getFullYear() + 1)
 
   await signIn(page, 'orgadmin@example.com')
   await go(page, isMobile, 'Renewals')
@@ -22,7 +17,7 @@ test('a renewal is created, paid (charged to the budget) and renewed', async ({ 
   await form.getByLabel('Type').fill('Fire NOC')
   await form.getByLabel('Department').selectOption({ label: 'Physics' })
   await form.getByLabel('Regulatory body').selectOption('Other Government')
-  await form.getByLabel('Expires on').fill(ymd(soon))
+  await form.getByLabel('Expires on').fill(orgDate(10))
   await form.getByLabel('Renewal cost (₹)').fill('3000')
   await form.getByRole('button', { name: 'Save' }).click()
 
@@ -35,7 +30,7 @@ test('a renewal is created, paid (charged to the budget) and renewed', async ({ 
 
   await page.getByRole('button', { name: 'Renew', exact: true }).click()
   const renew = page.getByRole('dialog')
-  await renew.getByLabel('New expiry date').fill(ymd(later))
+  await renew.getByLabel('New expiry date').fill(orgDate(10, 1))
   await renew.getByRole('button', { name: 'Renew', exact: true }).click()
   await expect(renew).toBeHidden()
   await expect(page.getByText('Earlier cycles')).toBeVisible()
