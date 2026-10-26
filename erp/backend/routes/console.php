@@ -18,3 +18,4 @@ Schedule::command('erp:celebrations')->hourly()->withoutOverlapping();
 Schedule::command('erp:letter-reminders')->dailyAt('03:30')->withoutOverlapping();
 // Renewals: 08:00 India time.
 Schedule::command('erp:renewal-reminders')->dailyAt('02:30')->withoutOverlapping();
+Schedule::command('erp:vehicle-service-due')->dailyAt('02:40')->withoutOverlapping();

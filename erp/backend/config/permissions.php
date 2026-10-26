@@ -24,5 +24,7 @@ return [
         'letters' => ['view', 'manage', 'export'],
         'finance' => ['view', 'manage', 'budget', 'export'],
         'renewals' => ['view', 'manage', 'export'],
+        'vehicles' => ['view', 'log', 'manage', 'export'],
+        'maintenance' => ['view', 'log', 'manage', 'export'],
     ],
 ];

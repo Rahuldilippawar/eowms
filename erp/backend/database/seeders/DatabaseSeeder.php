@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Enums\InstitutionType;
 use App\Models\ApprovalWorkflow;
+use App\Models\Building;
 use App\Models\CustomField;
 use App\Models\Department;
 use App\Models\DepartmentBudget;
@@ -11,6 +12,7 @@ use App\Models\Employee;
 use App\Models\Holiday;
 use App\Models\Institution;
 use App\Models\LetterCategory;
+use App\Models\MaintenanceLocation;
 use App\Models\Organization;
 use App\Models\RenewalItem;
 use App\Models\Role;
@@ -19,6 +21,7 @@ use App\Models\Student;
 use App\Models\Task;
 use App\Models\TaskUpdate;
 use App\Models\User;
+use App\Models\Vehicle;
 use App\Support\Access\DefaultRoles;
 use App\Support\Access\PermissionCatalog;
 use App\Support\Numbering\NumberSequence;
@@ -48,6 +51,8 @@ class DatabaseSeeder extends Seeder
         $physics = $this->department($trust, $college, 'Physics', 'PHY');
         $this->department($trust, $college, 'Library', 'LIB');
         $this->department($trust, $school, 'Primary Section', 'PRI');
+        $transport = $this->department($trust, null, 'Transport', 'TRP');
+        $maintenance = $this->department($trust, null, 'Maintenance', 'MNT');
 
         $hospital = $this->organization('Sanjeevani Hospital Trust', 'SHT', 'SHT');
         $this->department($hospital, null, 'Nursing', 'NUR');
@@ -58,6 +63,7 @@ class DatabaseSeeder extends Seeder
         $staff = $this->user('staff@example.com', 'IT Staff', $trust, 'staff', departments: [$it->id]);
         $this->user('hospital.admin@example.com', 'Org Admin (SHT)', $hospital, 'org_admin');
         $teacher = $this->user('teacher@example.com', 'Physics Teacher', $trust, 'staff', departments: [$physics->id]);
+        $driver = $this->user('driver@example.com', 'Bus Driver', $trust, 'staff', departments: [$transport->id]);
 
         // People records (linked to the accounts above where they log in).
         $ePrincipal = $this->employee($trust, $principal, 'EMP-001', 'Principal (SAC)', 'Principal', $college->departments()->where('code', 'LIB')->first() ?? $physics);
@@ -65,6 +71,7 @@ class DatabaseSeeder extends Seeder
         $eTeacher = $this->employee($trust, $teacher, 'EMP-003', 'Physics Teacher', 'Assistant Professor', $physics, $eHod);
         $this->employee($trust, $staff, 'EMP-004', 'IT Staff', 'System Administrator', $it);
         $this->employee($trust, $admin, 'EMP-005', 'Org Admin (SET)', 'Administrator', $it);
+        $this->employee($trust, $driver, 'EMP-006', 'Bus Driver', 'Driver', $transport);
         $eTeacher->fill(['gender' => 'female', 'date_of_birth' => '1991-07-12', 'blood_group' => 'B+', 'employment_type' => 'permanent', 'teaching_mode' => 'teaching'])->save();
         // Organization-defined fields, as the old app's community fields became.
         foreach ([['ashram_resident', 'आश्रमात राहतात', 'checkbox', null], ['naam_dharak', 'नामधारक', 'checkbox', null], ['food_preference', 'आहार', 'select', ['शाकाहारी', 'सात्विक']]] as $i => [$key, $label, $type, $options]) {
@@ -98,6 +105,19 @@ class DatabaseSeeder extends Seeder
             RenewalItem::firstOrCreate(['organization_id' => $trust->id, 'item_name' => $name], [
                 'institution_id' => $dept->institution_id, 'department_id' => $dept->id, 'item_type' => $type, 'regulatory_body' => $body,
                 'expiry_date' => $today->addDays($days)->toDateString(), 'renewal_cost' => $cost, 'created_by' => $admin->id,
+            ]);
+        }
+
+        // A college bus driven by the seeded driver, and a maintenance register with two rooms.
+        Vehicle::firstOrCreate(['organization_id' => $trust->id, 'vehicle_number' => 'MH12AB1234'], [
+            'department_id' => $transport->id, 'vehicle_type' => 'Bus', 'model' => 'Tata Starbus', 'passenger_capacity' => 40,
+            'driver_user_id' => $driver->id, 'fuel_type' => 'diesel', 'current_odometer' => 45200, 'created_by' => $admin->id,
+        ]);
+        $maintenance->forceFill(['has_maintenance_register' => true])->save();
+        $main = Building::firstOrCreate(['organization_id' => $trust->id, 'name' => 'Main Building'], ['institution_id' => $college->id]);
+        foreach ([['Physics Lab', 'MB-101', 1], ['Staff Room', 'MB-002', 0]] as [$name, $code, $floor]) {
+            MaintenanceLocation::firstOrCreate(['organization_id' => $trust->id, 'location_code' => $code], [
+                'institution_id' => $college->id, 'building_id' => $main->id, 'name' => $name, 'floor' => $floor,
             ]);
         }
 
