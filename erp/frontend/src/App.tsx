@@ -50,6 +50,14 @@ import { VehicleDetailPage } from '@/features/vehicles/VehicleDetailPage'
 import { VehicleImportPage } from '@/features/vehicles/VehicleImportPage'
 import { VehicleReportPage } from '@/features/vehicles/VehicleReportPage'
 import { VehiclesPage } from '@/features/vehicles/VehiclesPage'
+import { MyResidencyPage } from '@/features/residency/MyResidencyPage'
+import { ResidencyAnalyticsPage } from '@/features/residency/ResidencyAnalyticsPage'
+import { ResidencyBillsPage } from '@/features/residency/ResidencyBillsPage'
+import { ResidencyDirectoryPage } from '@/features/residency/ResidencyDirectoryPage'
+import { ResidencyImportPage } from '@/features/residency/ResidencyImportPage'
+import { ResidencyRequestsPage } from '@/features/residency/ResidencyRequestsPage'
+import { ResidencyRoomPage } from '@/features/residency/ResidencyRoomPage'
+import { ResidencyRoomsPage } from '@/features/residency/ResidencyRoomsPage'
 import { HostelAttendancePage } from '@/features/hostels/HostelAttendancePage'
 import { HostelImportPage } from '@/features/hostels/HostelImportPage'
 import { HostelPage } from '@/features/hostels/HostelPage'
@@ -128,6 +136,14 @@ export function AppRoutes() {
           <Route path="hostels/:id/attendance" element={<HostelAttendancePage />} />
           <Route path="hostels/:id/import" element={<HostelImportPage />} />
           <Route path="hostel-residents/:id" element={<ResidentPage />} />
+          <Route path="my/residency" element={<MyResidencyPage />} />
+          <Route path="residency" element={guard('residency.view', <ResidencyRoomsPage />)} />
+          <Route path="residency/rooms/:id" element={guard('residency.view', <ResidencyRoomPage />)} />
+          <Route path="residency/requests" element={guard('residency.view', <ResidencyRequestsPage />)} />
+          <Route path="residency/bills" element={guard('residency.view', <ResidencyBillsPage />)} />
+          <Route path="residency/directory" element={guard('residency.view', <ResidencyDirectoryPage />)} />
+          <Route path="residency/analytics" element={guard('residency.view', <ResidencyAnalyticsPage />)} />
+          <Route path="residency/import" element={guard('residency.manage', <ResidencyImportPage />)} />
           <Route path="maintenance" element={guard('maintenance.view', <MaintenancePage />)} />
           <Route path="maintenance/report" element={guard('maintenance.view', <MaintenanceReportPage />)} />
           <Route path="maintenance/settings" element={guard('maintenance.manage', <MaintenanceSettingsPage />)} />

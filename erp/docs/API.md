@@ -313,3 +313,23 @@ Rules: [`HOSTELS.md`](HOSTELS.md). Under the `hostels` module switch. "care" = t
 | POST | `/hostel-residents/{id}/fees`, `/hostel-fees/{fee}/payments` | care | `fee_period, amount_due, due_date?` / `amount, payment_mode, paid_on?, remarks?` |
 | POST / PUT | `/hostel-residents/{id}/depart`, `/alumnus` | care | `departure_date, departure_reason?, current_status?, contact_number?, notes?` |
 
+## Phase 8d — staff housing
+
+Rules: [`RESIDENCY.md`](RESIDENCY.md). Under the `residency` module switch.
+
+| Method | Path | Permission | Notes |
+|---|---|---|---|
+| GET | `/my/residency` | signed in | `home` (room, building, family), `bills` (own shares), `requests`, `buildings` |
+| POST | `/my/residency/requests`, `/my/residency/requests/{id}/cancel` | signed in | `preferred_building_id?, family_size, reason?`; one open request, not when housed |
+| GET | `/residency/rooms[?building_id&search&vacant]` | `residency.view` | Residential rooms with occupants count and staff names; `meta.can_manage`, `meta.buildings` |
+| GET | `/residency/rooms/{id}` | `residency.view` | Occupants, items, inspections, bills with shares, guests, room changes |
+| POST | `/residency/rooms/{id}/occupants` | `residency.manage` | `occupant_type (staff\|family), user_id (staff), family_of_id + name (family), relation?, age?, moved_in_date?` |
+| POST | `/residency/occupants/{id}/vacate`, `/transfer`, `/link` | `residency.manage` | `vacated_date?, remark?` / `to_location_id, transfer_date?, reason?` / `user_id` |
+| POST / DELETE | `/residency/rooms/{id}/items`, `/residency/items/{id}` | `residency.manage` | `item_name, ownership (institution\|personal), quantity, remarks?` |
+| POST | `/residency/rooms/{id}/inspections` | `residency.manage` | `inspection_date, condition_rating (excellent\|good\|fair\|poor), remarks?` |
+| POST | `/residency/rooms/{id}/bills`, `/residency/bill-shares/{id}/paid` | `residency.manage` | `billing_month (YYYY-MM), room_rent?, electricity_bill?, water_bill?` / `paid` |
+| GET | `/residency/bills?month` | `residency.view` | A month across rooms: `total`, `pending`, `bills` |
+| POST | `/residency/rooms/{id}/guests`, `/residency/guests/{id}/left` | `residency.manage` | `guest_name, guest_contact?, relation?, purpose?, host_occupant_id?, arrival_date, expected_departure_date?` |
+| GET / POST | `/residency/requests[?status=open\|approved\|rejected\|cancelled\|all]`, `/residency/requests/{id}/decide` | view / manage | `decision (approve\|waitlist\|reject), location_id (approve), remarks?` |
+| GET | `/residency/directory`, `/residency/analytics`, `/residency/unlinked` | `residency.view` | On / off campus staff; occupancy figures; imported staff without an account |
+| GET / POST | `/residency/import/template`, `/import/preview`, `/import`, `/import/history`, `/import/{batch}/rollback` | `residency.manage` | CSV; all rows or none; undo while no bills exist |

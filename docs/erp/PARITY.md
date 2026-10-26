@@ -98,7 +98,7 @@ Legend: ✅ in the ERP · 🟡 partly (gaps listed) · ⏳ scheduled (phase) · 
 | Grievances (complaints) with comments | ✅ 8b | Anonymous grievances keep only a keyed hash of the sender |
 | Tickets escalation cron | ✅ 8b | Hourly; one summary per person |
 | Hostels: hostels, rooms, room / bed allocation, students + import, attendance, leave / out-pass, health, fees, alumni, dashboard, bulk import | ✅ 8c | Wardens work without wider permissions; roll-call reminder cron included. Hostels themselves are added in the app (the old CSV of hostels is not carried over: an organization has a handful) |
-| Residency: buildings, layout, rooms + items, occupants, allotment requests, transfers, inspections, bills (rent / electricity) + shares + report, guests, occupancy analytics, staff directory (resident / non-resident), data import engine with preview / history, link unlinked | ⏳ 8d | Uses the 8a buildings and residential locations |
+| Residency: buildings, layout, rooms + items, occupants, allotment requests, transfers, inspections, bills (rent / electricity) + shares + report, guests, occupancy analytics, staff directory (resident / non-resident), data import engine with preview / history, link unlinked | ✅ 8d | Uses the 8a buildings and residential locations; a bill is split equally among the staff in the room; an import can be undone until bills exist |
 
 ## Assets, inventory, purchasing (⏳ 9)
 

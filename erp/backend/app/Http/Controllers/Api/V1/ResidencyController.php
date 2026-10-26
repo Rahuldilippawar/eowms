@@ -243,7 +243,7 @@ class ResidencyController extends Controller
             'month' => $month,
             'total' => round((float) $bills->sum('total_amount'), 2),
             'pending' => round((float) $bills->flatMap->shares->whereNull('paid_at')->sum('amount_due'), 2),
-            'bills' => $bills->map(fn (ResidencyBill $b) => $this->bill($b) + ['room' => $b->location?->name, 'building' => $b->location?->building?->name])->values(),
+            'bills' => $bills->map(fn (ResidencyBill $b) => $this->bill($b) + ['location_id' => $b->location_id, 'room' => $b->location?->name, 'building' => $b->location?->building?->name])->values(),
         ]]);
     }
 

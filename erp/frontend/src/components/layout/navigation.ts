@@ -1,4 +1,4 @@
-import { BarChart3, BedDouble, Bus, Hammer, MessageSquareWarning, FilePenLine, PieChart, Wrench, CalendarHeart, Fingerprint, IndianRupee, Scale, SlidersHorizontal, UserRound, Building, ClipboardPen, Mail, RefreshCw, ShoppingCart, Wallet, ListChecks, NotebookPen, Building2, CalendarClock, CalendarDays, ClipboardCheck, ClipboardList, GraduationCap, IdCard, KeyRound, LayoutDashboard, Network, Plane, Settings, Users, type LucideIcon } from 'lucide-react'
+import { BarChart3, BedDouble, DoorOpen, House, Bus, Hammer, MessageSquareWarning, FilePenLine, PieChart, Wrench, CalendarHeart, Fingerprint, IndianRupee, Scale, SlidersHorizontal, UserRound, Building, ClipboardPen, Mail, RefreshCw, ShoppingCart, Wallet, ListChecks, NotebookPen, Building2, CalendarClock, CalendarDays, ClipboardCheck, ClipboardList, GraduationCap, IdCard, KeyRound, LayoutDashboard, Network, Plane, Settings, Users, type LucideIcon } from 'lucide-react'
 
 export interface NavItem {
   to: string
@@ -32,6 +32,7 @@ export const NAVIGATION: NavSection[] = [
       { to: '/letters', labelKey: 'nav.letters', icon: Mail, module: 'letters' },
       { to: '/requests', labelKey: 'nav.requests', icon: Wrench, module: 'requests' },
       { to: '/grievances', labelKey: 'nav.grievances', icon: MessageSquareWarning, module: 'grievances' },
+      { to: '/my/residency', labelKey: 'nav.myResidency', icon: DoorOpen, module: 'residency' },
       // Reporting officers approve without holding leave.approve, so this entry is shown to everyone.
       { to: '/approvals', labelKey: 'nav.approvals', icon: ClipboardCheck },
       { to: '/performance', labelKey: 'nav.performance', icon: BarChart3, module: 'performance' },
@@ -65,6 +66,7 @@ export const NAVIGATION: NavSection[] = [
       { to: '/vehicles', labelKey: 'nav.vehicles', icon: Bus, permission: 'vehicles.view', module: 'vehicles', orFlag: 'drives_vehicle' },
       { to: '/vehicles/corrections', labelKey: 'nav.vehicleCorrections', icon: FilePenLine, permission: 'vehicles.manage', module: 'vehicles' },
       { to: '/hostels', labelKey: 'nav.hostels', icon: BedDouble, permission: 'hostels.view', module: 'hostels', orFlag: 'hostel_staff' },
+      { to: '/residency', labelKey: 'nav.residency', icon: House, permission: 'residency.view', module: 'residency' },
       { to: '/maintenance', labelKey: 'nav.maintenance', icon: Hammer, permission: 'maintenance.view', module: 'maintenance' },
       { to: '/maintenance/report', labelKey: 'nav.maintenanceReport', icon: PieChart, permission: 'maintenance.view', module: 'maintenance' },
     ],
