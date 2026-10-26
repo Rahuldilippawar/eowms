@@ -26,6 +26,7 @@ import { MyLeavePage } from '@/features/leave/MyLeavePage'
 import { DepartmentsPage } from '@/features/org/DepartmentsPage'
 import { InstitutionsPage } from '@/features/org/InstitutionsPage'
 import { EmployeesPage } from '@/features/people/EmployeesPage'
+import { StudentImportPage } from '@/features/people/StudentImportPage'
 import { StudentsPage } from '@/features/people/StudentsPage'
 import { NotificationsPage } from '@/features/notifications/NotificationsPage'
 import { PerformancePage } from '@/features/performance/PerformancePage'
@@ -33,6 +34,7 @@ import { TaskDetailPage } from '@/features/tasks/TaskDetailPage'
 import { TasksPage } from '@/features/tasks/TasksPage'
 import { MyWorkPage } from '@/features/work/MyWorkPage'
 import { TeamWorkPage } from '@/features/work/TeamWorkPage'
+import { WorkImportPage } from '@/features/work/WorkImportPage'
 import { CustomFieldsPage } from '@/features/admin/CustomFieldsPage'
 import { ChangePasswordPage } from '@/features/auth/ChangePasswordPage'
 import { EmployeeImportPage } from '@/features/people/EmployeeImportPage'
@@ -64,6 +66,7 @@ export function AppRoutes() {
           <Route path="notifications" element={<NotificationsPage />} />
           <Route path="performance" element={<PerformancePage />} />
           <Route path="work" element={guard('daily_work.view', <TeamWorkPage />)} />
+          <Route path="work/import" element={guard('daily_work.import', <WorkImportPage />)} />
           <Route path="attendance" element={guard('attendance.view', <TeamAttendancePage />)} />
           <Route path="employees" element={guard('employees.view', <EmployeesPage />)} />
           <Route path="employees/import" element={guard('employees.create', <EmployeeImportPage />)} />
@@ -73,6 +76,7 @@ export function AppRoutes() {
           <Route path="account/password" element={<ChangePasswordPage />} />
           <Route path="organization/fields" element={guard('organizations.edit', <CustomFieldsPage />)} />
           <Route path="students" element={guard('students.view', <StudentsPage />)} />
+          <Route path="students/import" element={guard('students.create', <StudentImportPage />)} />
           <Route path="holidays" element={<HolidaysPage />} />
           <Route path="leave-balances" element={guard('leave.view', <LeaveBalancesPage />)} />
           <Route path="attendance/certificate/:id" element={<CertificatePage />} />

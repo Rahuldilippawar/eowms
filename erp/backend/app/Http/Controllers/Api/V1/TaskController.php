@@ -81,8 +81,11 @@ class TaskController extends Controller
     public function transition(Request $request, Task $task, string $action): TaskResource
     {
         $this->assertVisible($request, $task);
-        $data = $request->validate(['note' => ['nullable', 'string', 'max:1000']]);
-        $task = $this->service->transition($task, $action, $data['note'] ?? null, $request->user());
+        $data = $request->validate([
+            'note' => ['nullable', 'string', 'max:1000'],
+            'cost_incurred' => ['nullable', 'numeric', 'min:0', 'max:9999999999'],
+        ]);
+        $task = $this->service->transition($task, $action, $data['note'] ?? null, $request->user(), $data['cost_incurred'] ?? null);
 
         return $this->show($request, $task);
     }

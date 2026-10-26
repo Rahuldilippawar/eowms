@@ -104,7 +104,7 @@ export interface ImportRow {
   data: Record<string, string | number | null>
   errors: Record<string, string>
 }
-const csvForm = (file: File) => {
+export const csvForm = (file: File) => {
   const form = new FormData()
   form.append('file', file)
   return form

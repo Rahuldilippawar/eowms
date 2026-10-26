@@ -241,7 +241,8 @@
     "review": "Review",
     "sensitive": "See / edit private data",
     "manage": "Holidays, shifts, machines",
-    "balances": "Allocate leave"
+    "balances": "Allocate leave",
+    "import": "Import"
   },
   "modules": {
     "organizations": "Organizations",
@@ -380,7 +381,14 @@
     "primaryDepartment": "Primary department",
     "reportingOfficer": "Reporting officer",
     "section": "Division",
-    "studentCode": "Student code"
+    "studentCode": "Student code",
+    "rollNo": "Roll no.",
+    "admissionNo": "Admission no.",
+    "yearOfStudy": "Year of study",
+    "yearN": "Year {{n}}",
+    "academicYear": "Academic year",
+    "academicYearRule": "Write it like 2026-27.",
+    "studentMobile": "Student mobile"
   },
   "notifications": {
     "title": "Notifications",
@@ -448,7 +456,34 @@
     "reviewedToast": "Marked as reviewed.",
     "reviewState": "Review",
     "reviewed": "Reviewed",
-    "notReviewed": "Not reviewed"
+    "notReviewed": "Not reviewed",
+    "team": "Done together with",
+    "teamSearch": "Search a colleague by name or code",
+    "addMember": "Add {{name}}",
+    "removeMember": "Remove {{name}}",
+    "noColleagues": "No matching active colleague.",
+    "requestedBy": "Requested by",
+    "requestedByName": "Requested by {{name}}",
+    "withTeam": "With {{names}}",
+    "estimatedCost": "Estimated cost (₹)",
+    "actualCost": "Actual cost (₹)",
+    "costRule": "Enter an amount of 0 or more.",
+    "estimatedCostValue": "Estimate {{amount}}",
+    "actualCostValue": "Spent {{amount}}",
+    "imported": "Old record",
+    "importTitle": "Import old work records",
+    "importNote": "Each row is matched to an employee by employee_code. Old dates are allowed; future dates are not. team_codes lists colleagues' codes separated by commas.",
+    "photo": {
+      "before": "Before",
+      "after": "After",
+      "none": "No photo",
+      "saved": "Photo saved",
+      "alt": "{{kind}} photo: {{title}}",
+      "upload": "{{kind}}: add photo",
+      "remove": "{{kind}}: remove photo"
+    },
+    "importDone_one": "{{count}} work record imported.",
+    "importDone_other": "{{count}} work records imported."
   },
   "tasks": {
     "status": {
@@ -526,7 +561,8 @@
     "sendComment": "Send",
     "reason": "Reason",
     "noteOptional": "Note (optional)",
-    "noteRequired": "Please write a short reason."
+    "noteRequired": "Please write a short reason.",
+    "costIncurred": "Money spent (₹)"
   },
   "performance": {
     "mine": "My figures",
@@ -695,7 +731,10 @@
     "run_one": "Import {{count}} row",
     "run_other": "Import {{count}} rows",
     "done_one": "{{count}} employee imported.",
-    "done_other": "{{count}} employees imported."
+    "done_other": "{{count}} employees imported.",
+    "studentsTitle": "Import students",
+    "studentsDone_one": "{{count}} student imported.",
+    "studentsDone_other": "{{count}} students imported."
   },
   "settings": {
     "modules": "Modules",

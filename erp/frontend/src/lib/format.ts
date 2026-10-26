@@ -14,6 +14,12 @@ export function formatDate(ymd: string | null | undefined): string {
   return new Intl.DateTimeFormat(locale(), { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(y, m - 1, d))
 }
 
+/** Rupees, e.g. ₹1,250 (paise only when there are any). */
+export function formatMoney(n: number | null | undefined): string {
+  if (n === null || n === undefined) return '—'
+  return new Intl.NumberFormat(locale(), { style: 'currency', currency: 'INR', minimumFractionDigits: Number.isInteger(n) ? 0 : 2, maximumFractionDigits: 2 }).format(n)
+}
+
 /** Today's date in the browser's timezone as YYYY-MM-DD (the server re-checks). */
 export function todayYmd(): string {
   const d = new Date()

@@ -167,3 +167,22 @@ Rules: [`ATTENDANCE.md`](ATTENDANCE.md).
 | GET, POST | `/iclock/cdata`, `/iclock/getrequest`, `/iclock/devicecmd` (no `/api/v1`) | registered machine serial | ZKTeco ADMS; plain-text replies |
 
 Leave applications now count working days and are checked against the balance.
+
+## Phase 5A-2b — students, daily-work team / cost / photos / import, task cost
+
+Rules: [`PEOPLE.md`](PEOPLE.md) (students), [`WORK-AND-TASKS.md`](WORK-AND-TASKS.md).
+
+| Method | Path | Permission | Notes |
+|---|---|---|---|
+| GET / POST / PUT | `/students[/{id}]` | as before | New fields `roll_no, admission_no, year_of_study, academic_year, mobile, email`; filters `academic_year, year_of_study` |
+| GET | `/students/export?search&institution_id&class_name&academic_year&year_of_study&is_active` | `students.export` | CSV, audited |
+| GET / POST | `/students/import/template`, `/students/import/preview`, `/students/import` | `students.create` | CSV; preview writes nothing; all rows or none |
+| GET | `/me/work/colleagues?search` | own employee record | Up to 20 active colleagues: id, name, code, department |
+| POST / PUT | `/me/work[/{id}]` | own entry | New fields `requested_by, estimated_cost, actual_cost, team_employee_ids[]` |
+| POST / DELETE | `/me/work/{id}/photos/{before\|after}` | own editable entry | `photo`: JPEG / PNG / WebP ≤ 5 MB |
+| GET | `/work/{id}/photos/{before\|after}` | owner, team mate or `daily_work.view` in scope | Private file |
+| GET / POST | `/work/import/template`, `/work/import/preview`, `/work/import` | `daily_work.import` | Old records; all rows or none |
+| POST | `/tasks/{id}/submit`, `/tasks/{id}/complete` | as before | Optional `cost_incurred` |
+
+Work entries now return `requested_by, estimated_cost, actual_cost, team[], has_before_photo,
+has_after_photo, is_imported`; tasks return `cost_incurred`.

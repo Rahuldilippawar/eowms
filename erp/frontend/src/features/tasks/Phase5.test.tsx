@@ -117,7 +117,7 @@ describe('phase 5 screens', () => {
 
     await userEvent.type(within(dialog).getByLabelText('Reason'), 'Remote missing')
     await userEvent.click(within(dialog).getByRole('button', { name: 'Send back' }))
-    await waitFor(() => expect(tasks.taskTransition).toHaveBeenCalledWith(7, 'reopen', 'Remote missing'))
+    await waitFor(() => expect(tasks.taskTransition).toHaveBeenCalledWith(7, 'reopen', 'Remote missing', null))
     expect(await screen.findByText('In progress')).toBeInTheDocument()
   })
 
@@ -126,7 +126,7 @@ describe('phase 5 screens', () => {
     tasks.taskTransition.mockResolvedValue(task({ status: 'in_progress', actions: ['submit', 'comment'] }))
     renderApp('/tasks/7')
     await userEvent.click(await screen.findByRole('button', { name: 'Start' }))
-    await waitFor(() => expect(tasks.taskTransition).toHaveBeenCalledWith(7, 'start', ''))
+    await waitFor(() => expect(tasks.taskTransition).toHaveBeenCalledWith(7, 'start', '', null))
     expect(await screen.findByRole('button', { name: 'Mark done' })).toBeInTheDocument()
   })
 
@@ -155,7 +155,7 @@ describe('phase 5 screens', () => {
     await userEvent.selectOptions(screen.getByLabelText('Related task (optional)'), '7')
     await userEvent.click(screen.getByRole('button', { name: 'Save' }))
     await waitFor(() =>
-      expect(work.saveWork).toHaveBeenCalledWith(null, { work_date: todayYmd(), title: 'Checked lab records', description: null, hours: 1.5, status: 'completed', task_id: 7, custom: {} }),
+      expect(work.saveWork).toHaveBeenCalledWith(null, { work_date: todayYmd(), title: 'Checked lab records', description: null, hours: 1.5, status: 'completed', task_id: 7, requested_by: null, estimated_cost: null, actual_cost: null, team_employee_ids: [], custom: {} }),
     )
   })
 })

@@ -132,8 +132,15 @@ Dev accounts (password `password`): `admin@example.com` (super admin), `orgadmin
 - Daily jobs: mark absent, late / absence pattern alerts, birthday and work-anniversary wishes.
 - Tests: 120 backend, 48 frontend, 31 end-to-end.
 
+### Phase 5A-2b — done (old-app parity, students and daily work)
+- Student roll no., admission no., year of study, academic year, mobile and email; student CSV import
+  and export.
+- Daily work: team members, requested by, estimated / actual cost, before / after photos, and import
+  of the old app's work records. Tasks record the money spent.
+- Shared CSV import screen (check first, then all rows or none) for staff, students and work.
+- Tests: 124 backend, 53 frontend, 35 end-to-end.
+
 ### Not yet (later phases)
-- Phase 5A-2b (student fields + import, daily-work team / photos / cost / import, task cost), then
-  correspondence, approvals and PDF/QR (Phase 6) and the other business modules; holiday calendar;
-  email / push delivery of notifications; organization-defined extra fields on work entries.
+- Correspondence, approvals and PDF/QR (Phase 6) and the other business modules (see
+  [`../docs/erp/PARITY.md`](../docs/erp/PARITY.md)); email / push delivery of notifications.
 - Reports, deployment to Hostinger.

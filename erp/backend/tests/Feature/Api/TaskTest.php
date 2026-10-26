@@ -107,7 +107,8 @@ class TaskTest extends TestCase
         $this->spa()->getJson("/api/v1/tasks/{$id}")->assertOk()->assertJsonPath('data.actions', ['start', 'submit', 'comment']);
         $this->spa()->postJson("/api/v1/tasks/{$id}/complete")->assertForbidden();
         $this->spa()->postJson("/api/v1/tasks/{$id}/start")->assertOk()->assertJsonPath('data.status', 'in_progress');
-        $this->spa()->postJson("/api/v1/tasks/{$id}/submit", ['note' => 'Done, bulb replaced'])->assertOk()->assertJsonPath('data.status', 'submitted');
+        $this->spa()->postJson("/api/v1/tasks/{$id}/submit", ['note' => 'Done, bulb replaced', 'cost_incurred' => 250])->assertOk()
+            ->assertJsonPath('data.status', 'submitted')->assertJsonPath('data.cost_incurred', 250);
         $this->assertContains('task.submit', $this->notificationsOf($this->officer));
 
         $this->actingAs($this->officer);
@@ -115,7 +116,8 @@ class TaskTest extends TestCase
         $this->spa()->postJson("/api/v1/tasks/{$id}/reopen", ['note' => 'Remote still missing'])->assertOk()->assertJsonPath('data.status', 'in_progress');
 
         $this->actingAs($this->worker);
-        $this->spa()->postJson("/api/v1/tasks/{$id}/submit")->assertOk();
+        // A later hand-in without a cost keeps the earlier one.
+        $this->spa()->postJson("/api/v1/tasks/{$id}/submit")->assertOk()->assertJsonPath('data.cost_incurred', 250);
 
         $this->actingAs($this->officer);
         $this->spa()->postJson("/api/v1/tasks/{$id}/complete")->assertOk()->assertJsonPath('data.status', 'completed')->assertJsonPath('data.actions', ['comment']);

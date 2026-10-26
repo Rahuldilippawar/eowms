@@ -5,12 +5,15 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Concerns\ResolvesMyEmployee;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\WorkEntryResource;
+use App\Models\Employee;
 use App\Models\Task;
 use App\Models\WorkEntry;
+use App\Services\WorkImport;
 use App\Services\WorkService;
 use App\Support\Access\AccessContext;
 use App\Support\Audit\AuditLogger;
 use App\Support\Export\Csv;
+use App\Support\Export\CsvReader;
 use App\Support\Forms\CustomFields;
 use App\Support\Queries\PeopleQueries;
 use Carbon\CarbonImmutable;
@@ -18,6 +21,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -25,6 +29,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class WorkController extends Controller
 {
     use ResolvesMyEmployee;
+
+    private const WITH = ['employee', 'task', 'reviewer', 'team'];
 
     public function __construct(private readonly WorkService $service) {}
 
@@ -35,7 +41,7 @@ class WorkController extends Controller
 
         $entries = WorkEntry::query()->where('employee_id', $employee->id)
             ->whereBetween('work_date', [$f['from'], $f['to']])
-            ->with(['employee', 'task', 'reviewer'])
+            ->with(self::WITH)
             ->orderByDesc('work_date')->orderByDesc('id')->get();
 
         return WorkEntryResource::collection($entries)->additional([
@@ -52,12 +58,25 @@ class WorkController extends Controller
             ->whereIn('status', Task::OPEN_STATES)->orderBy('due_date')->limit(100)->get(['id', 'code', 'title', 'status', 'due_date'])]);
     }
 
+    /** Active colleagues to name as the team of an entry: name, code and department only. */
+    public function colleagues(Request $request): JsonResponse
+    {
+        $employee = $this->employeeOrFail();
+        $f = $request->validate(['search' => ['required', 'string', 'min:2', 'max:100']]);
+        $like = '%'.addcslashes($f['search'], '%_\\').'%';
+
+        return response()->json(['data' => Employee::query()->with('department:id,name')->where('is_active', true)->whereKeyNot($employee->id)
+            ->where(fn ($q) => $q->where('name', 'like', $like)->orWhere('employee_code', 'like', $like))
+            ->orderBy('name')->limit(20)->get()
+            ->map(fn (Employee $e) => ['id' => $e->id, 'name' => $e->name, 'employee_code' => $e->employee_code, 'department' => $e->department?->name])]);
+    }
+
     public function store(Request $request): WorkEntryResource
     {
         $employee = $this->activeEmployeeOrFail();
         $entry = $this->service->save($employee, $this->validated($request), $request->user());
 
-        return new WorkEntryResource($entry->load(['employee', 'task', 'reviewer']));
+        return new WorkEntryResource($entry->load(self::WITH));
     }
 
     public function update(Request $request, WorkEntry $entry): WorkEntryResource
@@ -66,7 +85,7 @@ class WorkController extends Controller
         abort_unless($entry->employee_id === $employee->id, 404);
         $entry = $this->service->save($employee, $this->validated($request), $request->user(), $entry);
 
-        return new WorkEntryResource($entry->load(['employee', 'task', 'reviewer']));
+        return new WorkEntryResource($entry->load(self::WITH));
     }
 
     public function destroy(Request $request, WorkEntry $entry): JsonResponse
@@ -84,7 +103,7 @@ class WorkController extends Controller
         $query = $this->teamQuery($request, $f);
 
         return WorkEntryResource::collection(
-            $query->with(['employee', 'task', 'reviewer'])->orderByDesc('work_date')->orderByDesc('id')->paginate($f['per_page'] ?? 25)->withQueryString()
+            $query->with(self::WITH)->orderByDesc('work_date')->orderByDesc('id')->paginate($f['per_page'] ?? 25)->withQueryString()
         );
     }
 
@@ -92,21 +111,92 @@ class WorkController extends Controller
     {
         $data = $request->validate(['remarks' => ['nullable', 'string', 'max:500']]);
 
-        return new WorkEntryResource($this->service->review($entry, $data['remarks'] ?? null, $request->user())->load(['employee', 'task', 'reviewer']));
+        return new WorkEntryResource($this->service->review($entry, $data['remarks'] ?? null, $request->user())->load(self::WITH));
     }
 
     public function export(Request $request): StreamedResponse
     {
         $query = $this->teamQuery($request, $f);
-        $rows = $query->with(['employee', 'task'])->orderBy('work_date')->orderBy('id')->limit(20000)->get();
+        $rows = $query->with(['employee', 'task', 'team'])->orderBy('work_date')->orderBy('id')->limit(20000)->get();
         AuditLogger::record('daily_work', 'export', null, null, ['from' => $f['from'], 'to' => $f['to'], 'rows' => $rows->count()]);
 
         return Csv::download("daily-work-{$f['from']}-{$f['to']}.csv",
-            ['date', 'employee_code', 'employee', 'title', 'description', 'hours', 'status', 'task', 'reviewed_at', 'review_remarks'],
+            ['date', 'employee_code', 'employee', 'title', 'description', 'hours', 'status', 'task', 'requested_by', 'team',
+                'estimated_cost', 'actual_cost', 'reviewed_at', 'review_remarks'],
             $rows->map(fn (WorkEntry $e) => [
                 $e->work_date->toDateString(), $e->employee->employee_code, $e->employee->name, $e->title, $e->description,
-                $e->hours, $e->status, $e->task?->code, $e->reviewed_at?->toDateTimeString(), $e->review_remarks,
+                $e->hours, $e->status, $e->task?->code, $e->requested_by, $e->team->pluck('employee_code')->implode(', '),
+                $e->estimated_cost, $e->actual_cost, $e->reviewed_at?->toDateTimeString(), $e->review_remarks,
             ]));
+    }
+
+    /** Before / after photo of the employee's own entry, while it can still be edited. */
+    public function uploadPhoto(Request $request, WorkEntry $entry, string $kind): WorkEntryResource
+    {
+        $employee = $this->activeEmployeeOrFail();
+        abort_unless($entry->employee_id === $employee->id, 404);
+        $request->validate(['photo' => ['required', 'file', 'max:5120', 'mimes:jpg,jpeg,png,webp']]);
+
+        $this->service->setPhoto($entry, $kind, $request->file('photo'), $request->user());
+
+        return new WorkEntryResource($entry->refresh()->load(self::WITH));
+    }
+
+    public function deletePhoto(Request $request, WorkEntry $entry, string $kind): WorkEntryResource
+    {
+        $employee = $this->employeeOrFail();
+        abort_unless($entry->employee_id === $employee->id, 404);
+        $this->service->setPhoto($entry, $kind, null, $request->user());
+
+        return new WorkEntryResource($entry->refresh()->load(self::WITH));
+    }
+
+    /** The photo file, for the employee, their team mates and anyone whose daily_work.view scope reaches them. */
+    public function photo(Request $request, WorkEntry $entry, string $kind): StreamedResponse
+    {
+        abort_unless($this->service->canSee($entry, $request->user()), 404);
+        $path = $entry->{$kind.'_photo_path'};
+        abort_if($path === null || ! Storage::disk('local')->exists($path), 404);
+
+        return Storage::disk('local')->response($path, null, ['Cache-Control' => 'private, max-age=300', 'X-Content-Type-Options' => 'nosniff']);
+    }
+
+    public function importTemplate(): StreamedResponse
+    {
+        return Csv::download('daily-work-import-template.csv', WorkImport::COLUMNS, [
+            ['2026-03-15', 'EMP-101', 'Pipe repair', 'Fixed the leak in the main building', '2', 'completed', "Principal's office", 'EMP-102, EMP-103', '', '500'],
+        ]);
+    }
+
+    public function importPreview(Request $request, WorkImport $import): JsonResponse
+    {
+        $checked = $import->check($this->importRows($request));
+
+        return response()->json(['data' => [
+            'rows' => $checked,
+            'total' => count($checked),
+            'with_errors' => collect($checked)->filter(fn ($r) => $r['errors'] !== [])->count(),
+        ]]);
+    }
+
+    /** Old work records: every row, or nothing if any row has an error. */
+    public function import(Request $request, WorkImport $import): JsonResponse
+    {
+        $checked = $import->check($this->importRows($request));
+        $bad = collect($checked)->filter(fn ($r) => $r['errors'] !== [])->values();
+        if ($bad->isNotEmpty()) {
+            return response()->json(['message' => __('import.has_errors'), 'errors' => ['file' => [__('import.has_errors')]], 'rows' => $bad], 422);
+        }
+
+        return response()->json(['data' => ['imported' => $import->import($checked, $request->user())]], 201);
+    }
+
+    /** @return list<array<string, string>> */
+    private function importRows(Request $request): array
+    {
+        $request->validate(['file' => ['required', 'file', 'max:4096', 'mimes:csv,txt']]);
+
+        return CsvReader::rows($request->file('file'), WorkImport::REQUIRED, WorkImport::MAX_ROWS);
     }
 
     /**
@@ -161,6 +251,11 @@ class WorkController extends Controller
             'hours' => ['nullable', 'numeric', 'min:0.25', 'max:24', 'multiple_of:0.25'],
             'status' => ['required', Rule::in(WorkEntry::STATUSES)],
             'task_id' => ['nullable', 'integer'],
+            'requested_by' => ['nullable', 'string', 'max:255'],
+            'estimated_cost' => ['nullable', 'numeric', 'min:0', 'max:9999999999'],
+            'actual_cost' => ['nullable', 'numeric', 'min:0', 'max:9999999999'],
+            'team_employee_ids' => ['sometimes', 'array', 'max:'.WorkEntry::MAX_TEAM],
+            'team_employee_ids.*' => ['integer'],
             ...CustomFields::rules('work_entry'),
         ]);
     }

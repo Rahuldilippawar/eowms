@@ -35,6 +35,20 @@ Old-app parity for the staff module — see `docs/erp/PARITY.md`.
 3. Import: all rows in one transaction, or none if any row still has a problem. Up to 2,000 rows,
    comma or semicolon separated, UTF-8 (Excel's "CSV UTF-8").
 
+## Students (Phase 5A-2b)
+
+- Student fields: code, name, institution, department (of that institution), class, section,
+  **roll no., admission no., year of study (1–10), academic year** (`2026-27`), gender, date of
+  birth, admission date, guardian name and phone (the old app's parent mobile), **student mobile and email**, plus
+  organization-defined fields. The list searches name, code, roll no. and admission no., and filters
+  by institution, class, academic year and year of study.
+- **CSV export** with `students.export` (audited). **CSV import** with `students.create`, the same way
+  as the staff import: columns `student_code, name, institution_code` (required), `department_code,
+  class_name, section, roll_no, admission_no, year_of_study, academic_year, gender, date_of_birth,
+  admission_date, guardian_name, guardian_phone, mobile, email`. Every row is checked (code unique,
+  institution and department exist and are within your scope), then all rows or none are written.
+- Student portal login (the old app's student password) comes with the academics phase (14).
+
 ## ID cards and QR verification
 
 - Print cards for a department or for chosen people (`employees.view` in scope). Each card has a QR

@@ -1,4 +1,5 @@
 import { api } from '@/lib/api'
+import { csvForm, type ImportRow } from './profileApi'
 import type { Paginated } from '@/lib/pagination'
 
 export interface Ref {
@@ -48,6 +49,12 @@ export interface Student {
   admission_date: string | null
   guardian_name: string | null
   guardian_phone: string | null
+  roll_no: string | null
+  admission_no: string | null
+  year_of_study: number | null
+  academic_year: string | null
+  mobile: string | null
+  email: string | null
   is_active: boolean
   custom?: Record<string, string | number | boolean | null>
 }
@@ -66,6 +73,10 @@ export const setEmployeeActive = async (id: number, v: boolean, reason?: string)
 export const fetchStudents = async (p: ListParams): Promise<Paginated<Student>> => (await api.get('/students', { params: q(p) })).data
 export const createStudent = async (i: StudentInput): Promise<Student> => (await api.post('/students', i)).data.data
 export const updateStudent = async (id: number, i: StudentInput): Promise<Student> => (await api.put(`/students/${id}`, i)).data.data
+export const studentsCsvUrl = (search?: string) => `/api/v1/students/export${search ? `?${new URLSearchParams({ search })}` : ''}`
+export const studentImportTemplateUrl = '/api/v1/students/import/template'
+export const previewStudentImport = async (file: File): Promise<{ rows: ImportRow[] }> => (await api.post('/students/import/preview', csvForm(file))).data.data
+export const runStudentImport = async (file: File): Promise<{ imported: number }> => (await api.post('/students/import', csvForm(file))).data.data
 export const setStudentActive = async (id: number, v: boolean, reason?: string) => (await api.post(`/students/${id}/active`, { is_active: v, reason: reason || undefined })).data.data
 export const fetchDepartmentEmployees = async (departmentId: number): Promise<Employee[]> =>
   (await api.get('/employees', { params: { department_id: departmentId, is_active: 1, per_page: 100 } })).data.data
