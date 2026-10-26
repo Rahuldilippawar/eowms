@@ -267,7 +267,7 @@ class HostelResidentController extends Controller
             if ((float) $data['amount'] > $balance + 0.001) {
                 throw ValidationException::withMessages(['amount' => [__('finance.more_than_due', ['due' => number_format(max($balance, 0), 2)])]]);
             }
-            HostelFeePayment::create($data + ['fee_id' => $locked->id, 'paid_on' => $data['paid_on'] ?? $this->today(), 'received_by' => $request->user()->id]);
+            HostelFeePayment::create(['fee_id' => $locked->id, 'paid_on' => $data['paid_on'] ?? $this->today(), 'received_by' => $request->user()->id] + $data);
             AuditLogger::record('hostels', 'fee_payment', $r, null, ['fee' => $locked->id, 'amount' => $data['amount']]);
         });
 

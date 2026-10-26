@@ -50,6 +50,11 @@ import { VehicleDetailPage } from '@/features/vehicles/VehicleDetailPage'
 import { VehicleImportPage } from '@/features/vehicles/VehicleImportPage'
 import { VehicleReportPage } from '@/features/vehicles/VehicleReportPage'
 import { VehiclesPage } from '@/features/vehicles/VehiclesPage'
+import { HostelAttendancePage } from '@/features/hostels/HostelAttendancePage'
+import { HostelImportPage } from '@/features/hostels/HostelImportPage'
+import { HostelPage } from '@/features/hostels/HostelPage'
+import { HostelsPage } from '@/features/hostels/HostelsPage'
+import { ResidentPage } from '@/features/hostels/ResidentPage'
 import { GrievanceDetailPage } from '@/features/grievances/GrievanceDetailPage'
 import { GrievancesPage } from '@/features/grievances/GrievancesPage'
 import { PublicRequestPage } from '@/features/requests/PublicRequestPage'
@@ -117,6 +122,12 @@ export function AppRoutes() {
           <Route path="requests/:id" element={<RequestDetailPage />} />
           <Route path="grievances" element={<GrievancesPage />} />
           <Route path="grievances/:id" element={<GrievanceDetailPage />} />
+          {/* Hostel staff reach their own hostel without hostels.view; the API decides per hostel. */}
+          <Route path="hostels" element={<HostelsPage />} />
+          <Route path="hostels/:id" element={<HostelPage />} />
+          <Route path="hostels/:id/attendance" element={<HostelAttendancePage />} />
+          <Route path="hostels/:id/import" element={<HostelImportPage />} />
+          <Route path="hostel-residents/:id" element={<ResidentPage />} />
           <Route path="maintenance" element={guard('maintenance.view', <MaintenancePage />)} />
           <Route path="maintenance/report" element={guard('maintenance.view', <MaintenanceReportPage />)} />
           <Route path="maintenance/settings" element={guard('maintenance.manage', <MaintenanceSettingsPage />)} />

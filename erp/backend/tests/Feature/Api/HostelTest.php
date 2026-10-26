@@ -83,7 +83,7 @@ class HostelTest extends TestCase
         $this->spa()->postJson("/api/v1/hostel-residents/{$b}/incidents", ['incident_date' => '2026-07-09', 'description' => 'Fever', 'action_taken' => 'Doctor visit'])->assertOk()->assertJsonCount(1, 'data.incidents');
         $fee = $this->spa()->postJson("/api/v1/hostel-residents/{$b}/fees", ['fee_period' => 'July 2026', 'amount_due' => 1500])->assertOk()->json('data.fees.0.id');
         $this->spa()->postJson("/api/v1/hostel-fees/{$fee}/payments", ['amount' => 2000, 'payment_mode' => 'cash'])->assertStatus(422);
-        $this->spa()->postJson("/api/v1/hostel-fees/{$fee}/payments", ['amount' => 1000, 'payment_mode' => 'online'])->assertOk()
+        $this->spa()->postJson("/api/v1/hostel-fees/{$fee}/payments", ['amount' => 1000, 'payment_mode' => 'online', 'paid_on' => null])->assertOk()
             ->assertJsonPath('data.fees.0.status', 'partial')->assertJsonPath('data.fees.0.balance', 500);
         $this->spa()->getJson("/api/v1/hostels/{$hostel}")->assertJsonPath('data.stats.fees_due', 500);
 

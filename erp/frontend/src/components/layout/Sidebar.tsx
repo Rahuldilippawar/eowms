@@ -10,7 +10,7 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const sections = NAVIGATION.map((section) => ({
     ...section,
     items: section.items.filter(
-      (item) => (item.superAdminOnly ? !!user?.is_super_admin : !item.permission || can(item.permission) || (!!item.orDriver && !!user?.drives_vehicle)) && !(item.module && user?.disabled_modules?.includes(item.module)),
+      (item) => (item.superAdminOnly ? !!user?.is_super_admin : !item.permission || can(item.permission) || (!!item.orFlag && !!user?.[item.orFlag])) && !(item.module && user?.disabled_modules?.includes(item.module)),
     ),
   })).filter((section) => section.items.length > 0)
 
