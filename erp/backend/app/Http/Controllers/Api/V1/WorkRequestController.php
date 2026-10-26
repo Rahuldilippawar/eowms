@@ -259,6 +259,13 @@ class WorkRequestController extends Controller
         return $this->detail($r);
     }
 
+    /** Every active department can receive a request (the department list itself follows departments.view scope). */
+    public function departments(): JsonResponse
+    {
+        return response()->json(['data' => Department::query()->where('is_active', true)->orderBy('name')->get(['id', 'name'])
+            ->map(fn (Department $d) => ['id' => $d->id, 'name' => $d->name])->values()]);
+    }
+
     /** Colleagues of the receiving department, to assign the request to. */
     public function assignees(WorkRequest $workRequest): JsonResponse
     {

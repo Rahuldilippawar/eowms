@@ -250,6 +250,7 @@ Route::middleware(['auth:sanctum', SetAccessContext::class, EnsurePasswordChange
         Route::get('/requests', [WorkRequestController::class, 'index']);
         Route::post('/requests', [WorkRequestController::class, 'store']);
         Route::get('/requests/report', [WorkRequestController::class, 'report'])->middleware('permission:requests.view');
+        Route::get('/requests/departments', [WorkRequestController::class, 'departments']);
         Route::get('/requests/{workRequest}', [WorkRequestController::class, 'show']);
         Route::get('/requests/{workRequest}/assignees', [WorkRequestController::class, 'assignees']);
         Route::post('/requests/{workRequest}/status', [WorkRequestController::class, 'status']);

@@ -50,6 +50,13 @@ import { VehicleDetailPage } from '@/features/vehicles/VehicleDetailPage'
 import { VehicleImportPage } from '@/features/vehicles/VehicleImportPage'
 import { VehicleReportPage } from '@/features/vehicles/VehicleReportPage'
 import { VehiclesPage } from '@/features/vehicles/VehiclesPage'
+import { GrievanceDetailPage } from '@/features/grievances/GrievanceDetailPage'
+import { GrievancesPage } from '@/features/grievances/GrievancesPage'
+import { PublicRequestPage } from '@/features/requests/PublicRequestPage'
+import { RequestDetailPage } from '@/features/requests/RequestDetailPage'
+import { RequestReportPage } from '@/features/requests/RequestReportPage'
+import { RequestsPage } from '@/features/requests/RequestsPage'
+import { TrackRequestPage } from '@/features/requests/TrackRequestPage'
 import { LetterFormPage } from '@/features/letters/LetterFormPage'
 import { LetterPrintPage } from '@/features/letters/LetterPrintPage'
 import { LetterRegisterPage } from '@/features/letters/LetterRegisterPage'
@@ -78,6 +85,8 @@ export function AppRoutes() {
       </Route>
       <Route path="/verify/employee/:token" element={<VerifyEmployeePage />} />
       <Route path="/verify/signature/:code" element={<VerifySignaturePage />} />
+      <Route path="/request/:org" element={<PublicRequestPage />} />
+      <Route path="/request/:org/track" element={<TrackRequestPage />} />
       <Route element={<RequireAuth />}>
         <Route element={<AppLayout />}>
           <Route index element={<DashboardPage />} />
@@ -103,6 +112,11 @@ export function AppRoutes() {
           <Route path="vehicles/import" element={guard('vehicles.manage', <VehicleImportPage />)} />
           <Route path="vehicles/:id" element={<VehicleDetailPage />} />
           <Route path="vehicles/:id/report" element={<VehicleReportPage />} />
+          <Route path="requests" element={<RequestsPage />} />
+          <Route path="requests/report" element={guard('requests.view', <RequestReportPage />)} />
+          <Route path="requests/:id" element={<RequestDetailPage />} />
+          <Route path="grievances" element={<GrievancesPage />} />
+          <Route path="grievances/:id" element={<GrievanceDetailPage />} />
           <Route path="maintenance" element={guard('maintenance.view', <MaintenancePage />)} />
           <Route path="maintenance/report" element={guard('maintenance.view', <MaintenanceReportPage />)} />
           <Route path="maintenance/settings" element={guard('maintenance.manage', <MaintenanceSettingsPage />)} />

@@ -123,6 +123,7 @@ class WorkRequestTest extends TestCase
         $this->actingAs($this->teacher);
         $this->spa()->postJson("/api/v1/requests/{$id}/comments", ['comment' => 'The left one'])->assertOk()->assertJsonCount(2, 'data.comments');
         $this->spa()->getJson('/api/v1/requests?mine=1')->assertJsonCount(1, 'data');
+        $this->spa()->getJson('/api/v1/requests/departments')->assertJsonCount(2, 'data');
         $this->spa()->postJson("/api/v1/requests/{$id}/cancel", ['reason' => 'Fixed it myself'])->assertOk()->assertJsonPath('data.status', 'cancelled');
         $this->spa()->postJson("/api/v1/requests/{$id}/comments", ['comment' => 'x'])->assertOk();
 

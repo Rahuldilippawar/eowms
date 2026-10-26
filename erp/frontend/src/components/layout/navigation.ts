@@ -1,4 +1,4 @@
-import { BarChart3, Bus, FilePenLine, PieChart, Wrench, CalendarHeart, Fingerprint, IndianRupee, Scale, SlidersHorizontal, UserRound, Building, ClipboardPen, Mail, RefreshCw, ShoppingCart, Wallet, ListChecks, NotebookPen, Building2, CalendarClock, CalendarDays, ClipboardCheck, ClipboardList, GraduationCap, IdCard, KeyRound, LayoutDashboard, Network, Plane, Settings, Users, type LucideIcon } from 'lucide-react'
+import { BarChart3, Bus, Hammer, MessageSquareWarning, FilePenLine, PieChart, Wrench, CalendarHeart, Fingerprint, IndianRupee, Scale, SlidersHorizontal, UserRound, Building, ClipboardPen, Mail, RefreshCw, ShoppingCart, Wallet, ListChecks, NotebookPen, Building2, CalendarClock, CalendarDays, ClipboardCheck, ClipboardList, GraduationCap, IdCard, KeyRound, LayoutDashboard, Network, Plane, Settings, Users, type LucideIcon } from 'lucide-react'
 
 export interface NavItem {
   to: string
@@ -30,6 +30,8 @@ export const NAVIGATION: NavSection[] = [
       { to: '/my/work', labelKey: 'nav.myWork', icon: NotebookPen, module: 'daily_work' },
       { to: '/tasks', labelKey: 'nav.tasks', icon: ListChecks, module: 'tasks' },
       { to: '/letters', labelKey: 'nav.letters', icon: Mail, module: 'letters' },
+      { to: '/requests', labelKey: 'nav.requests', icon: Wrench, module: 'requests' },
+      { to: '/grievances', labelKey: 'nav.grievances', icon: MessageSquareWarning, module: 'grievances' },
       // Reporting officers approve without holding leave.approve, so this entry is shown to everyone.
       { to: '/approvals', labelKey: 'nav.approvals', icon: ClipboardCheck },
       { to: '/performance', labelKey: 'nav.performance', icon: BarChart3, module: 'performance' },
@@ -62,7 +64,7 @@ export const NAVIGATION: NavSection[] = [
     items: [
       { to: '/vehicles', labelKey: 'nav.vehicles', icon: Bus, permission: 'vehicles.view', module: 'vehicles', orDriver: true },
       { to: '/vehicles/corrections', labelKey: 'nav.vehicleCorrections', icon: FilePenLine, permission: 'vehicles.manage', module: 'vehicles' },
-      { to: '/maintenance', labelKey: 'nav.maintenance', icon: Wrench, permission: 'maintenance.view', module: 'maintenance' },
+      { to: '/maintenance', labelKey: 'nav.maintenance', icon: Hammer, permission: 'maintenance.view', module: 'maintenance' },
       { to: '/maintenance/report', labelKey: 'nav.maintenanceReport', icon: PieChart, permission: 'maintenance.view', module: 'maintenance' },
     ],
   },

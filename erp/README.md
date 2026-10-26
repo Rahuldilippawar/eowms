@@ -168,7 +168,14 @@ Dev accounts (password `password`): `admin@example.com` (super admin), `orgadmin
   location history, report. Rules: [`docs/VEHICLES.md`](docs/VEHICLES.md).
 - Tests: 144 backend, 69 frontend, 45 end-to-end.
 
+### Phase 8b — done (work requests, public form, grievances)
+- Work requests with SLA by priority, assignment, completion, rating, reopen, comments, queue,
+  report and CSV; the public request form (honeypot, rate limit) and tracker (code + phone);
+  grievances with real anonymity; hourly escalation with one summary per person.
+  Rules: [`docs/REQUESTS.md`](docs/REQUESTS.md).
+- Tests: 150 backend, 74 frontend, 51 end-to-end.
+
 ### Not yet (later phases)
-- Hostel, residency, work requests, grievances (rest of Phase 8) and the other business modules (see
+- Hostel and residency (rest of Phase 8) and the other business modules (see
   [`../docs/erp/PARITY.md`](../docs/erp/PARITY.md)); email / push delivery of notifications.
 - Reports, deployment to Hostinger.
