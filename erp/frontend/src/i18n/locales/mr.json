@@ -101,7 +101,8 @@
     "letters": "पत्रव्यवहार",
     "finance": "वित्त",
     "budgets": "विभाग Budget",
-    "purchases": "साहित्य खरेदी"
+    "purchases": "साहित्य खरेदी",
+    "renewals": "नूतनीकरण"
   },
   "dashboard": {
     "welcome": "नमस्कार, {{name}}",
@@ -264,7 +265,8 @@
     "tasks": "कामे (टास्क)",
     "performance": "कामगिरी अहवाल",
     "letters": "पत्रव्यवहार",
-    "finance": "विभाग वित्त"
+    "finance": "विभाग वित्त",
+    "renewals": "नूतनीकरण"
   },
   "attendance": {
     "notMarked": "नोंद नाही",
@@ -435,7 +437,10 @@
       "letter_returned": "{{by}} यांनी फाईल {{file_number}} तुम्हाला परत पाठवली: {{subject}}",
       "letter_completed": "{{by}} यांनी तुमची फाईल {{file_number}} सही करून पूर्ण केली: {{subject}}",
       "letter_overdue_holder": "फाईल {{file_number}} {{days}} दिवसांपासून तुमच्याकडे प्रलंबित आहे: {{subject}}",
-      "letter_overdue": "फाईल {{file_number}} {{days}} दिवसांपासून पुढे गेलेली नाही: {{subject}}"
+      "letter_overdue": "फाईल {{file_number}} {{days}} दिवसांपासून पुढे गेलेली नाही: {{subject}}",
+      "renewal_due": "{{item}} ची मुदत {{days}} दिवसांत संपते ({{expiry_date}}).",
+      "renewal_today": "{{item}} ची मुदत आज संपते.",
+      "renewal_expired": "{{item}} ची मुदत {{days}} दिवसांपूर्वी संपली ({{expiry_date}}): Renew करा."
     }
   },
   "work": {
@@ -899,7 +904,10 @@
     "finance.view": "Budget व खरेदी पाहणे",
     "finance.manage": "खरेदी व Payment नोंदवणे",
     "finance.budget": "विभागाचे Budget ठरवणे",
-    "finance.export": "वित्त CSV"
+    "finance.export": "वित्त CSV",
+    "renewals.view": "नूतनीकरण पाहणे",
+    "renewals.manage": "नूतनीकरण जोडणे, Renew व Payment",
+    "renewals.export": "नूतनीकरण CSV"
   },
   "letters": {
     "new": "नवीन फाईल",
@@ -1139,5 +1147,66 @@
     "recordPayment": "Payment नोंदवा",
     "paymentSaved": "Payment नोंदवले",
     "deleted": "खरेदी काढली"
+  },
+  "renewals": {
+    "status": {
+      "expired": "मुदत संपली",
+      "due_soon": "30 दिवसांत मुदत संपणार",
+      "active": "वैध",
+      "inactive": "बंद केलेले"
+    },
+    "daysLeft_one": "{{count}} दिवस उरला",
+    "daysLeft_other": "{{count}} दिवस उरले",
+    "expiredAgo_one": "मुदत संपून {{count}} दिवस",
+    "expiredAgo_other": "मुदत संपून {{count}} दिवस",
+    "expiresToday": "आज मुदत संपते",
+    "allActive": "सर्व चालू",
+    "new": "नवीन नूतनीकरण",
+    "edit": "नूतनीकरण बदला",
+    "itemName": "नाव",
+    "itemType": "प्रकार",
+    "itemTypeHint": "उदा. Fire NOC, वाहन विमा",
+    "regulatoryBody": "नियामक संस्था",
+    "issuedOn": "दिल्याचा दिनांक",
+    "expiresOn": "मुदत संपते",
+    "cost": "नूतनीकरण खर्च (₹)",
+    "monthly": "दर महिन्याला भरायचे (भाडे, AMC हप्ते…)",
+    "monthlyAmount": "मासिक रक्कम (₹)",
+    "startMonth": "कोणत्या महिन्यापासून",
+    "responsible": "जबाबदार व्यक्ती",
+    "expiryHint": "मुदत पुढे नेण्यासाठी Renew वापरा, म्हणजे जुने चक्र इतिहासात राहील.",
+    "calendar": "मुदत कॅलेंडर",
+    "costs": "खर्च विश्लेषण",
+    "importTitle": "नूतनीकरण आयात",
+    "importDone_one": "{{count}} नूतनीकरण आयात झाले.",
+    "importDone_other": "{{count}} नूतनीकरणे आयात झाली.",
+    "searchHint": "नाव, प्रकार, संदर्भ किंवा विक्रेता",
+    "none": "येथे नूतनीकरण नाही.",
+    "notFound": "हे नूतनीकरण सापडले नाही, किंवा पाहण्याची परवानगी नाही.",
+    "renew": "Renew करा",
+    "renewTitle": "{{name}} Renew करा",
+    "currentExpiry": "सध्या मुदत {{date}} ला संपते",
+    "newExpiry": "नवीन मुदत",
+    "newReference": "नवीन संदर्भ क्र. (ऐच्छिक)",
+    "laterExpiry": "सध्याच्या मुदतीनंतरचा दिनांक निवडा.",
+    "renewed": "Renew झाले",
+    "deactivate": "बंद करा",
+    "activate": "पुन्हा चालू करा",
+    "payments": "Payments",
+    "cycleLine": "या चक्रात: {{paid}} दिले, {{due}} बाकी.",
+    "cyclePaid": "या चक्रात: {{paid}} दिले.",
+    "monthlyLine_one": "दरमहा {{amount}} · {{count}} महिना अजून बाकी.",
+    "monthlyLine_other": "दरमहा {{amount}} · {{count}} महिने अजून बाकी.",
+    "months": "महिने",
+    "forMonth": "कोणत्या महिन्यासाठी",
+    "documents": "कागदपत्रे",
+    "forCycle": "{{date}} ला संपणारे चक्र",
+    "history": "आधीची चक्रे",
+    "historyLine": "{{old}} → {{next}}, Renew करणारे {{name}}",
+    "nothingThisMonth": "या महिन्यात कशाचीही मुदत संपत नाही.",
+    "costsHint": "प्रत्येक चक्राचा खर्च त्याची मुदत संपण्याच्या वर्षानुसार, आणि दर वर्षी प्रत्यक्ष दिलेली रक्कम.",
+    "noCosts": "अजून खर्च नोंदवलेला नाही.",
+    "yearTotal": "एकूण {{total}} · दिले {{paid}}",
+    "cycles": "चक्रे"
   }
 }

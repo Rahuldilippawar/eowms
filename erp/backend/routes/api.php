@@ -30,6 +30,7 @@ use App\Http\Controllers\Api\V1\PerformanceController;
 use App\Http\Controllers\Api\V1\PermissionController;
 use App\Http\Controllers\Api\V1\PublicSignatureController;
 use App\Http\Controllers\Api\V1\PublicVerifyController;
+use App\Http\Controllers\Api\V1\RenewalController;
 use App\Http\Controllers\Api\V1\RoleController;
 use App\Http\Controllers\Api\V1\StudentController;
 use App\Http\Controllers\Api\V1\TaskController;
@@ -174,6 +175,24 @@ Route::middleware(['auth:sanctum', SetAccessContext::class, EnsurePasswordChange
         Route::put('/purchases/{purchase}', [MaterialPurchaseController::class, 'update'])->middleware('permission:finance.manage');
         Route::delete('/purchases/{purchase}', [MaterialPurchaseController::class, 'destroy'])->middleware('permission:finance.manage');
         Route::post('/purchases/{purchase}/payments', [MaterialPurchaseController::class, 'pay'])->middleware('permission:finance.manage');
+    });
+
+    // Renewals (Phase 7b).
+    Route::middleware('module:renewals')->prefix('renewals')->group(function () {
+        Route::get('/', [RenewalController::class, 'index'])->middleware('permission:renewals.view');
+        Route::get('/calendar', [RenewalController::class, 'calendar'])->middleware('permission:renewals.view');
+        Route::get('/costs', [RenewalController::class, 'costs'])->middleware('permission:renewals.view');
+        Route::get('/import/template', [RenewalController::class, 'importTemplate'])->middleware('permission:renewals.manage');
+        Route::post('/import/preview', [RenewalController::class, 'importPreview'])->middleware('permission:renewals.manage');
+        Route::post('/import', [RenewalController::class, 'import'])->middleware('permission:renewals.manage');
+        Route::post('/', [RenewalController::class, 'store'])->middleware('permission:renewals.manage');
+        Route::get('/{renewal}', [RenewalController::class, 'show'])->middleware('permission:renewals.view');
+        Route::put('/{renewal}', [RenewalController::class, 'update'])->middleware('permission:renewals.manage');
+        Route::post('/{renewal}/active', [RenewalController::class, 'setActive'])->middleware('permission:renewals.manage');
+        Route::post('/{renewal}/renew', [RenewalController::class, 'renew'])->middleware('permission:renewals.manage');
+        Route::post('/{renewal}/payments', [RenewalController::class, 'pay'])->middleware('permission:renewals.manage');
+        Route::post('/{renewal}/attachments', [RenewalController::class, 'attach'])->middleware('permission:renewals.manage');
+        Route::get('/{renewal}/attachments/{attachment}', [RenewalController::class, 'attachment'])->middleware('permission:renewals.view');
     });
 
     // Correspondence (Phase 6).

@@ -12,6 +12,7 @@ use App\Models\Holiday;
 use App\Models\Institution;
 use App\Models\LetterCategory;
 use App\Models\Organization;
+use App\Models\RenewalItem;
 use App\Models\Role;
 use App\Models\RoleAssignment;
 use App\Models\Student;
@@ -90,6 +91,15 @@ class DatabaseSeeder extends Seeder
         // A budget for Physics in the current financial year.
         [$fy] = NumberSequence::financialYear(CarbonImmutable::now('Asia/Kolkata'));
         DepartmentBudget::firstOrCreate(['organization_id' => $trust->id, 'department_id' => $physics->id, 'fy_start_year' => $fy], ['allocated_amount' => 200000]);
+
+        // Two renewals: one due soon, one later in the year.
+        $today = CarbonImmutable::now('Asia/Kolkata')->startOfDay();
+        foreach ([[$it, 'Software License', null, 'Antivirus (50 users)', 20, 12000], [$physics, 'College Affiliation', 'AICTE', 'AICTE approval', 200, 25000]] as [$dept, $type, $body, $name, $days, $cost]) {
+            RenewalItem::firstOrCreate(['organization_id' => $trust->id, 'item_name' => $name], [
+                'institution_id' => $dept->institution_id, 'department_id' => $dept->id, 'item_type' => $type, 'regulatory_body' => $body,
+                'expiry_date' => $today->addDays($days)->toDateString(), 'renewal_cost' => $cost, 'created_by' => $admin->id,
+            ]);
+        }
 
         // A sample task from the HOD to the teacher.
         $task = Task::firstOrCreate(['organization_id' => $trust->id, 'title' => 'Prepare the physics lab inventory'], [

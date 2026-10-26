@@ -224,3 +224,19 @@ Rules: [`FINANCE.md`](FINANCE.md). All under the `finance` module switch.
 | POST | `/finance/purchases/{id}/payments` | `finance.manage` | `amount ≤ due, payment_date, payment_type=advance\|partial\|final, payment_mode?, remarks?` |
 
 Signing a budget letter (`POST /letters/{id}/sign`) now charges its approved amount to the creator's department.
+
+## Phase 7b — renewals
+
+Rules: [`RENEWALS.md`](RENEWALS.md). All under the `renewals` module switch.
+
+| Method | Path | Permission | Notes |
+|---|---|---|---|
+| GET | `/renewals?status=expired\|due_soon\|active\|inactive&department_id&regulatory_body&search&page&format=csv?` | `renewals.view` (+ export for CSV) | `meta.summary`, `meta.by_regulatory_body` |
+| POST / PUT | `/renewals[/{id}]` | `renewals.manage` in scope | `department_id, item_type, regulatory_body?, item_name, reference_no?, issued_date?, expiry_date, renewal_cost?, is_recurring_monthly, monthly_amount?, recurring_start_month? (Y-m), vendor_name?, vendor_contact?, responsible_user_id?` |
+| GET | `/renewals/{id}` | `renewals.view` | Detail with `history`, `payments`, `months` (monthly bills), `attachments`, `cycle_paid` |
+| POST | `/renewals/{id}/active` | manage | `is_active` |
+| POST | `/renewals/{id}/renew` | manage | `new_expiry_date` (after the current one), `issued_date?, renewal_cost?, vendor_name?, reference_no?` |
+| POST | `/renewals/{id}/payments` | manage | `amount, payment_date, payment_type, payment_mode?, for_month (Y-m, monthly bills), remarks?`; charged to the department budget |
+| POST / GET | `/renewals/{id}/attachments[/{attachment}]` | manage / view | `file` ≤ 10 MB, `title?` |
+| GET | `/renewals/calendar?month=Y-m`, `/renewals/costs` | `renewals.view` | |
+| GET / POST | `/renewals/import/template`, `/renewals/import/preview`, `/renewals/import` | `renewals.manage` | CSV; all rows or none |

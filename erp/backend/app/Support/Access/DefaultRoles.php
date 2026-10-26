@@ -27,13 +27,13 @@ final class DefaultRoles
                 'attendance.view', 'attendance.approve', 'attendance.export', 'attendance.manage', 'leave.view', 'leave.approve', 'leave.balances',
                 'daily_work.view', 'daily_work.review', 'daily_work.export', 'daily_work.import', 'tasks.view', 'tasks.create', 'tasks.edit',
                 'performance.view', 'performance.export', 'letters.view', 'letters.export',
-                'finance.view', 'finance.manage', 'finance.export',
+                'finance.view', 'finance.manage', 'finance.export', 'renewals.view', 'renewals.manage', 'renewals.export',
             ]],
             'hod' => ['name' => 'Head of Department', 'scope' => PermissionScope::Departments, 'permissions' => [
                 ...$structureRead, 'users.view', 'employees.view', 'students.view',
                 'attendance.view', 'attendance.create', 'attendance.approve', 'leave.view', 'leave.approve',
                 'daily_work.view', 'daily_work.review', 'tasks.view', 'tasks.create', 'performance.view', 'letters.view',
-                'finance.view', 'finance.manage',
+                'finance.view', 'finance.manage', 'renewals.view', 'renewals.manage',
             ]],
             'staff' => ['name' => 'Staff', 'scope' => PermissionScope::Departments, 'permissions' => ['organizations.view', 'departments.view']],
         ];
