@@ -11,7 +11,7 @@ class MaintenanceLocation extends Model
 {
     use BelongsToOrganization;
 
-    protected $fillable = ['organization_id', 'institution_id', 'building_id', 'floor', 'name', 'location_code', 'capacity', 'is_residential', 'is_active', 'created_by'];
+    protected $fillable = ['organization_id', 'institution_id', 'building_id', 'floor', 'name', 'location_code', 'capacity', 'is_residential', 'is_active', 'created_by', 'residency_import_batch_id'];
 
     protected function casts(): array
     {
@@ -26,6 +26,12 @@ class MaintenanceLocation extends Model
     public function institution(): BelongsTo
     {
         return $this->belongsTo(Institution::class);
+    }
+
+    /** Who lives here (residential locations). */
+    public function residents(): HasMany
+    {
+        return $this->hasMany(ResidencyOccupant::class, 'location_id');
     }
 
     public function logs(): HasMany

@@ -29,5 +29,6 @@ return [
         'requests' => ['view', 'manage', 'export'],
         'grievances' => ['manage'],
         'hostels' => ['view', 'care', 'manage', 'export'],
+        'residency' => ['view', 'manage'],
     ],
 ];
