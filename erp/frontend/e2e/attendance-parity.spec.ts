@@ -24,7 +24,10 @@ test('holiday is skipped in leave days; a machine punch shows up in the in/out r
   const dialog = page.getByRole('dialog')
   await dialog.getByLabel('Date').fill(ymd(tuesday))
   await dialog.getByLabel('Name').fill(`E2E holiday ${suffix}`)
+  // Wait for the save itself so a rejected request fails with its status, not a lingering dialog.
+  const saved = page.waitForResponse((r) => r.url().includes('/api/v1/holidays') && r.request().method() === 'POST')
   await dialog.getByRole('button', { name: 'Save' }).click()
+  expect((await saved).status()).toBe(201)
   await expect(dialog).toBeHidden()
 
   // Machine PIN on the teacher's profile, and a registered machine.
@@ -70,5 +73,6 @@ test('holiday is skipped in leave days; a machine punch shows up in the in/out r
 
   // Salary report is there for the admin.
   await go(page, isMobile, 'Salary report')
-  await expect(page.getByRole('rowheader', { name: /Physics Teacher/ })).toBeVisible()
+  await expect(page.getByRole('columnheader', { name: 'Pay days' })).toBeVisible()
+  await expect(page.getByRole('rowheader', { name: /Physics Teacher/ })).toBeVisible({ timeout: 15_000 })
 })

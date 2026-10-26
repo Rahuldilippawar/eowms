@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\V1\LeaveController;
 use App\Http\Controllers\Api\V1\LetterController;
 use App\Http\Controllers\Api\V1\LetterRegisterController;
 use App\Http\Controllers\Api\V1\LetterSettingsController;
+use App\Http\Controllers\Api\V1\MaintenanceController;
 use App\Http\Controllers\Api\V1\MaterialPurchaseController;
 use App\Http\Controllers\Api\V1\MeController;
 use App\Http\Controllers\Api\V1\NotificationController;
@@ -35,6 +36,8 @@ use App\Http\Controllers\Api\V1\RoleController;
 use App\Http\Controllers\Api\V1\StudentController;
 use App\Http\Controllers\Api\V1\TaskController;
 use App\Http\Controllers\Api\V1\UserController;
+use App\Http\Controllers\Api\V1\VehicleController;
+use App\Http\Controllers\Api\V1\VehicleCorrectionController;
 use App\Http\Controllers\Api\V1\WorkController;
 use App\Http\Middleware\EnsurePasswordChanged;
 use App\Http\Middleware\SetAccessContext;
@@ -193,6 +196,47 @@ Route::middleware(['auth:sanctum', SetAccessContext::class, EnsurePasswordChange
         Route::post('/{renewal}/payments', [RenewalController::class, 'pay'])->middleware('permission:renewals.manage');
         Route::post('/{renewal}/attachments', [RenewalController::class, 'attach'])->middleware('permission:renewals.manage');
         Route::get('/{renewal}/attachments/{attachment}', [RenewalController::class, 'attachment'])->middleware('permission:renewals.view');
+    });
+
+    // Vehicles (Phase 8a). Drivers reach their own vehicle without vehicles.view; the controller decides per vehicle.
+    Route::middleware('module:vehicles')->group(function () {
+        Route::get('/vehicles', [VehicleController::class, 'index']);
+        Route::get('/vehicles/import/template', [VehicleController::class, 'importTemplate'])->middleware('permission:vehicles.manage');
+        Route::post('/vehicles/import/preview', [VehicleController::class, 'importPreview'])->middleware('permission:vehicles.manage');
+        Route::post('/vehicles/import', [VehicleController::class, 'import'])->middleware('permission:vehicles.manage');
+        Route::post('/vehicles', [VehicleController::class, 'store'])->middleware('permission:vehicles.manage');
+        Route::get('/vehicle-corrections', [VehicleCorrectionController::class, 'index']);
+        Route::post('/vehicle-corrections/{correction}/review', [VehicleCorrectionController::class, 'review'])->middleware('permission:vehicles.manage');
+        Route::get('/vehicles/{vehicle}', [VehicleController::class, 'show']);
+        Route::put('/vehicles/{vehicle}', [VehicleController::class, 'update'])->middleware('permission:vehicles.manage');
+        Route::post('/vehicles/{vehicle}/active', [VehicleController::class, 'setActive'])->middleware('permission:vehicles.manage');
+        Route::get('/vehicles/{vehicle}/report', [VehicleController::class, 'report']);
+        Route::post('/vehicles/{vehicle}/trips', [VehicleController::class, 'storeTrip']);
+        Route::post('/vehicles/{vehicle}/fuel', [VehicleController::class, 'storeFuel']);
+        Route::post('/vehicles/{vehicle}/services', [VehicleController::class, 'storeService']);
+        Route::put('/vehicles/{vehicle}/entries/{type}/{entry}', [VehicleController::class, 'updateEntry'])->whereIn('type', ['trip', 'fuel', 'service'])->whereNumber('entry')->middleware('permission:vehicles.manage');
+        Route::delete('/vehicles/{vehicle}/entries/{type}/{entry}', [VehicleController::class, 'destroyEntry'])->whereIn('type', ['trip', 'fuel', 'service'])->whereNumber('entry')->middleware('permission:vehicles.manage');
+        Route::post('/vehicles/{vehicle}/entries/{type}/{entry}/corrections', [VehicleCorrectionController::class, 'store'])->whereIn('type', ['trip', 'fuel', 'service'])->whereNumber('entry');
+    });
+
+    // Maintenance register (Phase 8a).
+    Route::middleware('module:maintenance')->prefix('maintenance')->group(function () {
+        Route::get('/buildings', [MaintenanceController::class, 'buildings'])->middleware('permission:maintenance.view');
+        Route::post('/buildings', [MaintenanceController::class, 'saveBuilding'])->middleware('permission:maintenance.manage');
+        Route::put('/buildings/{building}', [MaintenanceController::class, 'saveBuilding'])->middleware('permission:maintenance.manage');
+        Route::get('/locations', [MaintenanceController::class, 'locations'])->middleware('permission:maintenance.view');
+        Route::post('/locations', [MaintenanceController::class, 'saveLocation'])->middleware('permission:maintenance.manage');
+        Route::get('/locations/{location}', [MaintenanceController::class, 'showLocation'])->middleware('permission:maintenance.view');
+        Route::put('/locations/{location}', [MaintenanceController::class, 'saveLocation'])->middleware('permission:maintenance.manage');
+        Route::get('/logs', [MaintenanceController::class, 'logs'])->middleware('permission:maintenance.view');
+        Route::post('/logs', [MaintenanceController::class, 'storeLog'])->middleware('permission:maintenance.log');
+        Route::get('/logs/{log}', [MaintenanceController::class, 'showLog'])->middleware('permission:maintenance.view');
+        Route::put('/logs/{log}', [MaintenanceController::class, 'updateLog'])->middleware('permission:maintenance.manage');
+        Route::delete('/logs/{log}', [MaintenanceController::class, 'destroyLog'])->middleware('permission:maintenance.manage');
+        Route::post('/logs/{log}/payments', [MaintenanceController::class, 'pay'])->middleware('permission:maintenance.manage');
+        Route::get('/departments', [MaintenanceController::class, 'departments'])->middleware('permission:maintenance.manage');
+        Route::put('/departments/{department}', [MaintenanceController::class, 'setDepartment'])->middleware('permission:maintenance.manage');
+        Route::get('/report', [MaintenanceController::class, 'report'])->middleware('permission:maintenance.view');
     });
 
     // Correspondence (Phase 6).

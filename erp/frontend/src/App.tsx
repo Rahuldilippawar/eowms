@@ -41,6 +41,15 @@ import { RenewalCostsPage } from '@/features/renewals/RenewalCostsPage'
 import { RenewalDetailPage } from '@/features/renewals/RenewalDetailPage'
 import { RenewalImportPage } from '@/features/renewals/RenewalImportPage'
 import { RenewalsPage } from '@/features/renewals/RenewalsPage'
+import { MaintenanceLocationPage } from '@/features/maintenance/MaintenanceLocationPage'
+import { MaintenancePage } from '@/features/maintenance/MaintenancePage'
+import { MaintenanceReportPage } from '@/features/maintenance/MaintenanceReportPage'
+import { MaintenanceSettingsPage } from '@/features/maintenance/MaintenanceSettingsPage'
+import { VehicleCorrectionsPage } from '@/features/vehicles/VehicleCorrectionsPage'
+import { VehicleDetailPage } from '@/features/vehicles/VehicleDetailPage'
+import { VehicleImportPage } from '@/features/vehicles/VehicleImportPage'
+import { VehicleReportPage } from '@/features/vehicles/VehicleReportPage'
+import { VehiclesPage } from '@/features/vehicles/VehiclesPage'
 import { LetterFormPage } from '@/features/letters/LetterFormPage'
 import { LetterPrintPage } from '@/features/letters/LetterPrintPage'
 import { LetterRegisterPage } from '@/features/letters/LetterRegisterPage'
@@ -88,6 +97,16 @@ export function AppRoutes() {
           <Route path="renewals/costs" element={guard('renewals.view', <RenewalCostsPage />)} />
           <Route path="renewals/import" element={guard('renewals.manage', <RenewalImportPage />)} />
           <Route path="renewals/:id" element={guard('renewals.view', <RenewalDetailPage />)} />
+          {/* Drivers reach their own vehicle without vehicles.view; the API decides per vehicle. */}
+          <Route path="vehicles" element={<VehiclesPage />} />
+          <Route path="vehicles/corrections" element={<VehicleCorrectionsPage />} />
+          <Route path="vehicles/import" element={guard('vehicles.manage', <VehicleImportPage />)} />
+          <Route path="vehicles/:id" element={<VehicleDetailPage />} />
+          <Route path="vehicles/:id/report" element={<VehicleReportPage />} />
+          <Route path="maintenance" element={guard('maintenance.view', <MaintenancePage />)} />
+          <Route path="maintenance/report" element={guard('maintenance.view', <MaintenanceReportPage />)} />
+          <Route path="maintenance/settings" element={guard('maintenance.manage', <MaintenanceSettingsPage />)} />
+          <Route path="maintenance/locations/:id" element={guard('maintenance.view', <MaintenanceLocationPage />)} />
           <Route path="letters" element={<LettersPage />} />
           <Route path="letters/new" element={<LetterFormPage />} />
           <Route path="letters/register" element={guard('letters.view', <LetterRegisterPage />)} />

@@ -86,19 +86,19 @@ Legend: ✅ in the ERP · 🟡 partly (gaps listed) · ⏳ scheduled (phase) · 
 | Budget module (overview per department) | ✅ 7a | Budgets page with use bar and spend by source |
 | Budget deduction on letter approval | ✅ 7a | Charged on signing |
 | Renewals: items, renew, history, attachments, calendar, cost analysis, payment track, import, report, reminders cron | ✅ 7b | Email reminders → ⏳ 11 (with email / push delivery); in-app now |
-| Vehicle-linked renewals (RTO, insurance per vehicle) | ⏳ 8 | Comes with the vehicles module |
+| Vehicle-linked renewals (RTO, insurance per vehicle) | ✅ 8a | Each document date of a vehicle is a renewal item |
 
-## Hostel, residency, transport, maintenance, requests (⏳ 8)
+## Hostel, residency, transport, maintenance, requests (8)
 
-| Old module | Notes |
-|---|---|
-| Hostels: hostels, rooms, room / bed allocation, students + import, attendance, leave / out-pass, health, fees, alumni, dashboard, bulk import | |
-| Residency: buildings, layout, rooms + items, occupants, allotment requests, transfers, inspections, bills (rent / electricity) + shares + report, guests, occupancy analytics, staff directory (resident / non-resident), data import engine with preview / history, link unlinked | |
-| Vehicles: vehicles, trips, fuel, maintenance, correction requests, dashboard, import, report, service-due cron | |
-| Maintenance log: locations (buildings / rooms), log, location history, payment track, settings, report | |
-| Work requests (requests, my requests, actions, comments, views, advance report) + public request form + track request | Public form: rate limit + honeypot (as fixed in the old app) |
-| Grievances (complaints) with comments | |
-| Tickets escalation cron | |
+| Old module | Status | Notes |
+|---|---|---|
+| Vehicles: vehicles, trips, fuel, maintenance, correction requests, dashboard, import, report, service-due cron | ✅ 8a | Documents are renewal items; fuel / service costs charged to the budget; drivers log their own vehicle; report prints to PDF from the browser |
+| Maintenance log: locations (buildings / rooms), log, location history, payment track, settings, report | ✅ 8a | Register departments switched on in settings; costs charged to the budget; payments in the finance ledger |
+| Work requests (requests, my requests, actions, comments, views, advance report) + public request form + track request | ⏳ 8b | Public form: rate limit + honeypot (as fixed in the old app) |
+| Grievances (complaints) with comments | ⏳ 8b | |
+| Tickets escalation cron | ⏳ 8b | |
+| Hostels: hostels, rooms, room / bed allocation, students + import, attendance, leave / out-pass, health, fees, alumni, dashboard, bulk import | ⏳ 8c | |
+| Residency: buildings, layout, rooms + items, occupants, allotment requests, transfers, inspections, bills (rent / electricity) + shares + report, guests, occupancy analytics, staff directory (resident / non-resident), data import engine with preview / history, link unlinked | ⏳ 8d | Uses the 8a buildings and residential locations |
 
 ## Assets, inventory, purchasing (⏳ 9)
 

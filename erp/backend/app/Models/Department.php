@@ -11,11 +11,11 @@ class Department extends Model
 {
     use BelongsToOrganization, HasFactory;
 
-    protected $fillable = ['organization_id', 'institution_id', 'name', 'code', 'category', 'head_user_id', 'is_active'];
+    protected $fillable = ['organization_id', 'institution_id', 'name', 'code', 'category', 'head_user_id', 'is_active', 'has_maintenance_register'];
 
     protected function casts(): array
     {
-        return ['is_active' => 'boolean'];
+        return ['is_active' => 'boolean', 'has_maintenance_register' => 'boolean'];
     }
 
     public function institution(): BelongsTo

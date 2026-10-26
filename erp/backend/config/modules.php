@@ -8,5 +8,5 @@
 */
 
 return [
-    'toggleable' => ['students', 'attendance', 'leave', 'daily_work', 'tasks', 'performance', 'letters', 'finance', 'renewals'],
+    'toggleable' => ['students', 'attendance', 'leave', 'daily_work', 'tasks', 'performance', 'letters', 'finance', 'renewals', 'vehicles', 'maintenance'],
 ];

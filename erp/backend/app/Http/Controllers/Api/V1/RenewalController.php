@@ -385,6 +385,7 @@ class RenewalController extends Controller
             'id' => $r->id,
             'department' => $r->department ? ['id' => $r->department->id, 'name' => $r->department->name] : null,
             'responsible' => $r->responsible ? ['id' => $r->responsible->id, 'name' => $r->responsible->name] : null,
+            'vehicle_id' => $r->vehicle_id,
             'item_type' => $r->item_type,
             'regulatory_body' => $r->regulatory_body,
             'item_name' => $r->item_name,

@@ -16,7 +16,11 @@ test('organization admin creates a department, then a user with a role limited t
   await deptDialog.getByLabel('Name').fill(`Chemistry ${suffix}`)
   await deptDialog.getByLabel('Code').fill(`CH${suffix}`)
   await deptDialog.getByLabel('Institution').selectOption({ label: 'Shivaji Arts College' })
+  // Wait for the save itself so a failure names its status (or that nothing was sent), not a lingering dialog.
+  const saved = page.waitForResponse((r) => r.url().endsWith('/api/v1/departments') && r.request().method() === 'POST')
   await deptDialog.getByRole('button', { name: 'Save' }).click()
+  const res = await saved
+  expect(res.status(), await res.text()).toBe(201)
   await expect(deptDialog).toBeHidden()
   await page.getByRole('searchbox', { name: 'Search' }).fill(`Chemistry ${suffix}`)
   await expect(page.getByText(`Chemistry ${suffix}`, { exact: true }).filter({ visible: true }).first()).toBeVisible()

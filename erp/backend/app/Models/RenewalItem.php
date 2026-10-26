@@ -20,7 +20,7 @@ class RenewalItem extends Model
     ];
 
     protected $fillable = [
-        'organization_id', 'institution_id', 'department_id', 'responsible_user_id', 'item_type', 'regulatory_body', 'item_name', 'reference_no',
+        'organization_id', 'institution_id', 'department_id', 'responsible_user_id', 'vehicle_id', 'renewal_field', 'item_type', 'regulatory_body', 'item_name', 'reference_no',
         'issued_date', 'expiry_date', 'renewal_cost', 'is_recurring_monthly', 'monthly_amount', 'recurring_start_month', 'vendor_name',
         'vendor_contact', 'is_active', 'created_by',
     ];
@@ -41,6 +41,11 @@ class RenewalItem extends Model
     public function responsible(): BelongsTo
     {
         return $this->belongsTo(User::class, 'responsible_user_id');
+    }
+
+    public function vehicle(): BelongsTo
+    {
+        return $this->belongsTo(Vehicle::class);
     }
 
     public function history(): HasMany
