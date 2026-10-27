@@ -199,7 +199,7 @@ class AllocationController extends Controller
     /** What the signed-in person holds now, and what they held before. */
     public function mine(Request $request): JsonResponse
     {
-        $rows = AssetAllocation::query()->where('user_id', $request->user()->id)->with(['type:id,name,is_loan', 'item:id,name', 'allocator:id,name', 'receiver:id,name'])
+        $rows = AssetAllocation::query()->where('user_id', $request->user()->id)->with(['type:id,name,is_loan,fields', 'item:id,name', 'allocator:id,name', 'receiver:id,name'])
             ->orderByRaw('returned_at is null desc')->orderByDesc('allocated_at')->limit(200)->get();
 
         return response()->json(['data' => $rows->map(fn (AssetAllocation $a) => $this->allocation($a))->values()]);

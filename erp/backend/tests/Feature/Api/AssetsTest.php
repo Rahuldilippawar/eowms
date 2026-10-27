@@ -126,7 +126,8 @@ class AssetsTest extends TestCase
         $this->spa()->getJson('/api/v1/assets/allocations/report')->assertJsonPath('data.held', 1)->assertJsonPath('data.overdue', 1)->assertJsonPath('data.free_items', 1);
 
         $this->actingAs($a);
-        $this->spa()->getJson('/api/v1/my/assets')->assertJsonCount(2, 'data')->assertJsonPath('data.0.overdue', true);
+        $this->spa()->getJson('/api/v1/my/assets')->assertJsonCount(2, 'data')->assertJsonPath('data.0.overdue', true)
+            ->assertJsonPath('data.1.custom.serial_no', 'X1')->assertJsonPath('data.1.fields.0.label', 'Serial no.');
         $this->spa()->getJson('/api/v1/assets/allocations')->assertForbidden();
         $this->assertSame(2, AssetAllocation::query()->where('user_id', $a->id)->count());
     }

@@ -50,6 +50,13 @@ import { VehicleDetailPage } from '@/features/vehicles/VehicleDetailPage'
 import { VehicleImportPage } from '@/features/vehicles/VehicleImportPage'
 import { VehicleReportPage } from '@/features/vehicles/VehicleReportPage'
 import { VehiclesPage } from '@/features/vehicles/VehiclesPage'
+import { AllocationImportPage, AllocationSetupPage } from '@/features/assets/AllocationSetupPage'
+import { AllocationReportPage } from '@/features/assets/AllocationReportPage'
+import { AllocationsPage } from '@/features/assets/AllocationsPage'
+import { DeadStockPage } from '@/features/assets/DeadStockPage'
+import { DeadStockReportPage } from '@/features/assets/DeadStockReportPage'
+import { ItemMasterImportPage, ItemMasterPage } from '@/features/assets/ItemMasterPage'
+import { MyAssetsPage } from '@/features/assets/MyAssetsPage'
 import { OrderFormPage } from '@/features/purchasing/OrderFormPage'
 import { OrderPage } from '@/features/purchasing/OrderPage'
 import { OrdersPage } from '@/features/purchasing/OrdersPage'
@@ -153,6 +160,15 @@ export function AppRoutes() {
           <Route path="residency/directory" element={guard('residency.view', <ResidencyDirectoryPage />)} />
           <Route path="residency/analytics" element={guard('residency.view', <ResidencyAnalyticsPage />)} />
           <Route path="residency/import" element={guard('residency.manage', <ResidencyImportPage />)} />
+          <Route path="my/assets" element={<MyAssetsPage />} />
+          <Route path="assets/dead-stock" element={guard('assets.view', <DeadStockPage />)} />
+          <Route path="assets/dead-stock/report" element={guard('assets.view', <DeadStockReportPage />)} />
+          <Route path="assets/masters" element={guard('assets.view', <ItemMasterPage />)} />
+          <Route path="assets/masters/import" element={guard('assets.manage', <ItemMasterImportPage />)} />
+          <Route path="assets/allocations" element={guard('assets.view', <AllocationsPage />)} />
+          <Route path="assets/allocations/report" element={guard('assets.view', <AllocationReportPage />)} />
+          <Route path="assets/allocations/setup" element={guard('assets.view', <AllocationSetupPage />)} />
+          <Route path="assets/allocations/import" element={guard('assets.manage', <AllocationImportPage />)} />
           <Route path="store" element={guard('store.view', <StorePage />)} />
           <Route path="store/issues" element={guard('store.view', <StoreIssuesPage />)} />
           <Route path="store/items/:id" element={guard('store.view', <StoreItemPage />)} />

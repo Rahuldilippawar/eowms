@@ -195,7 +195,14 @@ Dev accounts (password `password`): `admin@example.com` (super admin), `orgadmin
   Rules: [`docs/STORE.md`](docs/STORE.md), [`docs/PURCHASING.md`](docs/PURCHASING.md).
 - Tests: 158 backend, 84 frontend, 61 end-to-end.
 
+### Phase 9b — done (dead stock and the issue register)
+- The organization's asset item list (with import), each department's dead stock register (coded,
+  with condition; a new purchase charged to the budget; report and CSV), and the issue register:
+  types with their own details, items, give / take back / transfer, late-return reminders, what
+  each person holds, a report and an import. Rules: [`docs/ASSETS.md`](docs/ASSETS.md).
+- Tests: 161 backend, 86 frontend, 67 end-to-end.
+
 ### Not yet (later phases)
-- The other business modules (Phases 9b–14, see
+- The other business modules (Phases 9c–14, see
   [`../docs/erp/PARITY.md`](../docs/erp/PARITY.md)); email / push delivery of notifications.
 - Reports, deployment to Hostinger.
