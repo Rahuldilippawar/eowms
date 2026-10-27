@@ -31,6 +31,7 @@ final class DefaultRoles
                 'vehicles.view', 'vehicles.log', 'vehicles.manage', 'vehicles.export', 'maintenance.view', 'maintenance.log', 'maintenance.manage', 'maintenance.export',
                 'requests.view', 'requests.manage', 'requests.export', 'grievances.manage',
                 'hostels.view', 'hostels.care', 'hostels.manage', 'hostels.export', 'residency.view',
+                'store.view', 'purchasing.view', 'purchasing.manage',
             ]],
             'hod' => ['name' => 'Head of Department', 'scope' => PermissionScope::Departments, 'permissions' => [
                 ...$structureRead, 'users.view', 'employees.view', 'students.view',
@@ -38,7 +39,7 @@ final class DefaultRoles
                 'daily_work.view', 'daily_work.review', 'tasks.view', 'tasks.create', 'performance.view', 'letters.view',
                 'finance.view', 'finance.manage', 'renewals.view', 'renewals.manage',
                 'vehicles.view', 'vehicles.log', 'maintenance.view', 'maintenance.log', 'requests.view', 'requests.manage',
-                'hostels.view', 'hostels.care',
+                'hostels.view', 'hostels.care', 'purchasing.view',
             ]],
             'staff' => ['name' => 'Staff', 'scope' => PermissionScope::Departments, 'permissions' => ['organizations.view', 'departments.view']],
         ];

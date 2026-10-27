@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Employee;
 use App\Models\Organization;
+use App\Models\StoreItem;
 use App\Models\Task;
 use App\Models\User;
 use App\Models\WorkEntry;
@@ -100,6 +101,9 @@ final class WorkService
             if ($team !== null) {
                 $entry->team()->sync($team);
             }
+            if (array_key_exists('materials', $data)) {
+                $this->syncMaterials($entry, $data['materials'] ?? []);
+            }
 
             return $entry;
         });
@@ -175,6 +179,28 @@ final class WorkService
      * @param  list<int>|null  $ids
      * @return list<int>|null
      */
+    /**
+     * Replaces the material used. Items must be active store items, except
+     * ones already on the entry (an item made inactive later stays).
+     *
+     * @param  list<array{item_id: int, quantity: float|string}>  $materials
+     */
+    private function syncMaterials(WorkEntry $entry, array $materials): void
+    {
+        $kept = $entry->materials()->pluck('item_id')->all();
+        $ids = array_map(fn ($m) => (int) $m['item_id'], $materials);
+        $valid = StoreItem::query()->whereIn('id', $ids ?: [0])->where(fn ($q) => $q->where('is_active', true)->orWhereIn('id', $kept ?: [0]))->pluck('id')->all();
+        foreach ($ids as $i => $id) {
+            if (! in_array($id, $valid, true)) {
+                throw ValidationException::withMessages(["materials.{$i}.item_id" => [__('store.item_not_found')]]);
+            }
+        }
+        $entry->materials()->delete();
+        foreach ($materials as $m) {
+            $entry->materials()->create(['item_id' => (int) $m['item_id'], 'quantity' => round((float) $m['quantity'], 2)]);
+        }
+    }
+
     private function teamIds(Employee $employee, ?array $ids, ?WorkEntry $entry): ?array
     {
         if ($ids === null) {

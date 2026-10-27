@@ -6,6 +6,7 @@ use App\Models\Concerns\BelongsToOrganization;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class WorkEntry extends Model
 {
@@ -23,6 +24,8 @@ class WorkEntry extends Model
 
     /** Most colleagues one entry can name. */
     public const MAX_TEAM = 20;
+
+    public const MAX_MATERIALS = 20;
 
     protected $hidden = ['before_photo_path', 'after_photo_path'];
 
@@ -46,6 +49,11 @@ class WorkEntry extends Model
     public function team(): BelongsToMany
     {
         return $this->belongsToMany(Employee::class, 'work_entry_team')->orderBy('name');
+    }
+
+    public function materials(): HasMany
+    {
+        return $this->hasMany(WorkEntryMaterial::class);
     }
 
     public function reviewer(): BelongsTo

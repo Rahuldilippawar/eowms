@@ -6,6 +6,7 @@ use App\Http\Controllers\Concerns\ResolvesMyEmployee;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\WorkEntryResource;
 use App\Models\Employee;
+use App\Models\StoreItem;
 use App\Models\Task;
 use App\Models\WorkEntry;
 use App\Services\WorkImport;
@@ -21,6 +22,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -30,7 +32,7 @@ class WorkController extends Controller
 {
     use ResolvesMyEmployee;
 
-    private const WITH = ['employee', 'task', 'reviewer', 'team'];
+    private const WITH = ['employee', 'task', 'reviewer', 'team', 'materials.item:id,item_name,unit'];
 
     public function __construct(private readonly WorkService $service) {}
 
@@ -56,6 +58,14 @@ class WorkController extends Controller
 
         return response()->json(['data' => Task::query()->where('assignee_employee_id', $employee->id)
             ->whereIn('status', Task::OPEN_STATES)->orderBy('due_date')->limit(100)->get(['id', 'code', 'title', 'status', 'due_date'])]);
+    }
+
+    /** Store items that can be named as material used in a work entry. */
+    public function materialOptions(): JsonResponse
+    {
+        $this->employeeOrFail();
+
+        return response()->json(['data' => StoreItem::query()->where('is_active', true)->orderBy('item_name')->limit(2000)->get(['id', 'item_name', 'unit', 'category'])]);
     }
 
     /** Active colleagues to name as the team of an entry: name, code and department only. */
@@ -95,6 +105,34 @@ class WorkController extends Controller
         $this->service->delete($entry, $request->user());
 
         return response()->json(['data' => ['id' => $entry->id, 'deleted' => true]]);
+    }
+
+    /**
+     * Material used in the work of employees in daily_work.view scope (the
+     * old material usage report): totals by department and item, and the
+     * entries behind them.
+     */
+    public function materialsReport(Request $request): JsonResponse
+    {
+        $f = $this->range($request, AccessContext::current()->organization(), 30) + $request->validate(['department_id' => ['nullable', 'integer']]);
+        $base = DB::table('work_entry_materials as wm')->join('work_entries as we', 'we.id', '=', 'wm.work_entry_id')->join('store_items as si', 'si.id', '=', 'wm.item_id')
+            ->where('we.organization_id', AccessContext::current()->organizationId())
+            ->whereIn('we.employee_id', PeopleQueries::employeeIds('daily_work.view'))
+            ->whereBetween('we.work_date', [$f['from'], $f['to']])
+            ->when($f['department_id'] ?? null, fn ($q, $id) => $q->where('we.department_id', $id));
+        $totals = (clone $base)->leftJoin('departments as d', 'd.id', '=', 'we.department_id')
+            ->groupBy('we.department_id', 'd.name', 'si.id', 'si.item_name', 'si.unit')->orderBy('d.name')->orderBy('si.item_name')
+            ->get(['d.name as department', 'si.item_name', 'si.unit', DB::raw('sum(wm.quantity) as quantity'), DB::raw('count(distinct we.id) as entries')]);
+        $rows = (clone $base)->leftJoin('departments as d', 'd.id', '=', 'we.department_id')->join('employees as e', 'e.id', '=', 'we.employee_id')
+            ->orderByDesc('we.work_date')->orderByDesc('we.id')->limit(1000)
+            ->get(['we.id as entry_id', 'we.work_date', 'we.title', 'd.name as department', 'e.name as employee', 'si.item_name', 'si.unit', 'wm.quantity']);
+
+        return response()->json(['data' => [
+            'from' => $f['from'], 'to' => $f['to'],
+            'totals' => $totals->map(fn ($t) => ['department' => $t->department, 'item_name' => $t->item_name, 'unit' => $t->unit, 'quantity' => round((float) $t->quantity, 2), 'entries' => (int) $t->entries])->values(),
+            'rows' => $rows->map(fn ($r) => ['entry_id' => (int) $r->entry_id, 'work_date' => (string) $r->work_date, 'title' => $r->title, 'department' => $r->department,
+                'employee' => $r->employee, 'item_name' => $r->item_name, 'unit' => $r->unit, 'quantity' => round((float) $r->quantity, 2)])->values(),
+        ]]);
     }
 
     /** Team view: entries of employees within the caller's daily_work.view scope. */
@@ -256,6 +294,10 @@ class WorkController extends Controller
             'actual_cost' => ['nullable', 'numeric', 'min:0', 'max:9999999999'],
             'team_employee_ids' => ['sometimes', 'array', 'max:'.WorkEntry::MAX_TEAM],
             'team_employee_ids.*' => ['integer'],
+            // Material used (store items); sent = replaces the list.
+            'materials' => ['sometimes', 'array', 'max:'.WorkEntry::MAX_MATERIALS],
+            'materials.*.item_id' => ['required', 'integer', 'distinct'],
+            'materials.*.quantity' => ['required', 'numeric', 'gt:0', 'max:9999999'],
             ...CustomFields::rules('work_entry'),
         ]);
     }

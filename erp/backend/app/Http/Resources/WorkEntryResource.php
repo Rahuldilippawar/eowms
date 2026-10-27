@@ -28,6 +28,9 @@ class WorkEntryResource extends JsonResource
             'estimated_cost' => $this->estimated_cost === null ? null : (float) $this->estimated_cost,
             'actual_cost' => $this->actual_cost === null ? null : (float) $this->actual_cost,
             'team' => $this->whenLoaded('team', fn () => $this->team->map(fn ($e) => ['id' => $e->id, 'name' => $e->name, 'employee_code' => $e->employee_code])->values()),
+            'materials' => $this->whenLoaded('materials', fn () => $this->materials->map(fn ($m) => [
+                'item_id' => $m->item_id, 'item_name' => $m->item?->item_name, 'unit' => $m->item?->unit, 'quantity' => (float) $m->quantity,
+            ])->values()),
             'has_before_photo' => $this->before_photo_path !== null,
             'has_after_photo' => $this->after_photo_path !== null,
             'is_imported' => (bool) $this->is_imported,

@@ -23,11 +23,14 @@ use App\Models\RenewalItem;
 use App\Models\ResidencyOccupant;
 use App\Models\Role;
 use App\Models\RoleAssignment;
+use App\Models\StockMovement;
+use App\Models\StoreItem;
 use App\Models\Student;
 use App\Models\Task;
 use App\Models\TaskUpdate;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Models\Vendor;
 use App\Support\Access\DefaultRoles;
 use App\Support\Access\PermissionCatalog;
 use App\Support\Numbering\NumberSequence;
@@ -144,6 +147,16 @@ class DatabaseSeeder extends Seeder
         ResidencyOccupant::firstOrCreate(['organization_id' => $trust->id, 'family_of_id' => $home->id, 'name' => 'Asha'], [
             'location_id' => $q101->id, 'occupant_type' => 'family', 'relation' => 'Mother', 'age' => 62, 'moved_in_date' => '2026-06-01', 'status' => 'active',
         ]);
+
+        // The store: paper in stock, cement below its reorder level; one vendor.
+        foreach ([['A4 paper', 'Stationery', 'ream', 10, 25], ['Cement', 'Construction', 'bag', 5, 3]] as [$name, $category, $unit, $reorder, $stock]) {
+            $item = StoreItem::firstOrCreate(['organization_id' => $trust->id, 'item_name' => $name], ['category' => $category, 'unit' => $unit, 'reorder_level' => $reorder, 'created_by' => $admin->id]);
+            if (! StockMovement::query()->where('item_id', $item->id)->exists()) {
+                StockMovement::create(['organization_id' => $trust->id, 'item_id' => $item->id, 'movement_type' => 'receive', 'quantity' => $stock, 'movement_date' => '2026-06-01',
+                    'remarks' => 'Opening stock', 'created_by' => $admin->id]);
+            }
+        }
+        Vendor::firstOrCreate(['organization_id' => $trust->id, 'name' => 'Shree Traders'], ['contact_person' => 'Mahesh Patil', 'phone' => '9822000011', 'gstin' => '27ABCDE1234F1Z5']);
 
         // A boys' hostel looked after by the warden, with two rooms and two residents.
         $hostel = Hostel::firstOrCreate(['organization_id' => $trust->id, 'name' => 'Boys Hostel A'], ['department_id' => $hostelDept->id, 'gender' => 'boys', 'capacity' => 8, 'created_by' => $admin->id]);
