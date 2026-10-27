@@ -24,6 +24,7 @@ export interface CurrentUser {
   drives_vehicle?: boolean
   /** Staff of an active hostel (reaches it without the hostels permissions). */
   hostel_staff?: boolean
+  it_lab_assistant?: boolean
   /** Imported or reset accounts must set their own password first. */
   must_change_password?: boolean
 }

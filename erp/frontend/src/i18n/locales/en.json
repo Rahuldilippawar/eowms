@@ -119,7 +119,9 @@
     "assets": "Assets",
     "deadStock": "Dead stock",
     "allocations": "Issue register",
-    "myAssets": "Items with me"
+    "myAssets": "Items with me",
+    "it": "IT department",
+    "reportIt": "Report a computer problem"
   },
   "dashboard": {
     "welcome": "Hello, {{name}}",
@@ -292,7 +294,8 @@
     "residency": "Staff housing",
     "store": "Store",
     "purchasing": "Purchasing",
-    "assets": "Dead stock and issue register"
+    "assets": "Dead stock and issue register",
+    "it": "IT department"
   },
   "attendance": {
     "notMarked": "Not marked",
@@ -624,7 +627,9 @@
       "assets_allocated": "{{item}} was given to you.",
       "assets_allocated_due": "{{item}} was given to you — return by {{due}}.",
       "assets_overdue": "{{item}} was due back on {{due}}.",
-      "assets_overdue_given": "{{item}} given to {{name}} was due back on {{due}}."
+      "assets_overdue_given": "{{item}} given to {{name}} was due back on {{due}}.",
+      "it_ticket_new": "Problem with {{tag}} ({{lab}}): {{issue}}",
+      "it_ticket_resolved": "The problem you reported with {{tag}} is fixed."
     }
   },
   "work": {
@@ -1132,7 +1137,9 @@
     "purchasing.manage": "Quotations, orders, invoices and payments",
     "assets.view": "See dead stock and the issue register",
     "assets.manage": "Record dead stock; give and take back items",
-    "assets.export": "Dead stock and issue register CSV"
+    "assets.export": "Dead stock and issue register CSV",
+    "it.view": "See IT labs, assets and problems",
+    "it.manage": "Run IT labs: assets, transfers, fixing problems, import"
   },
   "letters": {
     "new": "New file",
@@ -2335,5 +2342,125 @@
     "itemsImported_one": "{{count}} item added.",
     "itemsImported_other": "{{count}} items added.",
     "importNote": "Missing types are created; is_loan (yes / no) applies to a new type."
+  },
+  "it": {
+    "tabs": {
+      "dashboard": "Overview",
+      "assets": "Assets",
+      "tickets": "Problems",
+      "smartboards": "Smart boards"
+    },
+    "type": {
+      "computer": "Computer",
+      "monitor": "Monitor",
+      "keyboard": "Keyboard",
+      "mouse": "Mouse",
+      "cpu": "CPU",
+      "ups": "UPS",
+      "smartboard": "Smart board",
+      "projector": "Projector",
+      "printer": "Printer",
+      "other": "Other"
+    },
+    "status": {
+      "working": "Working",
+      "faulty": "Faulty",
+      "under_repair": "Being repaired",
+      "scrapped": "Scrapped"
+    },
+    "power": {
+      "on": "Power on",
+      "off": "Power off"
+    },
+    "ticketStatus": {
+      "pending": "Waiting",
+      "in_progress": "Being fixed",
+      "resolved": "Fixed"
+    },
+    "ticketFilter": {
+      "open": "Not fixed yet",
+      "pending": "Waiting",
+      "in_progress": "Being fixed",
+      "resolved": "Fixed",
+      "all": "All"
+    },
+    "field": {
+      "workstation_no": "Workstation",
+      "brand": "Brand",
+      "model": "Model",
+      "serial_no": "Serial no.",
+      "os_license": "OS / licence",
+      "remarks": "Remarks",
+      "purchase_date": "Purchase date",
+      "warranty_expiry": "Warranty until",
+      "license_expiry": "Licence until",
+      "purchase_cost": "Cost (₹)"
+    },
+    "import": "Import assets",
+    "newLab": "New lab",
+    "editLab": "Edit lab",
+    "labName": "Lab name",
+    "location": "Location",
+    "capacity": "Seats",
+    "department": "Department",
+    "assistant": "Lab assistant",
+    "assistantName": "assistant: {{name}}",
+    "openTickets": "Problems not fixed",
+    "smartboardLine": "Smart boards: {{total}} · {{on}} on now · {{faulty}} with a problem",
+    "labs": "Labs",
+    "labCounts": "{{total}} assets · {{working}} working",
+    "withProblems_one": "{{count}} with a problem",
+    "withProblems_other": "{{count}} with a problem",
+    "expiringSoon": "Warranty or licence ending in 30 days",
+    "warrantyUntil": "warranty until {{date}}",
+    "licenseUntil": "licence until {{date}}",
+    "assetsTitle": "IT assets",
+    "newAsset": "New asset",
+    "editAsset": "Edit {{tag}}",
+    "assetAdded": "Added as {{tag}}.",
+    "lab": "Lab",
+    "allLabs": "All labs",
+    "assetType": "Kind",
+    "allTypes": "All kinds",
+    "statusLabel": "Status",
+    "anyStatus": "Any status",
+    "searchHint": "Tag, serial, brand, workstation",
+    "noAssets": "No assets.",
+    "tag": "Tag",
+    "openCount_one": "{{count}} problem open",
+    "openCount_other": "{{count}} problems open",
+    "changeStatus": "Status",
+    "turnedOn": "Mark power on",
+    "turnedOff": "Mark power off",
+    "problems": "Problems reported",
+    "noProblems": "No problems reported.",
+    "moveToLab": "Move to another lab",
+    "toLab": "To lab",
+    "move": "Move",
+    "moved": "Moved to {{lab}}.",
+    "transferLine": "{{when}}: {{from}} → {{to}} ({{by}})",
+    "reportedBy": "reported by {{name}}, {{when}}",
+    "fixed": "Fixed: {{notes}} ({{name}})",
+    "startWork": "Start work",
+    "markFixed": "Mark fixed",
+    "whatWasDone": "What was done on {{tag}}",
+    "whatWasDoneHint": "What was done",
+    "ticketsTitle": "Computer problems",
+    "noTickets": "No problems here.",
+    "smartboardsTitle": "Smart boards",
+    "noSmartboards": "No smart boards.",
+    "powerLabel": "Power",
+    "problemsCount": "Problems",
+    "imported_one": "{{count}} asset imported.",
+    "imported_other": "{{count}} assets imported.",
+    "importNote": "Labs that do not exist yet are created. Asset kind: computer, monitor, keyboard, mouse, cpu, ups, smartboard, projector, printer or other. Each asset gets its tag.",
+    "reportHint": "Type the tag printed on the computer, monitor or smart board (e.g. PC-26-0001).",
+    "find": "Find",
+    "alreadyReported_one": "{{count}} problem is already reported and not fixed yet.",
+    "alreadyReported_other": "{{count}} problems are already reported and not fixed yet.",
+    "whatIsWrong": "What is wrong?",
+    "sendReport": "Send to IT",
+    "reported": "Sent to the IT department.",
+    "myReports": "My reports"
   }
 }

@@ -202,7 +202,13 @@ Dev accounts (password `password`): `admin@example.com` (super admin), `orgadmin
   each person holds, a report and an import. Rules: [`docs/ASSETS.md`](docs/ASSETS.md).
 - Tests: 161 backend, 86 frontend, 67 end-to-end.
 
+### Phase 9c — done (IT department)
+- Labs with an assistant, tagged IT assets with warranty and licence dates, status and power,
+  problems reported by anyone from the asset's tag and fixed by IT, moves between labs, the
+  overview, the smart board report, CSV and import. Rules: [`docs/IT.md`](docs/IT.md).
+- Tests: 163 backend, 88 frontend, 71 end-to-end.
+
 ### Not yet (later phases)
-- The other business modules (Phases 9c–14, see
+- The other business modules (Phases 9d–14, see
   [`../docs/erp/PARITY.md`](../docs/erp/PARITY.md)); email / push delivery of notifications.
 - Reports, deployment to Hostinger.
