@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Models\Hostel;
+use App\Models\ItLab;
 use App\Models\User;
 use App\Models\Vehicle;
 use App\Services\AttendanceRules;
@@ -52,6 +53,9 @@ class CurrentUserResource extends JsonResource
             // Hostel staff (wardens) reach their own hostel without the hostels permissions.
             'hostel_staff' => $this->when($isCurrentUser, fn () => $context->organization() !== null
                 && Hostel::query()->where('is_active', true)->whereHas('staff', fn ($q) => $q->where('user_id', $this->id))->exists()),
+            // IT lab assistants keep their own lab's assets without the it permissions.
+            'it_lab_assistant' => $this->when($isCurrentUser, fn () => $context->organization() !== null
+                && ItLab::query()->where('is_active', true)->where('assistant_user_id', $this->id)->exists()),
             'must_change_password' => (bool) $this->must_change_password,
         ];
     }

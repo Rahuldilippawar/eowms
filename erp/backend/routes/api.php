@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\V1\HostelAttendanceController;
 use App\Http\Controllers\Api\V1\HostelController;
 use App\Http\Controllers\Api\V1\HostelResidentController;
 use App\Http\Controllers\Api\V1\InstitutionController;
+use App\Http\Controllers\Api\V1\ItController;
 use App\Http\Controllers\Api\V1\LeaveBalanceController;
 use App\Http\Controllers\Api\V1\LeaveController;
 use App\Http\Controllers\Api\V1\LetterController;
@@ -417,6 +418,32 @@ Route::middleware(['auth:sanctum', SetAccessContext::class, EnsurePasswordChange
             Route::get('/allocations/import/template', [AllocationController::class, 'importTemplate']);
             Route::post('/allocations/import/preview', [AllocationController::class, 'importPreview']);
             Route::post('/allocations/import', [AllocationController::class, 'import']);
+        });
+    });
+
+    // The IT department (Phase 9c). Lab assistants reach their own labs; the controller decides.
+    Route::middleware('module:it')->group(function () {
+        Route::get('/it/lookup', [ItController::class, 'lookup'])->middleware('throttle:60,1');
+        Route::post('/it/assets/{asset}/report', [ItController::class, 'report'])->middleware('throttle:20,1');
+        Route::get('/my/it-tickets', [ItController::class, 'mine']);
+        Route::get('/it/dashboard', [ItController::class, 'dashboard']);
+        Route::get('/it/labs', [ItController::class, 'labs']);
+        Route::get('/it/assets', [ItController::class, 'assets']);
+        Route::get('/it/assets/{asset}', [ItController::class, 'show']);
+        Route::post('/it/assets', [ItController::class, 'storeAsset']);
+        Route::put('/it/assets/{asset}', [ItController::class, 'updateAsset']);
+        Route::post('/it/assets/{asset}/status', [ItController::class, 'setStatus']);
+        Route::get('/it/tickets', [ItController::class, 'tickets']);
+        Route::get('/it/smartboards', [ItController::class, 'smartboards']);
+        Route::middleware('permission:it.manage')->group(function () {
+            Route::post('/it/labs', [ItController::class, 'storeLab']);
+            Route::put('/it/labs/{lab}', [ItController::class, 'updateLab']);
+            Route::post('/it/assets/{asset}/transfer', [ItController::class, 'transfer']);
+            Route::post('/it/tickets/{ticket}/start', [ItController::class, 'startTicket']);
+            Route::post('/it/tickets/{ticket}/resolve', [ItController::class, 'resolveTicket']);
+            Route::get('/it/import/template', [ItController::class, 'importTemplate']);
+            Route::post('/it/import/preview', [ItController::class, 'importPreview']);
+            Route::post('/it/import', [ItController::class, 'import']);
         });
     });
 
