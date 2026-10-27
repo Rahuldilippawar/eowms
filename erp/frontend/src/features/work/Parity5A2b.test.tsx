@@ -28,6 +28,7 @@ vi.mock('./api', async (importOriginal) => ({
   fetchMyOpenTasks: vi.fn(),
   saveWork: vi.fn(),
   searchColleagues: vi.fn(),
+  fetchMaterialOptions: vi.fn(),
   previewWorkImport: vi.fn(),
   runWorkImport: vi.fn(),
 }))
@@ -108,6 +109,24 @@ describe('students and daily work (old-app parity)', () => {
     await waitFor(() =>
       expect(work.saveWork).toHaveBeenCalledWith(null, expect.objectContaining({ requested_by: "Principal's office", estimated_cost: null, actual_cost: 500, team_employee_ids: [4] })),
     )
+  })
+
+  it('names the store material used, with a quantity for each', async () => {
+    work.fetchMyWork.mockResolvedValue({ data: [], meta: { edit_days: 3, today: todayYmd() } })
+    work.fetchMyOpenTasks.mockResolvedValue([])
+    work.fetchMaterialOptions.mockResolvedValue([{ id: 5, item_name: 'Cement', unit: 'bag', category: null }])
+    work.saveWork.mockResolvedValue(entry())
+    renderApp('/my/work')
+
+    await userEvent.type(await screen.findByLabelText('What did you do?'), 'Plastered the wall')
+    await userEvent.click(screen.getByRole('button', { name: 'Add material' }))
+    await userEvent.selectOptions(await screen.findByLabelText('Material 1'), '5')
+    expect(screen.getByText('bag')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+    expect(await screen.findByText('Enter how much of each material was used.')).toBeInTheDocument()
+    await userEvent.type(screen.getByLabelText('Material 1: quantity'), '2.5')
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(work.saveWork).toHaveBeenCalledWith(null, expect.objectContaining({ materials: [{ item_id: 5, quantity: 2.5 }] })))
   })
 
   it('shows the team, costs and photos of an entry, with photo controls while it can be edited', async () => {

@@ -58,7 +58,7 @@ Legend: ✅ in the ERP · 🟡 partly (gaps listed) · ⏳ scheduled (phase) · 
 | Daily work team members, before / after photos, requested by, cost | ✅ 5A-2b | Photos private; team mates may see them |
 | Custom fields per organization (daily work) | ✅ 5A-1 | Also on employee and student forms |
 | Import old work records + template | ✅ 5A-2b | Matched by employee code; all rows or none |
-| Daily work print report, material usage report | ⏳ 9 | Material usage needs the store ledger |
+| Daily work print report, material usage report | ✅ 9a (material usage); print report ⏳ 10 | Material used in a work entry is recorded for the report; it does not take stock out of the store |
 | Tasks: assign, my tasks, verify / reopen, report | ✅ | `cost_incurred` ✅ 5A-2b |
 | Notifications page, mark all read | ✅ | |
 | Cron: overdue tasks | ✅ | `erp:task-reminders` |
@@ -100,12 +100,14 @@ Legend: ✅ in the ERP · 🟡 partly (gaps listed) · ⏳ scheduled (phase) · 
 | Hostels: hostels, rooms, room / bed allocation, students + import, attendance, leave / out-pass, health, fees, alumni, dashboard, bulk import | ✅ 8c | Wardens work without wider permissions; roll-call reminder cron included. Hostels themselves are added in the app (the old CSV of hostels is not carried over: an organization has a handful) |
 | Residency: buildings, layout, rooms + items, occupants, allotment requests, transfers, inspections, bills (rent / electricity) + shares + report, guests, occupancy analytics, staff directory (resident / non-resident), data import engine with preview / history, link unlinked | ✅ 8d | Uses the 8a buildings and residential locations; a bill is split equally among the staff in the room; an import can be undone until bills exist |
 
-## Assets, inventory, purchasing (⏳ 9)
+## Assets, inventory, purchasing (9)
 
-Dead stock register + item master + import, asset allocation (issue / return register, types, custom
-fields, import, report), IT department (labs, assets, transfers, repair tickets, general requests,
-smart board report, import, dashboard), CCTV (DVRs, cameras, status, checkups, import, report), store
-items + stock ledger, vendor, quotation → PO → GRN → invoice (MVP prompt).
+| Old module | Status | Notes |
+|---|---|---|
+| Store items + stock ledger, vendor, quotation → PO → GRN → invoice (MVP prompt) | ✅ 9a | Goods received add stock; invoices are charged to the department budget and paid like Phase 7a purchases |
+| Dead stock register + item master + import; asset allocation (issue / return register, types, custom fields, import, report) | ⏳ 9b | |
+| IT department (labs, assets, transfers, repair tickets, general requests, smart board report, import, dashboard) | ⏳ 9c | |
+| CCTV (DVRs, cameras, status, checkups, import, report) | ⏳ 9d | |
 
 ## Reports, search, audit, backup (⏳ 10)
 

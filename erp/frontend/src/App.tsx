@@ -50,6 +50,15 @@ import { VehicleDetailPage } from '@/features/vehicles/VehicleDetailPage'
 import { VehicleImportPage } from '@/features/vehicles/VehicleImportPage'
 import { VehicleReportPage } from '@/features/vehicles/VehicleReportPage'
 import { VehiclesPage } from '@/features/vehicles/VehiclesPage'
+import { OrderFormPage } from '@/features/purchasing/OrderFormPage'
+import { OrderPage } from '@/features/purchasing/OrderPage'
+import { OrdersPage } from '@/features/purchasing/OrdersPage'
+import { QuotationsPage } from '@/features/purchasing/QuotationsPage'
+import { VendorsPage } from '@/features/purchasing/VendorsPage'
+import { StoreIssuesPage } from '@/features/store/StoreIssuesPage'
+import { StoreItemPage } from '@/features/store/StoreItemPage'
+import { StorePage } from '@/features/store/StorePage'
+import { MaterialUsagePage } from '@/features/work/MaterialUsagePage'
 import { MyResidencyPage } from '@/features/residency/MyResidencyPage'
 import { ResidencyAnalyticsPage } from '@/features/residency/ResidencyAnalyticsPage'
 import { ResidencyBillsPage } from '@/features/residency/ResidencyBillsPage'
@@ -144,6 +153,17 @@ export function AppRoutes() {
           <Route path="residency/directory" element={guard('residency.view', <ResidencyDirectoryPage />)} />
           <Route path="residency/analytics" element={guard('residency.view', <ResidencyAnalyticsPage />)} />
           <Route path="residency/import" element={guard('residency.manage', <ResidencyImportPage />)} />
+          <Route path="store" element={guard('store.view', <StorePage />)} />
+          <Route path="store/issues" element={guard('store.view', <StoreIssuesPage />)} />
+          <Route path="store/items/:id" element={guard('store.view', <StoreItemPage />)} />
+          {/* The store reaches orders to receive goods without purchasing.view; the API decides. */}
+          <Route path="purchasing/orders" element={<OrdersPage />} />
+          <Route path="purchasing/orders/new" element={guard('purchasing.manage', <OrderFormPage />)} />
+          <Route path="purchasing/orders/:id" element={<OrderPage />} />
+          <Route path="purchasing/orders/:id/edit" element={guard('purchasing.manage', <OrderFormPage />)} />
+          <Route path="purchasing/quotations" element={guard('purchasing.view', <QuotationsPage />)} />
+          <Route path="purchasing/vendors" element={guard('purchasing.view', <VendorsPage />)} />
+          <Route path="work/materials" element={guard('daily_work.view', <MaterialUsagePage />)} />
           <Route path="maintenance" element={guard('maintenance.view', <MaintenancePage />)} />
           <Route path="maintenance/report" element={guard('maintenance.view', <MaintenanceReportPage />)} />
           <Route path="maintenance/settings" element={guard('maintenance.manage', <MaintenanceSettingsPage />)} />
