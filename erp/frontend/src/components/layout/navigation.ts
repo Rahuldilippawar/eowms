@@ -1,4 +1,4 @@
-import { BarChart3, BedDouble, DoorOpen, House, Bus, Hammer, MessageSquareWarning, FilePenLine, PieChart, Wrench, CalendarHeart, Fingerprint, IndianRupee, Scale, SlidersHorizontal, UserRound, Building, ClipboardPen, Mail, RefreshCw, ShoppingCart, Wallet, ListChecks, NotebookPen, Building2, CalendarClock, CalendarDays, ClipboardCheck, ClipboardList, GraduationCap, IdCard, KeyRound, LayoutDashboard, Network, Plane, Settings, Users, type LucideIcon } from 'lucide-react'
+import { Boxes, PackageCheck, BarChart3, BedDouble, DoorOpen, House, Bus, Hammer, MessageSquareWarning, FilePenLine, PieChart, Wrench, CalendarHeart, Fingerprint, IndianRupee, Scale, SlidersHorizontal, UserRound, Building, ClipboardPen, Mail, RefreshCw, ShoppingCart, Wallet, ListChecks, NotebookPen, Building2, CalendarClock, CalendarDays, ClipboardCheck, ClipboardList, GraduationCap, IdCard, KeyRound, LayoutDashboard, Network, Plane, Settings, Users, type LucideIcon } from 'lucide-react'
 
 export interface NavItem {
   to: string
@@ -57,6 +57,8 @@ export const NAVIGATION: NavSection[] = [
     items: [
       { to: '/finance/budgets', labelKey: 'nav.budgets', icon: Wallet, permission: 'finance.view', module: 'finance' },
       { to: '/finance/purchases', labelKey: 'nav.purchases', icon: ShoppingCart, permission: 'finance.view', module: 'finance' },
+      { to: '/purchasing/orders', labelKey: 'nav.purchasing', icon: PackageCheck, permission: 'purchasing.view', module: 'purchasing' },
+      { to: '/store', labelKey: 'nav.store', icon: Boxes, permission: 'store.view', module: 'store' },
       { to: '/renewals', labelKey: 'nav.renewals', icon: RefreshCw, permission: 'renewals.view', module: 'renewals' },
     ],
   },

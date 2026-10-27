@@ -30,5 +30,7 @@ return [
         'grievances' => ['manage'],
         'hostels' => ['view', 'care', 'manage', 'export'],
         'residency' => ['view', 'manage'],
+        'store' => ['view', 'manage'],
+        'purchasing' => ['view', 'manage'],
     ],
 ];

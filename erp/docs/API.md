@@ -333,3 +333,27 @@ Rules: [`RESIDENCY.md`](RESIDENCY.md). Under the `residency` module switch.
 | GET / POST | `/residency/requests[?status=open\|approved\|rejected\|cancelled\|all]`, `/residency/requests/{id}/decide` | view / manage | `decision (approve\|waitlist\|reject), location_id (approve), remarks?` |
 | GET | `/residency/directory`, `/residency/analytics`, `/residency/unlinked` | `residency.view` | On / off campus staff; occupancy figures; imported staff without an account |
 | GET / POST | `/residency/import/template`, `/import/preview`, `/import`, `/import/history`, `/import/{batch}/rollback` | `residency.manage` | CSV; all rows or none; undo while no bills exist |
+
+## Phase 9a — store and purchasing
+
+Rules: [`STORE.md`](STORE.md), [`PURCHASING.md`](PURCHASING.md). Under the `store` and `purchasing` module switches.
+
+| Method | Path | Permission | Notes |
+|---|---|---|---|
+| GET | `/store/items[?search&category&low&inactive&format=csv]` | `store.view` | Items with `balance`, `low`; `meta.categories`, `meta.low_count` |
+| GET | `/store/items/{id}` | `store.view` | Item with its ledger (newest first, `balance` after each row) |
+| POST / PUT | `/store/items[/{id}]` | `store.manage` | `item_name, unit, category?, department_id?, reorder_level?, is_active?` |
+| POST | `/store/items/{id}/movements` | `store.manage` | `movement_type (receive\|issue\|adjust), quantity (signed for adjust), unit_cost?, department_id?, issued_to?, movement_date?, remarks (adjust)` |
+| GET | `/store/issues?from&to` | `store.view` | Issued, by department and item |
+| GET / POST / PUT | `/purchasing/vendors[/{id}]` | view / manage | `name, contact_person?, phone?, email?, gstin?, address?, is_active?` |
+| GET / POST | `/purchasing/quotations[?status&department_id]` | view / manage | `department_id, vendor_id, quotation_date, valid_until?, reference_no?, remarks?, lines[]` |
+| POST | `/purchasing/quotations/{id}/decide` | manage | `decision (accept\|reject)`; accept returns the new draft order (201) |
+| GET | `/purchasing/orders[?status=open\|draft\|…&vendor_id&department_id&search&page]`, `/purchasing/orders/{id}` | view, or `store.manage` | Detail: lines, receipts, invoices with payments, `received_value`, `invoiceable_amount`, `budget_left`, `can_manage`, `can_receive` |
+| POST / PUT | `/purchasing/orders[/{id}]` | manage | Draft only: `department_id, vendor_id, order_date, expected_date?, terms?, lines[{item_id?, description?, quantity, unit?, rate, gst_percent?}]` |
+| POST | `/purchasing/orders/{id}/issue`, `/cancel` | manage | Issue numbers the order; cancel takes `reason?` |
+| POST | `/purchasing/orders/{id}/receive` | manage over the department, or `store.manage` | `received_date, remarks?, lines[{line_id, quantity}]` |
+| POST | `/purchasing/orders/{id}/invoices` | manage | `invoice_number, invoice_date, goods_amount, other_charges?, remarks?` |
+| DELETE / POST | `/purchasing/invoices/{id}`, `/purchasing/invoices/{id}/payments` | manage | Delete only without payments / `amount, payment_date, payment_type, payment_mode?, remarks?` |
+| GET | `/me/work/materials` | signed in (with an employee record) | Active store items for a work entry; entries take `materials[{item_id, quantity}]` |
+| GET | `/work/materials?from&to&department_id` | `daily_work.view` | Material usage report: `totals` and `rows` |
+

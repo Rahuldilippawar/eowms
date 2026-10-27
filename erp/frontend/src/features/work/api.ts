@@ -20,6 +20,7 @@ export interface WorkEntry {
   estimated_cost?: number | null
   actual_cost?: number | null
   team?: Colleague[]
+  materials?: { item_id: number; item_name: string | null; unit: string | null; quantity: number }[]
   has_before_photo?: boolean
   has_after_photo?: boolean
   is_imported?: boolean
@@ -38,6 +39,8 @@ export interface WorkInput {
   estimated_cost: number | null
   actual_cost: number | null
   team_employee_ids: number[]
+  /** Sent only when the store module is on: replaces the material used. */
+  materials?: { item_id: number; quantity: number }[]
   custom?: Record<string, string | number | boolean | null>
 }
 
@@ -83,6 +86,14 @@ export const workCsvUrl = (p: { from: string; to: string; search?: string; revie
   `/api/v1/work/export?${new URLSearchParams(Object.entries(p).filter(([, v]) => v) as [string, string][])}`
 
 export const searchColleagues = async (search: string): Promise<Colleague[]> => (await api.get('/me/work/colleagues', { params: { search } })).data.data
+export const fetchMaterialOptions = async (): Promise<{ id: number; item_name: string; unit: string; category: string | null }[]> => (await api.get('/me/work/materials')).data.data
+export interface MaterialsReport {
+  from: string
+  to: string
+  totals: { department: string | null; item_name: string; unit: string; quantity: number; entries: number }[]
+  rows: { entry_id: number; work_date: string; title: string; department: string | null; employee: string; item_name: string; unit: string; quantity: number }[]
+}
+export const fetchMaterialsReport = async (p: { from: string; to: string }): Promise<MaterialsReport> => (await api.get('/work/materials', { params: p })).data.data
 export const workPhotoUrl = (id: number, kind: PhotoKind) => `/api/v1/work/${id}/photos/${kind}`
 export const uploadWorkPhoto = async (id: number, kind: PhotoKind, file: File): Promise<WorkEntry> => {
   const form = new FormData()

@@ -20,11 +20,11 @@ import { addDays, formatDate, formatMoney, todayYmd } from '@/lib/format'
 import { CustomFieldInputs } from '@/features/people/CustomFieldInputs'
 import type { CustomValues } from '@/features/people/profileApi'
 import { deleteWork, fetchMyOpenTasks, fetchMyWork, saveWork, type Colleague, type WorkEntry, type WorkInput, type WorkStatus } from './api'
-import { TeamPicker, WorkPhotos } from './WorkExtras'
+import { MaterialsPicker, TeamPicker, WorkPhotos, type MaterialRow } from './WorkExtras'
 import { WorkStatusBadge } from './WorkStatusBadge'
 
-const FIELDS = ['custom', 'work_date', 'title', 'description', 'hours', 'status', 'task_id', 'requested_by', 'estimated_cost', 'actual_cost', 'team_employee_ids'] as const
-const blank = (date: string): Form => ({ work_date: date, title: '', description: '', hours: '', status: 'completed', task_id: '', requested_by: '', estimated_cost: '', actual_cost: '', team: [], custom: {} })
+const FIELDS = ['custom', 'work_date', 'title', 'description', 'hours', 'status', 'task_id', 'requested_by', 'estimated_cost', 'actual_cost', 'team_employee_ids', 'materials'] as const
+const blank = (date: string): Form => ({ work_date: date, title: '', description: '', hours: '', status: 'completed', task_id: '', requested_by: '', estimated_cost: '', actual_cost: '', team: [], materials: [], custom: {} })
 
 interface Form {
   work_date: string
@@ -37,6 +37,7 @@ interface Form {
   estimated_cost: string
   actual_cost: string
   team: Colleague[]
+  materials: MaterialRow[]
   custom: CustomValues
 }
 
@@ -49,6 +50,7 @@ function WorkForm({ editing, onDone, today, editDays }: { editing: WorkEntry | n
   const queryClient = useQueryClient()
   const { user } = useAuth()
   const tasks = useQuery({ queryKey: ['my-open-tasks', user?.current_organization?.id], queryFn: fetchMyOpenTasks })
+  const storeOn = !user?.disabled_modules?.includes('store')
   const [v, setV] = useState<Form>(() =>
     editing
       ? {
@@ -62,6 +64,7 @@ function WorkForm({ editing, onDone, today, editDays }: { editing: WorkEntry | n
           estimated_cost: editing.estimated_cost?.toString() ?? '',
           actual_cost: editing.actual_cost?.toString() ?? '',
           team: editing.team ?? [],
+          materials: (editing.materials ?? []).map((m) => ({ item_id: String(m.item_id), quantity: String(m.quantity) })),
           custom: editing.custom ?? {},
         }
       : blank(today),
@@ -82,6 +85,7 @@ function WorkForm({ editing, onDone, today, editDays }: { editing: WorkEntry | n
         estimated_cost: money(v.estimated_cost),
         actual_cost: money(v.actual_cost),
         team_employee_ids: v.team.map((c) => c.id),
+        ...(storeOn ? { materials: v.materials.filter((m) => m.item_id).map((m) => ({ item_id: Number(m.item_id), quantity: Number(m.quantity) })) } : {}),
         custom: v.custom,
       }
       return saveWork(editing?.id ?? null, input)
@@ -109,6 +113,7 @@ function WorkForm({ editing, onDone, today, editDays }: { editing: WorkEntry | n
     if (v.hours !== '' && (Number.isNaN(h) || h < 0.25 || h > 24 || Math.round(h * 4) !== h * 4)) local.hours = t('work.hoursRule')
     if (badMoney(v.estimated_cost)) local.estimated_cost = t('work.costRule')
     if (badMoney(v.actual_cost)) local.actual_cost = t('work.costRule')
+    if (v.materials.some((m) => m.item_id && !(Number(m.quantity) > 0))) local.materials = t('work.materialQuantityRule')
     setErrors(local)
     if (Object.keys(local).length === 0) save.mutate()
   }
@@ -182,6 +187,11 @@ function WorkForm({ editing, onDone, today, editDays }: { editing: WorkEntry | n
       <div className="sm:col-span-2">
         <TeamPicker value={v.team} onChange={(team) => setV({ ...v, team })} error={errors.team_employee_ids} />
       </div>
+      {storeOn ? (
+        <div className="sm:col-span-2">
+          <MaterialsPicker value={v.materials} onChange={(materials) => setV({ ...v, materials })} error={errors.materials} />
+        </div>
+      ) : null}
       <CustomFieldInputs entity="work_entry" values={v.custom} onChange={(custom) => setV({ ...v, custom })} errors={errors} />
       <div className="flex gap-2 sm:col-span-2">
         <Button type="submit" disabled={save.isPending}>
@@ -213,6 +223,9 @@ export function WorkEntryCard({ entry, actions, showEmployee = false, photosEdit
             {entry.requested_by && entry.team?.length ? ' · ' : null}
             {entry.team?.length ? t('work.withTeam', { names: entry.team.map((c) => c.name).join(', ') }) : null}
           </p>
+        ) : null}
+        {entry.materials?.length ? (
+          <p className="text-xs text-slate-500">{t('work.materialsList', { list: entry.materials.map((m) => `${m.item_name} ${m.quantity} ${m.unit ?? ''}`.trim()).join(', ') })}</p>
         ) : null}
         <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
           <WorkStatusBadge status={entry.status} />

@@ -188,7 +188,14 @@ Dev accounts (password `password`): `admin@example.com` (super admin), `orgadmin
   Rules: [`docs/RESIDENCY.md`](docs/RESIDENCY.md).
 - Tests: 155 backend, 80 frontend, 57 end-to-end.
 
+### Phase 9a — done (store and purchasing)
+- Store items with a stock ledger (in, out, corrections; never below zero; a reorder reminder),
+  vendors, quotations, purchase orders, goods received into stock, vendor invoices charged to the
+  department budget and their payments, and the material used in daily work with its report.
+  Rules: [`docs/STORE.md`](docs/STORE.md), [`docs/PURCHASING.md`](docs/PURCHASING.md).
+- Tests: 158 backend, 84 frontend, 61 end-to-end.
+
 ### Not yet (later phases)
-- The other business modules (Phases 9–14, see
+- The other business modules (Phases 9b–14, see
   [`../docs/erp/PARITY.md`](../docs/erp/PARITY.md)); email / push delivery of notifications.
 - Reports, deployment to Hostinger.

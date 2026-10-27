@@ -37,15 +37,18 @@ use App\Http\Controllers\Api\V1\PermissionController;
 use App\Http\Controllers\Api\V1\PublicRequestController;
 use App\Http\Controllers\Api\V1\PublicSignatureController;
 use App\Http\Controllers\Api\V1\PublicVerifyController;
+use App\Http\Controllers\Api\V1\PurchasingController;
 use App\Http\Controllers\Api\V1\RenewalController;
 use App\Http\Controllers\Api\V1\ResidencyController;
 use App\Http\Controllers\Api\V1\ResidencyImportController;
 use App\Http\Controllers\Api\V1\RoleController;
+use App\Http\Controllers\Api\V1\StoreController;
 use App\Http\Controllers\Api\V1\StudentController;
 use App\Http\Controllers\Api\V1\TaskController;
 use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\VehicleController;
 use App\Http\Controllers\Api\V1\VehicleCorrectionController;
+use App\Http\Controllers\Api\V1\VendorController;
 use App\Http\Controllers\Api\V1\WorkController;
 use App\Http\Controllers\Api\V1\WorkRequestController;
 use App\Http\Middleware\EnsurePasswordChanged;
@@ -167,9 +170,11 @@ Route::middleware(['auth:sanctum', SetAccessContext::class, EnsurePasswordChange
     Route::post('/me/work/{entry}/photos/{kind}', [WorkController::class, 'uploadPhoto'])->whereIn('kind', ['before', 'after'])->middleware('module:daily_work');
     Route::delete('/me/work/{entry}/photos/{kind}', [WorkController::class, 'deletePhoto'])->whereIn('kind', ['before', 'after'])->middleware('module:daily_work');
     Route::get('/work/{entry}/photos/{kind}', [WorkController::class, 'photo'])->whereIn('kind', ['before', 'after'])->middleware('module:daily_work');
+    Route::get('/me/work/materials', [WorkController::class, 'materialOptions'])->middleware(['module:daily_work', 'module:store']);
     Route::get('/me/work/colleagues', [WorkController::class, 'colleagues'])->middleware(['module:daily_work', 'throttle:60,1']);
     Route::get('/me/tasks/open', [WorkController::class, 'myTasks'])->middleware('module:tasks');
     Route::get('/me/performance', [PerformanceController::class, 'me'])->middleware('module:performance');
+    Route::get('/work/materials', [WorkController::class, 'materialsReport'])->middleware(['permission:daily_work.view', 'module:daily_work', 'module:store']);
     Route::get('/work', [WorkController::class, 'index'])->middleware('permission:daily_work.view')->middleware('module:daily_work');
     Route::get('/work/export', [WorkController::class, 'export'])->middleware('permission:daily_work.export')->middleware('module:daily_work');
     Route::get('/work/import/template', [WorkController::class, 'importTemplate'])->middleware('permission:daily_work.import')->middleware('module:daily_work');
@@ -339,6 +344,43 @@ Route::middleware(['auth:sanctum', SetAccessContext::class, EnsurePasswordChange
             Route::post('/import', [ResidencyImportController::class, 'run']);
             Route::get('/import/history', [ResidencyImportController::class, 'history']);
             Route::post('/import/{batch}/rollback', [ResidencyImportController::class, 'rollback']);
+        });
+    });
+
+    // Store and purchasing (Phase 9a).
+    Route::middleware(['module:store', 'permission:store.view'])->prefix('store')->group(function () {
+        Route::get('/items', [StoreController::class, 'items']);
+        Route::get('/items/{item}', [StoreController::class, 'show']);
+        Route::get('/issues', [StoreController::class, 'issuesReport']);
+        Route::middleware('permission:store.manage')->group(function () {
+            Route::post('/items', [StoreController::class, 'store']);
+            Route::put('/items/{item}', [StoreController::class, 'update']);
+            Route::post('/items/{item}/movements', [StoreController::class, 'move']);
+        });
+    });
+    Route::middleware('module:purchasing')->prefix('purchasing')->group(function () {
+        // The store sees orders to receive goods against them.
+        Route::middleware('permission:purchasing.view|store.manage')->group(function () {
+            Route::get('/orders', [PurchasingController::class, 'orders']);
+            Route::get('/orders/{order}', [PurchasingController::class, 'showOrder']);
+            Route::post('/orders/{order}/receive', [PurchasingController::class, 'receive']);
+        });
+        Route::middleware('permission:purchasing.view')->group(function () {
+            Route::get('/vendors', [VendorController::class, 'index']);
+            Route::get('/quotations', [PurchasingController::class, 'quotations']);
+        });
+        Route::middleware('permission:purchasing.manage')->group(function () {
+            Route::post('/vendors', [VendorController::class, 'store']);
+            Route::put('/vendors/{vendor}', [VendorController::class, 'update']);
+            Route::post('/quotations', [PurchasingController::class, 'storeQuotation']);
+            Route::post('/quotations/{quotation}/decide', [PurchasingController::class, 'decideQuotation']);
+            Route::post('/orders', [PurchasingController::class, 'storeOrder']);
+            Route::put('/orders/{order}', [PurchasingController::class, 'updateOrder']);
+            Route::post('/orders/{order}/issue', [PurchasingController::class, 'issueOrder']);
+            Route::post('/orders/{order}/cancel', [PurchasingController::class, 'cancelOrder']);
+            Route::post('/orders/{order}/invoices', [PurchasingController::class, 'storeInvoice']);
+            Route::delete('/invoices/{invoice}', [PurchasingController::class, 'destroyInvoice']);
+            Route::post('/invoices/{invoice}/payments', [PurchasingController::class, 'payInvoice']);
         });
     });
 

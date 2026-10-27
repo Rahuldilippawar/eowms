@@ -4,13 +4,64 @@ import { useEffect, useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { Select } from '@/components/ui/Select'
 import { Spinner } from '@/components/ui/Spinner'
 import { useToast } from '@/components/ui/Toast'
 import { useAuth } from '@/features/auth/AuthProvider'
 import { actionErrorMessage } from '@/lib/forms'
-import { deleteWorkPhoto, searchColleagues, uploadWorkPhoto, workPhotoUrl, type Colleague, type PhotoKind, type WorkEntry } from './api'
+import { deleteWorkPhoto, fetchMaterialOptions, searchColleagues, uploadWorkPhoto, workPhotoUrl, type Colleague, type PhotoKind, type WorkEntry } from './api'
 
 const MAX_TEAM = 20
+const MAX_MATERIALS = 20
+
+export interface MaterialRow {
+  item_id: string
+  quantity: string
+}
+
+/** Store material used in the work (item and quantity per row). */
+export function MaterialsPicker({ value, onChange, error }: { value: MaterialRow[]; onChange: (rows: MaterialRow[]) => void; error?: string }) {
+  const { t } = useTranslation()
+  const { user } = useAuth()
+  // Loaded once the first row is added: most entries name no material.
+  const options = useQuery({ queryKey: ['work-material-options', user?.current_organization?.id], queryFn: fetchMaterialOptions, enabled: value.length > 0 })
+  const set = (i: number, patch: Partial<MaterialRow>) => onChange(value.map((r, j) => (j === i ? { ...r, ...patch } : r)))
+  return (
+    <fieldset className="space-y-2">
+      <legend className="text-sm font-medium">{t('work.materialsUsed')}</legend>
+      {value.map((r, i) => {
+        const unit = options.data?.find((o) => String(o.id) === r.item_id)?.unit
+        return (
+          <div key={i} className="flex flex-wrap items-center gap-2">
+            <Select aria-label={t('work.materialItem', { n: i + 1 })} className="min-w-48 flex-1" value={r.item_id} onChange={(e) => set(i, { item_id: e.target.value })}>
+              <option value="">—</option>
+              {(options.data ?? []).map((o) => (
+                <option key={o.id} value={o.id} disabled={value.some((x, j) => j !== i && x.item_id === String(o.id))}>
+                  {o.item_name}
+                </option>
+              ))}
+            </Select>
+            <Input aria-label={t('work.materialQuantity', { n: i + 1 })} className="w-28" type="number" inputMode="decimal" min={0} step="0.01" value={r.quantity} onChange={(e) => set(i, { quantity: e.target.value })} />
+            <span className="w-12 text-sm text-slate-500">{unit ?? ''}</span>
+            <Button type="button" variant="ghost" aria-label={t('work.removeMaterial', { n: i + 1 })} onClick={() => onChange(value.filter((_, j) => j !== i))}>
+              <X aria-hidden className="size-4" />
+            </Button>
+          </div>
+        )
+      })}
+      {error ? (
+        <p role="alert" className="text-sm text-red-600">
+          {error}
+        </p>
+      ) : null}
+      {value.length < MAX_MATERIALS ? (
+        <Button type="button" variant="secondary" onClick={() => onChange([...value, { item_id: '', quantity: '' }])}>
+          {t('work.addMaterial')}
+        </Button>
+      ) : null}
+    </fieldset>
+  )
+}
 
 /** Colleagues who did the work together with the employee (searched by name or code). */
 export function TeamPicker({ value, onChange, error }: { value: Colleague[]; onChange: (team: Colleague[]) => void; error?: string }) {

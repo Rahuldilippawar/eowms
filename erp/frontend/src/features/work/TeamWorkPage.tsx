@@ -103,6 +103,11 @@ export function TeamWorkPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">{t('nav.teamWork')}</h1>
         <div className="flex flex-wrap items-center gap-4">
+          {!user?.disabled_modules?.includes('store') ? (
+            <Link to="/work/materials" className="text-sm font-medium text-brand-700 hover:underline">
+              {t('work.materialUsage')}
+            </Link>
+          ) : null}
           {can('daily_work.import') ? (
             <Link to="/work/import" className="inline-flex items-center gap-2 text-sm font-medium text-brand-700 hover:underline">
               <Upload aria-hidden className="size-4" />
