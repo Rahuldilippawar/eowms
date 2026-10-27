@@ -357,3 +357,24 @@ Rules: [`STORE.md`](STORE.md), [`PURCHASING.md`](PURCHASING.md). Under the `stor
 | GET | `/me/work/materials` | signed in (with an employee record) | Active store items for a work entry; entries take `materials[{item_id, quantity}]` |
 | GET | `/work/materials?from&to&department_id` | `daily_work.view` | Material usage report: `totals` and `rows` |
 
+## Phase 9b — dead stock and the issue register
+
+Rules: [`ASSETS.md`](ASSETS.md). Under the `assets` module switch. "org-wide" = the permission held with organization scope.
+
+| Method | Path | Permission | Notes |
+|---|---|---|---|
+| GET | `/assets/masters[?inactive]` | `assets.view` | The item list; `meta.can_manage` |
+| POST / PUT | `/assets/masters[/{id}]` | `assets.manage` org-wide | `item_name, category?, default_unit?, is_active?` |
+| GET / POST | `/assets/masters/import/template`, `/import/preview`, `/import` | `assets.manage` org-wide | CSV; all rows or none |
+| GET | `/assets/dead-stock[?department_id&category&condition&search&page&format=csv]` | `assets.view` scope (+ export for CSV) | Register |
+| POST / PUT / DELETE | `/assets/dead-stock[/{id}]` | `assets.manage` scope | `department_id, item_master_id, quantity, unit?, purchase_date?, purchase_cost? (required for a new purchase), is_new_purchase, condition, location?, remarks?` |
+| GET | `/assets/dead-stock/report` | `assets.view` scope | By department, category, condition; total value |
+| GET / POST / PUT | `/assets/allocation-types[/{id}]` | view / manage, org-wide | `name, is_loan, fields[{label, type (text\|number\|date\|dropdown\|yesno), options?, required?, key?}], is_active?` |
+| GET / POST | `/assets/allocation-items[?type_id&free]`, `/assets/allocation-items/{id}/retire` | view / manage, org-wide | `type_id, name, default_location?`; items show who holds them |
+| GET | `/assets/allocations[?view=current\|loans\|overdue\|history&type_id&user_id&search&page&format=csv]` | `assets.view` org-wide | `meta.overdue` |
+| POST | `/assets/allocations` | `assets.manage` org-wide | `item_id, user_id, purpose?, allocated_at?, due_at?, custom{key: value}` |
+| POST | `/assets/allocations/{id}/return`, `/transfer` | `assets.manage` org-wide | `reason?` / `user_id, reason?` |
+| GET | `/assets/allocations/report` | `assets.view` org-wide | Held, late, free items, by type, by holder |
+| GET / POST | `/assets/allocations/import/template`, `/import/preview`, `/import` | `assets.manage` org-wide | CSV `type_name, item_name, default_location, is_loan` |
+| GET | `/my/assets` | signed in | What the caller holds and returned |
+

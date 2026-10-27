@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\AllocationController;
 use App\Http\Controllers\Api\V1\AttendanceController;
 use App\Http\Controllers\Api\V1\AttendanceReportController;
 use App\Http\Controllers\Api\V1\AttendanceSettingsController;
@@ -7,6 +8,7 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BiometricDeviceController;
 use App\Http\Controllers\Api\V1\CustomFieldController;
 use App\Http\Controllers\Api\V1\DashboardController;
+use App\Http\Controllers\Api\V1\DeadStockController;
 use App\Http\Controllers\Api\V1\DepartmentController;
 use App\Http\Controllers\Api\V1\EmployeeController;
 use App\Http\Controllers\Api\V1\EmployeeProfileController;
@@ -381,6 +383,40 @@ Route::middleware(['auth:sanctum', SetAccessContext::class, EnsurePasswordChange
             Route::post('/orders/{order}/invoices', [PurchasingController::class, 'storeInvoice']);
             Route::delete('/invoices/{invoice}', [PurchasingController::class, 'destroyInvoice']);
             Route::post('/invoices/{invoice}/payments', [PurchasingController::class, 'payInvoice']);
+        });
+    });
+
+    // Dead stock and the issue / return register (Phase 9b).
+    Route::middleware('module:assets')->group(function () {
+        Route::get('/my/assets', [AllocationController::class, 'mine']);
+        Route::middleware('permission:assets.view')->prefix('assets')->group(function () {
+            Route::get('/masters', [DeadStockController::class, 'masters']);
+            Route::get('/dead-stock', [DeadStockController::class, 'index']);
+            Route::get('/dead-stock/report', [DeadStockController::class, 'report']);
+            Route::get('/allocation-types', [AllocationController::class, 'types']);
+            Route::get('/allocation-items', [AllocationController::class, 'items']);
+            Route::get('/allocations', [AllocationController::class, 'index']);
+            Route::get('/allocations/report', [AllocationController::class, 'report']);
+        });
+        Route::middleware('permission:assets.manage')->prefix('assets')->group(function () {
+            Route::post('/masters', [DeadStockController::class, 'storeMaster']);
+            Route::put('/masters/{master}', [DeadStockController::class, 'updateMaster']);
+            Route::get('/masters/import/template', [DeadStockController::class, 'masterTemplate']);
+            Route::post('/masters/import/preview', [DeadStockController::class, 'masterPreview']);
+            Route::post('/masters/import', [DeadStockController::class, 'masterImport']);
+            Route::post('/dead-stock', [DeadStockController::class, 'store']);
+            Route::put('/dead-stock/{item}', [DeadStockController::class, 'update']);
+            Route::delete('/dead-stock/{item}', [DeadStockController::class, 'destroy']);
+            Route::post('/allocation-types', [AllocationController::class, 'storeType']);
+            Route::put('/allocation-types/{type}', [AllocationController::class, 'updateType']);
+            Route::post('/allocation-items', [AllocationController::class, 'storeItem']);
+            Route::post('/allocation-items/{item}/retire', [AllocationController::class, 'retireItem']);
+            Route::post('/allocations', [AllocationController::class, 'allocate']);
+            Route::post('/allocations/{allocation}/return', [AllocationController::class, 'giveBack']);
+            Route::post('/allocations/{allocation}/transfer', [AllocationController::class, 'transfer']);
+            Route::get('/allocations/import/template', [AllocationController::class, 'importTemplate']);
+            Route::post('/allocations/import/preview', [AllocationController::class, 'importPreview']);
+            Route::post('/allocations/import', [AllocationController::class, 'import']);
         });
     });
 

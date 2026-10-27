@@ -1,4 +1,4 @@
-import { Boxes, PackageCheck, BarChart3, BedDouble, DoorOpen, House, Bus, Hammer, MessageSquareWarning, FilePenLine, PieChart, Wrench, CalendarHeart, Fingerprint, IndianRupee, Scale, SlidersHorizontal, UserRound, Building, ClipboardPen, Mail, RefreshCw, ShoppingCart, Wallet, ListChecks, NotebookPen, Building2, CalendarClock, CalendarDays, ClipboardCheck, ClipboardList, GraduationCap, IdCard, KeyRound, LayoutDashboard, Network, Plane, Settings, Users, type LucideIcon } from 'lucide-react'
+import { Archive, Laptop, Boxes, PackageCheck, BarChart3, BedDouble, DoorOpen, House, Bus, Hammer, MessageSquareWarning, FilePenLine, PieChart, Wrench, CalendarHeart, Fingerprint, IndianRupee, Scale, SlidersHorizontal, UserRound, Building, ClipboardPen, Mail, RefreshCw, ShoppingCart, Wallet, ListChecks, NotebookPen, Building2, CalendarClock, CalendarDays, ClipboardCheck, ClipboardList, GraduationCap, IdCard, KeyRound, LayoutDashboard, Network, Plane, Settings, Users, type LucideIcon } from 'lucide-react'
 
 export interface NavItem {
   to: string
@@ -32,6 +32,7 @@ export const NAVIGATION: NavSection[] = [
       { to: '/letters', labelKey: 'nav.letters', icon: Mail, module: 'letters' },
       { to: '/requests', labelKey: 'nav.requests', icon: Wrench, module: 'requests' },
       { to: '/grievances', labelKey: 'nav.grievances', icon: MessageSquareWarning, module: 'grievances' },
+      { to: '/my/assets', labelKey: 'nav.myAssets', icon: Laptop, module: 'assets' },
       { to: '/my/residency', labelKey: 'nav.myResidency', icon: DoorOpen, module: 'residency' },
       // Reporting officers approve without holding leave.approve, so this entry is shown to everyone.
       { to: '/approvals', labelKey: 'nav.approvals', icon: ClipboardCheck },
@@ -58,6 +59,8 @@ export const NAVIGATION: NavSection[] = [
       { to: '/finance/budgets', labelKey: 'nav.budgets', icon: Wallet, permission: 'finance.view', module: 'finance' },
       { to: '/finance/purchases', labelKey: 'nav.purchases', icon: ShoppingCart, permission: 'finance.view', module: 'finance' },
       { to: '/purchasing/orders', labelKey: 'nav.purchasing', icon: PackageCheck, permission: 'purchasing.view', module: 'purchasing' },
+      { to: '/assets/dead-stock', labelKey: 'nav.deadStock', icon: Archive, permission: 'assets.view', module: 'assets' },
+      { to: '/assets/allocations', labelKey: 'nav.allocations', icon: KeyRound, permission: 'assets.view', module: 'assets' },
       { to: '/store', labelKey: 'nav.store', icon: Boxes, permission: 'store.view', module: 'store' },
       { to: '/renewals', labelKey: 'nav.renewals', icon: RefreshCw, permission: 'renewals.view', module: 'renewals' },
     ],

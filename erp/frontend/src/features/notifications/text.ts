@@ -1,5 +1,5 @@
 import type { TFunction } from 'i18next'
-import { formatDate } from '@/lib/format'
+import { formatDate, formatTime } from '@/lib/format'
 import type { AppNotification } from './api'
 
 /** Notification text is rendered here, in the reader's language, from the stored type + data. */
@@ -12,7 +12,10 @@ export function notificationText(n: AppNotification, t: TFunction): string {
     if (params.date) params.date = formatDate(params.date)
     if (params.sessions) params.sessions = params.sessions.split(',').map((s) => t(`hostels.session.${s}`)).join(', ')
   }
+  // Return times of borrowed items are stored as ISO date-times.
+  if (n.type.startsWith('assets.') && params.due) params.due = `${formatDate(params.due.slice(0, 10))} ${formatTime(params.due)}`
   let key = n.type.replace('.', '_')
+  if (n.type === 'assets.allocated' && params.due) key += '_due'
   if ((n.type === 'leave.decided' || n.type === 'correction.decided') && params.status) key += `_${params.status}`
   // Request and grievance statuses are stored as keys; show them in the reader's language.
   if ((key === 'request_status' || key === 'grievance_status') && params.status) params.status = t(`${key === 'request_status' ? 'requests' : 'grievances'}.status.${params.status}`)
