@@ -5,6 +5,7 @@ namespace App\Http\Resources;
 use App\Models\Hostel;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Services\AttendanceRules;
 use App\Support\Access\AccessContext;
 use App\Support\Access\Modules;
 use Illuminate\Http\Request;
@@ -38,6 +39,8 @@ class CurrentUserResource extends JsonResource
                 'id' => $context->organization()->id,
                 'name' => $context->organization()->name,
                 'short_name' => $context->organization()->short_name,
+                // "Today" for dates on screen is the organization's day, not the browser's.
+                'timezone' => AttendanceRules::for($context->organization())->timezone,
             ] : null),
             'organizations' => $this->when($isCurrentUser, fn () => AccessContext::organizationsFor($this->resource)
                 ->map(fn ($o) => ['id' => $o->id, 'name' => $o->name, 'short_name' => $o->short_name])->values()),

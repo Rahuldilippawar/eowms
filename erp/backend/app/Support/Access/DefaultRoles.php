@@ -30,7 +30,7 @@ final class DefaultRoles
                 'finance.view', 'finance.manage', 'finance.export', 'renewals.view', 'renewals.manage', 'renewals.export',
                 'vehicles.view', 'vehicles.log', 'vehicles.manage', 'vehicles.export', 'maintenance.view', 'maintenance.log', 'maintenance.manage', 'maintenance.export',
                 'requests.view', 'requests.manage', 'requests.export', 'grievances.manage',
-                'hostels.view', 'hostels.care', 'hostels.manage', 'hostels.export',
+                'hostels.view', 'hostels.care', 'hostels.manage', 'hostels.export', 'residency.view',
             ]],
             'hod' => ['name' => 'Head of Department', 'scope' => PermissionScope::Departments, 'permissions' => [
                 ...$structureRead, 'users.view', 'employees.view', 'students.view',

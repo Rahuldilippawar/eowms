@@ -20,6 +20,7 @@ use App\Models\LetterCategory;
 use App\Models\MaintenanceLocation;
 use App\Models\Organization;
 use App\Models\RenewalItem;
+use App\Models\ResidencyOccupant;
 use App\Models\Role;
 use App\Models\RoleAssignment;
 use App\Models\Student;
@@ -128,6 +129,21 @@ class DatabaseSeeder extends Seeder
                 'institution_id' => $college->id, 'building_id' => $main->id, 'name' => $name, 'floor' => $floor,
             ]);
         }
+
+        // Staff quarters: the teacher lives in Q-101 with family; Q-102 is free.
+        $quarters = Building::firstOrCreate(['organization_id' => $trust->id, 'name' => 'Staff Quarters A'], ['institution_id' => $college->id]);
+        $q101 = MaintenanceLocation::firstOrCreate(['organization_id' => $trust->id, 'location_code' => 'SQ-101'], [
+            'institution_id' => $college->id, 'building_id' => $quarters->id, 'name' => 'Q-101', 'capacity' => 4, 'is_residential' => true,
+        ]);
+        MaintenanceLocation::firstOrCreate(['organization_id' => $trust->id, 'location_code' => 'SQ-102'], [
+            'institution_id' => $college->id, 'building_id' => $quarters->id, 'name' => 'Q-102', 'capacity' => 4, 'is_residential' => true,
+        ]);
+        $home = ResidencyOccupant::firstOrCreate(['organization_id' => $trust->id, 'user_id' => $teacher->id, 'status' => 'active'], [
+            'location_id' => $q101->id, 'occupant_type' => 'staff', 'name' => 'Physics Teacher', 'moved_in_date' => '2026-06-01',
+        ]);
+        ResidencyOccupant::firstOrCreate(['organization_id' => $trust->id, 'family_of_id' => $home->id, 'name' => 'Asha'], [
+            'location_id' => $q101->id, 'occupant_type' => 'family', 'relation' => 'Mother', 'age' => 62, 'moved_in_date' => '2026-06-01', 'status' => 'active',
+        ]);
 
         // A boys' hostel looked after by the warden, with two rooms and two residents.
         $hostel = Hostel::firstOrCreate(['organization_id' => $trust->id, 'name' => 'Boys Hostel A'], ['department_id' => $hostelDept->id, 'gender' => 'boys', 'capacity' => 8, 'created_by' => $admin->id]);

@@ -27,6 +27,7 @@ use App\Http\Controllers\Api\V1\LetterSettingsController;
 use App\Http\Controllers\Api\V1\MaintenanceController;
 use App\Http\Controllers\Api\V1\MaterialPurchaseController;
 use App\Http\Controllers\Api\V1\MeController;
+use App\Http\Controllers\Api\V1\MyResidencyController;
 use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\OrganizationController;
 use App\Http\Controllers\Api\V1\OrganizationModulesController;
@@ -37,6 +38,8 @@ use App\Http\Controllers\Api\V1\PublicRequestController;
 use App\Http\Controllers\Api\V1\PublicSignatureController;
 use App\Http\Controllers\Api\V1\PublicVerifyController;
 use App\Http\Controllers\Api\V1\RenewalController;
+use App\Http\Controllers\Api\V1\ResidencyController;
+use App\Http\Controllers\Api\V1\ResidencyImportController;
 use App\Http\Controllers\Api\V1\RoleController;
 use App\Http\Controllers\Api\V1\StudentController;
 use App\Http\Controllers\Api\V1\TaskController;
@@ -302,6 +305,41 @@ Route::middleware(['auth:sanctum', SetAccessContext::class, EnsurePasswordChange
         Route::post('/hostel-fees/{fee}/payments', [HostelResidentController::class, 'payFee']);
         Route::post('/hostel-residents/{resident}/depart', [HostelResidentController::class, 'depart']);
         Route::put('/hostel-residents/{resident}/alumnus', [HostelResidentController::class, 'updateAlumnus']);
+    });
+
+    // Staff housing (Phase 8d). Everyone sees their own; residency.view / manage the rest.
+    Route::middleware('module:residency')->group(function () {
+        Route::get('/my/residency', [MyResidencyController::class, 'show']);
+        Route::post('/my/residency/requests', [MyResidencyController::class, 'request']);
+        Route::post('/my/residency/requests/{allotment}/cancel', [MyResidencyController::class, 'cancel']);
+        Route::middleware('permission:residency.view')->prefix('residency')->group(function () {
+            Route::get('/rooms', [ResidencyController::class, 'rooms']);
+            Route::get('/rooms/{location}', [ResidencyController::class, 'room']);
+            Route::get('/requests', [ResidencyController::class, 'requests']);
+            Route::get('/bills', [ResidencyController::class, 'billsReport']);
+            Route::get('/directory', [ResidencyController::class, 'directory']);
+            Route::get('/analytics', [ResidencyController::class, 'analytics']);
+            Route::get('/unlinked', [ResidencyController::class, 'unlinked']);
+        });
+        Route::middleware('permission:residency.manage')->prefix('residency')->group(function () {
+            Route::post('/rooms/{location}/occupants', [ResidencyController::class, 'addOccupant']);
+            Route::post('/rooms/{location}/items', [ResidencyController::class, 'addItem']);
+            Route::delete('/items/{item}', [ResidencyController::class, 'removeItem']);
+            Route::post('/rooms/{location}/inspections', [ResidencyController::class, 'inspect']);
+            Route::post('/rooms/{location}/bills', [ResidencyController::class, 'createBill']);
+            Route::post('/bill-shares/{share}/paid', [ResidencyController::class, 'markPaid']);
+            Route::post('/rooms/{location}/guests', [ResidencyController::class, 'addGuest']);
+            Route::post('/guests/{guest}/left', [ResidencyController::class, 'guestLeft']);
+            Route::post('/occupants/{occupant}/vacate', [ResidencyController::class, 'vacate']);
+            Route::post('/occupants/{occupant}/transfer', [ResidencyController::class, 'transfer']);
+            Route::post('/occupants/{occupant}/link', [ResidencyController::class, 'link']);
+            Route::post('/requests/{allotment}/decide', [ResidencyController::class, 'decide']);
+            Route::get('/import/template', [ResidencyImportController::class, 'template']);
+            Route::post('/import/preview', [ResidencyImportController::class, 'preview']);
+            Route::post('/import', [ResidencyImportController::class, 'run']);
+            Route::get('/import/history', [ResidencyImportController::class, 'history']);
+            Route::post('/import/{batch}/rollback', [ResidencyImportController::class, 'rollback']);
+        });
     });
 
     // Correspondence (Phase 6).

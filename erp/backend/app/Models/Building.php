@@ -11,7 +11,7 @@ class Building extends Model
 {
     use BelongsToOrganization;
 
-    protected $fillable = ['organization_id', 'institution_id', 'name', 'created_by'];
+    protected $fillable = ['organization_id', 'institution_id', 'name', 'created_by', 'residency_import_batch_id'];
 
     public function institution(): BelongsTo
     {

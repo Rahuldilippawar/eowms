@@ -4,6 +4,8 @@ export interface OrganizationSummary {
   id: number
   name: string
   short_name: string | null
+  /** Only on the current organization: its time zone for "today". */
+  timezone?: string
 }
 
 export interface CurrentUser {

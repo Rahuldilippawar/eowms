@@ -16,3 +16,14 @@ export async function signIn(page: Page, email: string) {
   await page.getByRole('button', { name: 'Sign in' }).click()
   await expect(page.getByRole('heading', { name: /^Hello,/ })).toBeVisible()
 }
+
+/**
+ * "YYYY-MM-DD" in the seeded organizations' time zone (Asia/Kolkata), shifted by whole days and
+ * years. The server counts "days left" from that day, which differs from the browser's day for
+ * 5½ hours each night on a UTC runner.
+ */
+export function orgDate(days = 0, years = 0): string {
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
+  const [y, m, d] = today.split('-').map(Number)
+  return new Date(Date.UTC(y + years, m - 1, d + days)).toISOString().slice(0, 10)
+}
