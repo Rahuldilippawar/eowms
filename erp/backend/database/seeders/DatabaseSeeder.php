@@ -3,9 +3,14 @@
 namespace Database\Seeders;
 
 use App\Enums\InstitutionType;
+use App\Models\AllocationItem;
+use App\Models\AllocationType;
 use App\Models\ApprovalWorkflow;
+use App\Models\AssetAllocation;
+use App\Models\AssetItemMaster;
 use App\Models\Building;
 use App\Models\CustomField;
+use App\Models\DeadStockItem;
 use App\Models\Department;
 use App\Models\DepartmentBudget;
 use App\Models\Employee;
@@ -36,6 +41,7 @@ use App\Support\Access\PermissionCatalog;
 use App\Support\Numbering\NumberSequence;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
 class DatabaseSeeder extends Seeder
 {
@@ -157,6 +163,22 @@ class DatabaseSeeder extends Seeder
             }
         }
         Vendor::firstOrCreate(['organization_id' => $trust->id, 'name' => 'Shree Traders'], ['contact_person' => 'Mahesh Patil', 'phone' => '9822000011', 'gstin' => '27ABCDE1234F1Z5']);
+
+        // Assets: the item master, a cupboard in the maintenance register, a laptop with the teacher and a free lab key.
+        $cupboard = AssetItemMaster::firstOrCreate(['organization_id' => $trust->id, 'item_name' => 'Steel cupboard'], ['category' => 'Furniture', 'default_unit' => 'piece']);
+        AssetItemMaster::firstOrCreate(['organization_id' => $trust->id, 'item_name' => 'Projector'], ['category' => 'Electronics', 'default_unit' => 'piece']);
+        DeadStockItem::firstOrCreate(['organization_id' => $trust->id, 'item_code' => 'DS-MNT-0001'], [
+            'department_id' => $maintenance->id, 'item_master_id' => $cupboard->id, 'item_name' => 'Steel cupboard', 'category' => 'Furniture', 'quantity' => 2, 'unit' => 'piece',
+            'condition' => 'good', 'location' => 'Store room', 'added_by' => $admin->id,
+        ]);
+        DB::table('number_sequences')->insertOrIgnore(['organization_id' => $trust->id, 'key' => 'dead_stock', 'period' => 'MNT', 'last_value' => 1, 'created_at' => now(), 'updated_at' => now()]);
+        $laptops = AllocationType::firstOrCreate(['organization_id' => $trust->id, 'name' => 'Laptop'], ['is_loan' => false, 'fields' => [['key' => 'serial_no', 'label' => 'Serial no.', 'type' => 'text', 'options' => [], 'required' => true]]]);
+        $keys = AllocationType::firstOrCreate(['organization_id' => $trust->id, 'name' => 'Room keys'], ['is_loan' => true, 'fields' => []]);
+        $laptop = AllocationItem::firstOrCreate(['organization_id' => $trust->id, 'type_id' => $laptops->id, 'name' => 'Dell Latitude #12'], ['default_location' => 'Office']);
+        AllocationItem::firstOrCreate(['organization_id' => $trust->id, 'type_id' => $keys->id, 'name' => 'Lab 2 key'], ['default_location' => 'Security desk']);
+        AssetAllocation::firstOrCreate(['organization_id' => $trust->id, 'item_id' => $laptop->id, 'returned_at' => null], [
+            'type_id' => $laptops->id, 'user_id' => $teacher->id, 'custom' => ['serial_no' => 'DL-7781'], 'purpose' => 'Teaching', 'allocated_at' => '2026-06-01 10:00:00', 'allocated_by' => $admin->id,
+        ]);
 
         // A boys' hostel looked after by the warden, with two rooms and two residents.
         $hostel = Hostel::firstOrCreate(['organization_id' => $trust->id, 'name' => 'Boys Hostel A'], ['department_id' => $hostelDept->id, 'gender' => 'boys', 'capacity' => 8, 'created_by' => $admin->id]);

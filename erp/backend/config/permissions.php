@@ -32,5 +32,6 @@ return [
         'residency' => ['view', 'manage'],
         'store' => ['view', 'manage'],
         'purchasing' => ['view', 'manage'],
+        'assets' => ['view', 'manage', 'export'],
     ],
 ];
