@@ -31,7 +31,7 @@ final class DefaultRoles
                 'vehicles.view', 'vehicles.log', 'vehicles.manage', 'vehicles.export', 'maintenance.view', 'maintenance.log', 'maintenance.manage', 'maintenance.export',
                 'requests.view', 'requests.manage', 'requests.export', 'grievances.manage',
                 'hostels.view', 'hostels.care', 'hostels.manage', 'hostels.export', 'residency.view',
-                'store.view', 'purchasing.view', 'purchasing.manage', 'assets.view', 'assets.manage', 'assets.export',
+                'store.view', 'purchasing.view', 'purchasing.manage', 'assets.view', 'assets.manage', 'assets.export', 'it.view',
             ]],
             'hod' => ['name' => 'Head of Department', 'scope' => PermissionScope::Departments, 'permissions' => [
                 ...$structureRead, 'users.view', 'employees.view', 'students.view',

@@ -21,6 +21,8 @@ use App\Models\HostelResident;
 use App\Models\HostelRoom;
 use App\Models\HostelStaff;
 use App\Models\Institution;
+use App\Models\ItAsset;
+use App\Models\ItLab;
 use App\Models\LetterCategory;
 use App\Models\MaintenanceLocation;
 use App\Models\Organization;
@@ -179,6 +181,17 @@ class DatabaseSeeder extends Seeder
         AssetAllocation::firstOrCreate(['organization_id' => $trust->id, 'item_id' => $laptop->id, 'returned_at' => null], [
             'type_id' => $laptops->id, 'user_id' => $teacher->id, 'custom' => ['serial_no' => 'DL-7781'], 'purpose' => 'Teaching', 'allocated_at' => '2026-06-01 10:00:00', 'allocated_by' => $admin->id,
         ]);
+
+        // IT: a computer lab looked after by the teacher, with a PC, its monitor and a smart board.
+        $lab = ItLab::firstOrCreate(['organization_id' => $trust->id, 'name' => 'Computer Lab 1'], ['location' => 'Ground floor', 'capacity' => 40, 'assistant_user_id' => $teacher->id]);
+        foreach ([['PC-26-0001', 'cpu', 'PC-01', 'Dell', 'OptiPlex 3090'], ['MON-26-0001', 'monitor', 'PC-01', 'Dell', 'E2222H'], ['SB-26-0001', 'smartboard', null, 'Promethean', 'ActivPanel']] as [$tag, $type, $ws, $brand, $model]) {
+            ItAsset::firstOrCreate(['organization_id' => $trust->id, 'asset_tag' => $tag], [
+                'lab_id' => $lab->id, 'asset_type' => $type, 'workstation_no' => $ws, 'brand' => $brand, 'model' => $model, 'purchase_date' => '2026-01-15', 'added_by' => $admin->id,
+            ]);
+        }
+        foreach (['PC' => 1, 'MON' => 1, 'SB' => 1] as $prefix => $last) {
+            DB::table('number_sequences')->insertOrIgnore(['organization_id' => $trust->id, 'key' => "it_asset:{$prefix}", 'period' => '26', 'last_value' => $last, 'created_at' => now(), 'updated_at' => now()]);
+        }
 
         // A boys' hostel looked after by the warden, with two rooms and two residents.
         $hostel = Hostel::firstOrCreate(['organization_id' => $trust->id, 'name' => 'Boys Hostel A'], ['department_id' => $hostelDept->id, 'gender' => 'boys', 'capacity' => 8, 'created_by' => $admin->id]);

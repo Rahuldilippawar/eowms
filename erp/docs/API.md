@@ -378,3 +378,22 @@ Rules: [`ASSETS.md`](ASSETS.md). Under the `assets` module switch. "org-wide" = 
 | GET / POST | `/assets/allocations/import/template`, `/import/preview`, `/import` | `assets.manage` org-wide | CSV `type_name, item_name, default_location, is_loan` |
 | GET | `/my/assets` | signed in | What the caller holds and returned |
 
+## Phase 9c — IT department
+
+Rules: [`IT.md`](IT.md). Under the `it` module switch. "seen" = `it.view`, `it.manage` or the lab's assistant (their labs only).
+
+| Method | Path | Permission | Notes |
+|---|---|---|---|
+| GET | `/it/lookup?tag` | signed in | An asset by its tag (to report a problem) |
+| POST | `/it/assets/{id}/report` | signed in | `issue_description` (5+ characters) |
+| GET | `/my/it-tickets` | signed in | Problems the caller reported |
+| GET | `/it/dashboard`, `/it/labs`, `/it/smartboards` | seen | Overview with labs, counts and warranties ending in 30 days |
+| POST / PUT | `/it/labs[/{id}]` | `it.manage` | `name, location?, capacity?, department_id?, assistant_user_id?, is_active?` |
+| GET | `/it/assets[?lab_id&asset_type&status&search&page&format=csv]`, `/it/assets/{id}` | seen | Detail with problems and moves |
+| POST / PUT | `/it/assets[/{id}]` | `it.manage` or the lab's assistant | `lab_id, asset_type` (create), `workstation_no?, brand?, model?, serial_no?, purchase_date?, purchase_cost?, warranty_expiry?, os_license?, license_expiry?, remarks?` |
+| POST | `/it/assets/{id}/status` | `it.manage` or the lab's assistant | `status?, power_status? (on\|off)` |
+| POST | `/it/assets/{id}/transfer` | `it.manage` | `to_lab_id, remarks?` |
+| GET | `/it/tickets[?status=open\|pending\|in_progress\|resolved\|all]` | seen | |
+| POST | `/it/tickets/{id}/start`, `/it/tickets/{id}/resolve` | `it.manage` | resolve: `resolution_notes` |
+| GET / POST | `/it/import/template`, `/it/import/preview`, `/it/import` | `it.manage` | CSV; missing labs created; all rows or none |
+

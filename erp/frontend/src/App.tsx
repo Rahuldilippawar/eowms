@@ -50,6 +50,13 @@ import { VehicleDetailPage } from '@/features/vehicles/VehicleDetailPage'
 import { VehicleImportPage } from '@/features/vehicles/VehicleImportPage'
 import { VehicleReportPage } from '@/features/vehicles/VehicleReportPage'
 import { VehiclesPage } from '@/features/vehicles/VehiclesPage'
+import { ItAssetPage } from '@/features/it/ItAssetPage'
+import { ItAssetsPage } from '@/features/it/ItAssetsPage'
+import { ItDashboardPage } from '@/features/it/ItDashboardPage'
+import { ItImportPage } from '@/features/it/ItImportPage'
+import { ItTicketsPage } from '@/features/it/ItTicketsPage'
+import { ReportProblemPage } from '@/features/it/ReportProblemPage'
+import { SmartboardsPage } from '@/features/it/SmartboardsPage'
 import { AllocationImportPage, AllocationSetupPage } from '@/features/assets/AllocationSetupPage'
 import { AllocationReportPage } from '@/features/assets/AllocationReportPage'
 import { AllocationsPage } from '@/features/assets/AllocationsPage'
@@ -160,6 +167,14 @@ export function AppRoutes() {
           <Route path="residency/directory" element={guard('residency.view', <ResidencyDirectoryPage />)} />
           <Route path="residency/analytics" element={guard('residency.view', <ResidencyAnalyticsPage />)} />
           <Route path="residency/import" element={guard('residency.manage', <ResidencyImportPage />)} />
+          <Route path="it/report" element={<ReportProblemPage />} />
+          {/* Lab assistants reach their own labs without it.view; the API decides. */}
+          <Route path="it" element={<ItDashboardPage />} />
+          <Route path="it/assets" element={<ItAssetsPage />} />
+          <Route path="it/assets/:id" element={<ItAssetPage />} />
+          <Route path="it/tickets" element={<ItTicketsPage />} />
+          <Route path="it/smartboards" element={<SmartboardsPage />} />
+          <Route path="it/import" element={guard('it.manage', <ItImportPage />)} />
           <Route path="my/assets" element={<MyAssetsPage />} />
           <Route path="assets/dead-stock" element={guard('assets.view', <DeadStockPage />)} />
           <Route path="assets/dead-stock/report" element={guard('assets.view', <DeadStockReportPage />)} />

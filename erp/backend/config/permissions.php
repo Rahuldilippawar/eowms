@@ -33,5 +33,6 @@ return [
         'store' => ['view', 'manage'],
         'purchasing' => ['view', 'manage'],
         'assets' => ['view', 'manage', 'export'],
+        'it' => ['view', 'manage'],
     ],
 ];

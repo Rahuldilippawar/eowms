@@ -106,7 +106,7 @@ Legend: ✅ in the ERP · 🟡 partly (gaps listed) · ⏳ scheduled (phase) · 
 |---|---|---|
 | Store items + stock ledger, vendor, quotation → PO → GRN → invoice (MVP prompt) | ✅ 9a | Goods received add stock; invoices are charged to the department budget and paid like Phase 7a purchases |
 | Dead stock register + item master + import; asset allocation (issue / return register, types, custom fields, import, report) | ✅ 9b | A new purchase is charged to the department budget; late borrowed items are reminded daily; the issue register needs organization-wide permission |
-| IT department (labs, assets, transfers, repair tickets, general requests, smart board report, import, dashboard) | ⏳ 9c | |
+| IT department (labs, assets, transfers, repair tickets, general requests, smart board report, import, dashboard) | ✅ 9c | General IT requests are work requests with the IT category (8b), as in the old app; lab assistants keep their own labs without IT permissions |
 | CCTV (DVRs, cameras, status, checkups, import, report) | ⏳ 9d | |
 
 ## Reports, search, audit, backup (⏳ 10)

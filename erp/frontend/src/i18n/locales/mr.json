@@ -119,7 +119,9 @@
     "assets": "मालमत्ता",
     "deadStock": "डेड स्टॉक",
     "allocations": "वस्तू वाटप नोंद",
-    "myAssets": "माझ्याकडील वस्तू"
+    "myAssets": "माझ्याकडील वस्तू",
+    "it": "IT विभाग",
+    "reportIt": "संगणक तक्रार"
   },
   "dashboard": {
     "welcome": "नमस्कार, {{name}}",
@@ -292,7 +294,8 @@
     "residency": "कर्मचारी निवास",
     "store": "भांडार",
     "purchasing": "खरेदी",
-    "assets": "डेड स्टॉक व वस्तू वाटप"
+    "assets": "डेड स्टॉक व वस्तू वाटप",
+    "it": "IT विभाग"
   },
   "attendance": {
     "notMarked": "नोंद नाही",
@@ -624,7 +627,9 @@
       "assets_allocated": "{{item}} तुम्हाला दिली.",
       "assets_allocated_due": "{{item}} तुम्हाला दिली — {{due}} पर्यंत परत करा.",
       "assets_overdue": "{{item}} {{due}} ला परत करायची होती.",
-      "assets_overdue_given": "{{name}} यांना दिलेली {{item}} {{due}} ला परत यायची होती."
+      "assets_overdue_given": "{{name}} यांना दिलेली {{item}} {{due}} ला परत यायची होती.",
+      "it_ticket_new": "{{tag}} ({{lab}}) मध्ये बिघाड: {{issue}}",
+      "it_ticket_resolved": "तुम्ही नोंदवलेली {{tag}} ची तक्रार सोडवली."
     }
   },
   "work": {
@@ -1132,7 +1137,9 @@
     "purchasing.manage": "दरपत्रके, ऑर्डर, बिले व देयके",
     "assets.view": "डेड स्टॉक व वाटप नोंद पाहणे",
     "assets.manage": "डेड स्टॉक नोंदवणे; वस्तू देणे व परत घेणे",
-    "assets.export": "डेड स्टॉक व वाटप CSV"
+    "assets.export": "डेड स्टॉक व वाटप CSV",
+    "it.view": "IT labs, साहित्य व तक्रारी पाहणे",
+    "it.manage": "IT labs चालवणे: साहित्य, हस्तांतर, तक्रारी सोडवणे, आयात"
   },
   "letters": {
     "new": "नवीन फाईल",
@@ -2335,5 +2342,125 @@
     "itemsImported_one": "{{count}} वस्तू जोडली.",
     "itemsImported_other": "{{count}} वस्तू जोडल्या.",
     "importNote": "नसलेले प्रकार तयार होतात; is_loan (yes / no) नवीन प्रकाराला लागू होते."
+  },
+  "it": {
+    "tabs": {
+      "dashboard": "आढावा",
+      "assets": "साहित्य",
+      "tickets": "तक्रारी",
+      "smartboards": "Smart boards"
+    },
+    "type": {
+      "computer": "संगणक",
+      "monitor": "Monitor",
+      "keyboard": "Keyboard",
+      "mouse": "Mouse",
+      "cpu": "CPU",
+      "ups": "UPS",
+      "smartboard": "Smart board",
+      "projector": "Projector",
+      "printer": "Printer",
+      "other": "इतर"
+    },
+    "status": {
+      "working": "चालू",
+      "faulty": "बिघडलेले",
+      "under_repair": "दुरुस्तीत",
+      "scrapped": "भंगारात"
+    },
+    "power": {
+      "on": "चालू (power on)",
+      "off": "बंद (power off)"
+    },
+    "ticketStatus": {
+      "pending": "प्रलंबित",
+      "in_progress": "काम सुरू",
+      "resolved": "सोडवली"
+    },
+    "ticketFilter": {
+      "open": "अजून न सोडवलेल्या",
+      "pending": "प्रलंबित",
+      "in_progress": "काम सुरू",
+      "resolved": "सोडवलेल्या",
+      "all": "सर्व"
+    },
+    "field": {
+      "workstation_no": "Workstation",
+      "brand": "Brand",
+      "model": "Model",
+      "serial_no": "Serial no.",
+      "os_license": "OS / licence",
+      "remarks": "शेरा",
+      "purchase_date": "खरेदी दिनांक",
+      "warranty_expiry": "Warranty पर्यंत",
+      "license_expiry": "Licence पर्यंत",
+      "purchase_cost": "किंमत (₹)"
+    },
+    "import": "साहित्य आयात",
+    "newLab": "नवीन lab",
+    "editLab": "lab बदला",
+    "labName": "Lab चे नाव",
+    "location": "ठिकाण",
+    "capacity": "जागा",
+    "department": "विभाग",
+    "assistant": "Lab assistant",
+    "assistantName": "assistant: {{name}}",
+    "openTickets": "न सोडवलेल्या तक्रारी",
+    "smartboardLine": "Smart boards: {{total}} · {{on}} आता चालू · {{faulty}} मध्ये बिघाड",
+    "labs": "Labs",
+    "labCounts": "{{total}} साहित्य · {{working}} चालू",
+    "withProblems_one": "{{count}} मध्ये बिघाड",
+    "withProblems_other": "{{count}} मध्ये बिघाड",
+    "expiringSoon": "30 दिवसांत संपणारी warranty किंवा licence",
+    "warrantyUntil": "{{date}} पर्यंत warranty",
+    "licenseUntil": "{{date}} पर्यंत licence",
+    "assetsTitle": "IT साहित्य",
+    "newAsset": "नवीन साहित्य",
+    "editAsset": "{{tag}} बदला",
+    "assetAdded": "{{tag}} म्हणून जोडले.",
+    "lab": "Lab",
+    "allLabs": "सर्व labs",
+    "assetType": "प्रकार",
+    "allTypes": "सर्व प्रकार",
+    "statusLabel": "स्थिती",
+    "anyStatus": "कोणतीही स्थिती",
+    "searchHint": "Tag, serial, brand, workstation",
+    "noAssets": "साहित्य नाही.",
+    "tag": "Tag",
+    "openCount_one": "{{count}} तक्रार उघडी",
+    "openCount_other": "{{count}} तक्रारी उघड्या",
+    "changeStatus": "स्थिती",
+    "turnedOn": "चालू (on) नोंदवा",
+    "turnedOff": "बंद (off) नोंदवा",
+    "problems": "नोंदवलेल्या तक्रारी",
+    "noProblems": "तक्रार नाही.",
+    "moveToLab": "दुसऱ्या lab मध्ये हलवा",
+    "toLab": "कोणत्या lab मध्ये",
+    "move": "हलवा",
+    "moved": "{{lab}} मध्ये हलवले.",
+    "transferLine": "{{when}}: {{from}} → {{to}} ({{by}})",
+    "reportedBy": "{{name}} यांनी नोंदवली, {{when}}",
+    "fixed": "सोडवली: {{notes}} ({{name}})",
+    "startWork": "काम सुरू करा",
+    "markFixed": "सोडवली",
+    "whatWasDone": "{{tag}} वर काय केले",
+    "whatWasDoneHint": "काय केले",
+    "ticketsTitle": "संगणक तक्रारी",
+    "noTickets": "येथे तक्रारी नाहीत.",
+    "smartboardsTitle": "Smart boards",
+    "noSmartboards": "Smart boards नाहीत.",
+    "powerLabel": "Power",
+    "problemsCount": "तक्रारी",
+    "imported_one": "{{count}} साहित्य आयात झाले.",
+    "imported_other": "{{count}} साहित्य आयात झाले.",
+    "importNote": "नसलेल्या labs तयार होतात. प्रकार: computer, monitor, keyboard, mouse, cpu, ups, smartboard, projector, printer किंवा other. प्रत्येक साहित्याला tag मिळतो.",
+    "reportHint": "संगणक, monitor किंवा smart board वर छापलेला tag लिहा (उदा. PC-26-0001).",
+    "find": "शोधा",
+    "alreadyReported_one": "{{count}} तक्रार आधीच नोंदवली आहे व अजून सोडवली नाही.",
+    "alreadyReported_other": "{{count}} तक्रारी आधीच नोंदवल्या आहेत व अजून सोडवल्या नाहीत.",
+    "whatIsWrong": "काय बिघडले आहे?",
+    "sendReport": "IT ला पाठवा",
+    "reported": "IT विभागाकडे पाठवले.",
+    "myReports": "माझ्या तक्रारी"
   }
 }
