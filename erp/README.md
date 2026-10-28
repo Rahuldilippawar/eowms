@@ -208,7 +208,14 @@ Dev accounts (password `password`): `admin@example.com` (super admin), `orgadmin
   overview, the smart board report, CSV and import. Rules: [`docs/IT.md`](docs/IT.md).
 - Tests: 163 backend, 88 frontend, 71 end-to-end.
 
+### Phase 9d — done (CCTV; Phase 9 complete)
+- Recorders and cameras, the daily check of each recorder (storage, footage, backup and every
+  camera, with a reminder to the managers when cameras are down), the overview flagging recorders
+  not checked for two days, the weekly / monthly report, and the import.
+  Rules: [`docs/CCTV.md`](docs/CCTV.md).
+- Tests: 165 backend, 90 frontend, 73 end-to-end.
+
 ### Not yet (later phases)
-- The other business modules (Phases 9d–14, see
+- The other business modules (Phases 10–14, see
   [`../docs/erp/PARITY.md`](../docs/erp/PARITY.md)); email / push delivery of notifications.
 - Reports, deployment to Hostinger.

@@ -8,6 +8,7 @@ export function notificationText(n: AppNotification, t: TFunction): string {
   const params: Record<string, string> = {}
   for (const [k, v] of Object.entries(d)) params[k] = v === null || v === undefined ? '' : String(v)
   for (const k of ['due_date', 'start_date', 'end_date', 'work_date', 'expiry_date']) if (params[k]) params[k] = formatDate(params[k])
+  if (n.type === 'cctv.cameras_down' && params.date) params.date = formatDate(params.date)
   if (n.type === 'hostel.attendance_missing') {
     if (params.date) params.date = formatDate(params.date)
     if (params.sessions) params.sessions = params.sessions.split(',').map((s) => t(`hostels.session.${s}`)).join(', ')

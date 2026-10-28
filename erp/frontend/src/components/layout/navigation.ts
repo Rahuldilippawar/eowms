@@ -1,10 +1,10 @@
-import { Monitor, MonitorX, Archive, Laptop, Boxes, PackageCheck, BarChart3, BedDouble, DoorOpen, House, Bus, Hammer, MessageSquareWarning, FilePenLine, PieChart, Wrench, CalendarHeart, Fingerprint, IndianRupee, Scale, SlidersHorizontal, UserRound, Building, ClipboardPen, Mail, RefreshCw, ShoppingCart, Wallet, ListChecks, NotebookPen, Building2, CalendarClock, CalendarDays, ClipboardCheck, ClipboardList, GraduationCap, IdCard, KeyRound, LayoutDashboard, Network, Plane, Settings, Users, type LucideIcon } from 'lucide-react'
+import { Cctv, Monitor, MonitorX, Archive, Laptop, Boxes, PackageCheck, BarChart3, BedDouble, DoorOpen, House, Bus, Hammer, MessageSquareWarning, FilePenLine, PieChart, Wrench, CalendarHeart, Fingerprint, IndianRupee, Scale, SlidersHorizontal, UserRound, Building, ClipboardPen, Mail, RefreshCw, ShoppingCart, Wallet, ListChecks, NotebookPen, Building2, CalendarClock, CalendarDays, ClipboardCheck, ClipboardList, GraduationCap, IdCard, KeyRound, LayoutDashboard, Network, Plane, Settings, Users, type LucideIcon } from 'lucide-react'
 
 export interface NavItem {
   to: string
   labelKey: string
   icon: LucideIcon
-  /** Shown only when the user holds this permission (the API enforces it regardless). */
+  /** Shown only when the user holds this permission, or one of `a|b` (the API enforces it regardless). */
   permission?: string
   superAdminOnly?: boolean
   /** Hidden when the organization switched this module off. */
@@ -61,6 +61,7 @@ export const NAVIGATION: NavSection[] = [
       { to: '/finance/purchases', labelKey: 'nav.purchases', icon: ShoppingCart, permission: 'finance.view', module: 'finance' },
       { to: '/purchasing/orders', labelKey: 'nav.purchasing', icon: PackageCheck, permission: 'purchasing.view', module: 'purchasing' },
       { to: '/it', labelKey: 'nav.it', icon: Monitor, permission: 'it.view', module: 'it', orFlag: 'it_lab_assistant' },
+      { to: '/cctv', labelKey: 'nav.cctv', icon: Cctv, permission: 'cctv.view|cctv.check|cctv.manage', module: 'cctv' },
       { to: '/assets/dead-stock', labelKey: 'nav.deadStock', icon: Archive, permission: 'assets.view', module: 'assets' },
       { to: '/assets/allocations', labelKey: 'nav.allocations', icon: KeyRound, permission: 'assets.view', module: 'assets' },
       { to: '/store', labelKey: 'nav.store', icon: Boxes, permission: 'store.view', module: 'store' },

@@ -121,7 +121,8 @@
     "allocations": "वस्तू वाटप नोंद",
     "myAssets": "माझ्याकडील वस्तू",
     "it": "IT विभाग",
-    "reportIt": "संगणक तक्रार"
+    "reportIt": "संगणक तक्रार",
+    "cctv": "CCTV"
   },
   "dashboard": {
     "welcome": "नमस्कार, {{name}}",
@@ -295,7 +296,8 @@
     "store": "भांडार",
     "purchasing": "खरेदी",
     "assets": "डेड स्टॉक व वस्तू वाटप",
-    "it": "IT विभाग"
+    "it": "IT विभाग",
+    "cctv": "CCTV"
   },
   "attendance": {
     "notMarked": "नोंद नाही",
@@ -629,7 +631,8 @@
       "assets_overdue": "{{item}} {{due}} ला परत करायची होती.",
       "assets_overdue_given": "{{name}} यांना दिलेली {{item}} {{due}} ला परत यायची होती.",
       "it_ticket_new": "{{tag}} ({{lab}}) मध्ये बिघाड: {{issue}}",
-      "it_ticket_resolved": "तुम्ही नोंदवलेली {{tag}} ची तक्रार सोडवली."
+      "it_ticket_resolved": "तुम्ही नोंदवलेली {{tag}} ची तक्रार सोडवली.",
+      "cctv_cameras_down": "{{dvr}}: {{date}} ला {{count}} camera बंद."
     }
   },
   "work": {
@@ -1139,7 +1142,10 @@
     "assets.manage": "डेड स्टॉक नोंदवणे; वस्तू देणे व परत घेणे",
     "assets.export": "डेड स्टॉक व वाटप CSV",
     "it.view": "IT labs, साहित्य व तक्रारी पाहणे",
-    "it.manage": "IT labs चालवणे: साहित्य, हस्तांतर, तक्रारी सोडवणे, आयात"
+    "it.manage": "IT labs चालवणे: साहित्य, हस्तांतर, तक्रारी सोडवणे, आयात",
+    "cctv.view": "CCTV DVR व तपासण्या पाहणे",
+    "cctv.check": "रोजची CCTV तपासणी नोंदवणे",
+    "cctv.manage": "DVR, cameras व आयात"
   },
   "letters": {
     "new": "नवीन फाईल",
@@ -2462,5 +2468,85 @@
     "sendReport": "IT ला पाठवा",
     "reported": "IT विभागाकडे पाठवले.",
     "myReports": "माझ्या तक्रारी"
+  },
+  "cctv": {
+    "tabs": {
+      "overview": "आढावा",
+      "report": "अहवाल"
+    },
+    "type": {
+      "dome": "Dome",
+      "bullet": "Bullet",
+      "ptz": "PTZ",
+      "other": "इतर"
+    },
+    "camera": {
+      "working": "चालू",
+      "not_working": "बंद",
+      "needs_attention": "लक्ष हवे"
+    },
+    "period": {
+      "weekly": "मागील 7 दिवस",
+      "monthly": "मागील 30 दिवस"
+    },
+    "import": "DVR व cameras आयात",
+    "newDvr": "नवीन DVR",
+    "editDvr": "DVR बदला",
+    "dvrName": "DVR",
+    "location": "ठिकाण",
+    "channels": "किती cameras घेतो",
+    "storageTb": "Storage (TB)",
+    "installed": "बसवल्याची तारीख",
+    "installedOn": "{{date}} ला बसवले",
+    "storageOf": "{{tb}} TB",
+    "checkedToday": "आज तपासले",
+    "statusFromLatest": "Camera ची संख्या प्रत्येक DVR च्या शेवटच्या तपासणीवरून.",
+    "noDvrs": "अजून DVR नाहीत.",
+    "camerasOf": "{{capacity}} पैकी {{count}} cameras",
+    "lastChecked": "शेवटची तपासणी {{date}}",
+    "daysAgo_one": "{{count}} दिवसापूर्वी",
+    "daysAgo_other": "{{count}} दिवसांपूर्वी",
+    "neverChecked": "अजून तपासणी नाही",
+    "storageUsed": "storage {{percent}}% भरले",
+    "footageDays_one": "{{count}} दिवसाचे footage",
+    "footageDays_other": "{{count}} दिवसांचे footage",
+    "backupDone": "backup घेतला",
+    "noBackup": "backup नाही",
+    "checkNow": "रोजची तपासणी",
+    "cameras": "Cameras",
+    "noCameras": "अजून cameras नाहीत.",
+    "remove": "वापरातून काढा",
+    "restore": "पुन्हा वापरात",
+    "removeNamed": "{{name}} वापरातून काढा",
+    "restoreNamed": "{{name}} पुन्हा वापरात",
+    "newCameraName": "नवीन camera चे नाव",
+    "newCameraLocation": "नवीन camera चे ठिकाण",
+    "newCameraType": "नवीन camera चा प्रकार",
+    "addCamera": "Camera जोडा",
+    "recentChecks": "अलीकडच्या तपासण्या",
+    "problemCounts": "{{down}} बंद · {{attention}} ला लक्ष हवे",
+    "allWorking": "सर्व cameras चालू",
+    "dailyCheck": "रोजची तपासणी",
+    "alreadyChecked": "{{name}} यांनी आधीच तपासले: पुन्हा जतन केल्यास ते बदलेल.",
+    "storageUsedLabel": "भरलेले storage (%)",
+    "footageLabel": "किती दिवसांचे footage आहे",
+    "backupTaken": "Backup घेतला",
+    "backupWhere": "Backup कुठे",
+    "backupWhereHint": "External disk, cloud…",
+    "cameraRemark": "{{name}} ला काय झाले",
+    "whatIsWrong": "काय बिघडले?",
+    "saveCheck": "तपासणी जतन करा",
+    "checkSaved": "तपासणी जतन झाली.",
+    "reportTitle": "CCTV तपासणी अहवाल",
+    "between": "{{from}} ते {{to}}",
+    "daysChecked": "तपासलेले दिवस",
+    "backups": "Backups",
+    "maxStorage": "सर्वात जास्त storage",
+    "cameraResults": "Camera स्थिती",
+    "results": "{{working}} चालू · {{down}} बंद · {{attention}} लक्ष",
+    "cameraName": "Camera",
+    "imported_one": "{{count}} camera आयात झाला.",
+    "imported_other": "{{count}} cameras आयात झाले.",
+    "importNote": "प्रत्येक camera साठी एक ओळ. नसलेले DVR तयार होतात. Camera प्रकार: dome, bullet, ptz किंवा other."
   }
 }

@@ -397,3 +397,18 @@ Rules: [`IT.md`](IT.md). Under the `it` module switch. "seen" = `it.view`, `it.m
 | POST | `/it/tickets/{id}/start`, `/it/tickets/{id}/resolve` | `it.manage` | resolve: `resolution_notes` |
 | GET / POST | `/it/import/template`, `/it/import/preview`, `/it/import` | `it.manage` | CSV; missing labs created; all rows or none |
 
+## Phase 9d — CCTV
+
+Rules: [`CCTV.md`](CCTV.md). Under the `cctv` module switch. "any" = `cctv.view`, `cctv.check` or `cctv.manage`.
+
+| Method | Path | Permission | Notes |
+|---|---|---|---|
+| GET | `/cctv/dashboard` | any | Recorders with their latest check, `late`, camera counts, `checked_today` |
+| GET | `/cctv/dvrs/{id}` | any | Cameras and the last 30 checks |
+| POST / PUT | `/cctv/dvrs[/{id}]` | `cctv.manage` | `name, location?, department_id?, channel_capacity?, storage_tb?, installed_date?, is_active?` |
+| POST / PUT | `/cctv/dvrs/{id}/cameras`, `/cctv/cameras/{id}` | `cctv.manage` | `name, location?, camera_type (dome\|bullet\|ptz\|other), is_active?` |
+| GET | `/cctv/dvrs/{id}/checkup?date` | any | The day's sheet (saved or all working) |
+| POST | `/cctv/dvrs/{id}/checkup` | `cctv.check` or `cctv.manage` | `date, storage_used_percent?, footage_days?, backup_done, backup_location?, remarks?, cameras[{camera_id, status (working\|not_working\|needs_attention), remarks?}]` |
+| GET | `/cctv/report?period=weekly\|monthly` | any | Per recorder: checks, share of days, backups, fullest storage, camera results |
+| GET / POST | `/cctv/import/template`, `/import/preview`, `/import` | `cctv.manage` | CSV, one row per camera |
+
