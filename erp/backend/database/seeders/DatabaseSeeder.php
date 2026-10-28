@@ -9,6 +9,8 @@ use App\Models\ApprovalWorkflow;
 use App\Models\AssetAllocation;
 use App\Models\AssetItemMaster;
 use App\Models\Building;
+use App\Models\CctvCamera;
+use App\Models\CctvDvr;
 use App\Models\CustomField;
 use App\Models\DeadStockItem;
 use App\Models\Department;
@@ -191,6 +193,12 @@ class DatabaseSeeder extends Seeder
         }
         foreach (['PC' => 1, 'MON' => 1, 'SB' => 1] as $prefix => $last) {
             DB::table('number_sequences')->insertOrIgnore(['organization_id' => $trust->id, 'key' => "it_asset:{$prefix}", 'period' => '26', 'last_value' => $last, 'created_at' => now(), 'updated_at' => now()]);
+        }
+
+        // CCTV: one recorder with three cameras, not checked yet.
+        $dvr = CctvDvr::firstOrCreate(['organization_id' => $trust->id, 'name' => 'Main building DVR'], ['location' => 'Server room', 'channel_capacity' => 8, 'storage_tb' => 4]);
+        foreach ([['Cam-01', 'Main gate', 'bullet'], ['Cam-02', 'Office', 'dome'], ['Cam-03', 'Corridor', 'dome']] as [$name, $where, $type]) {
+            CctvCamera::firstOrCreate(['dvr_id' => $dvr->id, 'name' => $name], ['organization_id' => $trust->id, 'location' => $where, 'camera_type' => $type]);
         }
 
         // A boys' hostel looked after by the warden, with two rooms and two residents.

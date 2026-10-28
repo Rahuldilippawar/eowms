@@ -34,5 +34,6 @@ return [
         'purchasing' => ['view', 'manage'],
         'assets' => ['view', 'manage', 'export'],
         'it' => ['view', 'manage'],
+        'cctv' => ['view', 'check', 'manage'],
     ],
 ];
