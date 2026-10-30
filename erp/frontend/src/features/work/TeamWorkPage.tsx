@@ -103,6 +103,9 @@ export function TeamWorkPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">{t('nav.teamWork')}</h1>
         <div className="flex flex-wrap items-center gap-4">
+          <Link to="/work/print" className="text-sm font-medium text-brand-700 hover:underline">
+            {t('reports.items.workPrint.title')}
+          </Link>
           {!user?.disabled_modules?.includes('store') ? (
             <Link to="/work/materials" className="text-sm font-medium text-brand-700 hover:underline">
               {t('work.materialUsage')}

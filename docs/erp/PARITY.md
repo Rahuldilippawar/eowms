@@ -14,7 +14,7 @@ Legend: ✅ in the ERP · 🟡 partly (gaps listed) · ⏳ scheduled (phase) · 
 | Login, logout, forgot / reset password | ✅ | Phase 2 (rate-limited); forced password change ✅ 5A-1 |
 | WebAuthn fingerprint login + identity check | ⏳ 11 | Needs HTTPS on the ERP domain |
 | Organizations (create, edit, delete, switch) | ✅ | |
-| Campuses (= institutions) incl. compare | 🟡 | Campus comparison report → ⏳ 10 |
+| Campuses (= institutions) incl. compare | ✅ 10b | Campus comparison: staff, students, attendance, work, open requests side by side |
 | Departments incl. dashboard, bulk reassign | ✅ | Dashboard has a department filter; bulk move ✅ 5A-1 |
 | Roles / permissions, extra department / campus access | ✅ | Scoped role assignments replace "extra access" |
 | Organization module on/off (`organization_module_settings`) | ✅ 5A-1 | Organization settings → Modules |
@@ -58,7 +58,7 @@ Legend: ✅ in the ERP · 🟡 partly (gaps listed) · ⏳ scheduled (phase) · 
 | Daily work team members, before / after photos, requested by, cost | ✅ 5A-2b | Photos private; team mates may see them |
 | Custom fields per organization (daily work) | ✅ 5A-1 | Also on employee and student forms |
 | Import old work records + template | ✅ 5A-2b | Matched by employee code; all rows or none |
-| Daily work print report, material usage report | ✅ 9a (material usage); print report ⏳ 10 | Material used in a work entry is recorded for the report; it does not take stock out of the store |
+| Daily work print report, material usage report | ✅ 9a (material usage), ✅ 10b (print report) | Material used in a work entry is recorded for the report; it does not take stock out of the store |
 | Tasks: assign, my tasks, verify / reopen, report | ✅ | `cost_incurred` ✅ 5A-2b |
 | Notifications page, mark all read | ✅ | |
 | Cron: overdue tasks | ✅ | `erp:task-reminders` |
@@ -111,8 +111,9 @@ Legend: ✅ in the ERP · 🟡 partly (gaps listed) · ⏳ scheduled (phase) · 
 
 ## Reports, search, audit, backup (⏳ 10)
 
-Reports hub + CSV / Excel / PDF exports, activity / login log viewer, global search, campus comparison,
-backup / restore / scheduled backup.
+- ✅ 10a: activity / login log viewer, global search + Ctrl+K command palette.
+- ✅ 10b: reports hub, CSV (opens in Excel) and Print / PDF on report pages, printable work report, campus comparison.
+- ⏳ 10c: backup / restore / scheduled backup, clear data.
 
 ## Remaining old modules (⏳ 12–14, after the MVP phases)
 

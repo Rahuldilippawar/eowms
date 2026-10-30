@@ -1,4 +1,4 @@
-import { History, Cctv, Monitor, MonitorX, Archive, Laptop, Boxes, PackageCheck, BarChart3, BedDouble, DoorOpen, House, Bus, Hammer, MessageSquareWarning, FilePenLine, PieChart, Wrench, CalendarHeart, Fingerprint, IndianRupee, Scale, SlidersHorizontal, UserRound, Building, ClipboardPen, Mail, RefreshCw, ShoppingCart, Wallet, ListChecks, NotebookPen, Building2, CalendarClock, CalendarDays, ClipboardCheck, ClipboardList, GraduationCap, IdCard, KeyRound, LayoutDashboard, Network, Plane, Settings, Users, type LucideIcon } from 'lucide-react'
+import { FileBarChart, History, Cctv, Monitor, MonitorX, Archive, Laptop, Boxes, PackageCheck, BarChart3, BedDouble, DoorOpen, House, Bus, Hammer, MessageSquareWarning, FilePenLine, PieChart, Wrench, CalendarHeart, Fingerprint, IndianRupee, Scale, SlidersHorizontal, UserRound, Building, ClipboardPen, Mail, RefreshCw, ShoppingCart, Wallet, ListChecks, NotebookPen, Building2, CalendarClock, CalendarDays, ClipboardCheck, ClipboardList, GraduationCap, IdCard, KeyRound, LayoutDashboard, Network, Plane, Settings, Users, type LucideIcon } from 'lucide-react'
 
 export interface NavItem {
   to: string
@@ -38,6 +38,7 @@ export const NAVIGATION: NavSection[] = [
       // Reporting officers approve without holding leave.approve, so this entry is shown to everyone.
       { to: '/approvals', labelKey: 'nav.approvals', icon: ClipboardCheck },
       { to: '/performance', labelKey: 'nav.performance', icon: BarChart3, module: 'performance' },
+      { to: '/reports', labelKey: 'nav.reports', icon: FileBarChart },
     ],
   },
   {

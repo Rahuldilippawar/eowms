@@ -49,9 +49,9 @@ export function AppLayout() {
   }
 
   return (
-    <div className="flex h-full">
+    <div className="flex h-full print:block print:h-auto">
       {/* Desktop sidebar */}
-      <aside className="hidden w-64 shrink-0 border-r border-slate-200 bg-white lg:block dark:border-slate-800 dark:bg-slate-900">
+      <aside className="hidden w-64 shrink-0 print:!hidden border-r border-slate-200 bg-white lg:block dark:border-slate-800 dark:bg-slate-900">
         <Brand />
         <SidebarNav />
       </aside>
@@ -77,7 +77,7 @@ export function AppLayout() {
       </Dialog.Root>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 items-center gap-2 border-b border-slate-200 bg-white px-4 dark:border-slate-800 dark:bg-slate-900">
+        <header className="flex h-14 items-center print:hidden gap-2 border-b border-slate-200 bg-white px-4 dark:border-slate-800 dark:bg-slate-900">
           <Button variant="ghost" className="px-2 lg:hidden" aria-label={t('common.openMenu')} onClick={() => setDrawerOpen(true)}>
             <Menu aria-hidden className="size-5" />
           </Button>
@@ -132,7 +132,7 @@ export function AppLayout() {
         </header>
 
         <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
-        <main className="min-w-0 flex-1 overflow-y-auto p-4 sm:p-6">
+        <main className="min-w-0 flex-1 overflow-y-auto p-4 sm:p-6 print:overflow-visible print:p-0">
           <Outlet />
         </main>
       </div>

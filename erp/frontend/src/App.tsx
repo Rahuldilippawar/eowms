@@ -51,6 +51,9 @@ import { VehicleImportPage } from '@/features/vehicles/VehicleImportPage'
 import { VehicleReportPage } from '@/features/vehicles/VehicleReportPage'
 import { VehiclesPage } from '@/features/vehicles/VehiclesPage'
 import { ActivityLogPage } from '@/features/audit/ActivityLogPage'
+import { CampusComparisonPage } from '@/features/reports/CampusComparisonPage'
+import { ReportsHubPage } from '@/features/reports/ReportsHubPage'
+import { WorkPrintPage } from '@/features/reports/WorkPrintPage'
 import { LoginActivityPage } from '@/features/audit/LoginActivityPage'
 import { CctvImportPage } from '@/features/cctv/CctvImportPage'
 import { CctvPage } from '@/features/cctv/CctvPage'
@@ -175,6 +178,9 @@ export function AppRoutes() {
           <Route path="residency/analytics" element={guard('residency.view', <ResidencyAnalyticsPage />)} />
           <Route path="residency/import" element={guard('residency.manage', <ResidencyImportPage />)} />
           {/* The guards' cctv.check is enough to reach the recorders; the API decides. */}
+          <Route path="reports" element={<ReportsHubPage />} />
+          <Route path="reports/campuses" element={guard('institutions.view', <CampusComparisonPage />)} />
+          <Route path="work/print" element={guard('daily_work.view', <WorkPrintPage />)} />
           <Route path="audit" element={guard('audit.view', <ActivityLogPage />)} />
           <Route path="audit/logins" element={guard('audit.view', <LoginActivityPage />)} />
           <Route path="cctv" element={<CctvPage />} />
