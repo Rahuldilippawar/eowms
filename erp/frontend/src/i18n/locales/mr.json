@@ -122,7 +122,8 @@
     "myAssets": "माझ्याकडील वस्तू",
     "it": "IT विभाग",
     "reportIt": "संगणक तक्रार",
-    "cctv": "CCTV"
+    "cctv": "CCTV",
+    "activityLog": "कामकाजाची नोंद"
   },
   "dashboard": {
     "welcome": "नमस्कार, {{name}}",
@@ -1145,7 +1146,9 @@
     "it.manage": "IT labs चालवणे: साहित्य, हस्तांतर, तक्रारी सोडवणे, आयात",
     "cctv.view": "CCTV DVR व तपासण्या पाहणे",
     "cctv.check": "रोजची CCTV तपासणी नोंदवणे",
-    "cctv.manage": "DVR, cameras व आयात"
+    "cctv.manage": "DVR, cameras व आयात",
+    "audit.view": "कामकाज व login नोंद पाहणे",
+    "audit.export": "कामकाज नोंद download करणे"
   },
   "letters": {
     "new": "नवीन फाईल",
@@ -2548,5 +2551,59 @@
     "imported_one": "{{count}} camera आयात झाला.",
     "imported_other": "{{count}} cameras आयात झाले.",
     "importNote": "प्रत्येक camera साठी एक ओळ. नसलेले DVR तयार होतात. Camera प्रकार: dome, bullet, ptz किंवा other."
+  },
+  "audit": {
+    "tabs": {
+      "activity": "कामकाज",
+      "logins": "Login"
+    },
+    "who": "कोणी",
+    "everyone": "सर्व",
+    "from": "पासून",
+    "to": "पर्यंत",
+    "module": "Module",
+    "allModules": "सर्व modules",
+    "empty": "या निवडीसाठी काही नोंद नाही.",
+    "when": "केव्हा",
+    "what": "काय",
+    "record": "नोंद",
+    "details": "तपशील",
+    "system": "System",
+    "fieldsChanged_one": "{{count}} माहिती बदलली",
+    "fieldsChanged_other": "{{count}} माहिती बदलल्या",
+    "loginsTitle": "Login नोंद",
+    "logins7d": "मागील 7 दिवसांतील login",
+    "users7d": "मागील 7 दिवसांत login केलेले लोक",
+    "failed7d": "मागील 7 दिवसांतील चुकलेले login",
+    "event": "घटना",
+    "allEvents": "सर्व घटना",
+    "ip": "IP address",
+    "device": "Browser / device",
+    "actions": {
+      "login": "Login केले",
+      "login_failed": "चुकीचा पासवर्ड",
+      "logout": "Logout केले",
+      "password_changed": "पासवर्ड बदलला",
+      "password_reset_requested": "Reset link मागितली",
+      "password_reset": "पासवर्ड reset केला"
+    }
+  },
+  "search": {
+    "open": "शोधा (Ctrl+K)",
+    "title": "शोधा",
+    "hint": "पान किंवा नोंद शोधण्यासाठी टाइप करा; बाणांनी निवडा, Enter ने उघडा.",
+    "placeholder": "पाने, लोक, पत्रे, वाहने शोधा…",
+    "pages": "पाने",
+    "searching": "शोधत आहे…",
+    "minChars": "नोंदी शोधण्यासाठी किमान 2 अक्षरे टाइप करा.",
+    "groups": {
+      "employees": "कर्मचारी",
+      "students": "विद्यार्थी",
+      "letters": "पत्रे",
+      "vehicles": "वाहने",
+      "renewals": "नूतनीकरण",
+      "store": "भांडार वस्तू",
+      "it": "IT साहित्य"
+    }
   }
 }

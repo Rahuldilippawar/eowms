@@ -122,7 +122,8 @@
     "myAssets": "Items with me",
     "it": "IT department",
     "reportIt": "Report a computer problem",
-    "cctv": "CCTV"
+    "cctv": "CCTV",
+    "activityLog": "Activity log"
   },
   "dashboard": {
     "welcome": "Hello, {{name}}",
@@ -1145,7 +1146,9 @@
     "it.manage": "Run IT labs: assets, transfers, fixing problems, import",
     "cctv.view": "See CCTV recorders and checks",
     "cctv.check": "Record the daily CCTV check",
-    "cctv.manage": "Recorders, cameras and import"
+    "cctv.manage": "Recorders, cameras and import",
+    "audit.view": "See the activity and sign-in log",
+    "audit.export": "Download the activity log"
   },
   "letters": {
     "new": "New file",
@@ -2548,5 +2551,59 @@
     "imported_one": "{{count}} camera imported.",
     "imported_other": "{{count}} cameras imported.",
     "importNote": "One row per camera. Recorders that do not exist yet are created. Camera type: dome, bullet, ptz or other."
+  },
+  "audit": {
+    "tabs": {
+      "activity": "Activity",
+      "logins": "Sign-ins"
+    },
+    "who": "Who",
+    "everyone": "Everyone",
+    "from": "From",
+    "to": "To",
+    "module": "Module",
+    "allModules": "All modules",
+    "empty": "Nothing recorded for these filters.",
+    "when": "When",
+    "what": "What",
+    "record": "Record",
+    "details": "Details",
+    "system": "System",
+    "fieldsChanged_one": "{{count}} field changed",
+    "fieldsChanged_other": "{{count}} fields changed",
+    "loginsTitle": "Sign-in activity",
+    "logins7d": "Sign-ins, last 7 days",
+    "users7d": "People signed in, last 7 days",
+    "failed7d": "Failed sign-ins, last 7 days",
+    "event": "Event",
+    "allEvents": "All events",
+    "ip": "IP address",
+    "device": "Browser / device",
+    "actions": {
+      "login": "Signed in",
+      "login_failed": "Wrong password",
+      "logout": "Signed out",
+      "password_changed": "Changed password",
+      "password_reset_requested": "Asked for a reset link",
+      "password_reset": "Reset password"
+    }
+  },
+  "search": {
+    "open": "Search (Ctrl+K)",
+    "title": "Search",
+    "hint": "Type to find a page or a record; arrows to move, Enter to open.",
+    "placeholder": "Search pages, people, letters, vehicles…",
+    "pages": "Pages",
+    "searching": "Searching…",
+    "minChars": "Type at least 2 letters to search records.",
+    "groups": {
+      "employees": "Employees",
+      "students": "Students",
+      "letters": "Letters",
+      "vehicles": "Vehicles",
+      "renewals": "Renewals",
+      "store": "Store items",
+      "it": "IT assets"
+    }
   }
 }

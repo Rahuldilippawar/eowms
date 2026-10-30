@@ -1,12 +1,13 @@
 import * as Dialog from '@radix-ui/react-dialog'
 import * as Dropdown from '@radix-ui/react-dropdown-menu'
-import { KeyRound, LogOut, Menu, UserCircle, UserRound, X } from 'lucide-react'
-import { useState } from 'react'
+import { KeyRound, LogOut, Menu, Search, UserCircle, UserRound, X } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Outlet, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { useAuth } from '@/features/auth/AuthProvider'
 import { NotificationBell } from '@/features/notifications/NotificationBell'
+import { CommandPalette } from '@/features/search/CommandPalette'
 import { LanguageSwitcher } from './LanguageSwitcher'
 import { OrganizationSwitcher } from './OrganizationSwitcher'
 import { SidebarNav } from './Sidebar'
@@ -26,6 +27,18 @@ export function AppLayout() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [paletteOpen, setPaletteOpen] = useState(false)
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        setPaletteOpen((o) => !o)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   const onLogout = async () => {
     try {
@@ -71,6 +84,10 @@ export function AppLayout() {
           <div className="min-w-0 flex-1">
             <OrganizationSwitcher />
           </div>
+          <Button variant="ghost" className="gap-2 px-2" aria-label={t('search.open')} aria-keyshortcuts="Control+K" onClick={() => setPaletteOpen(true)}>
+            <Search aria-hidden className="size-5" />
+            <kbd className="hidden rounded border border-slate-300 px-1.5 text-xs text-slate-500 md:inline dark:border-slate-700">Ctrl K</kbd>
+          </Button>
           <LanguageSwitcher />
           <NotificationBell />
           <Dropdown.Root>
@@ -114,6 +131,7 @@ export function AppLayout() {
           </Dropdown.Root>
         </header>
 
+        <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
         <main className="min-w-0 flex-1 overflow-y-auto p-4 sm:p-6">
           <Outlet />
         </main>

@@ -2,6 +2,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { Search } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useSearchParams } from 'react-router-dom'
 import { EmptyState, ErrorState, LoadingState } from '@/components/data/ListStates'
 import { Pagination } from '@/components/data/Pagination'
 import { Input } from '@/components/ui/Input'
@@ -34,7 +35,9 @@ interface ListPageProps<T extends { id: number }> {
 export function ListPage<T extends { id: number }>({ title, queryKey, fetcher, columns, emptyMessage, cardTitle, toolbar, actions }: ListPageProps<T>) {
   const { t } = useTranslation()
   const { user } = useAuth()
-  const [search, setSearch] = useState('')
+  // A link (e.g. from global search) can open the list already filtered: ?search=…
+  const [params] = useSearchParams()
+  const [search, setSearch] = useState(() => params.get('search') ?? '')
   const [page, setPage] = useState(1)
   const debounced = useDebouncedValue(search.trim())
 

@@ -46,7 +46,7 @@ class AuditLogController extends Controller
 
         return response()->json([
             'data' => collect($page->items())->map(fn (AuditLog $l) => $this->row($l, true))->values(),
-            'meta' => ['current_page' => $page->currentPage(), 'last_page' => $page->lastPage(), 'total' => $page->total(),
+            'meta' => ['current_page' => $page->currentPage(), 'last_page' => $page->lastPage(), 'per_page' => $page->perPage(), 'total' => $page->total(), 'from' => $page->firstItem(), 'to' => $page->lastItem(),
                 'modules' => $this->organizationRows()->distinct()->orderBy('module')->pluck('module'),
                 'can_export' => AccessContext::current()->can('audit.export')],
         ]);
@@ -67,7 +67,7 @@ class AuditLogController extends Controller
 
         return response()->json([
             'data' => collect($page->items())->map(fn (AuditLog $l) => $this->row($l, false))->values(),
-            'meta' => ['current_page' => $page->currentPage(), 'last_page' => $page->lastPage(), 'total' => $page->total(),
+            'meta' => ['current_page' => $page->currentPage(), 'last_page' => $page->lastPage(), 'per_page' => $page->perPage(), 'total' => $page->total(), 'from' => $page->firstItem(), 'to' => $page->lastItem(),
                 'summary' => [
                     'logins_7d' => $this->loginRows()->where('action', 'login')->where('created_at', '>=', $since)->count(),
                     'failed_7d' => $this->loginRows()->where('action', 'login_failed')->where('created_at', '>=', $since)->count(),

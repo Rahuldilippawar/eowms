@@ -2,17 +2,12 @@ import { NavLink } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/features/auth/AuthProvider'
 import { cn } from '@/lib/utils'
-import { NAVIGATION } from './navigation'
+import { visibleNavigation } from './visibleNav'
 
 export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const { t } = useTranslation()
   const { can, user } = useAuth()
-  const sections = NAVIGATION.map((section) => ({
-    ...section,
-    items: section.items.filter(
-      (item) => (item.superAdminOnly ? !!user?.is_super_admin : !item.permission || item.permission.split('|').some(can) || (!!item.orFlag && !!user?.[item.orFlag])) && !(item.module && user?.disabled_modules?.includes(item.module)),
-    ),
-  })).filter((section) => section.items.length > 0)
+  const sections = visibleNavigation(user, can)
 
   return (
     <nav aria-label={t('nav.main')} className="space-y-6 px-3 py-4">

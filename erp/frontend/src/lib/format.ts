@@ -40,6 +40,17 @@ export function todayYmd(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
+/** A timestamp as date and time in the organization's time zone (else the browser's). */
+export function formatDateTime(iso: string | null | undefined): string {
+  if (!iso) return '—'
+  const options: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }
+  try {
+    return new Intl.DateTimeFormat(locale(), orgTimeZone ? { ...options, timeZone: orgTimeZone } : options).format(new Date(iso))
+  } catch {
+    return new Intl.DateTimeFormat(locale(), options).format(new Date(iso))
+  }
+}
+
 /** YYYY-MM of the given date, or of today (as todayYmd). */
 export function monthYm(d?: Date): string {
   if (!d) return todayYmd().slice(0, 7)
