@@ -40,6 +40,11 @@ class WorkEntry extends Model
         return $this->belongsTo(Employee::class);
     }
 
+    public function department(): BelongsTo
+    {
+        return $this->belongsTo(Department::class);
+    }
+
     public function task(): BelongsTo
     {
         return $this->belongsTo(Task::class);
