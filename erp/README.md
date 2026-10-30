@@ -215,7 +215,13 @@ Dev accounts (password `password`): `admin@example.com` (super admin), `orgadmin
   Rules: [`docs/CCTV.md`](docs/CCTV.md).
 - Tests: 165 backend, 90 frontend, 73 end-to-end.
 
+### Phase 10a — done (activity log, global search)
+- The activity log and sign-in log for organization-wide auditors (filters, CSV), and global search
+  with a Ctrl+K command palette that follows each module's visibility rules.
+  Rules: [`docs/AUDIT.md`](docs/AUDIT.md), [`docs/SEARCH.md`](docs/SEARCH.md).
+- Tests: 167 backend, 92 frontend, 75 end-to-end.
+
 ### Not yet (later phases)
-- The other business modules (Phases 10–14, see
+- The other business modules (Phases 10b–14, see
   [`../docs/erp/PARITY.md`](../docs/erp/PARITY.md)); email / push delivery of notifications.
 - Reports, deployment to Hostinger.

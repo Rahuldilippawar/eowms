@@ -18,9 +18,9 @@ Legend: ✅ in the ERP · 🟡 partly (gaps listed) · ⏳ scheduled (phase) · 
 | Departments incl. dashboard, bulk reassign | ✅ | Dashboard has a department filter; bulk move ✅ 5A-1 |
 | Roles / permissions, extra department / campus access | ✅ | Scoped role assignments replace "extra access" |
 | Organization module on/off (`organization_module_settings`) | ✅ 5A-1 | Organization settings → Modules |
-| Activity log, login activity | ⏳ 10 | Audit log is written since Phase 2; viewer in Phase 10 |
+| Activity log, login activity | ✅ 10a | Organization-wide auditors; filters, CSV; sign-ins of the organization's members |
 | Account profile (own photo, password) | ✅ 5A-1 | My profile + change password |
-| Global search, command palette (Ctrl+K) | ⏳ 10 | |
+| Global search, command palette (Ctrl+K) | ✅ 10a | Pages + employees, students, letters, vehicles, renewals, store items, IT assets — each module's own visibility |
 | Welcome / onboarding tour, About page (contributors) | ⏳ 11 | |
 | PWA (manifest, offline page), Web Push / FCM, device tokens | ⏳ 11 | In-app notifications done in Phase 5 |
 | Maintenance mode, system update, DB update screen | ⏳ 11 | Replaced by the deploy workflow + migrate screen |

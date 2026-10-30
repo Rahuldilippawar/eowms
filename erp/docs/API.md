@@ -412,3 +412,14 @@ Rules: [`CCTV.md`](CCTV.md). Under the `cctv` module switch. "any" = `cctv.view`
 | GET | `/cctv/report?period=weekly\|monthly` | any | Per recorder: checks, share of days, backups, fullest storage, camera results |
 | GET / POST | `/cctv/import/template`, `/import/preview`, `/import` | `cctv.manage` | CSV, one row per camera |
 
+## Phase 10a — activity log and global search
+
+Rules: [`AUDIT.md`](AUDIT.md), [`SEARCH.md`](SEARCH.md).
+
+| Method | Path | Permission | Notes |
+|---|---|---|---|
+| GET | `/audit-logs?user_id&module&action&subject_id&from&to&page[&format=csv]` | `audit.view` organization-wide (CSV: `audit.export`) | 50 per page; `meta.modules`, `meta.can_export` |
+| GET | `/audit-logs/logins?user_id&action&from&to&page[&format=csv]` | (the same) | Sign-in events of the organization's members; `meta.summary` (`logins_7d`, `users_7d`, `failed_7d`) |
+| GET | `/audit-logs/users` | (the same) | People for the "who" filter |
+| GET | `/search?q` | signed in (60 / minute) | `q` 2–100 characters; `data.{employees,students,letters,vehicles,renewals,store,it}[{id,title,subtitle,url}]`, only groups with results |
+

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use LogicException;
 
 /** Append-only audit trail. Updates and deletes are refused at model level. */
@@ -18,6 +19,11 @@ class AuditLog extends Model
     protected function casts(): array
     {
         return ['old_values' => 'array', 'new_values' => 'array'];
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
 
     protected static function booted(): void

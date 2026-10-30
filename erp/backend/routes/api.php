@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\V1\AllocationController;
 use App\Http\Controllers\Api\V1\AttendanceController;
 use App\Http\Controllers\Api\V1\AttendanceReportController;
 use App\Http\Controllers\Api\V1\AttendanceSettingsController;
+use App\Http\Controllers\Api\V1\AuditLogController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BiometricDeviceController;
 use App\Http\Controllers\Api\V1\CctvController;
@@ -46,6 +47,7 @@ use App\Http\Controllers\Api\V1\RenewalController;
 use App\Http\Controllers\Api\V1\ResidencyController;
 use App\Http\Controllers\Api\V1\ResidencyImportController;
 use App\Http\Controllers\Api\V1\RoleController;
+use App\Http\Controllers\Api\V1\SearchController;
 use App\Http\Controllers\Api\V1\StoreController;
 use App\Http\Controllers\Api\V1\StudentController;
 use App\Http\Controllers\Api\V1\TaskController;
@@ -106,6 +108,14 @@ Route::middleware(['auth:sanctum', SetAccessContext::class, EnsurePasswordChange
     Route::get('/departments/{department}', [DepartmentController::class, 'show'])->middleware('permission:departments.view');
     Route::put('/departments/{department}', [DepartmentController::class, 'update'])->middleware('permission:departments.edit');
     Route::post('/departments/{department}/active', [DepartmentController::class, 'setActive'])->middleware('permission:departments.activate');
+
+    // Phase 10a: activity / sign-in log (organization-wide audit.view, checked in the controller) and global search.
+    Route::middleware('permission:audit.view')->group(function () {
+        Route::get('/audit-logs', [AuditLogController::class, 'index']);
+        Route::get('/audit-logs/logins', [AuditLogController::class, 'logins']);
+        Route::get('/audit-logs/users', [AuditLogController::class, 'users']);
+    });
+    Route::get('/search', SearchController::class)->middleware('throttle:60,1');
 
     Route::get('/users', [UserController::class, 'index'])->middleware('permission:users.view');
     Route::post('/users', [UserController::class, 'store'])->middleware('permission:users.create');

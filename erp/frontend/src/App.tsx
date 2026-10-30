@@ -50,6 +50,8 @@ import { VehicleDetailPage } from '@/features/vehicles/VehicleDetailPage'
 import { VehicleImportPage } from '@/features/vehicles/VehicleImportPage'
 import { VehicleReportPage } from '@/features/vehicles/VehicleReportPage'
 import { VehiclesPage } from '@/features/vehicles/VehiclesPage'
+import { ActivityLogPage } from '@/features/audit/ActivityLogPage'
+import { LoginActivityPage } from '@/features/audit/LoginActivityPage'
 import { CctvImportPage } from '@/features/cctv/CctvImportPage'
 import { CctvPage } from '@/features/cctv/CctvPage'
 import { CctvReportPage } from '@/features/cctv/CctvReportPage'
@@ -173,6 +175,8 @@ export function AppRoutes() {
           <Route path="residency/analytics" element={guard('residency.view', <ResidencyAnalyticsPage />)} />
           <Route path="residency/import" element={guard('residency.manage', <ResidencyImportPage />)} />
           {/* The guards' cctv.check is enough to reach the recorders; the API decides. */}
+          <Route path="audit" element={guard('audit.view', <ActivityLogPage />)} />
+          <Route path="audit/logins" element={guard('audit.view', <LoginActivityPage />)} />
           <Route path="cctv" element={<CctvPage />} />
           <Route path="cctv/report" element={<CctvReportPage />} />
           <Route path="cctv/import" element={guard('cctv.manage', <CctvImportPage />)} />
