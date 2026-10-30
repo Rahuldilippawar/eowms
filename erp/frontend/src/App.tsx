@@ -50,6 +50,11 @@ import { VehicleDetailPage } from '@/features/vehicles/VehicleDetailPage'
 import { VehicleImportPage } from '@/features/vehicles/VehicleImportPage'
 import { VehicleReportPage } from '@/features/vehicles/VehicleReportPage'
 import { VehiclesPage } from '@/features/vehicles/VehiclesPage'
+import { CctvImportPage } from '@/features/cctv/CctvImportPage'
+import { CctvPage } from '@/features/cctv/CctvPage'
+import { CctvReportPage } from '@/features/cctv/CctvReportPage'
+import { CheckupPage } from '@/features/cctv/CheckupPage'
+import { DvrPage } from '@/features/cctv/DvrPage'
 import { ItAssetPage } from '@/features/it/ItAssetPage'
 import { ItAssetsPage } from '@/features/it/ItAssetsPage'
 import { ItDashboardPage } from '@/features/it/ItDashboardPage'
@@ -167,6 +172,12 @@ export function AppRoutes() {
           <Route path="residency/directory" element={guard('residency.view', <ResidencyDirectoryPage />)} />
           <Route path="residency/analytics" element={guard('residency.view', <ResidencyAnalyticsPage />)} />
           <Route path="residency/import" element={guard('residency.manage', <ResidencyImportPage />)} />
+          {/* The guards' cctv.check is enough to reach the recorders; the API decides. */}
+          <Route path="cctv" element={<CctvPage />} />
+          <Route path="cctv/report" element={<CctvReportPage />} />
+          <Route path="cctv/import" element={guard('cctv.manage', <CctvImportPage />)} />
+          <Route path="cctv/dvrs/:id" element={<DvrPage />} />
+          <Route path="cctv/dvrs/:id/checkup" element={<CheckupPage />} />
           <Route path="it/report" element={<ReportProblemPage />} />
           {/* Lab assistants reach their own labs without it.view; the API decides. */}
           <Route path="it" element={<ItDashboardPage />} />

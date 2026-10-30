@@ -100,14 +100,14 @@ Legend: ✅ in the ERP · 🟡 partly (gaps listed) · ⏳ scheduled (phase) · 
 | Hostels: hostels, rooms, room / bed allocation, students + import, attendance, leave / out-pass, health, fees, alumni, dashboard, bulk import | ✅ 8c | Wardens work without wider permissions; roll-call reminder cron included. Hostels themselves are added in the app (the old CSV of hostels is not carried over: an organization has a handful) |
 | Residency: buildings, layout, rooms + items, occupants, allotment requests, transfers, inspections, bills (rent / electricity) + shares + report, guests, occupancy analytics, staff directory (resident / non-resident), data import engine with preview / history, link unlinked | ✅ 8d | Uses the 8a buildings and residential locations; a bill is split equally among the staff in the room; an import can be undone until bills exist |
 
-## Assets, inventory, purchasing (9)
+## Assets, inventory, purchasing (✅ 9)
 
 | Old module | Status | Notes |
 |---|---|---|
 | Store items + stock ledger, vendor, quotation → PO → GRN → invoice (MVP prompt) | ✅ 9a | Goods received add stock; invoices are charged to the department budget and paid like Phase 7a purchases |
 | Dead stock register + item master + import; asset allocation (issue / return register, types, custom fields, import, report) | ✅ 9b | A new purchase is charged to the department budget; late borrowed items are reminded daily; the issue register needs organization-wide permission |
 | IT department (labs, assets, transfers, repair tickets, general requests, smart board report, import, dashboard) | ✅ 9c | General IT requests are work requests with the IT category (8b), as in the old app; lab assistants keep their own labs without IT permissions |
-| CCTV (DVRs, cameras, status, checkups, import, report) | ⏳ 9d | |
+| CCTV (DVRs, cameras, status, checkups, import, report) | ✅ 9d | Daily check per recorder; managers notified of cameras down; a recorder unchecked for 2 days is flagged |
 
 ## Reports, search, audit, backup (⏳ 10)
 

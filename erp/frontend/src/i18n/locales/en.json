@@ -121,7 +121,8 @@
     "allocations": "Issue register",
     "myAssets": "Items with me",
     "it": "IT department",
-    "reportIt": "Report a computer problem"
+    "reportIt": "Report a computer problem",
+    "cctv": "CCTV"
   },
   "dashboard": {
     "welcome": "Hello, {{name}}",
@@ -295,7 +296,8 @@
     "store": "Store",
     "purchasing": "Purchasing",
     "assets": "Dead stock and issue register",
-    "it": "IT department"
+    "it": "IT department",
+    "cctv": "CCTV"
   },
   "attendance": {
     "notMarked": "Not marked",
@@ -629,7 +631,8 @@
       "assets_overdue": "{{item}} was due back on {{due}}.",
       "assets_overdue_given": "{{item}} given to {{name}} was due back on {{due}}.",
       "it_ticket_new": "Problem with {{tag}} ({{lab}}): {{issue}}",
-      "it_ticket_resolved": "The problem you reported with {{tag}} is fixed."
+      "it_ticket_resolved": "The problem you reported with {{tag}} is fixed.",
+      "cctv_cameras_down": "{{dvr}}: {{count}} camera(s) not working on {{date}}."
     }
   },
   "work": {
@@ -1139,7 +1142,10 @@
     "assets.manage": "Record dead stock; give and take back items",
     "assets.export": "Dead stock and issue register CSV",
     "it.view": "See IT labs, assets and problems",
-    "it.manage": "Run IT labs: assets, transfers, fixing problems, import"
+    "it.manage": "Run IT labs: assets, transfers, fixing problems, import",
+    "cctv.view": "See CCTV recorders and checks",
+    "cctv.check": "Record the daily CCTV check",
+    "cctv.manage": "Recorders, cameras and import"
   },
   "letters": {
     "new": "New file",
@@ -2462,5 +2468,85 @@
     "sendReport": "Send to IT",
     "reported": "Sent to the IT department.",
     "myReports": "My reports"
+  },
+  "cctv": {
+    "tabs": {
+      "overview": "Overview",
+      "report": "Report"
+    },
+    "type": {
+      "dome": "Dome",
+      "bullet": "Bullet",
+      "ptz": "PTZ",
+      "other": "Other"
+    },
+    "camera": {
+      "working": "Working",
+      "not_working": "Not working",
+      "needs_attention": "Needs attention"
+    },
+    "period": {
+      "weekly": "Last 7 days",
+      "monthly": "Last 30 days"
+    },
+    "import": "Import recorders and cameras",
+    "newDvr": "New recorder",
+    "editDvr": "Edit recorder",
+    "dvrName": "Recorder (DVR)",
+    "location": "Location",
+    "channels": "Cameras it takes",
+    "storageTb": "Storage (TB)",
+    "installed": "Installed on",
+    "installedOn": "installed {{date}}",
+    "storageOf": "{{tb}} TB",
+    "checkedToday": "Checked today",
+    "statusFromLatest": "Camera counts are from each recorder's latest check.",
+    "noDvrs": "No recorders yet.",
+    "camerasOf": "{{count}} of {{capacity}} cameras",
+    "lastChecked": "Last checked {{date}}",
+    "daysAgo_one": "{{count}} day ago",
+    "daysAgo_other": "{{count}} days ago",
+    "neverChecked": "Not checked yet",
+    "storageUsed": "storage {{percent}}% used",
+    "footageDays_one": "{{count}} day of footage",
+    "footageDays_other": "{{count}} days of footage",
+    "backupDone": "backup taken",
+    "noBackup": "no backup",
+    "checkNow": "Daily check",
+    "cameras": "Cameras",
+    "noCameras": "No cameras yet.",
+    "remove": "Not in use",
+    "restore": "Back in use",
+    "removeNamed": "Mark {{name}} not in use",
+    "restoreNamed": "Put {{name}} back in use",
+    "newCameraName": "New camera name",
+    "newCameraLocation": "New camera location",
+    "newCameraType": "New camera type",
+    "addCamera": "Add camera",
+    "recentChecks": "Recent checks",
+    "problemCounts": "{{down}} not working · {{attention}} need attention",
+    "allWorking": "All cameras working",
+    "dailyCheck": "Daily check",
+    "alreadyChecked": "Already checked by {{name}}: saving again replaces it.",
+    "storageUsedLabel": "Storage used (%)",
+    "footageLabel": "Days of footage kept",
+    "backupTaken": "Backup taken",
+    "backupWhere": "Backup kept on",
+    "backupWhereHint": "External disk, cloud…",
+    "cameraRemark": "What is wrong with {{name}}",
+    "whatIsWrong": "What is wrong?",
+    "saveCheck": "Save check",
+    "checkSaved": "Check saved.",
+    "reportTitle": "CCTV check report",
+    "between": "{{from}} to {{to}}",
+    "daysChecked": "Days checked",
+    "backups": "Backups",
+    "maxStorage": "Fullest storage",
+    "cameraResults": "Camera results",
+    "results": "{{working}} working · {{down}} down · {{attention}} attention",
+    "cameraName": "Camera",
+    "imported_one": "{{count}} camera imported.",
+    "imported_other": "{{count}} cameras imported.",
+    "importNote": "One row per camera. Recorders that do not exist yet are created. Camera type: dome, bullet, ptz or other."
   }
 }

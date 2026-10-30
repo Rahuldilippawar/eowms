@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\V1\AttendanceReportController;
 use App\Http\Controllers\Api\V1\AttendanceSettingsController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BiometricDeviceController;
+use App\Http\Controllers\Api\V1\CctvController;
 use App\Http\Controllers\Api\V1\CustomFieldController;
 use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\DeadStockController;
@@ -444,6 +445,26 @@ Route::middleware(['auth:sanctum', SetAccessContext::class, EnsurePasswordChange
             Route::get('/it/import/template', [ItController::class, 'importTemplate']);
             Route::post('/it/import/preview', [ItController::class, 'importPreview']);
             Route::post('/it/import', [ItController::class, 'import']);
+        });
+    });
+
+    // CCTV (Phase 9d).
+    Route::middleware('module:cctv')->prefix('cctv')->group(function () {
+        Route::middleware('permission:cctv.view|cctv.check|cctv.manage')->group(function () {
+            Route::get('/dashboard', [CctvController::class, 'dashboard']);
+            Route::get('/dvrs/{dvr}', [CctvController::class, 'show']);
+            Route::get('/dvrs/{dvr}/checkup', [CctvController::class, 'sheet']);
+            Route::get('/report', [CctvController::class, 'report']);
+        });
+        Route::post('/dvrs/{dvr}/checkup', [CctvController::class, 'saveCheckup'])->middleware('permission:cctv.check|cctv.manage');
+        Route::middleware('permission:cctv.manage')->group(function () {
+            Route::post('/dvrs', [CctvController::class, 'storeDvr']);
+            Route::put('/dvrs/{dvr}', [CctvController::class, 'updateDvr']);
+            Route::post('/dvrs/{dvr}/cameras', [CctvController::class, 'storeCamera']);
+            Route::put('/cameras/{camera}', [CctvController::class, 'updateCamera']);
+            Route::get('/import/template', [CctvController::class, 'importTemplate']);
+            Route::post('/import/preview', [CctvController::class, 'importPreview']);
+            Route::post('/import', [CctvController::class, 'import']);
         });
     });
 
