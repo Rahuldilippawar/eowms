@@ -24,7 +24,7 @@ Legend: ✅ in the ERP · 🟡 partly (gaps listed) · ⏳ scheduled (phase) · 
 | Welcome / onboarding tour, About page (contributors) | ⏳ 11 | |
 | PWA (manifest, offline page), Web Push / FCM, device tokens | ⏳ 11 | In-app notifications done in Phase 5 |
 | Maintenance mode, system update, DB update screen | ⏳ 11 | Replaced by the deploy workflow + migrate screen |
-| Backup / restore, scheduled backup, clear data | ⏳ 10 | |
+| Backup / restore, scheduled backup, clear data | ✅ 10c | Whole-database backup and restore (super admins, safety backup first); organization export and clear (keeps structure, accounts, settings) |
 | TV display (notice board screen) | ⏳ 11 | |
 
 ## People, attendance, leave (phase 4 → gaps in 5A)
@@ -109,11 +109,11 @@ Legend: ✅ in the ERP · 🟡 partly (gaps listed) · ⏳ scheduled (phase) · 
 | IT department (labs, assets, transfers, repair tickets, general requests, smart board report, import, dashboard) | ✅ 9c | General IT requests are work requests with the IT category (8b), as in the old app; lab assistants keep their own labs without IT permissions |
 | CCTV (DVRs, cameras, status, checkups, import, report) | ✅ 9d | Daily check per recorder; managers notified of cameras down; a recorder unchecked for 2 days is flagged |
 
-## Reports, search, audit, backup (⏳ 10)
+## Reports, search, audit, backup (✅ 10)
 
 - ✅ 10a: activity / login log viewer, global search + Ctrl+K command palette.
 - ✅ 10b: reports hub, CSV (opens in Excel) and Print / PDF on report pages, printable work report, campus comparison.
-- ⏳ 10c: backup / restore / scheduled backup, clear data.
+- ✅ 10c: backup / restore / scheduled backup, organization export, clear data.
 
 ## Remaining old modules (⏳ 12–14, after the MVP phases)
 

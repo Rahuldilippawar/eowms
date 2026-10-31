@@ -124,7 +124,9 @@
     "reportIt": "संगणक तक्रार",
     "cctv": "CCTV",
     "activityLog": "कामकाजाची नोंद",
-    "reports": "अहवाल"
+    "reports": "अहवाल",
+    "backups": "Backup",
+    "organizationData": "Data export / साफ करा"
   },
   "dashboard": {
     "welcome": "नमस्कार, {{name}}",
@@ -2728,5 +2730,43 @@
       "work_completion_percent": "पूर्ण झालेले काम",
       "open_requests": "प्रलंबित काम-विनंत्या"
     }
+  },
+  "backup": {
+    "hint": "संपूर्ण database चे backup, server वर website बाहेर ठेवलेले. रोज रात्री backup होतो; नवीनतम {{count}} रात्रीचे backup ठेवले जातात.",
+    "filesNote": "Backup मध्ये फक्त database असतो. Upload केलेल्या files (photos, attachments) server वरच राहतात; त्या hosting च्या backup मध्येही ठेवा.",
+    "backupNow": "आता backup घ्या",
+    "upload": "Backup upload करा",
+    "working": "काम चालू आहे…",
+    "created": "Backup तयार झाला.",
+    "uploaded": "Backup upload झाला.",
+    "none": "अजून backup नाहीत.",
+    "kinds": {
+      "manual": "हाताने",
+      "scheduled": "रात्रीचा",
+      "uploaded": "Upload केलेला",
+      "pre_restore": "Restore आधीचा",
+      "pre_clear": "साफ करण्याआधीचा"
+    },
+    "download": "Download",
+    "downloadNamed": "{{name}} download करा",
+    "restore": "Restore करा",
+    "restoreNamed": "{{name}} restore करा",
+    "deleteNamed": "{{name}} हटवा",
+    "deleteTitle": "हा backup हटवायचा?",
+    "restoreTitle": "संपूर्ण database restore करा",
+    "restoreBody": "प्रत्येक संस्था {{date}} रोजी होती तशी होईल; त्यानंतरच्या सर्व नोंदी बदलल्या जातील. आधी आत्ताच्या database चा backup घेतला जातो. हे चालू असताना app सर्वांसाठी बंद राहते.",
+    "restored": "Restore झाले. App पुन्हा सुरू होत आहे…",
+    "typeToConfirm": "पुष्टीसाठी {{phrase}} टाइप करा",
+    "yourPassword": "तुमचा पासवर्ड",
+    "exportTitle": "या संस्थेचा data export करा",
+    "exportBody": "या संस्थेच्या नोंदींची JSON file, जपून ठेवण्यासाठी किंवा दुसरीकडे नेण्यासाठी. पासवर्ड, कर्मचाऱ्यांची खाजगी माहिती (आधार, बँक), कामकाजाची नोंद आणि निनावी तक्रार ओळखू देईल असे काहीही यात नसते.",
+    "exportButton": "Export download करा",
+    "clearTitle": "या संस्थेचा data साफ करा",
+    "clearBody": "कामकाजाचा data पुसतो: लोकांच्या नोंदी, हजेरी, रजा, काम, पत्रे, वित्त, नूतनीकरण, वाहने, वसतिगृहे, निवास, भांडार, मालमत्ता, IT, CCTV, विनंत्या व सूचना. राहते: संस्था, संकुले, विभाग, user accounts, roles, settings (custom fields, रजा प्रकार, पत्र प्रकार, workflows, सुट्ट्या, क्रमांक) व कामकाजाची नोंद. आधी backup घेतला जातो; super admin तो restore करू शकतो.",
+    "clearConfirmBody": "हे या संस्थेचा कामकाजाचा data पुसते. पुढे जाण्यासाठी तिचे नाव अचूक टाइप करा.",
+    "clearButton": "Data साफ करा",
+    "cleared": "Data साफ झाला.",
+    "clearedCount_one": "{{count}} नोंद पुसली.",
+    "clearedCount_other": "{{count}} नोंदी पुसल्या."
   }
 }

@@ -124,7 +124,9 @@
     "reportIt": "Report a computer problem",
     "cctv": "CCTV",
     "activityLog": "Activity log",
-    "reports": "Reports"
+    "reports": "Reports",
+    "backups": "Backups",
+    "organizationData": "Export / clear data"
   },
   "dashboard": {
     "welcome": "Hello, {{name}}",
@@ -2728,5 +2730,43 @@
       "work_completion_percent": "Work completed",
       "open_requests": "Open work requests"
     }
+  },
+  "backup": {
+    "hint": "Backups of the whole database, kept on the server outside the website. A backup is taken every night; the newest {{count}} nightly ones are kept.",
+    "filesNote": "Backups hold the database only. Uploaded files (photos, attachments) stay on the server; keep them in the hosting backup too.",
+    "backupNow": "Back up now",
+    "upload": "Upload a backup",
+    "working": "Working…",
+    "created": "Backup made.",
+    "uploaded": "Backup uploaded.",
+    "none": "No backups yet.",
+    "kinds": {
+      "manual": "Manual",
+      "scheduled": "Nightly",
+      "uploaded": "Uploaded",
+      "pre_restore": "Before a restore",
+      "pre_clear": "Before clearing"
+    },
+    "download": "Download",
+    "downloadNamed": "Download {{name}}",
+    "restore": "Restore",
+    "restoreNamed": "Restore {{name}}",
+    "deleteNamed": "Delete {{name}}",
+    "deleteTitle": "Delete this backup?",
+    "restoreTitle": "Restore the whole database",
+    "restoreBody": "Every organization goes back to how it was on {{date}}; everything entered since is replaced. A backup of the database as it is now is taken first. The app is closed to everyone while this runs.",
+    "restored": "Restored. The app is reloading…",
+    "typeToConfirm": "Type {{phrase}} to confirm",
+    "yourPassword": "Your password",
+    "exportTitle": "Export this organization's data",
+    "exportBody": "A JSON file with this organization's records, for keeping or moving elsewhere. Passwords, private employee details (Aadhaar, bank), the activity log and anything that could reveal an anonymous grievance are left out.",
+    "exportButton": "Download the export",
+    "clearTitle": "Clear this organization's data",
+    "clearBody": "Deletes the working data: people records, attendance, leave, work, letters, finance, renewals, vehicles, hostels, housing, store, assets, IT, CCTV, requests and notifications. Kept: the organization, campuses, departments, user accounts, roles, settings (custom fields, leave types, letter categories, workflows, holidays, numbering) and the activity log. A backup is taken first; a super admin can restore it.",
+    "clearConfirmBody": "This deletes the working data of this organization. Type its name exactly to go on.",
+    "clearButton": "Clear data",
+    "cleared": "Data cleared.",
+    "clearedCount_one": "{{count}} record deleted.",
+    "clearedCount_other": "{{count}} records deleted."
   }
 }
