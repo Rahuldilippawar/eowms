@@ -123,7 +123,8 @@
     "it": "IT विभाग",
     "reportIt": "संगणक तक्रार",
     "cctv": "CCTV",
-    "activityLog": "कामकाजाची नोंद"
+    "activityLog": "कामकाजाची नोंद",
+    "reports": "अहवाल"
   },
   "dashboard": {
     "welcome": "नमस्कार, {{name}}",
@@ -2604,6 +2605,128 @@
       "renewals": "नूतनीकरण",
       "store": "भांडार वस्तू",
       "it": "IT साहित्य"
+    }
+  },
+  "reports": {
+    "hubHint": "तुम्ही उघडू शकता ते सर्व अहवाल एकाच ठिकाणी. प्रत्येक अहवाल छापता येतो (Print → Save as PDF); तक्ते CSV मध्ये download होतात, जे Excel मध्ये उघडतात.",
+    "none": "तुमच्यासाठी कोणताही अहवाल उपलब्ध नाही.",
+    "print": "छापा / PDF",
+    "groups": {
+      "people": "लोक",
+      "work": "काम",
+      "money": "पैसा",
+      "assets": "मालमत्ता व भांडार",
+      "organization": "संस्था"
+    },
+    "items": {
+      "attendance": {
+        "title": "हजेरी",
+        "description": "दिवसाची यादी, महिन्याचा तक्ता, ये-जा व सारांश"
+      },
+      "leaveBalances": {
+        "title": "रजा शिल्लक",
+        "description": "प्रत्येकाची घेतलेली व शिल्लक रजा"
+      },
+      "salary": {
+        "title": "पगार अहवाल",
+        "description": "महिन्याचे पगारी दिवस"
+      },
+      "performance": {
+        "title": "कामगिरी",
+        "description": "हजेरी, काम व कार्ये यांचे गुण"
+      },
+      "workPrint": {
+        "title": "कामाचा अहवाल (छापील)",
+        "description": "कालावधीतील नोंदी व विभागनिहाय सारांश, छापण्यासाठी तयार"
+      },
+      "materials": {
+        "title": "साहित्य वापर",
+        "description": "कामाच्या नोंदींमध्ये वापरलेले भांडार साहित्य"
+      },
+      "requests": {
+        "title": "काम-विनंती अहवाल",
+        "description": "स्थिती, प्रकार व लागलेल्या वेळेनुसार विनंत्या"
+      },
+      "maintenance": {
+        "title": "देखभाल अहवाल",
+        "description": "ठिकाण व खर्चानुसार देखभाल"
+      },
+      "letters": {
+        "title": "पत्र नोंदवही",
+        "description": "आवक-जावक नोंदवही"
+      },
+      "budgets": {
+        "title": "विभागीय अंदाजपत्रक",
+        "description": "अंदाजपत्रक, खर्च व शिल्लक"
+      },
+      "renewalCosts": {
+        "title": "नूतनीकरण खर्च",
+        "description": "प्रकार व महिन्यानुसार नूतनीकरणाचा खर्च"
+      },
+      "residency": {
+        "title": "निवास विश्लेषण",
+        "description": "भरलेल्या खोल्या, बिले व विनंत्या"
+      },
+      "deadStock": {
+        "title": "डेड स्टॉक अहवाल",
+        "description": "विभाग व स्थितीनुसार वस्तू"
+      },
+      "allocations": {
+        "title": "वाटप अहवाल",
+        "description": "कोणाला काय दिले, व परत न आलेले"
+      },
+      "storeIssues": {
+        "title": "भांडार वितरण",
+        "description": "भांडारातून दिलेले साहित्य"
+      },
+      "smartboards": {
+        "title": "स्मार्ट बोर्ड",
+        "description": "लॅबनुसार स्मार्ट बोर्डची स्थिती"
+      },
+      "cctv": {
+        "title": "CCTV तपासणी अहवाल",
+        "description": "रोजच्या तपासण्या, backup व बंद cameras"
+      },
+      "campuses": {
+        "title": "संकुल तुलना",
+        "description": "संकुले शेजारी-शेजारी: कर्मचारी, विद्यार्थी, हजेरी, काम"
+      },
+      "activity": {
+        "title": "कामकाजाची नोंद",
+        "description": "कोणी काय बदलले, व login"
+      }
+    },
+    "status": "स्थिती",
+    "allStatuses": "सर्व",
+    "period": "{{from}} ते {{to}}",
+    "entryCount_one": "{{count}} नोंद",
+    "entryCount_other": "{{count}} नोंदी",
+    "truncated": "फक्त पहिल्या {{count}} नोंदी दाखवल्या आहेत; कमी कालावधी निवडा.",
+    "byDepartment": "विभागनिहाय",
+    "department": "विभाग",
+    "entries": "नोंदी",
+    "hours": "तास",
+    "completion": "पूर्ण",
+    "entriesTitle": "नोंदी",
+    "noEntries": "या कालावधीत कामाची नोंद नाही.",
+    "date": "दिनांक",
+    "employee": "कर्मचारी",
+    "work": "काम",
+    "with": "सोबत: {{names}}",
+    "materialsUsed": "साहित्य: {{list}}",
+    "reviewed": "तपासले",
+    "campusPeriod": "काम {{from}} ते {{to}}; हजेरी व प्रलंबित विनंत्या {{today}} रोजीच्या.",
+    "noCampuses": "तुलना करण्यासाठी संकुले नाहीत.",
+    "figure": "आकडा",
+    "metrics": {
+      "departments": "विभाग",
+      "employees": "कर्मचारी",
+      "students": "विद्यार्थी",
+      "present_today": "आज उपस्थित",
+      "attendance_percent": "आजची हजेरी",
+      "work_entries": "कामाच्या नोंदी",
+      "work_completion_percent": "पूर्ण झालेले काम",
+      "open_requests": "प्रलंबित काम-विनंत्या"
     }
   }
 }

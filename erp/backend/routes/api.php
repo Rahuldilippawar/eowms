@@ -44,6 +44,7 @@ use App\Http\Controllers\Api\V1\PublicSignatureController;
 use App\Http\Controllers\Api\V1\PublicVerifyController;
 use App\Http\Controllers\Api\V1\PurchasingController;
 use App\Http\Controllers\Api\V1\RenewalController;
+use App\Http\Controllers\Api\V1\ReportController;
 use App\Http\Controllers\Api\V1\ResidencyController;
 use App\Http\Controllers\Api\V1\ResidencyImportController;
 use App\Http\Controllers\Api\V1\RoleController;
@@ -115,6 +116,7 @@ Route::middleware(['auth:sanctum', SetAccessContext::class, EnsurePasswordChange
         Route::get('/audit-logs/logins', [AuditLogController::class, 'logins']);
         Route::get('/audit-logs/users', [AuditLogController::class, 'users']);
     });
+    Route::get('/reports/campuses', [ReportController::class, 'campuses'])->middleware('permission:institutions.view');
     Route::get('/search', SearchController::class)->middleware('throttle:60,1');
 
     Route::get('/users', [UserController::class, 'index'])->middleware('permission:users.view');
@@ -189,6 +191,7 @@ Route::middleware(['auth:sanctum', SetAccessContext::class, EnsurePasswordChange
     Route::get('/me/tasks/open', [WorkController::class, 'myTasks'])->middleware('module:tasks');
     Route::get('/me/performance', [PerformanceController::class, 'me'])->middleware('module:performance');
     Route::get('/work/materials', [WorkController::class, 'materialsReport'])->middleware(['permission:daily_work.view', 'module:daily_work', 'module:store']);
+    Route::get('/work/print', [WorkController::class, 'printReport'])->middleware(['permission:daily_work.view', 'module:daily_work']);
     Route::get('/work', [WorkController::class, 'index'])->middleware('permission:daily_work.view')->middleware('module:daily_work');
     Route::get('/work/export', [WorkController::class, 'export'])->middleware('permission:daily_work.export')->middleware('module:daily_work');
     Route::get('/work/import/template', [WorkController::class, 'importTemplate'])->middleware('permission:daily_work.import')->middleware('module:daily_work');

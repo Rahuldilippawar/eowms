@@ -32,6 +32,8 @@ class WorkController extends Controller
 {
     use ResolvesMyEmployee;
 
+    public const PRINT_LIMIT = 2000;
+
     private const WITH = ['employee', 'task', 'reviewer', 'team', 'materials.item:id,item_name,unit'];
 
     public function __construct(private readonly WorkService $service) {}
@@ -132,6 +134,47 @@ class WorkController extends Controller
             'totals' => $totals->map(fn ($t) => ['department' => $t->department, 'item_name' => $t->item_name, 'unit' => $t->unit, 'quantity' => round((float) $t->quantity, 2), 'entries' => (int) $t->entries])->values(),
             'rows' => $rows->map(fn ($r) => ['entry_id' => (int) $r->entry_id, 'work_date' => (string) $r->work_date, 'title' => $r->title, 'department' => $r->department,
                 'employee' => $r->employee, 'item_name' => $r->item_name, 'unit' => $r->unit, 'quantity' => round((float) $r->quantity, 2)])->values(),
+        ]]);
+    }
+
+    /**
+     * The printable work report (erp/docs/REPORTS.md): the period's entries with materials and team, and
+     * a per-department summary, for the caller's daily_work.view scope.
+     */
+    public function printReport(Request $request): JsonResponse
+    {
+        $f = $this->range($request, AccessContext::current()->organization(), 6) + $request->validate([
+            'department_id' => ['nullable', 'integer'],
+            'employee_id' => ['nullable', 'integer'],
+            'status' => ['nullable', Rule::in(WorkEntry::STATUSES)],
+        ]);
+        $query = WorkEntry::query()
+            ->whereIn('employee_id', PeopleQueries::employeeIds('daily_work.view'))
+            ->whereBetween('work_date', [$f['from'], $f['to']])
+            ->when($f['department_id'] ?? null, fn ($q, $id) => $q->where('department_id', $id))
+            ->when($f['employee_id'] ?? null, fn ($q, $id) => $q->where('employee_id', $id))
+            ->when($f['status'] ?? null, fn ($q, $st) => $q->where('status', $st));
+        $summary = (clone $query)->leftJoin('departments as d', 'd.id', '=', 'work_entries.department_id')
+            ->groupBy('work_entries.department_id', 'd.name')->orderBy('d.name')
+            ->get(['d.name as department', DB::raw('count(*) as total'), DB::raw("sum(case when work_entries.status = 'completed' then 1 else 0 end) as completed"),
+                DB::raw("sum(case when work_entries.status = 'in_progress' then 1 else 0 end) as in_progress"), DB::raw('coalesce(sum(work_entries.hours), 0) as hours')]);
+        $total = (clone $query)->count();
+        $entries = $query->with(['employee:id,name,employee_code', 'department:id,name', 'team:employees.id,employees.name', 'materials.item:id,item_name,unit'])
+            ->orderBy('work_date')->orderBy('id')->limit(self::PRINT_LIMIT)->get();
+
+        return response()->json(['data' => [
+            'from' => $f['from'], 'to' => $f['to'], 'total' => $total, 'truncated' => $total > self::PRINT_LIMIT,
+            'summary' => $summary->map(fn ($r) => ['department' => $r->department, 'total' => (int) $r->total, 'completed' => (int) $r->completed,
+                'in_progress' => (int) $r->in_progress, 'hours' => round((float) $r->hours, 2),
+                'completion' => $r->total > 0 ? (int) round($r->completed * 100 / $r->total) : 0])->values(),
+            'entries' => $entries->map(fn (WorkEntry $e) => [
+                'id' => $e->id, 'work_date' => $e->work_date->toDateString(), 'title' => $e->title, 'description' => $e->description,
+                'hours' => $e->hours === null ? null : (float) $e->hours, 'status' => $e->status, 'reviewed' => $e->reviewed_at !== null,
+                'employee' => $e->employee ? ['name' => $e->employee->name, 'code' => $e->employee->employee_code] : null,
+                'department' => $e->department?->name,
+                'team' => $e->team->pluck('name')->values(),
+                'materials' => $e->materials->map(fn ($m) => ['item' => $m->item?->item_name, 'unit' => $m->item?->unit, 'quantity' => round((float) $m->quantity, 2)])->values(),
+            ])->values(),
         ]]);
     }
 

@@ -423,3 +423,12 @@ Rules: [`AUDIT.md`](AUDIT.md), [`SEARCH.md`](SEARCH.md).
 | GET | `/audit-logs/users` | (the same) | People for the "who" filter |
 | GET | `/search?q` | signed in (60 / minute) | `q` 2–100 characters; `data.{employees,students,letters,vehicles,renewals,store,it}[{id,title,subtitle,url}]`, only groups with results |
 
+## Phase 10b — reports
+
+Rules: [`REPORTS.md`](REPORTS.md).
+
+| Method | Path | Permission | Notes |
+|---|---|---|---|
+| GET | `/work/print?from&to&department_id&employee_id&status` | `daily_work.view` | `data.{from,to,total,truncated,summary[],entries[]}`; up to 2,000 entries |
+| GET | `/reports/campuses?from&to[&format=csv]` | `institutions.view` (organization or campus wide) | `data.{from,to,today,metrics[],campuses[]}`; switched-off modules' figures left out |
+

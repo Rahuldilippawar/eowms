@@ -123,7 +123,8 @@
     "it": "IT department",
     "reportIt": "Report a computer problem",
     "cctv": "CCTV",
-    "activityLog": "Activity log"
+    "activityLog": "Activity log",
+    "reports": "Reports"
   },
   "dashboard": {
     "welcome": "Hello, {{name}}",
@@ -2604,6 +2605,128 @@
       "renewals": "Renewals",
       "store": "Store items",
       "it": "IT assets"
+    }
+  },
+  "reports": {
+    "hubHint": "Every report you can open, in one place. Each prints cleanly (Print → Save as PDF); tables also download as CSV, which opens in Excel.",
+    "none": "No reports are available to you.",
+    "print": "Print / PDF",
+    "groups": {
+      "people": "People",
+      "work": "Work",
+      "money": "Money",
+      "assets": "Assets and store",
+      "organization": "Organization"
+    },
+    "items": {
+      "attendance": {
+        "title": "Attendance",
+        "description": "Day sheet, month grid, movement and summary"
+      },
+      "leaveBalances": {
+        "title": "Leave balances",
+        "description": "Leave taken and left per person"
+      },
+      "salary": {
+        "title": "Salary report",
+        "description": "Paid days for the month"
+      },
+      "performance": {
+        "title": "Performance",
+        "description": "Attendance, work and tasks scored"
+      },
+      "workPrint": {
+        "title": "Work report (print)",
+        "description": "Entries of a period with a department summary, ready to print"
+      },
+      "materials": {
+        "title": "Material usage",
+        "description": "Store material used in work entries"
+      },
+      "requests": {
+        "title": "Work requests report",
+        "description": "Requests by status, category and time taken"
+      },
+      "maintenance": {
+        "title": "Maintenance report",
+        "description": "Maintenance work by location and cost"
+      },
+      "letters": {
+        "title": "Letter register",
+        "description": "Inward and outward register"
+      },
+      "budgets": {
+        "title": "Department budgets",
+        "description": "Budget, spent and remaining"
+      },
+      "renewalCosts": {
+        "title": "Renewal costs",
+        "description": "What renewals cost, by type and month"
+      },
+      "residency": {
+        "title": "Staff housing analytics",
+        "description": "Occupancy, bills and requests"
+      },
+      "deadStock": {
+        "title": "Dead stock report",
+        "description": "Items by department and condition"
+      },
+      "allocations": {
+        "title": "Issue register report",
+        "description": "What is issued to whom, and overdue returns"
+      },
+      "storeIssues": {
+        "title": "Store issues",
+        "description": "Material issued from the store"
+      },
+      "smartboards": {
+        "title": "Smart boards",
+        "description": "Smart board status by lab"
+      },
+      "cctv": {
+        "title": "CCTV check report",
+        "description": "Daily checks, backups and cameras down"
+      },
+      "campuses": {
+        "title": "Campus comparison",
+        "description": "Campuses side by side: staff, students, attendance, work"
+      },
+      "activity": {
+        "title": "Activity log",
+        "description": "Who changed what, and sign-ins"
+      }
+    },
+    "status": "Status",
+    "allStatuses": "All",
+    "period": "{{from}} to {{to}}",
+    "entryCount_one": "{{count}} entry",
+    "entryCount_other": "{{count}} entries",
+    "truncated": "Only the first {{count}} entries are shown; choose a shorter period.",
+    "byDepartment": "By department",
+    "department": "Department",
+    "entries": "Entries",
+    "hours": "Hours",
+    "completion": "Completed",
+    "entriesTitle": "Entries",
+    "noEntries": "No work recorded in this period.",
+    "date": "Date",
+    "employee": "Employee",
+    "work": "Work",
+    "with": "With {{names}}",
+    "materialsUsed": "Material: {{list}}",
+    "reviewed": "Reviewed",
+    "campusPeriod": "Work from {{from}} to {{to}}; attendance and open requests as of {{today}}.",
+    "noCampuses": "No campuses to compare.",
+    "figure": "Figure",
+    "metrics": {
+      "departments": "Departments",
+      "employees": "Staff",
+      "students": "Students",
+      "present_today": "Present today",
+      "attendance_percent": "Attendance today",
+      "work_entries": "Work entries",
+      "work_completion_percent": "Work completed",
+      "open_requests": "Open work requests"
     }
   }
 }
