@@ -72,7 +72,7 @@ class NotificationSettingsController extends Controller
         $sent = 0;
         foreach ($request->user()->pushSubscriptions as $sub) {
             try {
-                $result = $push->send($sub, ['title' => config('app.name'), 'body' => '✓', 'url' => '/my/notifications', 'tag' => 'test']);
+                $result = $push->send($sub, ['title' => config('app.name'), 'body' => '✓', 'url' => '/notifications/settings', 'tag' => 'test']);
             } catch (Throwable $e) {
                 report($e);
                 $result = 'failed';

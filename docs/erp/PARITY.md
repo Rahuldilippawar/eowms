@@ -22,7 +22,7 @@ Legend: ✅ in the ERP · 🟡 partly (gaps listed) · ⏳ scheduled (phase) · 
 | Account profile (own photo, password) | ✅ 5A-1 | My profile + change password |
 | Global search, command palette (Ctrl+K) | ✅ 10a | Pages + employees, students, letters, vehicles, renewals, store items, IT assets — each module's own visibility |
 | Welcome / onboarding tour, About page (contributors) | ⏳ 11 | |
-| PWA (manifest, offline page), Web Push / FCM, device tokens | ⏳ 11 | In-app notifications done in Phase 5 |
+| PWA (manifest, offline page), Web Push / FCM, device tokens | ✅ 11a | Web Push (VAPID) to each person's devices, per-group push / e-mail choices, hourly e-mail summary |
 | Maintenance mode, system update, DB update screen | ⏳ 11 | Replaced by the deploy workflow + migrate screen |
 | Backup / restore, scheduled backup, clear data | ✅ 10c | Whole-database backup and restore (super admins, safety backup first); organization export and clear (keeps structure, accounts, settings) |
 | TV display (notice board screen) | ⏳ 11 | |
@@ -85,7 +85,7 @@ Legend: ✅ in the ERP · 🟡 partly (gaps listed) · ⏳ scheduled (phase) · 
 | Material purchase (GST, transport) + payment ledger | ✅ 7a | Payments never exceed what is due |
 | Budget module (overview per department) | ✅ 7a | Budgets page with use bar and spend by source |
 | Budget deduction on letter approval | ✅ 7a | Charged on signing |
-| Renewals: items, renew, history, attachments, calendar, cost analysis, payment track, import, report, reminders cron | ✅ 7b | Email reminders → ⏳ 11 (with email / push delivery); in-app now |
+| Renewals: items, renew, history, attachments, calendar, cost analysis, payment track, import, report, reminders cron | ✅ 7b | E-mail and push reminders ✅ 11a (renewals e-mailed by default) |
 | Vehicle-linked renewals (RTO, insurance per vehicle) | ✅ 8a | Each document date of a vehicle is a renewal item |
 
 ## Hostel, residency, transport, maintenance, requests (8)

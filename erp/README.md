@@ -233,7 +233,13 @@ Dev accounts (password `password`): `admin@example.com` (super admin), `orgadmin
   Rules: [`docs/BACKUP.md`](docs/BACKUP.md).
 - Tests: 172 backend, 96 frontend, 81 end-to-end.
 
+### Phase 11a — done (installable app, push and e-mail notifications)
+- The app installs on phones and computers (manifest, icons, offline page); notifications also go
+  out as Web Push and as an hourly e-mail summary, in each person's language, with each person
+  choosing push / e-mail per group. Rules: [`docs/NOTIFICATIONS.md`](docs/NOTIFICATIONS.md).
+- Tests: 174 backend, 98 frontend, 83 end-to-end.
+
 ### Not yet (later phases)
-- The other business modules (Phases 11–14, see
+- The other business modules (Phases 11b–14, see
   [`../docs/erp/PARITY.md`](../docs/erp/PARITY.md)); email / push delivery of notifications.
 - Reports, deployment to Hostinger.

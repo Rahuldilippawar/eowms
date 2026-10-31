@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="mr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0f766e" />
+    <title>Offline · E-Admin ERP</title>
+    <style>
+      body { margin: 0; min-height: 100vh; display: grid; place-items: center; font-family: "Noto Sans Devanagari", "Noto Sans", system-ui, sans-serif; background: #f8fafc; color: #0f172a; padding: 16px; }
+      main { max-width: 26rem; text-align: center; }
+      img { width: 72px; height: 72px; }
+      h1 { font-size: 1.25rem; margin: 1rem 0 .5rem; }
+      p { color: #475569; line-height: 1.5; margin: .25rem 0; }
+      button { margin-top: 1rem; min-height: 2.5rem; padding: 0 1.25rem; border: 0; border-radius: .5rem; background: #0f766e; color: #fff; font-size: 1rem; }
+      @media (prefers-color-scheme: dark) { body { background: #020617; color: #f1f5f9; } p { color: #cbd5e1; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <img src="/icons/icon-192.png" alt="" />
+      <h1>तुम्ही offline आहात · You are offline</h1>
+      <p>इंटरनेट जोडणी परत आल्यावर पुन्हा प्रयत्न करा.</p>
+      <p>Try again when the internet connection is back.</p>
+      <button type="button" onclick="location.reload()">पुन्हा प्रयत्न करा · Try again</button>
+    </main>
+  </body>
+</html>
