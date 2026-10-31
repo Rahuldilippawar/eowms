@@ -31,6 +31,12 @@ class User extends Authenticatable
      *
      * @var list<string>
      */
+    /** @return HasMany<PushSubscription, $this> */
+    public function pushSubscriptions(): HasMany
+    {
+        return $this->hasMany(PushSubscription::class);
+    }
+
     /** @return HasMany<RoleAssignment, $this> */
     public function roleAssignments(): HasMany
     {
@@ -52,6 +58,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'notification_settings' => 'array',
             'is_active' => 'boolean',
             'is_super_admin' => 'boolean',
             'must_change_password' => 'boolean',

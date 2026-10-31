@@ -35,6 +35,7 @@ use App\Http\Controllers\Api\V1\MaterialPurchaseController;
 use App\Http\Controllers\Api\V1\MeController;
 use App\Http\Controllers\Api\V1\MyResidencyController;
 use App\Http\Controllers\Api\V1\NotificationController;
+use App\Http\Controllers\Api\V1\NotificationSettingsController;
 use App\Http\Controllers\Api\V1\OrganizationController;
 use App\Http\Controllers\Api\V1\OrganizationModulesController;
 use App\Http\Controllers\Api\V1\PasswordResetController;
@@ -530,6 +531,12 @@ Route::middleware(['auth:sanctum', SetAccessContext::class, EnsurePasswordChange
     Route::post('/tasks/{task}/comments', [TaskController::class, 'comment'])->middleware('module:tasks');
     Route::post('/tasks/{task}/{action}', [TaskController::class, 'transition'])->whereIn('action', ['start', 'submit', 'complete', 'reopen', 'cancel'])->middleware('module:tasks');
 
+    // Phase 11a: one's own language, push devices and push / e-mail choices.
+    Route::get('/me/notification-settings', [NotificationSettingsController::class, 'show']);
+    Route::put('/me/notification-settings', [NotificationSettingsController::class, 'update']);
+    Route::post('/me/push-subscriptions', [NotificationSettingsController::class, 'subscribe'])->middleware('throttle:20,1');
+    Route::delete('/me/push-subscriptions', [NotificationSettingsController::class, 'unsubscribe']);
+    Route::post('/me/push-subscriptions/test', [NotificationSettingsController::class, 'test'])->middleware('throttle:5,1');
     Route::get('/notifications', [NotificationController::class, 'index']);
     Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
     Route::post('/notifications/read-all', [NotificationController::class, 'readAll']);

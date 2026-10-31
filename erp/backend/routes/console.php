@@ -27,3 +27,6 @@ Schedule::command('erp:loan-overdue')->dailyAt('03:40')->withoutOverlapping();
 Schedule::command('erp:hostel-attendance-check')->dailyAt('14:30')->withoutOverlapping();
 // Whole-database backup: 02:50 India time; keeps the newest 14 scheduled backups.
 Schedule::command('erp:backup')->dailyAt('21:20')->withoutOverlapping();
+// Phase 11a: new notifications as Web Push (every minute) and as an e-mail summary (hourly).
+Schedule::command('erp:deliver-push')->everyMinute()->withoutOverlapping();
+Schedule::command('erp:email-notifications')->hourlyAt(17)->withoutOverlapping();

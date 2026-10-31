@@ -18,6 +18,13 @@ return [
         'key' => env('POSTMARK_API_KEY'),
     ],
 
+    // Web Push (Phase 11a): keys from `php artisan erp:vapid`; push is off while they are empty.
+    'vapid' => [
+        'public_key' => env('VAPID_PUBLIC_KEY', ''),
+        'private_key' => env('VAPID_PRIVATE_KEY', ''),
+        'subject' => env('VAPID_SUBJECT', ''),
+    ],
+
     'resend' => [
         'key' => env('RESEND_API_KEY'),
     ],
