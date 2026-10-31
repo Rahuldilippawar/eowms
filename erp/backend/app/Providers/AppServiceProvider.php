@@ -55,5 +55,16 @@ class AppServiceProvider extends ServiceProvider
                 Limit::perMinute(config('auth.login_throttle.per_ip'))->by($request->ip()),
             ];
         });
+
+        // Fingerprint sign-in carries no e-mail: limited per key and per IP. Each sign-in is two
+        // requests (challenge + answer), and a whole office may share one IP.
+        RateLimiter::for('webauthn-login', function (Request $request) {
+            $key = (string) $request->input('credential.id');
+
+            return array_filter([
+                $key !== '' ? Limit::perMinute(config('auth.login_throttle.per_email'))->by('wa|'.$key.'|'.$request->ip()) : null,
+                Limit::perMinute(config('auth.login_throttle.per_ip') * 2)->by('wa|'.$request->ip()),
+            ]);
+        });
     }
 }

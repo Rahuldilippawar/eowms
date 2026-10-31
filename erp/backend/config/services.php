@@ -25,6 +25,14 @@ return [
         'subject' => env('VAPID_SUBJECT', ''),
     ],
 
+    // WebAuthn (Phase 11b): the relying party id is the registrable domain the keys belong to
+    // (e.g. babashree.com, valid for amd.babashree.com and erp.babashree.com); origins the browser
+    // may answer from, comma separated, besides APP_URL.
+    'webauthn' => [
+        'rp_id' => env('WEBAUTHN_RP_ID', ''),
+        'origins' => env('WEBAUTHN_ORIGINS', ''),
+    ],
+
     'resend' => [
         'key' => env('RESEND_API_KEY'),
     ],

@@ -31,6 +31,12 @@ class User extends Authenticatable
      *
      * @var list<string>
      */
+    /** @return HasMany<WebauthnCredential, $this> */
+    public function webauthnCredentials(): HasMany
+    {
+        return $this->hasMany(WebauthnCredential::class);
+    }
+
     /** @return HasMany<PushSubscription, $this> */
     public function pushSubscriptions(): HasMany
     {
