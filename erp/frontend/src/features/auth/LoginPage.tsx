@@ -1,4 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
+import { Fingerprint } from 'lucide-react'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
@@ -11,6 +12,7 @@ import { Spinner } from '@/components/ui/Spinner'
 import { parseApiError } from '@/lib/api'
 import { AuthCard } from './AuthCard'
 import { useAuth } from './AuthProvider'
+import { webauthnSupported } from './webauthn'
 
 const schema = z.object({
   email: z.string().trim().min(1, 'auth.errors.emailRequired').email('auth.errors.emailInvalid'),
@@ -22,7 +24,8 @@ type FormValues = z.infer<typeof schema>
 
 export function LoginPage() {
   const { t } = useTranslation()
-  const { login } = useAuth()
+  const { login, loginWithKey } = useAuth()
+  const [keyBusy, setKeyBusy] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
   const [formError, setFormError] = useState<string | null>(null)
@@ -37,8 +40,7 @@ export function LoginPage() {
     setFormError(null)
     try {
       await login(values)
-      const from = (location.state as { from?: string } | null)?.from
-      navigate(from && from !== '/login' ? from : '/', { replace: true })
+      goOn()
     } catch (error) {
       const { status, errors: fieldErrors, message } = parseApiError(error)
       if (status === 429) setFormError(t('auth.errors.throttled'))
@@ -47,6 +49,28 @@ export function LoginPage() {
       else setFormError(t('auth.errors.generic'))
     }
   })
+
+  const goOn = () => {
+    const from = (location.state as { from?: string } | null)?.from
+    navigate(from && from !== '/login' ? from : '/', { replace: true })
+  }
+
+  const onKey = async () => {
+    setFormError(null)
+    setKeyBusy(true)
+    try {
+      await loginWithKey()
+      goOn()
+    } catch (error) {
+      const { status, errors: fieldErrors } = parseApiError(error)
+      // The person closed the device prompt (NotAllowedError): no message needed.
+      if (error instanceof DOMException) setFormError(error.name === 'NotAllowedError' ? null : t('auth.fingerprintFailed'))
+      else if (status === 429) setFormError(t('auth.errors.throttled'))
+      else setFormError(fieldErrors?.credential?.[0] ?? t('auth.fingerprintFailed'))
+    } finally {
+      setKeyBusy(false)
+    }
+  }
 
   return (
     <AuthCard title={t('auth.title')} subtitle={t('auth.subtitle')}>
@@ -91,6 +115,15 @@ export function LoginPage() {
             {isSubmitting ? <Spinner label={t('auth.submitting')} /> : t('auth.submit')}
           </Button>
         </form>
+
+        {webauthnSupported() ? (
+          <div className="mt-4 border-t border-slate-200 pt-4 dark:border-slate-800">
+            <Button type="button" variant="secondary" className="w-full gap-2" disabled={keyBusy} onClick={() => void onKey()}>
+              {keyBusy ? <Spinner label={t('auth.submitting')} /> : <Fingerprint aria-hidden className="size-5" />}
+              {t('auth.signInWithFingerprint')}
+            </Button>
+          </div>
+        ) : null}
     </AuthCard>
   )
 }

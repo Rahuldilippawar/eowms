@@ -133,7 +133,8 @@ export const reassignLetter = async (id: number, toUserId: number, remark: strin
   (await api.post(`/letters/${id}/reassign`, { to_user_id: toUserId, remark: remark || undefined })).data.data
 export const dispatchLetter = async (id: number, input: { dispatch_mode: DispatchMode; dispatch_tracking_no: string | null; dispatch_date: string | null }): Promise<LetterDetail> =>
   (await api.post(`/letters/${id}/dispatch`, input)).data.data
-export const signLetter = async (id: number, input: { password: string; remark: string | null; approved_amount: number | null }): Promise<LetterDetail> =>
+/** Signed with the password, or with a fingerprint check (`webauthn`, from confirmWithKey). */
+export const signLetter = async (id: number, input: { password?: string; webauthn?: Record<string, unknown>; remark: string | null; approved_amount: number | null }): Promise<LetterDetail> =>
   (await api.post(`/letters/${id}/sign`, { ...input, approved_amount: input.approved_amount ?? undefined })).data.data
 export const attachToLetter = async (id: number, file: File): Promise<LetterDetail> => {
   const form = new FormData()

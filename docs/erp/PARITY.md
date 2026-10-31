@@ -12,7 +12,7 @@ Legend: ✅ in the ERP · 🟡 partly (gaps listed) · ⏳ scheduled (phase) · 
 | Old module | Status | Notes / gaps |
 |---|---|---|
 | Login, logout, forgot / reset password | ✅ | Phase 2 (rate-limited); forced password change ✅ 5A-1 |
-| WebAuthn fingerprint login + identity check | ⏳ 11 | Needs HTTPS on the ERP domain |
+| WebAuthn fingerprint login + identity check | ✅ 11b | Fingerprint / face / device PIN; staging erp.babashree.com, production amd.babashree.com (RP id babashree.com) |
 | Organizations (create, edit, delete, switch) | ✅ | |
 | Campuses (= institutions) incl. compare | ✅ 10b | Campus comparison: staff, students, attendance, work, open requests side by side |
 | Departments incl. dashboard, bulk reassign | ✅ | Dashboard has a department filter; bulk move ✅ 5A-1 |
@@ -70,7 +70,7 @@ Legend: ✅ in the ERP · 🟡 partly (gaps listed) · ⏳ scheduled (phase) · 
 | Letters: create, view, inward / outward numbers, register + export, print | ✅ 6 | Gap-free numbers per financial year; print → browser PDF with QR |
 | Letter categories, seed default categories and workflows | ✅ 6 | 18 default categories; workflows are built in the settings page (no guessed "top management") |
 | Workflow templates (create / edit) with steps | ✅ 6 | Generic approval engine (`module` column) for later modules |
-| Sign & approve (password / fingerprint), signature verification | 🟡 6 | Password ✅ with SHA-256 seal + public check; fingerprint → ⏳ 11 (WebAuthn) |
+| Sign & approve (password / fingerprint), signature verification | ✅ 6, 11b | Password ✅ with SHA-256 seal + public check; fingerprint ✅ 11b (WebAuthn) |
 | Budget deduction on approval | ✅ 7a | Charged to the department budget when signed |
 | Attachments | ✅ 6 | Private storage, audited downloads, sealed by the signature |
 | Reassign (super admin), dispatch details, remarks, seen-by-holder | ✅ 6 | |

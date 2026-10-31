@@ -52,6 +52,7 @@ import { VehicleImportPage } from '@/features/vehicles/VehicleImportPage'
 import { VehicleReportPage } from '@/features/vehicles/VehicleReportPage'
 import { VehiclesPage } from '@/features/vehicles/VehiclesPage'
 import { ActivityLogPage } from '@/features/audit/ActivityLogPage'
+import { DeviceKeysPage } from '@/features/auth/DeviceKeysPage'
 import { BackupsPage } from '@/features/backup/BackupsPage'
 import { OrganizationDataPage } from '@/features/backup/OrganizationDataPage'
 import { CampusComparisonPage } from '@/features/reports/CampusComparisonPage'
@@ -238,6 +239,7 @@ export function AppRoutes() {
           <Route path="employees/id-cards" element={guard('employees.view', <IdCardsPage />)} />
           <Route path="employees/:id" element={<EmployeeProfilePage />} />
           <Route path="my/profile" element={<EmployeeProfilePage mine />} />
+          <Route path="account/fingerprint" element={<DeviceKeysPage />} />
           <Route path="account/password" element={<ChangePasswordPage />} />
           <Route path="organization/fields" element={guard('organizations.edit', <CustomFieldsPage />)} />
           <Route path="students" element={guard('students.view', <StudentsPage />)} />

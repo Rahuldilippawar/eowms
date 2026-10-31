@@ -10,6 +10,7 @@ use App\Models\Letter;
 use App\Models\LetterAttachment;
 use App\Models\LetterCategory;
 use App\Services\Correspondence\LetterService;
+use App\Services\WebAuthn\WebAuthn;
 use App\Support\Access\AccessContext;
 use App\Support\Audit\AuditLogger;
 use Illuminate\Database\Eloquent\Builder;
@@ -18,6 +19,8 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
+use RuntimeException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /** Correspondence files: lists, the file view and every move on a file. */
@@ -144,15 +147,32 @@ class LetterController extends Controller
         return $this->detail($this->service->dispatch($letter, $data, $request->user()));
     }
 
-    public function sign(Request $request, Letter $letter): LetterResource
+    public function sign(Request $request, Letter $letter, WebAuthn $webauthn): LetterResource
     {
         $letter = $this->visibleOrFail($request, $letter);
+        // Confirmed with the password, or with the person's fingerprint / face / device PIN (WebAuthn).
         $data = $request->validate([
-            'password' => ['required', 'string', 'max:255'],
+            'password' => ['required_without:webauthn', 'nullable', 'string', 'max:255'],
+            'webauthn' => ['required_without:password', 'nullable', 'array'],
+            'webauthn.id' => ['required_with:webauthn', 'string', 'max:512'],
+            'webauthn.response.clientDataJSON' => ['required_with:webauthn', 'string', 'max:4096'],
+            'webauthn.response.authenticatorData' => ['required_with:webauthn', 'string', 'max:4096'],
+            'webauthn.response.signature' => ['required_with:webauthn', 'string', 'max:1024'],
             'remark' => ['nullable', 'string', 'max:2000'],
             'approved_amount' => ['nullable', 'numeric', 'min:0', 'max:9999999999'],
         ]);
-        $this->service->sign($letter, $data['password'], $data['remark'] ?? null, isset($data['approved_amount']) ? (float) $data['approved_amount'] : null, $request->user());
+        $amount = isset($data['approved_amount']) ? (float) $data['approved_amount'] : null;
+        if (! empty($data['password'])) {
+            $this->service->sign($letter, $data['password'], $data['remark'] ?? null, $amount, $request->user());
+        } else {
+            try {
+                $webauthn->verify('confirm', $request->input('webauthn'), $request->user());
+            } catch (RuntimeException) {
+                AuditLogger::record('letters', 'sign_failed', $letter);
+                throw ValidationException::withMessages(['webauthn' => [__('webauthn.confirm_failed')]]);
+            }
+            $this->service->signConfirmed($letter, $data['remark'] ?? null, $amount, $request->user());
+        }
 
         return $this->detail($letter->refresh());
     }

@@ -243,7 +243,18 @@ final class LetterService
             throw ValidationException::withMessages(['password' => [__('letters.wrong_password')]]);
         }
 
-        $signature = DB::transaction(function () use ($letter, $remark, $approvedAmount, $actor) {
+        return $this->complete($letter, 'password', $remark, $approvedAmount, $actor);
+    }
+
+    /** Signing after the person confirmed with their fingerprint / face / device PIN (checked by the caller). */
+    public function signConfirmed(Letter $letter, ?string $remark, ?float $approvedAmount, User $actor): LetterSignature
+    {
+        return $this->complete($letter, 'webauthn', $remark, $approvedAmount, $actor);
+    }
+
+    private function complete(Letter $letter, string $method, ?string $remark, ?float $approvedAmount, User $actor): LetterSignature
+    {
+        $signature = DB::transaction(function () use ($letter, $method, $remark, $approvedAmount, $actor) {
             $letter = $this->lock($letter);
             $this->assertAllowed($actor, $letter, 'sign');
             if ($letter->is_budget_expense) {
@@ -260,7 +271,7 @@ final class LetterService
                 'signer_name' => $employee?->name ?? $actor->name,
                 'signer_designation' => $employee?->designation,
                 'action' => 'complete',
-                'method' => 'password',
+                'method' => $method,
                 'verification_code' => strtoupper(Str::random(12)),
                 'previous_hash' => $previous,
                 'signed_at' => now()->startOfSecond(),

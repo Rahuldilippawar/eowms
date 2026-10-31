@@ -58,6 +58,7 @@ use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\VehicleController;
 use App\Http\Controllers\Api\V1\VehicleCorrectionController;
 use App\Http\Controllers\Api\V1\VendorController;
+use App\Http\Controllers\Api\V1\WebAuthnController;
 use App\Http\Controllers\Api\V1\WorkController;
 use App\Http\Controllers\Api\V1\WorkRequestController;
 use App\Http\Middleware\EnsurePasswordChanged;
@@ -71,6 +72,12 @@ Route::get('/health', HealthController::class)->name('api.health');
 Route::post('/auth/login', [AuthController::class, 'login'])
     ->middleware('throttle:login')
     ->name('api.auth.login');
+
+// Fingerprint / face / device-PIN sign-in (Phase 11b).
+Route::middleware('throttle:webauthn-login')->group(function () {
+    Route::post('/auth/webauthn/options', [AuthController::class, 'webauthnOptions'])->name('api.auth.webauthn.options');
+    Route::post('/auth/webauthn/login', [AuthController::class, 'webauthnLogin'])->name('api.auth.webauthn.login');
+});
 
 // Public ID-card check (QR on the card): only what the card shows.
 Route::middleware('throttle:30,1')->group(function () {
@@ -532,6 +539,12 @@ Route::middleware(['auth:sanctum', SetAccessContext::class, EnsurePasswordChange
     Route::post('/tasks/{task}/{action}', [TaskController::class, 'transition'])->whereIn('action', ['start', 'submit', 'complete', 'reopen', 'cancel'])->middleware('module:tasks');
 
     // Phase 11a: one's own language, push devices and push / e-mail choices.
+    // Phase 11b: one's own fingerprint / face / device-PIN keys.
+    Route::get('/me/webauthn', [WebAuthnController::class, 'index']);
+    Route::post('/me/webauthn/register/options', [WebAuthnController::class, 'registerOptions'])->middleware('throttle:20,1');
+    Route::post('/me/webauthn/register', [WebAuthnController::class, 'register'])->middleware('throttle:10,1');
+    Route::delete('/me/webauthn/{id}', [WebAuthnController::class, 'destroy'])->whereNumber('id');
+    Route::post('/me/webauthn/confirm/options', [WebAuthnController::class, 'confirmOptions'])->middleware('throttle:20,1');
     Route::get('/me/notification-settings', [NotificationSettingsController::class, 'show']);
     Route::put('/me/notification-settings', [NotificationSettingsController::class, 'update']);
     Route::post('/me/push-subscriptions', [NotificationSettingsController::class, 'subscribe'])->middleware('throttle:20,1');
