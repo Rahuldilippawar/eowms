@@ -1,7 +1,8 @@
+import { Settings } from 'lucide-react'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { EmptyState, ErrorState, LoadingState } from '@/components/data/ListStates'
 import { Pagination } from '@/components/data/Pagination'
 import { Button } from '@/components/ui/Button'
@@ -36,6 +37,10 @@ export function NotificationsPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">{t('notifications.title')}</h1>
         <div className="flex items-center gap-3">
+          <Link to="/notifications/settings" className="inline-flex items-center gap-1 text-sm font-medium text-brand-700 hover:underline">
+            <Settings aria-hidden className="size-4" />
+            {t('notifications.settingsLink')}
+          </Link>
           <label className="flex items-center gap-2 text-sm">
             <input
               type="checkbox"

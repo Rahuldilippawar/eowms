@@ -28,6 +28,7 @@ import { InstitutionsPage } from '@/features/org/InstitutionsPage'
 import { EmployeesPage } from '@/features/people/EmployeesPage'
 import { StudentImportPage } from '@/features/people/StudentImportPage'
 import { StudentsPage } from '@/features/people/StudentsPage'
+import { NotificationSettingsPage } from '@/features/notifications/NotificationSettingsPage'
 import { NotificationsPage } from '@/features/notifications/NotificationsPage'
 import { PerformancePage } from '@/features/performance/PerformancePage'
 import { TaskDetailPage } from '@/features/tasks/TaskDetailPage'
@@ -145,6 +146,7 @@ export function AppRoutes() {
           <Route path="tasks" element={<TasksPage />} />
           <Route path="tasks/:id" element={<TaskDetailPage />} />
           <Route path="notifications" element={<NotificationsPage />} />
+          <Route path="notifications/settings" element={<NotificationSettingsPage />} />
           <Route path="performance" element={<PerformancePage />} />
           <Route path="work" element={guard('daily_work.view', <TeamWorkPage />)} />
           <Route path="finance/budgets" element={guard('finance.view', <BudgetsPage />)} />

@@ -446,3 +446,15 @@ Rules: [`BACKUP.md`](BACKUP.md). "Confirm" = `password` (the person's own) and `
 | GET | `/organization/export` | `organizations.edit` organization-wide | JSON download |
 | POST | `/organization/clear` | (the same) | Confirm with the organization's name; returns `deleted` per table and `safety_backup` |
 
+## Phase 11a — push and e-mail settings
+
+Rules: [`NOTIFICATIONS.md`](NOTIFICATIONS.md). All for the signed-in person only.
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/me/notification-settings` | `{locale, groups[], push{group: bool}, email{group: bool}, push_key (null when push is off on the server), devices[]}` |
+| PUT | `/me/notification-settings` | Any of `locale (mr\|en)`, `push{group: bool}`, `email{group: bool}`; unknown groups are ignored |
+| POST | `/me/push-subscriptions` | The browser's `PushSubscription.toJSON()`: `endpoint` (https), `keys.p256dh`, `keys.auth` (20 / minute) |
+| DELETE | `/me/push-subscriptions` | `endpoint` |
+| POST | `/me/push-subscriptions/test` | A test message to one's own devices (5 / minute); 409 when push is not set up |
+
