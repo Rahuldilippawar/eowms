@@ -76,8 +76,14 @@ final class OrganizationData
                 do {
                     $changed = 0;
                     foreach ($fks as $fk) {
+                        // A table pointing at itself is read through a materialised copy: MySQL refuses a
+                        // DELETE / UPDATE whose subquery reads the same table (error 1093); DISTINCT keeps
+                        // the derived table from being merged back into the outer query.
+                        $parent = $fk['t'] === $fk['rt']
+                            ? DB::raw('(select distinct `'.$fk['rc'].'` from `'.$fk['rt'].'`) as p')
+                            : $fk['rt'].' as p';
                         $orphans = DB::table($fk['t'])->whereNotNull($fk['c'])
-                            ->whereNotExists(fn ($q) => $q->selectRaw('1')->from($fk['rt'].' as p')->whereColumn('p.'.$fk['rc'], $fk['t'].'.'.$fk['c']));
+                            ->whereNotExists(fn ($q) => $q->selectRaw('1')->from($parent)->whereColumn('p.'.$fk['rc'], $fk['t'].'.'.$fk['c']));
                         if (! in_array($fk['t'], self::KEEP, true)) {
                             $n = $orphans->delete();
                             $deleted[$fk['t']] = ($deleted[$fk['t']] ?? 0) + $n;
