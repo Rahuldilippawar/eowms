@@ -239,7 +239,13 @@ Dev accounts (password `password`): `admin@example.com` (super admin), `orgadmin
   choosing push / e-mail per group. Rules: [`docs/NOTIFICATIONS.md`](docs/NOTIFICATIONS.md).
 - Tests: 174 backend, 98 frontend, 83 end-to-end.
 
+### Phase 11b — done (fingerprint sign-in and signing)
+- Sign in and sign letters with the device's fingerprint, face or screen-lock PIN (WebAuthn, verified
+  with openssl); each person manages their devices. Staging `erp.babashree.com`, production
+  `amd.babashree.com`, shared relying party `babashree.com`. Rules: [`docs/WEBAUTHN.md`](docs/WEBAUTHN.md).
+- Tests: 178 backend, 100 frontend, 85 end-to-end.
+
 ### Not yet (later phases)
-- The other business modules (Phases 11b–14, see
+- The other business modules (Phases 11c–14, see
   [`../docs/erp/PARITY.md`](../docs/erp/PARITY.md)); email / push delivery of notifications.
 - Reports, deployment to Hostinger.
