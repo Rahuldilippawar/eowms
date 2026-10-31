@@ -1,4 +1,4 @@
-import { FileBarChart, History, Cctv, Monitor, MonitorX, Archive, Laptop, Boxes, PackageCheck, BarChart3, BedDouble, DoorOpen, House, Bus, Hammer, MessageSquareWarning, FilePenLine, PieChart, Wrench, CalendarHeart, Fingerprint, IndianRupee, Scale, SlidersHorizontal, UserRound, Building, ClipboardPen, Mail, RefreshCw, ShoppingCart, Wallet, ListChecks, NotebookPen, Building2, CalendarClock, CalendarDays, ClipboardCheck, ClipboardList, GraduationCap, IdCard, KeyRound, LayoutDashboard, Network, Plane, Settings, Users, type LucideIcon } from 'lucide-react'
+import { DatabaseBackup, FolderDown, FileBarChart, History, Cctv, Monitor, MonitorX, Archive, Laptop, Boxes, PackageCheck, BarChart3, BedDouble, DoorOpen, House, Bus, Hammer, MessageSquareWarning, FilePenLine, PieChart, Wrench, CalendarHeart, Fingerprint, IndianRupee, Scale, SlidersHorizontal, UserRound, Building, ClipboardPen, Mail, RefreshCw, ShoppingCart, Wallet, ListChecks, NotebookPen, Building2, CalendarClock, CalendarDays, ClipboardCheck, ClipboardList, GraduationCap, IdCard, KeyRound, LayoutDashboard, Network, Plane, Settings, Users, type LucideIcon } from 'lucide-react'
 
 export interface NavItem {
   to: string
@@ -95,7 +95,9 @@ export const NAVIGATION: NavSection[] = [
       { to: '/audit', labelKey: 'nav.activityLog', icon: History, permission: 'audit.view' },
       { to: '/organization', labelKey: 'nav.organizationSettings', icon: Settings, permission: 'organizations.edit' },
       { to: '/organization/fields', labelKey: 'nav.customFields', icon: SlidersHorizontal, permission: 'organizations.edit' },
+      { to: '/organization/data', labelKey: 'nav.organizationData', icon: FolderDown, permission: 'organizations.edit' },
       { to: '/admin/organizations', labelKey: 'nav.allOrganizations', icon: Building, superAdminOnly: true },
+      { to: '/admin/backups', labelKey: 'nav.backups', icon: DatabaseBackup, superAdminOnly: true },
     ],
   },
 ]

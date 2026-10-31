@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\V1\AttendanceReportController;
 use App\Http\Controllers\Api\V1\AttendanceSettingsController;
 use App\Http\Controllers\Api\V1\AuditLogController;
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\BackupController;
 use App\Http\Controllers\Api\V1\BiometricDeviceController;
 use App\Http\Controllers\Api\V1\CctvController;
 use App\Http\Controllers\Api\V1\CustomFieldController;
@@ -116,6 +117,17 @@ Route::middleware(['auth:sanctum', SetAccessContext::class, EnsurePasswordChange
         Route::get('/audit-logs/logins', [AuditLogController::class, 'logins']);
         Route::get('/audit-logs/users', [AuditLogController::class, 'users']);
     });
+    // Phase 10c: backups (super admins; checked in the controller) and an organization's export / clear.
+    Route::prefix('backups')->group(function () {
+        Route::get('/', [BackupController::class, 'index']);
+        Route::post('/', [BackupController::class, 'store'])->middleware('throttle:6,1');
+        Route::post('/upload', [BackupController::class, 'upload'])->middleware('throttle:6,1');
+        Route::get('/{name}', [BackupController::class, 'download'])->where('name', '[A-Za-z0-9._-]+');
+        Route::delete('/{name}', [BackupController::class, 'destroy'])->where('name', '[A-Za-z0-9._-]+');
+        Route::post('/{name}/restore', [BackupController::class, 'restore'])->where('name', '[A-Za-z0-9._-]+')->middleware('throttle:5,1');
+    });
+    Route::get('/organization/export', [BackupController::class, 'exportOrganization'])->middleware('throttle:6,1');
+    Route::post('/organization/clear', [BackupController::class, 'clearOrganization'])->middleware('throttle:5,1');
     Route::get('/reports/campuses', [ReportController::class, 'campuses'])->middleware('permission:institutions.view');
     Route::get('/search', SearchController::class)->middleware('throttle:60,1');
 

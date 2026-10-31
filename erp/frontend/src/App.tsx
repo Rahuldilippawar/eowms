@@ -51,6 +51,8 @@ import { VehicleImportPage } from '@/features/vehicles/VehicleImportPage'
 import { VehicleReportPage } from '@/features/vehicles/VehicleReportPage'
 import { VehiclesPage } from '@/features/vehicles/VehiclesPage'
 import { ActivityLogPage } from '@/features/audit/ActivityLogPage'
+import { BackupsPage } from '@/features/backup/BackupsPage'
+import { OrganizationDataPage } from '@/features/backup/OrganizationDataPage'
 import { CampusComparisonPage } from '@/features/reports/CampusComparisonPage'
 import { ReportsHubPage } from '@/features/reports/ReportsHubPage'
 import { WorkPrintPage } from '@/features/reports/WorkPrintPage'
@@ -252,6 +254,15 @@ export function AppRoutes() {
           <Route path="roles" element={guard('roles.view', <RolesPage />)} />
           <Route path="roles/:id" element={guard('roles.view', <RoleEditorPage />)} />
           <Route path="organization" element={guard('organizations.edit', <OrganizationSettingsPage />)} />
+          <Route path="organization/data" element={guard('organizations.edit', <OrganizationDataPage />)} />
+          <Route
+            path="admin/backups"
+            element={
+              <RequirePermission superAdmin>
+                <BackupsPage />
+              </RequirePermission>
+            }
+          />
           <Route
             path="admin/organizations"
             element={

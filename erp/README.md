@@ -227,7 +227,13 @@ Dev accounts (password `password`): `admin@example.com` (super admin), `orgadmin
   Rules: [`docs/REPORTS.md`](docs/REPORTS.md).
 - Tests: 169 backend, 94 frontend, 77 end-to-end.
 
+### Phase 10c — done (backup; Phase 10 complete)
+- Whole-database backups (nightly, manual, upload), download and restore with a safety backup and
+  maintenance mode, for super admins; an organization's JSON export and "clear data" for its admins.
+  Rules: [`docs/BACKUP.md`](docs/BACKUP.md).
+- Tests: 172 backend, 96 frontend, 81 end-to-end.
+
 ### Not yet (later phases)
-- The other business modules (Phases 10c–14, see
+- The other business modules (Phases 11–14, see
   [`../docs/erp/PARITY.md`](../docs/erp/PARITY.md)); email / push delivery of notifications.
 - Reports, deployment to Hostinger.

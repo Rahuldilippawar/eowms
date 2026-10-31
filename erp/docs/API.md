@@ -432,3 +432,17 @@ Rules: [`REPORTS.md`](REPORTS.md).
 | GET | `/work/print?from&to&department_id&employee_id&status` | `daily_work.view` | `data.{from,to,total,truncated,summary[],entries[]}`; up to 2,000 entries |
 | GET | `/reports/campuses?from&to[&format=csv]` | `institutions.view` (organization or campus wide) | `data.{from,to,today,metrics[],campuses[]}`; switched-off modules' figures left out |
 
+## Phase 10c — backup, restore, organization data
+
+Rules: [`BACKUP.md`](BACKUP.md). "Confirm" = `password` (the person's own) and `confirmation` (the exact phrase).
+
+| Method | Path | Who | Notes |
+|---|---|---|---|
+| GET | `/backups` | super admin | `[{name, kind (manual\|scheduled\|uploaded\|pre_restore\|pre_clear), created_at, size}]`, newest first |
+| POST | `/backups` | super admin | Make a backup now (6 / minute) |
+| POST | `/backups/upload` | super admin | `file` (gzip, made by this ERP; up to 500 MB, host limits apply) |
+| GET / DELETE | `/backups/{name}` | super admin | Download / delete |
+| POST | `/backups/{name}/restore` | super admin | Confirm with `RESTORE`; returns `safety_backup` |
+| GET | `/organization/export` | `organizations.edit` organization-wide | JSON download |
+| POST | `/organization/clear` | (the same) | Confirm with the organization's name; returns `deleted` per table and `safety_backup` |
+

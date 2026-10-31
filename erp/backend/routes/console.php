@@ -25,3 +25,5 @@ Schedule::command('erp:escalate-tickets')->hourly()->withoutOverlapping();
 Schedule::command('erp:loan-overdue')->dailyAt('03:40')->withoutOverlapping();
 // Hostel roll calls not taken today: 20:00 India time.
 Schedule::command('erp:hostel-attendance-check')->dailyAt('14:30')->withoutOverlapping();
+// Whole-database backup: 02:50 India time; keeps the newest 14 scheduled backups.
+Schedule::command('erp:backup')->dailyAt('21:20')->withoutOverlapping();
