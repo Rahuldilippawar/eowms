@@ -128,7 +128,10 @@
     "activityLog": "कामकाजाची नोंद",
     "reports": "अहवाल",
     "backups": "Backup",
-    "organizationData": "Data export / साफ करा"
+    "organizationData": "Data export / साफ करा",
+    "about": "आमच्याविषयी",
+    "tvDisplays": "सूचना-फलक screens",
+    "system": "System स्थिती"
   },
   "dashboard": {
     "welcome": "नमस्कार, {{name}}",
@@ -2787,7 +2790,8 @@
       "scheduled": "रात्रीचा",
       "uploaded": "Upload केलेला",
       "pre_restore": "Restore आधीचा",
-      "pre_clear": "साफ करण्याआधीचा"
+      "pre_clear": "साफ करण्याआधीचा",
+      "pre_migrate": "Update आधीचा"
     },
     "download": "Download",
     "downloadNamed": "{{name}} download करा",
@@ -2831,5 +2835,118 @@
     "removeNamed": "{{name}} काढा",
     "signWith": "Fingerprint ने सही करा",
     "orPassword": "किंवा तुमचा पासवर्ड"
+  },
+  "about": {
+    "kinds": {
+      "deity": "आराध्य दैवत",
+      "sadguru": "सद्गुरू",
+      "guide": "मार्गदर्शक",
+      "contributor": "योगदानकर्ते"
+    },
+    "groups": {
+      "revered": "प्रेरणा",
+      "guides": "मार्गदर्शन",
+      "contributors": "योगदानकर्ते"
+    },
+    "manage": "पान बदला",
+    "done": "झाले",
+    "add": "जोडा",
+    "edit": "बदला",
+    "kind": "विभाग",
+    "title": "शीर्षक",
+    "name": "नाव",
+    "subtitle": "शीर्षकाखालील ओळ",
+    "contribution": "योगदान",
+    "body": "मजकूर",
+    "photo": "फोटो (JPEG, PNG किंवा WebP, 3 MB पर्यंत)",
+    "order": "क्रम",
+    "shown": "पानावर दाखवा",
+    "hidden": "लपवलेले",
+    "empty": "या पानावर अजून काही नाही.",
+    "editNamed": "{{name}} बदला",
+    "deleteNamed": "{{name}} हटवा",
+    "deleteTitle": "ही नोंद हटवायची?"
+  },
+  "tv": {
+    "hint": "प्रत्येक screen (उदा. ऑफिसमधला TV) स्वतःची गुप्त link login न करता उघडतो. त्यावर फक्त आकडे व आजचे वाढदिवस दिसतात. Link बंद करण्यासाठी screen हटवा.",
+    "screenName": "Screen चे नाव",
+    "screenNameHint": "उदा. ऑफिस स्वागतकक्ष TV",
+    "create": "Link बनवा",
+    "linkOnce": "ही link screen वर उघडा. ती फक्त आत्ताच दिसते: copy करून घ्या.",
+    "copy": "Copy",
+    "copied": "Link copy झाली.",
+    "none": "अजून screens नाहीत.",
+    "lastSeen": "शेवटचे दिसले {{date}}",
+    "neverSeen": "अजून उघडले नाही",
+    "removeNamed": "{{name}} हटवा",
+    "removeTitle": "हा screen हटवायचा?",
+    "removeBody": "त्याची link लगेच बंद होईल.",
+    "invalid": "ही screen link आता चालत नाही.",
+    "today": "आज",
+    "present": "आज उपस्थित",
+    "staff": "कर्मचारी",
+    "onLeave": "आज रजेवर",
+    "openRequests": "प्रलंबित काम-विनंत्या",
+    "wishes": "शुभेच्छा",
+    "birthdays": "वाढदिवसाच्या शुभेच्छा",
+    "anniversaries": "सेवापूर्ती वर्धापनदिन"
+  },
+  "system": {
+    "checksTitle": "Production तपासण्या",
+    "ok": "ठीक",
+    "notOk": "लक्ष हवे",
+    "checks": {
+      "debug_off": "Debug mode बंद आहे",
+      "https": "App चा पत्ता HTTPS आहे",
+      "mail": "E-mail सेट आहे",
+      "push": "Push सूचना सेट आहेत (VAPID keys)",
+      "scheduler": "Scheduler मागील 10 मिनिटांत चालला",
+      "storage_writable": "Storage मध्ये लिहिता येते",
+      "recent_backup": "मागील 26 तासांत backup झाला"
+    },
+    "updateTitle": "Database update",
+    "upToDate": "Database अद्ययावत आहे.",
+    "pending_one": "{{count}} update बाकी आहे:",
+    "pending_other": "{{count}} updates बाकी आहेत:",
+    "update": "Database update करा",
+    "updated": "Database update झाला.",
+    "updateBody": "सर्व संस्थांसाठी बाकी database updates चालवते. आधी संपूर्ण database चा backup घेतला जातो.",
+    "version": "Version",
+    "database": "Database",
+    "appUrl": "App चा पत्ता",
+    "fingerprintDomain": "Fingerprint domain",
+    "schedulerLastRun": "Scheduler शेवटचा चालला",
+    "latestBackup": "शेवटचा backup",
+    "never": "कधीच नाही"
+  },
+  "tour": {
+    "step": "पायरी {{n}} / {{total}}",
+    "skip": "वगळा",
+    "finish": "काम सुरू करा",
+    "again": "ओळख फेरी",
+    "welcome": {
+      "title": "स्वागत आहे, {{name}}",
+      "body": "गोष्टी कुठे आहेत याची झटपट ओळख. एक मिनिट लागेल; वगळू शकता आणि account menu मधून पुन्हा उघडू शकता."
+    },
+    "menu": {
+      "title": "मेनू",
+      "body": "डावीकडे (फोनवर ☰ बटण) तुम्ही वापरू शकता ते सर्व आहे. तुमच्या भूमिकेला परवानगी आहे तेवढेच दिसते."
+    },
+    "search": {
+      "title": "शोध",
+      "body": "कोणतेही पान, व्यक्ती, पत्र किंवा वाहन शोधण्यासाठी Ctrl+K दाबा, किंवा वरचे शोध बटण."
+    },
+    "notifications": {
+      "title": "सूचना",
+      "body": "घंटी तुमच्यासाठी काय आहे ते दाखवते. त्याच्या सेटिंग्जमधून त्या फोनवरही मिळवता येतात."
+    },
+    "profile": {
+      "title": "तुमचे account",
+      "body": "वर उजवीकडे तुमच्या नावात profile, पासवर्ड व fingerprint login आहे."
+    },
+    "language": {
+      "title": "भाषा",
+      "body": "वर कधीही मराठी व English मध्ये बदला."
+    }
   }
 }

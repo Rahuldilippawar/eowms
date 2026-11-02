@@ -245,7 +245,13 @@ Dev accounts (password `password`): `admin@example.com` (super admin), `orgadmin
   `amd.babashree.com`, shared relying party `babashree.com`. Rules: [`docs/WEBAUTHN.md`](docs/WEBAUTHN.md).
 - Tests: 178 backend, 100 frontend, 85 end-to-end.
 
+### Phase 11c — done (About, notice-board screens, welcome tour, system status)
+- The About page (revered figures, guides, contributors), notice-board screens on secret links, the
+  first-sign-in tour, and a system status page with the database update for FTP-only hosting.
+  Rules: [`docs/ABOUT-AND-TV.md`](docs/ABOUT-AND-TV.md), [`docs/SYSTEM.md`](docs/SYSTEM.md).
+- Tests: 181 backend, 103 frontend, 91 end-to-end.
+
 ### Not yet (later phases)
-- The other business modules (Phases 11c–14, see
+- The other business modules (Phases 11d–14, see
   [`../docs/erp/PARITY.md`](../docs/erp/PARITY.md)); email / push delivery of notifications.
 - Reports, deployment to Hostinger.

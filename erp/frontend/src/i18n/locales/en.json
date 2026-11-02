@@ -128,7 +128,10 @@
     "activityLog": "Activity log",
     "reports": "Reports",
     "backups": "Backups",
-    "organizationData": "Export / clear data"
+    "organizationData": "Export / clear data",
+    "about": "About",
+    "tvDisplays": "Notice-board screens",
+    "system": "System status"
   },
   "dashboard": {
     "welcome": "Hello, {{name}}",
@@ -2787,7 +2790,8 @@
       "scheduled": "Nightly",
       "uploaded": "Uploaded",
       "pre_restore": "Before a restore",
-      "pre_clear": "Before clearing"
+      "pre_clear": "Before clearing",
+      "pre_migrate": "Before an update"
     },
     "download": "Download",
     "downloadNamed": "Download {{name}}",
@@ -2831,5 +2835,118 @@
     "removeNamed": "Remove {{name}}",
     "signWith": "Sign with fingerprint",
     "orPassword": "Or your password"
+  },
+  "about": {
+    "kinds": {
+      "deity": "Revered deity",
+      "sadguru": "Sadguru",
+      "guide": "Guide",
+      "contributor": "Contributor"
+    },
+    "groups": {
+      "revered": "Inspiration",
+      "guides": "Guidance",
+      "contributors": "Contributors"
+    },
+    "manage": "Edit page",
+    "done": "Done",
+    "add": "Add",
+    "edit": "Edit",
+    "kind": "Section",
+    "title": "Title",
+    "name": "Name",
+    "subtitle": "Line under the title",
+    "contribution": "Contribution",
+    "body": "Text",
+    "photo": "Photo (JPEG, PNG or WebP, up to 3 MB)",
+    "order": "Order",
+    "shown": "Shown on the page",
+    "hidden": "Hidden",
+    "empty": "Nothing on this page yet.",
+    "editNamed": "Edit {{name}}",
+    "deleteNamed": "Delete {{name}}",
+    "deleteTitle": "Delete this entry?"
+  },
+  "tv": {
+    "hint": "Each screen (e.g. a TV in the office) opens its own secret link, without signing in. It shows only counts and today’s birthdays. Delete a screen to stop its link.",
+    "screenName": "Screen name",
+    "screenNameHint": "e.g. Office reception TV",
+    "create": "Make a link",
+    "linkOnce": "Open this link on the screen. It is shown only now: copy it.",
+    "copy": "Copy",
+    "copied": "Link copied.",
+    "none": "No screens yet.",
+    "lastSeen": "last shown {{date}}",
+    "neverSeen": "not opened yet",
+    "removeNamed": "Delete {{name}}",
+    "removeTitle": "Delete this screen?",
+    "removeBody": "Its link stops working at once.",
+    "invalid": "This screen link is not valid any more.",
+    "today": "Today",
+    "present": "Present today",
+    "staff": "Staff",
+    "onLeave": "On leave today",
+    "openRequests": "Open work requests",
+    "wishes": "Wishes",
+    "birthdays": "Happy birthday",
+    "anniversaries": "Work anniversary"
+  },
+  "system": {
+    "checksTitle": "Production checks",
+    "ok": "OK",
+    "notOk": "needs attention",
+    "checks": {
+      "debug_off": "Debug mode is off",
+      "https": "The app address uses HTTPS",
+      "mail": "E-mail is set up",
+      "push": "Push notifications are set up (VAPID keys)",
+      "scheduler": "The scheduler ran in the last 10 minutes",
+      "storage_writable": "Storage can be written",
+      "recent_backup": "A backup was made in the last 26 hours"
+    },
+    "updateTitle": "Database update",
+    "upToDate": "The database is up to date.",
+    "pending_one": "{{count}} update is waiting:",
+    "pending_other": "{{count}} updates are waiting:",
+    "update": "Update the database",
+    "updated": "Database updated.",
+    "updateBody": "Runs the waiting database updates for every organization. A backup of the whole database is taken first.",
+    "version": "Version",
+    "database": "Database",
+    "appUrl": "App address",
+    "fingerprintDomain": "Fingerprint domain",
+    "schedulerLastRun": "Scheduler last ran",
+    "latestBackup": "Latest backup",
+    "never": "never"
+  },
+  "tour": {
+    "step": "Step {{n}} of {{total}}",
+    "skip": "Skip",
+    "finish": "Start working",
+    "again": "Welcome tour",
+    "welcome": {
+      "title": "Welcome, {{name}}",
+      "body": "A quick look at where things are. It takes a minute; you can skip it and open it again from your account menu."
+    },
+    "menu": {
+      "title": "The menu",
+      "body": "On the left (the ☰ button on a phone) is everything you can use. You see only what your role allows."
+    },
+    "search": {
+      "title": "Search",
+      "body": "Press Ctrl+K, or the search button at the top, to jump to any page or find a person, letter or vehicle."
+    },
+    "notifications": {
+      "title": "Notifications",
+      "body": "The bell shows what needs you. In its settings you can get them on your phone too."
+    },
+    "profile": {
+      "title": "Your account",
+      "body": "Your name at the top right has your profile, password and fingerprint sign-in."
+    },
+    "language": {
+      "title": "Language",
+      "body": "Switch between मराठी and English at the top at any time."
+    }
   }
 }

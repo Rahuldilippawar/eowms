@@ -78,6 +78,14 @@ class AuthController extends Controller
         return $this->currentUser($request, $user);
     }
 
+    /** The first-sign-in tour was seen (or skipped). */
+    public function onboardingSeen(Request $request): CurrentUserResource
+    {
+        $request->user()->forceFill(['onboarding_seen_at' => now()])->save();
+
+        return new CurrentUserResource($request->user());
+    }
+
     public function me(Request $request): CurrentUserResource
     {
         return new CurrentUserResource($request->user());

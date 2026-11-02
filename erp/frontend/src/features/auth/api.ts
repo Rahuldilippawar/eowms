@@ -27,6 +27,8 @@ export interface CurrentUser {
   it_lab_assistant?: boolean
   /** Imported or reset accounts must set their own password first. */
   must_change_password?: boolean
+  /** false until the person has seen (or skipped) the first-sign-in tour. */
+  onboarding_seen?: boolean
 }
 
 export interface LoginInput {

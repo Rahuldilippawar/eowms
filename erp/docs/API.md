@@ -438,7 +438,7 @@ Rules: [`BACKUP.md`](BACKUP.md). "Confirm" = `password` (the person's own) and `
 
 | Method | Path | Who | Notes |
 |---|---|---|---|
-| GET | `/backups` | super admin | `[{name, kind (manual\|scheduled\|uploaded\|pre_restore\|pre_clear), created_at, size}]`, newest first |
+| GET | `/backups` | super admin | `[{name, kind (manual\|scheduled\|uploaded\|pre_restore\|pre_clear\|pre_migrate), created_at, size}]`, newest first |
 | POST | `/backups` | super admin | Make a backup now (6 / minute) |
 | POST | `/backups/upload` | super admin | `file` (gzip, made by this ERP; up to 500 MB, host limits apply) |
 | GET / DELETE | `/backups/{name}` | super admin | Download / delete |
@@ -473,4 +473,21 @@ Rules: [`WEBAUTHN.md`](WEBAUTHN.md). Binary values are base64url. Options are th
 | DELETE | `/me/webauthn/{id}` | signed in (own devices) | |
 | POST | `/me/webauthn/confirm/options` | signed in | Challenge for confirming an action with one's own device |
 | POST | `/letters/{id}/sign` | (as before) | Now `password` **or** `webauthn` (an answer to the confirm challenge) |
+
+## Phase 11c — About, notice-board screens, system status
+
+Rules: [`ABOUT-AND-TV.md`](ABOUT-AND-TV.md), [`SYSTEM.md`](SYSTEM.md). "Org admin" = `organizations.edit` organization-wide.
+
+| Method | Path | Who | Notes |
+|---|---|---|---|
+| GET | `/about[?all=1]` | signed in | Entries (`kind` deity\|sadguru\|guide\|contributor); `all` (hidden ones too) for org admins; `meta.can_manage` |
+| POST | `/about`, `/about/{id}` | org admin | Multipart: `kind, title, subtitle?, body?, sort_order?, is_active?, photo?` (create / update) |
+| DELETE | `/about/{id}` | org admin | |
+| GET | `/about/{id}/photo` | signed in (same organization) | |
+| GET / POST | `/tv-displays` | org admin | Create returns `url` (`/tv/<secret>`) once |
+| DELETE | `/tv-displays/{id}` | org admin | The link stops working |
+| GET | `/public/tv/{secret}` | the screen (no sign-in, 120 / minute) | Organization, time, counts, today's birthdays / anniversaries |
+| POST | `/me/onboarding-seen` | signed in | Records the welcome tour as seen |
+| GET | `/admin/system` | super admin | Versions, checks, pending migrations, scheduler heartbeat, latest backup |
+| POST | `/admin/system/migrate` | super admin | `password, confirmation: "MIGRATE"`; safety backup first; returns `ran`, `safety_backup` |
 
