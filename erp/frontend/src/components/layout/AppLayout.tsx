@@ -1,11 +1,12 @@
 import * as Dialog from '@radix-ui/react-dialog'
 import * as Dropdown from '@radix-ui/react-dropdown-menu'
-import { Fingerprint, KeyRound, LogOut, Menu, Search, UserCircle, UserRound, X } from 'lucide-react'
+import { Compass, Fingerprint, KeyRound, LogOut, Menu, Search, UserCircle, UserRound, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Outlet, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { useAuth } from '@/features/auth/AuthProvider'
+import { OnboardingTour } from '@/features/auth/OnboardingTour'
 import { NotificationBell } from '@/features/notifications/NotificationBell'
 import { CommandPalette } from '@/features/search/CommandPalette'
 import { LanguageSwitcher } from './LanguageSwitcher'
@@ -28,6 +29,7 @@ export function AppLayout() {
   const navigate = useNavigate()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [paletteOpen, setPaletteOpen] = useState(false)
+  const [tourAgain, setTourAgain] = useState(false)
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -127,6 +129,13 @@ export function AppLayout() {
                   {t('fingerprint.title')}
                 </Dropdown.Item>
                 <Dropdown.Item
+                  onSelect={() => setTourAgain(true)}
+                  className="flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm outline-none data-[highlighted]:bg-slate-100 dark:data-[highlighted]:bg-slate-800"
+                >
+                  <Compass aria-hidden className="size-4" />
+                  {t('tour.again')}
+                </Dropdown.Item>
+                <Dropdown.Item
                   onSelect={() => void onLogout()}
                   className="flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm outline-none data-[highlighted]:bg-slate-100 dark:data-[highlighted]:bg-slate-800"
                 >
@@ -139,6 +148,7 @@ export function AppLayout() {
         </header>
 
         <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
+        {tourAgain ? <OnboardingTour replay onClose={() => setTourAgain(false)} /> : <OnboardingTour />}
         <main className="min-w-0 flex-1 overflow-y-auto p-4 sm:p-6 print:overflow-visible print:p-0">
           <Outlet />
         </main>

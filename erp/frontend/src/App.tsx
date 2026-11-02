@@ -51,8 +51,12 @@ import { VehicleDetailPage } from '@/features/vehicles/VehicleDetailPage'
 import { VehicleImportPage } from '@/features/vehicles/VehicleImportPage'
 import { VehicleReportPage } from '@/features/vehicles/VehicleReportPage'
 import { VehiclesPage } from '@/features/vehicles/VehiclesPage'
+import { AboutPage } from '@/features/about/AboutPage'
+import { TvDisplaysPage } from '@/features/about/TvDisplaysPage'
+import { TvScreenPage } from '@/features/about/TvScreenPage'
 import { ActivityLogPage } from '@/features/audit/ActivityLogPage'
 import { DeviceKeysPage } from '@/features/auth/DeviceKeysPage'
+import { SystemPage } from '@/features/system/SystemPage'
 import { BackupsPage } from '@/features/backup/BackupsPage'
 import { OrganizationDataPage } from '@/features/backup/OrganizationDataPage'
 import { CampusComparisonPage } from '@/features/reports/CampusComparisonPage'
@@ -134,6 +138,7 @@ export function AppRoutes() {
         <Route path="/reset-password" element={<ResetPasswordPage />} />
       </Route>
       <Route path="/verify/employee/:token" element={<VerifyEmployeePage />} />
+      <Route path="/tv/:token" element={<TvScreenPage />} />
       <Route path="/verify/signature/:code" element={<VerifySignaturePage />} />
       <Route path="/request/:org" element={<PublicRequestPage />} />
       <Route path="/request/:org/track" element={<TrackRequestPage />} />
@@ -258,6 +263,16 @@ export function AppRoutes() {
           <Route path="roles" element={guard('roles.view', <RolesPage />)} />
           <Route path="roles/:id" element={guard('roles.view', <RoleEditorPage />)} />
           <Route path="organization" element={guard('organizations.edit', <OrganizationSettingsPage />)} />
+          <Route path="about" element={<AboutPage />} />
+          <Route path="organization/tv" element={guard('organizations.edit', <TvDisplaysPage />)} />
+          <Route
+            path="admin/system"
+            element={
+              <RequirePermission superAdmin>
+                <SystemPage />
+              </RequirePermission>
+            }
+          />
           <Route path="organization/data" element={guard('organizations.edit', <OrganizationDataPage />)} />
           <Route
             path="admin/backups"

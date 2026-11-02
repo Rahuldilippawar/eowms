@@ -85,6 +85,9 @@ class DatabaseSeeder extends Seeder
         $teacher = $this->user('teacher@example.com', 'Physics Teacher', $trust, 'staff', departments: [$physics->id]);
         $driver = $this->user('driver@example.com', 'Bus Driver', $trust, 'staff', departments: [$transport->id]);
         $warden = $this->user('warden@example.com', 'Hostel Warden', $trust, 'staff', departments: [$hostelDept->id]);
+        // Demo accounts have seen the first-sign-in tour, except this newcomer.
+        User::query()->whereNull('onboarding_seen_at')->update(['onboarding_seen_at' => now()]);
+        $this->user('newcomer@example.com', 'New Staff Member', $trust, 'staff', departments: [$it->id]);
 
         // People records (linked to the accounts above where they log in).
         $ePrincipal = $this->employee($trust, $principal, 'EMP-001', 'Principal (SAC)', 'Principal', $college->departments()->where('code', 'LIB')->first() ?? $physics);

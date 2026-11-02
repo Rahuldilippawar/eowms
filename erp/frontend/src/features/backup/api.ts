@@ -1,6 +1,6 @@
 import { api } from '@/lib/api'
 
-export const BACKUP_KINDS = ['manual', 'scheduled', 'uploaded', 'pre_restore', 'pre_clear'] as const
+export const BACKUP_KINDS = ['manual', 'scheduled', 'uploaded', 'pre_restore', 'pre_clear', 'pre_migrate'] as const
 export interface Backup {
   name: string
   kind: (typeof BACKUP_KINDS)[number]

@@ -21,11 +21,11 @@ Legend: ✅ in the ERP · 🟡 partly (gaps listed) · ⏳ scheduled (phase) · 
 | Activity log, login activity | ✅ 10a | Organization-wide auditors; filters, CSV; sign-ins of the organization's members |
 | Account profile (own photo, password) | ✅ 5A-1 | My profile + change password |
 | Global search, command palette (Ctrl+K) | ✅ 10a | Pages + employees, students, letters, vehicles, renewals, store items, IT assets — each module's own visibility |
-| Welcome / onboarding tour, About page (contributors) | ⏳ 11 | |
+| Welcome / onboarding tour, About page (contributors) | ✅ 11c | About sections + contributors with photos; tour once, replayable |
 | PWA (manifest, offline page), Web Push / FCM, device tokens | ✅ 11a | Web Push (VAPID) to each person's devices, per-group push / e-mail choices, hourly e-mail summary |
-| Maintenance mode, system update, DB update screen | ⏳ 11 | Replaced by the deploy workflow + migrate screen |
+| Maintenance mode, system update, DB update screen | ✅ 11c | System status + database update (backup first); deploy workflow replaces system update |
 | Backup / restore, scheduled backup, clear data | ✅ 10c | Whole-database backup and restore (super admins, safety backup first); organization export and clear (keeps structure, accounts, settings) |
-| TV display (notice board screen) | ⏳ 11 | |
+| TV display (notice board screen) | ✅ 11c | Secret link per screen; counts and today's wishes (guests / events with Phase 12) |
 
 ## People, attendance, leave (phase 4 → gaps in 5A)
 
