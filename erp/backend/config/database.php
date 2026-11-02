@@ -68,12 +68,13 @@ return [
         // (erp/docs/LEGACY-IMPORT.md). Never point this at the live database.
         'legacy' => [
             'driver' => 'mysql',
-            'host' => env('LEGACY_DB_HOST', env('DB_HOST', '127.0.0.1')),
-            'port' => env('LEGACY_DB_PORT', env('DB_PORT', '3306')),
-            'database' => env('LEGACY_DB_DATABASE', ''),
-            'username' => env('LEGACY_DB_USERNAME', env('DB_USERNAME', 'root')),
-            'password' => env('LEGACY_DB_PASSWORD', env('DB_PASSWORD', '')),
-            'unix_socket' => env('LEGACY_DB_SOCKET', ''),
+            // Empty values (as in .env.example) fall back to the app's own database server and user.
+            'host' => env('LEGACY_DB_HOST') ?: env('DB_HOST', '127.0.0.1'),
+            'port' => env('LEGACY_DB_PORT') ?: env('DB_PORT', '3306'),
+            'database' => (string) env('LEGACY_DB_DATABASE', ''),
+            'username' => env('LEGACY_DB_USERNAME') ?: env('DB_USERNAME', 'root'),
+            'password' => env('LEGACY_DB_USERNAME') ? (string) env('LEGACY_DB_PASSWORD', '') : (string) env('DB_PASSWORD', ''),
+            'unix_socket' => env('LEGACY_DB_SOCKET') ?: env('DB_SOCKET', ''),
             'charset' => 'utf8mb4',
             'collation' => 'utf8mb4_unicode_ci',
             'prefix' => '',
