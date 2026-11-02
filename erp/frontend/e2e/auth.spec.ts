@@ -14,7 +14,7 @@ test('guest is redirected to sign in, signs in, reloads, and signs out', async (
 
   await page.getByLabel('Email').fill(ADMIN.email)
   await page.getByLabel('Password').fill(ADMIN.password)
-  await page.getByRole('button', { name: 'Sign in' }).click()
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
 
   await expect(page.getByRole('heading', { name: 'Hello, Dev Admin' })).toBeVisible()
 
@@ -39,7 +39,7 @@ test('wrong password shows an error and stays on the sign-in page', async ({ pag
   await page.goto('/login')
   await page.getByLabel('Email').fill(ADMIN.email)
   await page.getByLabel('Password').fill('definitely-wrong')
-  await page.getByRole('button', { name: 'Sign in' }).click()
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
 
   await expect(page.getByRole('alert')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible()
@@ -50,7 +50,7 @@ test('mobile navigation drawer opens and closes', async ({ page, isMobile }) => 
   await page.goto('/login')
   await page.getByLabel('Email').fill(ADMIN.email)
   await page.getByLabel('Password').fill(ADMIN.password)
-  await page.getByRole('button', { name: 'Sign in' }).click()
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
 
   await page.getByRole('button', { name: 'Open menu' }).click()
   const drawer = page.getByRole('dialog')

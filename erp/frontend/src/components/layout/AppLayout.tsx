@@ -1,6 +1,6 @@
 import * as Dialog from '@radix-ui/react-dialog'
 import * as Dropdown from '@radix-ui/react-dropdown-menu'
-import { KeyRound, LogOut, Menu, Search, UserCircle, UserRound, X } from 'lucide-react'
+import { Fingerprint, KeyRound, LogOut, Menu, Search, UserCircle, UserRound, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Outlet, useNavigate } from 'react-router-dom'
@@ -118,6 +118,13 @@ export function AppLayout() {
                 >
                   <KeyRound aria-hidden className="size-4" />
                   {t('account.changePassword')}
+                </Dropdown.Item>
+                <Dropdown.Item
+                  onSelect={() => navigate('/account/fingerprint')}
+                  className="flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm outline-none data-[highlighted]:bg-slate-100 dark:data-[highlighted]:bg-slate-800"
+                >
+                  <Fingerprint aria-hidden className="size-4" />
+                  {t('fingerprint.title')}
                 </Dropdown.Item>
                 <Dropdown.Item
                   onSelect={() => void onLogout()}

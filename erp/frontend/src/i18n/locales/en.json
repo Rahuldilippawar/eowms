@@ -68,7 +68,9 @@
     "saving": "Saving…",
     "requestNewLink": "Request a new link",
     "passwordRule": "At least 8 characters, with a letter and a number.",
-    "passwordMismatch": "The two passwords do not match."
+    "passwordMismatch": "The two passwords do not match.",
+    "signInWithFingerprint": "Sign in with fingerprint",
+    "fingerprintFailed": "Sign-in with the fingerprint did not work. Use your password, or try again."
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -1368,7 +1370,8 @@
     "when": "Date and time",
     "method": "Identity check",
     "methods": {
-      "password": "Password"
+      "password": "Password",
+      "webauthn": "Fingerprint / device lock"
     },
     "code": "Verification code"
   },
@@ -2807,5 +2810,26 @@
     "cleared": "Data cleared.",
     "clearedCount_one": "{{count}} record deleted.",
     "clearedCount_other": "{{count}} records deleted."
+  },
+  "fingerprint": {
+    "title": "Fingerprint sign-in",
+    "hint": "Sign in and sign letters with this phone's or computer's fingerprint, face or screen-lock PIN. The fingerprint itself never leaves the device.",
+    "addTitle": "Add this device",
+    "deviceName": "Name of this device",
+    "deviceNameHint": "e.g. My phone",
+    "yourPassword": "Your password",
+    "add": "Add fingerprint",
+    "added": "Fingerprint added.",
+    "unsupported": "This browser cannot use fingerprints for sign-in, or the site is not on HTTPS.",
+    "deviceFailed": "The device did not finish the fingerprint check. Try again.",
+    "listTitle": "Devices that can sign in",
+    "none": "No device added yet.",
+    "addedOn": "added {{date}}",
+    "lastUsed": "last used {{date}}",
+    "remove": "Remove",
+    "removeTitle": "Remove this device?",
+    "removeNamed": "Remove {{name}}",
+    "signWith": "Sign with fingerprint",
+    "orPassword": "Or your password"
   }
 }

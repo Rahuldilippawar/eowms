@@ -458,3 +458,19 @@ Rules: [`NOTIFICATIONS.md`](NOTIFICATIONS.md). All for the signed-in person only
 | DELETE | `/me/push-subscriptions` | `endpoint` |
 | POST | `/me/push-subscriptions/test` | A test message to one's own devices (5 / minute); 409 when push is not set up |
 
+## Phase 11b — fingerprint (WebAuthn)
+
+Rules: [`WEBAUTHN.md`](WEBAUTHN.md). Binary values are base64url. Options are the browser's
+`PublicKeyCredentialCreationOptions` / `PublicKeyCredentialRequestOptions`.
+
+| Method | Path | Who | Notes |
+|---|---|---|---|
+| POST | `/auth/webauthn/options` | anyone (rate limited) | Sign-in challenge |
+| POST | `/auth/webauthn/login` | anyone (rate limited per key and IP) | `credential{id, response{clientDataJSON, authenticatorData, signature}}`; returns the signed-in user like `/auth/login` |
+| GET | `/me/webauthn` | signed in | One's devices `[{id, name, created_at, last_used_at}]` |
+| POST | `/me/webauthn/register/options` | signed in | Registration challenge |
+| POST | `/me/webauthn/register` | signed in | `password, name, credential{id, response{clientDataJSON, attestationObject, transports?}}` |
+| DELETE | `/me/webauthn/{id}` | signed in (own devices) | |
+| POST | `/me/webauthn/confirm/options` | signed in | Challenge for confirming an action with one's own device |
+| POST | `/letters/{id}/sign` | (as before) | Now `password` **or** `webauthn` (an answer to the confirm challenge) |
+

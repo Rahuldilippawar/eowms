@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Testing\TestResponse;
 use Tests\Concerns\BuildsTenants;
+use Tests\Support\FakeAuthenticator;
 use Tests\TestCase;
 
 class LetterTest extends TestCase
@@ -169,6 +170,30 @@ class LetterTest extends TestCase
         $this->as($this->clerk, 'GET', "/api/v1/letters/{$id}")->assertJsonPath('data.actions', ['forward', 'sign', 'remark', 'attach', 'dispatch']);
         $this->as($this->clerk, 'PUT', "/api/v1/letters/{$id}", ['subject' => 'Edited', 'priority' => 'normal'])->assertStatus(422);
         $this->as($this->clerk, 'POST', "/api/v1/letters/{$id}/sign", ['password' => 'password'])->assertOk()->assertJsonPath('data.status', 'completed');
+    }
+
+    public function test_signing_with_a_fingerprint_instead_of_the_password(): void
+    {
+        config(['app.url' => 'http://localhost', 'services.webauthn.rp_id' => '', 'services.webauthn.origins' => '']);
+        $id = $this->draft()->json('data.id');
+        $this->as($this->clerk, 'POST', "/api/v1/letters/{$id}/submit", ['to_user_id' => $this->accountant->id])->assertOk();
+        $mine = new FakeAuthenticator;
+        $theirs = new FakeAuthenticator;
+        foreach ([[$this->accountant, $mine], [$this->clerk, $theirs]] as [$user, $device]) {
+            $options = $this->as($user, 'POST', '/api/v1/me/webauthn/register/options')->json('data');
+            $this->as($user, 'POST', '/api/v1/me/webauthn/register', ['password' => 'password', 'name' => 'Phone', 'credential' => $device->create($options)])->assertCreated();
+        }
+
+        // Someone else's key does not sign for the holder.
+        $options = $this->as($this->accountant, 'POST', '/api/v1/me/webauthn/confirm/options')->assertOk()->json('data');
+        $this->as($this->accountant, 'POST', "/api/v1/letters/{$id}/sign", ['webauthn' => $theirs->get($options)])->assertStatus(422)->assertJsonValidationErrors('webauthn');
+        $this->as($this->accountant, 'POST', "/api/v1/letters/{$id}/sign", [])->assertStatus(422)->assertJsonValidationErrors(['password', 'webauthn']);
+
+        $options = $this->as($this->accountant, 'POST', '/api/v1/me/webauthn/confirm/options')->json('data');
+        $this->assertSame([$mine->id()], array_column($options['allowCredentials'], 'id'));
+        $signed = $this->as($this->accountant, 'POST', "/api/v1/letters/{$id}/sign", ['webauthn' => $mine->get($options), 'remark' => 'Approved'])->assertOk()->assertJsonPath('data.status', 'completed');
+        $code = $signed->json('data.signatures.0.verification_code');
+        $this->getJson("/api/v1/public/signatures/{$code}")->assertOk()->assertJsonPath('data.method', 'webauthn')->assertJsonPath('data.intact', true);
     }
 
     public function test_who_sees_a_file_and_the_inbox(): void

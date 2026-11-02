@@ -27,7 +27,7 @@ export default defineConfig({
     cwd: '../backend',
     url: 'http://127.0.0.1:8000/api/v1/health',
     // Production-like settings: debug off, so error responses are checked as users would see them.
-    env: { APP_ENV: 'testing', APP_DEBUG: 'false', LOGIN_THROTTLE_PER_EMAIL: '100', LOGIN_THROTTLE_PER_IP: '200', PASSWORD_RESET_THROTTLE_PER_EMAIL: '100', PASSWORD_RESET_THROTTLE_PER_IP: '200', API_THROTTLE_PER_MINUTE: '1000' },
+    env: { APP_ENV: 'testing', APP_DEBUG: 'false', LOGIN_THROTTLE_PER_EMAIL: '100', LOGIN_THROTTLE_PER_IP: '200', PASSWORD_RESET_THROTTLE_PER_EMAIL: '100', PASSWORD_RESET_THROTTLE_PER_IP: '200', API_THROTTLE_PER_MINUTE: '1000', WEBAUTHN_RP_ID: 'localhost', WEBAUTHN_ORIGINS: 'http://localhost:8000' },
     reuseExistingServer: false,
     timeout: 60_000,
   },

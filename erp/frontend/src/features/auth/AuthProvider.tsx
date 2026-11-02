@@ -9,6 +9,7 @@ import {
   type CurrentUser,
   type LoginInput,
 } from './api'
+import { signInWithKey } from './webauthn'
 
 interface AuthContextValue {
   user: CurrentUser | null
@@ -16,6 +17,8 @@ interface AuthContextValue {
   isError: boolean
   refetch: () => void
   login: (input: LoginInput) => Promise<CurrentUser>
+  /** Sign in with a fingerprint / face / device-PIN key. */
+  loginWithKey: () => Promise<CurrentUser>
   logout: () => Promise<void>
   switchOrganization: (organizationId: number) => Promise<void>
   /** UI hint only — the API checks every permission itself. */
@@ -32,6 +35,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginMutation = useMutation({
     mutationFn: loginRequest,
+    onSuccess: (user) => queryClient.setQueryData(CURRENT_USER_KEY, user),
+  })
+
+  const keyLoginMutation = useMutation({
+    mutationFn: () => signInWithKey(),
     onSuccess: (user) => queryClient.setQueryData(CURRENT_USER_KEY, user),
   })
 
@@ -63,6 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isError: me.isError,
     refetch: () => void me.refetch(),
     login: (input) => loginMutation.mutateAsync(input),
+    loginWithKey: () => keyLoginMutation.mutateAsync(),
     logout: () => logoutMutation.mutateAsync(),
     switchOrganization: async (organizationId) => {
       await switchMutation.mutateAsync(organizationId)

@@ -8,6 +8,7 @@ use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Resources\CurrentUserResource;
 use App\Models\Organization;
 use App\Models\User;
+use App\Services\WebAuthn\WebAuthn;
 use App\Support\Access\AccessContext;
 use App\Support\Audit\AuditLogger;
 use Illuminate\Http\JsonResponse;
@@ -17,6 +18,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password as PasswordRule;
 use Illuminate\Validation\ValidationException;
+use RuntimeException;
 
 class AuthController extends Controller
 {
@@ -41,6 +43,37 @@ class AuthController extends Controller
 
         $user->forceFill(['last_login_at' => now()])->save();
         AuditLogger::record('auth', 'login', $user, userId: $user->id);
+
+        return $this->currentUser($request, $user);
+    }
+
+    /** Sign-in with a fingerprint / face / device PIN (erp/docs/WEBAUTHN.md): first the challenge… */
+    public function webauthnOptions(WebAuthn $webauthn): JsonResponse
+    {
+        return response()->json(['data' => $webauthn->requestOptions('login')]);
+    }
+
+    /** …then the signed answer. Same outcome as a password sign-in. */
+    public function webauthnLogin(Request $request, WebAuthn $webauthn): JsonResponse
+    {
+        $request->validate([
+            'credential.id' => ['required', 'string', 'max:512'],
+            'credential.response.clientDataJSON' => ['required', 'string', 'max:4096'],
+            'credential.response.authenticatorData' => ['required', 'string', 'max:4096'],
+            'credential.response.signature' => ['required', 'string', 'max:1024'],
+        ]);
+        try {
+            $user = $webauthn->verify('login', $request->input('credential'))->user;
+        } catch (RuntimeException) {
+            throw ValidationException::withMessages(['credential' => [__('webauthn.login_failed')]]);
+        }
+        if (! $user->is_active) {
+            throw ValidationException::withMessages(['credential' => [__('webauthn.login_failed')]]);
+        }
+        Auth::guard('web')->login($user);
+        $request->session()->regenerate();
+        $user->forceFill(['last_login_at' => now()])->save();
+        AuditLogger::record('auth', 'login', $user, null, ['method' => 'webauthn'], userId: $user->id);
 
         return $this->currentUser($request, $user);
     }

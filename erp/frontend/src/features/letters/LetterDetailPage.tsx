@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, CheckCircle2, FileText, Paperclip, Printer, ShieldAlert } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, FileText, Fingerprint, Paperclip, Printer, ShieldAlert } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router-dom'
@@ -12,6 +12,7 @@ import { Select } from '@/components/ui/Select'
 import { Spinner } from '@/components/ui/Spinner'
 import { Textarea } from '@/components/ui/Textarea'
 import { useToast } from '@/components/ui/Toast'
+import { confirmWithKey, fetchKeys, webauthnSupported } from '@/features/auth/webauthn'
 import { PriorityLabel } from '@/features/tasks/TaskBadges'
 import { parseApiError } from '@/lib/api'
 import { actionErrorMessage } from '@/lib/forms'
@@ -64,6 +65,29 @@ function ActionDialog({ letter, kind, onClose }: { letter: LetterDetail; kind: D
   const byWorkflow = letter.approval_workflow_id !== null && (kind === 'submit' || kind === 'forward')
   const nextStep = byWorkflow ? letter.steps.find((s) => s.step_order > (kind === 'submit' ? 0 : letter.current_step_order)) : undefined
   const needsPerson = (kind === 'submit' || kind === 'forward' || kind === 'reassign') && !byWorkflow
+
+  // Signing can be confirmed with a fingerprint instead of the password, once the person has a key.
+  const keys = useQuery({ queryKey: ['device-keys'], queryFn: fetchKeys, enabled: kind === 'sign' && webauthnSupported() })
+  const canUseKey = kind === 'sign' && webauthnSupported() && (keys.data?.length ?? 0) > 0
+
+  const signWithKey = async () => {
+    setBusy(true)
+    setError(null)
+    try {
+      const webauthn = await confirmWithKey()
+      update(await signLetter(letter.id, { webauthn, remark: remark.trim() || null, approved_amount: letter.is_budget_expense && amount !== '' ? Number(amount) : null }))
+      toast.success(t('letters.done.sign'))
+      onClose()
+    } catch (e) {
+      if (e instanceof DOMException) setError(e.name === 'NotAllowedError' ? null : t('fingerprint.deviceFailed'))
+      else {
+        const { status, errors } = parseApiError(e)
+        setError(status === 422 && errors ? Object.values(errors)[0]?.[0] ?? t('common.actionFailed') : actionErrorMessage(e, t('common.actionFailed')))
+      }
+    } finally {
+      setBusy(false)
+    }
+  }
 
   const run = async () => {
     if (needsPerson && !person) return setError(t('letters.choosePersonFirst'))
@@ -149,7 +173,13 @@ function ActionDialog({ letter, kind, onClose }: { letter: LetterDetail; kind: D
                 <Input id="ls-amount" type="number" inputMode="decimal" min={0} step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} />
               </Field>
             ) : null}
-            <Field id="ls-password" label={t('auth.password')}>
+            {canUseKey ? (
+              <Button type="button" variant="secondary" className="w-full gap-2" disabled={busy} onClick={() => void signWithKey()}>
+                <Fingerprint aria-hidden className="size-5" />
+                {t('fingerprint.signWith')}
+              </Button>
+            ) : null}
+            <Field id="ls-password" label={canUseKey ? t('fingerprint.orPassword') : t('auth.password')}>
               <Input id="ls-password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
             </Field>
           </>

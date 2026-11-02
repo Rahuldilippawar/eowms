@@ -68,7 +68,9 @@
     "saving": "जतन होत आहे…",
     "requestNewLink": "नवीन लिंक मागवा",
     "passwordRule": "किमान 8 अक्षरे, त्यात एक अक्षर आणि एक अंक.",
-    "passwordMismatch": "दोन्ही पासवर्ड जुळत नाहीत."
+    "passwordMismatch": "दोन्ही पासवर्ड जुळत नाहीत.",
+    "signInWithFingerprint": "Fingerprint ने login करा",
+    "fingerprintFailed": "Fingerprint ने login झाले नाही. पासवर्ड वापरा, किंवा पुन्हा प्रयत्न करा."
   },
   "nav": {
     "dashboard": "डॅशबोर्ड",
@@ -1368,7 +1370,8 @@
     "when": "दिनांक व वेळ",
     "method": "ओळख पडताळणी",
     "methods": {
-      "password": "पासवर्ड"
+      "password": "पासवर्ड",
+      "webauthn": "Fingerprint / device lock"
     },
     "code": "पडताळणी कोड"
   },
@@ -2807,5 +2810,26 @@
     "cleared": "Data साफ झाला.",
     "clearedCount_one": "{{count}} नोंद पुसली.",
     "clearedCount_other": "{{count}} नोंदी पुसल्या."
+  },
+  "fingerprint": {
+    "title": "Fingerprint login",
+    "hint": "या फोन / संगणकाच्या fingerprint, चेहरा किंवा screen-lock PIN ने login करा व पत्रांवर सही करा. Fingerprint स्वतः कधीही device बाहेर जात नाही.",
+    "addTitle": "हे device जोडा",
+    "deviceName": "या device चे नाव",
+    "deviceNameHint": "उदा. माझा फोन",
+    "yourPassword": "तुमचा पासवर्ड",
+    "add": "Fingerprint जोडा",
+    "added": "Fingerprint जोडले.",
+    "unsupported": "हा browser fingerprint login वापरू शकत नाही, किंवा site HTTPS वर नाही.",
+    "deviceFailed": "Device ने fingerprint तपासणी पूर्ण केली नाही. पुन्हा प्रयत्न करा.",
+    "listTitle": "Login करू शकणारी devices",
+    "none": "अजून कोणतेही device जोडलेले नाही.",
+    "addedOn": "{{date}} ला जोडले",
+    "lastUsed": "शेवटचा वापर {{date}}",
+    "remove": "काढा",
+    "removeTitle": "हे device काढायचे?",
+    "removeNamed": "{{name}} काढा",
+    "signWith": "Fingerprint ने सही करा",
+    "orPassword": "किंवा तुमचा पासवर्ड"
   }
 }
