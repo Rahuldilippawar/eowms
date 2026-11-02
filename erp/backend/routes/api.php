@@ -28,6 +28,7 @@ use App\Http\Controllers\Api\V1\InstitutionController;
 use App\Http\Controllers\Api\V1\ItController;
 use App\Http\Controllers\Api\V1\LeaveBalanceController;
 use App\Http\Controllers\Api\V1\LeaveController;
+use App\Http\Controllers\Api\V1\LegacyImportController;
 use App\Http\Controllers\Api\V1\LetterController;
 use App\Http\Controllers\Api\V1\LetterRegisterController;
 use App\Http\Controllers\Api\V1\LetterSettingsController;
@@ -152,6 +153,9 @@ Route::middleware(['auth:sanctum', SetAccessContext::class, EnsurePasswordChange
     Route::get('/tv-displays', [TvDisplayController::class, 'index']);
     Route::post('/tv-displays', [TvDisplayController::class, 'store']);
     Route::delete('/tv-displays/{display}', [TvDisplayController::class, 'destroy']);
+    Route::get('/admin/legacy-import', [LegacyImportController::class, 'show']);
+    Route::get('/admin/legacy-import/runs/{id}', [LegacyImportController::class, 'report'])->whereNumber('id');
+    Route::post('/admin/legacy-import', [LegacyImportController::class, 'run'])->middleware('throttle:6,1');
     Route::get('/admin/system', [SystemController::class, 'show']);
     Route::post('/admin/system/migrate', [SystemController::class, 'migrate'])->middleware('throttle:5,1');
     Route::get('/reports/campuses', [ReportController::class, 'campuses'])->middleware('permission:institutions.view');
