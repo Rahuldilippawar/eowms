@@ -131,7 +131,8 @@
     "organizationData": "Data export / साफ करा",
     "about": "आमच्याविषयी",
     "tvDisplays": "सूचना-फलक screens",
-    "system": "System स्थिती"
+    "system": "System स्थिती",
+    "legacyImport": "जुना data import"
   },
   "dashboard": {
     "welcome": "नमस्कार, {{name}}",
@@ -2947,6 +2948,58 @@
     "language": {
       "title": "भाषा",
       "body": "वर कधीही मराठी व English मध्ये बदला."
+    }
+  },
+  "legacy": {
+    "hint": "जुन्या app चा data त्याच्या database च्या प्रतीमधून ERP मध्ये आणते. आधी dry run चालवा: काय येईल ते दाखवते, काहीही लिहीत नाही. Import आधी backup घेतो, आणि पुन्हा चालवता येतो: आधी आलेले वगळले जाते.",
+    "source": "जुन्या database ची प्रत",
+    "connected": "जोडलेले.",
+    "sourceErrors": {
+      "not_configured": "सेट केलेले नाही: प्रतीचे तपशील server settings मध्ये LEGACY_DB_* मध्ये भरा (erp/docs/LEGACY-IMPORT.md).",
+      "connection_failed": "प्रत जोडता येत नाही: LEGACY_DB_* व database आहे का ते तपासा."
+    },
+    "dryRun": "Dry run",
+    "import": "Import करा",
+    "importBody": "जुना data या ERP मध्ये आणते. आधी संपूर्ण database चा backup घेतला जातो; आधी आलेल्या नोंदी वगळल्या जातात.",
+    "imported": "Import झाले.",
+    "failed": "अयशस्वी, काहीही लिहिले नाही: {{error}}",
+    "dryRunNote": "Dry run: काहीही लिहिले नाही. आत्ता import केल्यास असे होईल.",
+    "reportTitle": "अहवाल #{{id}}",
+    "runs": "आधीचे runs",
+    "step": "काय",
+    "cols": {
+      "read": "वाचले",
+      "created": "नवीन",
+      "existing": "आधीच आलेले",
+      "matched": "जोडले",
+      "skipped": "वगळले"
+    },
+    "notes": "{{skipped}} वगळले, {{warnings}} नोंदी",
+    "steps": {
+      "organizations": "संस्था",
+      "institutions": "संकुले",
+      "departments": "विभाग",
+      "users": "Accounts",
+      "employees": "कर्मचारी",
+      "department_heads": "विभागप्रमुख",
+      "students": "विद्यार्थी"
+    },
+    "reasons": {
+      "organization_missing": "त्याची संस्था आली नाही",
+      "email_invalid": "योग्य e-mail नाही",
+      "account_missing": "त्याचे account आले नाही",
+      "super_admin_without_employee_code": "employee code नसलेला super admin",
+      "head_missing": "विभाग किंवा प्रमुख आले नाहीत",
+      "campus_missing": "त्याचे संकुल आले नाही",
+      "admission_no_duplicate": "प्रवेश क्रमांक आधीच वापरलेला"
+    },
+    "modes": {
+      "dry_run": "Dry run",
+      "import": "Import"
+    },
+    "statuses": {
+      "done": "झाले",
+      "failed": "अयशस्वी"
     }
   }
 }

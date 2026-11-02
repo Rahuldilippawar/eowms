@@ -131,7 +131,8 @@
     "organizationData": "Export / clear data",
     "about": "About",
     "tvDisplays": "Notice-board screens",
-    "system": "System status"
+    "system": "System status",
+    "legacyImport": "Old data import"
   },
   "dashboard": {
     "welcome": "Hello, {{name}}",
@@ -2947,6 +2948,58 @@
     "language": {
       "title": "Language",
       "body": "Switch between मराठी and English at the top at any time."
+    }
+  },
+  "legacy": {
+    "hint": "Brings the old app’s data into the ERP from a copy of its database. Run a dry run first: it shows what would come in and writes nothing. The import takes a backup first, and can be run again: what is already in is skipped.",
+    "source": "Copy of the old database",
+    "connected": "Connected.",
+    "sourceErrors": {
+      "not_configured": "Not set up: put the copy’s details in LEGACY_DB_* in the server settings (erp/docs/LEGACY-IMPORT.md).",
+      "connection_failed": "The copy cannot be reached: check LEGACY_DB_* and that the database exists."
+    },
+    "dryRun": "Dry run",
+    "import": "Import",
+    "importBody": "Brings the old data into this ERP. A backup of the whole database is taken first; rows already imported are skipped.",
+    "imported": "Imported.",
+    "failed": "Failed, nothing was written: {{error}}",
+    "dryRunNote": "Dry run: nothing was written. This is what an import would do now.",
+    "reportTitle": "Report #{{id}}",
+    "runs": "Earlier runs",
+    "step": "What",
+    "cols": {
+      "read": "Read",
+      "created": "New",
+      "existing": "Already in",
+      "matched": "Joined",
+      "skipped": "Skipped"
+    },
+    "notes": "{{skipped}} skipped, {{warnings}} notes",
+    "steps": {
+      "organizations": "Organizations",
+      "institutions": "Campuses",
+      "departments": "Departments",
+      "users": "Accounts",
+      "employees": "Employees",
+      "department_heads": "Department heads",
+      "students": "Students"
+    },
+    "reasons": {
+      "organization_missing": "its organization was not imported",
+      "email_invalid": "no valid e-mail",
+      "account_missing": "its account was not imported",
+      "super_admin_without_employee_code": "super admin without an employee code",
+      "head_missing": "the department or its head was not imported",
+      "campus_missing": "its campus was not imported",
+      "admission_no_duplicate": "admission number already used"
+    },
+    "modes": {
+      "dry_run": "Dry run",
+      "import": "Import"
+    },
+    "statuses": {
+      "done": "Done",
+      "failed": "Failed"
     }
   }
 }

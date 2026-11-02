@@ -251,7 +251,14 @@ Dev accounts (password `password`): `admin@example.com` (super admin), `orgadmin
   Rules: [`docs/ABOUT-AND-TV.md`](docs/ABOUT-AND-TV.md), [`docs/SYSTEM.md`](docs/SYSTEM.md).
 - Tests: 181 backend, 103 frontend, 91 end-to-end.
 
+### Phase 11d-1 — done (old data import: structure and people)
+- The importer reads a copy of the old database (dry run first, then a transactional import with a
+  safety backup, safe to run again) and brings in organizations, campuses, departments, accounts with
+  their passwords and roles, employees (private details encrypted), family, achievements and students.
+  Rules: [`docs/LEGACY-IMPORT.md`](docs/LEGACY-IMPORT.md).
+- Tests: 183 backend, 105 frontend, 93 end-to-end.
+
 ### Not yet (later phases)
-- The other business modules (Phases 11d–14, see
+- The other business modules (Phases 11d-2–14, see
   [`../docs/erp/PARITY.md`](../docs/erp/PARITY.md)); email / push delivery of notifications.
 - Reports, deployment to Hostinger.
