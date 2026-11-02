@@ -28,6 +28,9 @@ return [
 
     'env' => env('APP_ENV', 'production'),
 
+    // Shown on the system status page; set by the deploy (e.g. the git commit).
+    'version' => env('APP_VERSION', ''),
+
     /*
     |--------------------------------------------------------------------------
     | Application Debug Mode

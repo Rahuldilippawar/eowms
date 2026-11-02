@@ -1,7 +1,9 @@
 <?php
 
+use App\Http\Controllers\Api\V1\SystemController;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schedule;
 
 Artisan::command('inspire', function () {
@@ -30,3 +32,5 @@ Schedule::command('erp:backup')->dailyAt('21:20')->withoutOverlapping();
 // Phase 11a: new notifications as Web Push (every minute) and as an e-mail summary (hourly).
 Schedule::command('erp:deliver-push')->everyMinute()->withoutOverlapping();
 Schedule::command('erp:email-notifications')->hourlyAt(17)->withoutOverlapping();
+// Phase 11c: the system status page shows when the scheduler last ran.
+Schedule::call(fn () => Cache::put(SystemController::HEARTBEAT_KEY, now()->toIso8601String(), 86400))->everyMinute()->name('heartbeat');

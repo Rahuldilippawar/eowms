@@ -57,6 +57,7 @@ class CurrentUserResource extends JsonResource
             'it_lab_assistant' => $this->when($isCurrentUser, fn () => $context->organization() !== null
                 && ItLab::query()->where('is_active', true)->where('assistant_user_id', $this->id)->exists()),
             'must_change_password' => (bool) $this->must_change_password,
+            'onboarding_seen' => $this->onboarding_seen_at !== null,
         ];
     }
 }

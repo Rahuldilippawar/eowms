@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\AboutController;
 use App\Http\Controllers\Api\V1\AllocationController;
 use App\Http\Controllers\Api\V1\AttendanceController;
 use App\Http\Controllers\Api\V1\AttendanceReportController;
@@ -53,7 +54,9 @@ use App\Http\Controllers\Api\V1\RoleController;
 use App\Http\Controllers\Api\V1\SearchController;
 use App\Http\Controllers\Api\V1\StoreController;
 use App\Http\Controllers\Api\V1\StudentController;
+use App\Http\Controllers\Api\V1\SystemController;
 use App\Http\Controllers\Api\V1\TaskController;
+use App\Http\Controllers\Api\V1\TvDisplayController;
 use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\VehicleController;
 use App\Http\Controllers\Api\V1\VehicleCorrectionController;
@@ -79,6 +82,9 @@ Route::middleware('throttle:webauthn-login')->group(function () {
     Route::post('/auth/webauthn/login', [AuthController::class, 'webauthnLogin'])->name('api.auth.webauthn.login');
 });
 
+// A notice-board screen's data, by its secret link (Phase 11c).
+Route::get('/public/tv/{token}', [TvDisplayController::class, 'screen'])->middleware('throttle:120,1')->where('token', '[A-Za-z0-9]{40}');
+
 // Public ID-card check (QR on the card): only what the card shows.
 Route::middleware('throttle:30,1')->group(function () {
     Route::get('/public/employees/{token}', [PublicVerifyController::class, 'employee']);
@@ -98,6 +104,7 @@ Route::middleware(['auth:sanctum', SetAccessContext::class, EnsurePasswordChange
     Route::get('/auth/me', [AuthController::class, 'me'])->name('api.auth.me');
     Route::post('/auth/change-password', [AuthController::class, 'changePassword'])->middleware('throttle:10,1')->name('api.auth.change-password');
     Route::post('/auth/logout', [AuthController::class, 'logout'])->name('api.auth.logout');
+    Route::post('/me/onboarding-seen', [AuthController::class, 'onboardingSeen']);
     Route::post('/auth/switch-organization', [AuthController::class, 'switchOrganization'])->name('api.auth.switch');
 
     // Organizations: super admins manage all; others only their current one.
@@ -136,6 +143,17 @@ Route::middleware(['auth:sanctum', SetAccessContext::class, EnsurePasswordChange
     });
     Route::get('/organization/export', [BackupController::class, 'exportOrganization'])->middleware('throttle:6,1');
     Route::post('/organization/clear', [BackupController::class, 'clearOrganization'])->middleware('throttle:5,1');
+    // Phase 11c: About page, notice-board screens, system status (checked in the controllers).
+    Route::get('/about', [AboutController::class, 'index']);
+    Route::post('/about', [AboutController::class, 'store']);
+    Route::post('/about/{entry}', [AboutController::class, 'update']);
+    Route::delete('/about/{entry}', [AboutController::class, 'destroy']);
+    Route::get('/about/{entry}/photo', [AboutController::class, 'photo']);
+    Route::get('/tv-displays', [TvDisplayController::class, 'index']);
+    Route::post('/tv-displays', [TvDisplayController::class, 'store']);
+    Route::delete('/tv-displays/{display}', [TvDisplayController::class, 'destroy']);
+    Route::get('/admin/system', [SystemController::class, 'show']);
+    Route::post('/admin/system/migrate', [SystemController::class, 'migrate'])->middleware('throttle:5,1');
     Route::get('/reports/campuses', [ReportController::class, 'campuses'])->middleware('permission:institutions.view');
     Route::get('/search', SearchController::class)->middleware('throttle:60,1');
 
