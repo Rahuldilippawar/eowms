@@ -4290,3 +4290,31 @@ ALTER TABLE announcements
   ADD COLUMN withdrawn_at DATETIME NULL,
   ADD COLUMN withdrawn_by INT NULL,
   ADD COLUMN updated_at DATETIME NULL;
+
+-- ---------------- 🌐 भाषांतर (मराठी / हिंदी / English) ----------------
+ALTER TABLE users
+  ADD COLUMN preferred_language VARCHAR(5) NULL;
+
+-- Admin ने "भाषांतर व्यवस्थापन" मधून केलेल्या दुरुस्त्या (File मधल्या शब्दकोशावर प्राधान्य)
+CREATE TABLE translation_overrides (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  lang VARCHAR(5) NOT NULL,
+  source_hash CHAR(40) NOT NULL,
+  source_text TEXT NOT NULL,
+  translated_text TEXT NOT NULL,
+  updated_by INT NULL,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_lang_src (lang, source_hash)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- पानांवर दिसलेली पण भाषांतर नसलेली वाक्यं — Admin ला प्राधान्याने दाखवण्यासाठी
+CREATE TABLE translation_misses (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  lang VARCHAR(5) NOT NULL,
+  source_hash CHAR(40) NOT NULL,
+  source_text TEXT NOT NULL,
+  page VARCHAR(190) NULL,
+  hits INT NOT NULL DEFAULT 1,
+  last_seen DATETIME NULL,
+  UNIQUE KEY uniq_lang_src (lang, source_hash)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

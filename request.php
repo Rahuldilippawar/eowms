@@ -136,35 +136,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </style>
 </head>
 <body>
-<select id="eowmsLangSelect" class="lang-select" onchange="eowmsChangeLanguage(this.value)">
-  <option value="">🌐 भाषा</option>
-  <option value="en">English</option>
-  <option value="hi">हिंदी</option>
-  <option value="gu">ગુજરાતી</option>
-  <option value="mr">मराठी (मूळ)</option>
-</select>
-<div id="google_translate_element" style="display:none;"></div>
-<style>body > .skiptranslate{display:none !important;} body{top:0 !important;}</style>
-<script>
-  function googleTranslateElementInit() {
-    new google.translate.TranslateElement({ pageLanguage: 'mr', autoDisplay: false }, 'google_translate_element');
-  }
-  function eowmsChangeLanguage(lang) {
-    var tries = 0;
-    var trigger = function () {
-      var combo = document.querySelector('.goog-te-combo');
-      if (combo) {
-        combo.value = lang;
-        combo.dispatchEvent(new Event('change'));
-      } else if (tries < 20) {
-        tries++;
-        setTimeout(trigger, 250);
-      }
-    };
-    trigger();
-  }
-</script>
-<script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async></script>
+<?= i18nSwitcher('class="lang-select"') ?>
+<?= i18nClientScript() ?>
 
 <div class="hero">
   <div class="hero-ring"></div>

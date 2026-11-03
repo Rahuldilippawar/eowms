@@ -244,31 +244,10 @@ $loginOrgName = $loginOrg['name'] ?? 'VJMAT';
     .lg-card{padding:24px 20px 20px;border-radius:20px;}
   }
   @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none !important;transition:none !important;}}
-  body > .skiptranslate{display:none !important;} body{top:0 !important;}
 </style>
 </head>
 <body>
-<div id="google_translate_element" style="display:none;"></div>
-<script>
-  function googleTranslateElementInit() {
-    new google.translate.TranslateElement({ pageLanguage: 'mr', autoDisplay: false }, 'google_translate_element');
-  }
-  function eowmsChangeLanguage(lang) {
-    var tries = 0;
-    var trigger = function () {
-      var combo = document.querySelector('.goog-te-combo');
-      if (combo) {
-        combo.value = lang;
-        combo.dispatchEvent(new Event('change'));
-      } else if (tries < 20) {
-        tries++;
-        setTimeout(trigger, 250);
-      }
-    };
-    trigger();
-  }
-</script>
-<script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async></script>
+<?= i18nClientScript() ?>
 
 <div class="lg-wrap">
   <aside class="lg-brand">
@@ -300,13 +279,7 @@ $loginOrgName = $loginOrg['name'] ?? 'VJMAT';
         <div class="lg-badge"><span class="dot"></span> सुरक्षित प्रवेश</div>
         <div class="lg-lang">
           <i class="fa-solid fa-globe"></i>
-          <select id="eowmsLangSelect" onchange="eowmsChangeLanguage(this.value)" aria-label="भाषा (Language)">
-            <option value="">भाषा (Language)</option>
-            <option value="en">English</option>
-            <option value="hi">हिंदी (Hindi)</option>
-            <option value="gu">ગુજરાતી (Gujarati)</option>
-            <option value="mr">मराठी (मूळ)</option>
-          </select>
+          <?= i18nSwitcher('') ?>
         </div>
       </div>
 

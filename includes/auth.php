@@ -21,6 +21,13 @@ require_once __DIR__ . '/csrf.php';
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/module-registry.php';
 require_once __DIR__ . '/lang.php';
+require_once __DIR__ . '/i18n.php';
+// 🌐 भाषा — Headers जाण्याआधीच ठरवा (?lang= असल्यास Cookie लिहिता यावी), मग
+// पान Browser कडे जाण्याआधी मराठी मजकूर निवडलेल्या भाषेत (includes/i18n.php)
+if (PHP_SAPI !== 'cli') {
+    i18nLang();
+    if (!in_array('i18nFilterOutput', ob_list_handlers(), true)) { ob_start('i18nFilterOutput'); }
+}
 
 function currentUser() {
     return $_SESSION['user'] ?? null;

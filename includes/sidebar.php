@@ -96,7 +96,7 @@ $dirToGroup = [
     'messages' => 'communication', 'grievances' => 'communication',
     'vehicles' => 'assets', 'deadstock' => 'assets', 'maintenance' => 'assets',
     'cctv' => 'techdept', 'it' => 'techdept',
-    'organizations' => 'admin', 'roles' => 'admin', 'custom-fields' => 'admin', 'backup' => 'admin',
+    'organizations' => 'admin', 'roles' => 'admin', 'custom-fields' => 'admin', 'translations' => 'admin', 'backup' => 'admin',
     'activity-log' => 'admin', 'campuses' => 'admin', 'system-update' => 'admin',
 ];
 // 'departments' आणि 'letters' (Admin-Group आतल्या Sub-Pages: categories,
@@ -613,6 +613,9 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
         </a>
         <a href="<?= $rp ?>custom-fields/index.php" class="tree-node <?= $currentDir === 'custom-fields' ? 'active' : '' ?>">
           <i class="fa-solid fa-list-ul fa-fw"></i><span><?= h(t('nav_custom_fields')) ?></span>
+        </a>
+        <a href="<?= $rp ?>translations/index.php" class="tree-node <?= $currentDir === 'translations' ? 'active' : '' ?>">
+          <i class="fa-solid fa-language fa-fw"></i><span>🌐 भाषांतर व्यवस्थापन</span>
         </a>
         <a href="<?= $rp ?>staff/import.php" class="tree-node <?= $currentDir === 'staff' && $currentPage === 'import.php' ? 'active' : '' ?>">
           <i class="fa-solid fa-file-csv fa-fw"></i><span><?= h(t('nav_csv_import')) ?></span>
