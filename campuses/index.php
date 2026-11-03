@@ -4,12 +4,46 @@ $rootPath = '../';
 require_once __DIR__ . '/../includes/header.php';
 requirePermission('manage_campuses', '../');
 
+require_once __DIR__ . '/../includes/smart-insights.php';
 $stmt = $pdo->prepare("
-    SELECT c.*, (SELECT COUNT(*) FROM departments d WHERE d.campus_id = c.id) AS dept_count
+    SELECT c.*,
+      (SELECT COUNT(*) FROM departments d WHERE d.campus_id = c.id) AS dept_count,
+      (SELECT COUNT(*) FROM departments d WHERE d.campus_id = c.id AND d.is_active = 1) AS dept_active,
+      (SELECT COUNT(*) FROM departments d WHERE d.campus_id = c.id AND d.is_active = 1 AND d.hod_id IS NULL) AS dept_nohod,
+      (SELECT COUNT(*) FROM users u WHERE u.campus_id = c.id AND u.is_active = 1) AS staff_active
     FROM campuses c WHERE c.organization_id = ? ORDER BY c.name
 ");
 $stmt->execute([activeOrgId()]);
 $campuses = $stmt->fetchAll();
+
+// 🎓 NAAC / UGC मान्यता — मुदत संपली / ९० दिवसांत संपते
+$today = date('Y-m-d'); $soon = date('Y-m-d', strtotime('+90 days'));
+$validity = function ($d) use ($today, $soon) {
+    if (!$d) return null;
+    if ($d < $today) return ['bad', 'संपली'];
+    if ($d <= $soon) return ['warn', (int)((strtotime($d) - strtotime($today)) / 86400) . ' दिवस'];
+    return ['ok', ''];
+};
+$alerts = []; $expiring = 0;
+foreach ($campuses as $c) {
+    if (!$c['is_active']) {
+        if ((int)$c['dept_active']) $alerts[] = ['warn', "'{$c['name']}' निष्क्रिय आहे, पण त्यात {$c['dept_active']} सक्रिय विभाग आहेत.", 'edit.php?id=' . $c['id']];
+        continue;
+    }
+    foreach (['naac_valid_until' => 'NAAC', 'ugc_valid_until' => 'UGC'] as $col => $lbl) {
+        $v = $validity($c[$col] ?? null);
+        if ($v && $v[0] !== 'ok') {
+            $expiring++;
+            $alerts[] = [$v[0], "'{$c['name']}' ची {$lbl} मान्यता " . ($v[0] === 'bad' ? 'संपली आहे (' . date('d M Y', strtotime($c[$col])) . ')' : $v[1] . 'ांत संपते (' . date('d M Y', strtotime($c[$col])) . ')') . ' — नूतनीकरण करा.', 'edit.php?id=' . $c['id']];
+        }
+    }
+    if (!(int)$c['dept_count'] && $c['college_type'] !== 'Trust HQ') $alerts[] = ['info', "'{$c['name']}' मध्ये अजून एकही विभाग नाही.", '../departments/create.php'];
+    if ((int)$c['dept_nohod']) $alerts[] = ['info', "'{$c['name']}' मधील {$c['dept_nohod']} विभागांना HOD नाहीत.", '../departments/index.php'];
+}
+$activeCampuses = array_filter($campuses, fn($c) => $c['is_active']);
+$noPrincipal = array_filter($activeCampuses, fn($c) => !$c['principal_name'] && !in_array($c['college_type'], ['Trust HQ'], true));
+if ($noPrincipal) $alerts[] = ['info', count($noPrincipal) . ' सक्रिय कॅम्पसचे प्राचार्य/प्रमुख नोंदवलेले नाहीत — पत्रांवर व अहवालांवर नाव येत नाही.', '#campusTable'];
+usort($alerts, fn($a, $b) => array_search($a[0], ['bad', 'warn', 'info']) <=> array_search($b[0], ['bad', 'warn', 'info']));
 ?>
 
 <div class="page-eyebrow"><?= h($user['name']) ?></div>
@@ -32,12 +66,24 @@ $campuses = $stmt->fetchAll();
   </div>
 </div>
 
-<div class="panel mt-3">
+<?php
+smartTiles([
+    ['label' => 'कॅम्पस / College', 'value' => count($campuses), 'sub' => count($activeCampuses) . ' सक्रिय'],
+    ['label' => 'विभाग', 'value' => array_sum(array_column($activeCampuses, 'dept_active')), 'sub' => array_sum(array_column($activeCampuses, 'dept_nohod')) . ' HOD विना', 'tone' => array_sum(array_column($activeCampuses, 'dept_nohod')) ? 'warn' : 'ok'],
+    ['label' => 'सक्रिय कर्मचारी', 'value' => array_sum(array_column($activeCampuses, 'staff_active')), 'sub' => 'सर्व कॅम्पस मिळून'],
+    ['label' => 'NAAC / UGC मुदत', 'value' => $expiring, 'sub' => $expiring ? 'संपली / ९० दिवसांत' : 'सर्व वैध', 'tone' => $expiring ? 'bad' : 'ok'],
+    ['label' => 'प्रमुख नोंद नाही', 'value' => count($noPrincipal), 'sub' => 'प्राचार्य / प्रमुखाचे नाव', 'tone' => $noPrincipal ? 'warn' : 'ok'],
+]);
+smartAlerts(array_slice($alerts, 0, 8));
+?>
+
+<div class="panel mt-3" id="campusTable">
+  <div class="table-responsive">
   <table class="rtable">
-    <thead><tr><th><?= h(t('s15')) ?></th><th><?= h(t('s99')) ?></th><th>प्रकार</th><th><?= h(t('s46')) ?></th><th><?= h(t('s1')) ?></th><th><?= h(t('s2')) ?></th><th></th></tr></thead>
+    <thead><tr><th><?= h(t('s15')) ?></th><th><?= h(t('s99')) ?></th><th>प्रकार</th><th><?= h(t('s46')) ?></th><th><?= h(t('s1')) ?></th><th>कर्मचारी</th><th>NAAC / UGC</th><th><?= h(t('s2')) ?></th><th data-no-sort></th></tr></thead>
     <tbody>
       <?php if (empty($campuses)): ?>
-        <tr><td colspan="7" style="text-align:center;color:var(--text-dim);padding:24px;"><?= h(t('s296')) ?></td></tr>
+        <tr><td colspan="9" style="text-align:center;color:var(--text-dim);padding:24px;"><?= h(t('s296')) ?></td></tr>
       <?php endif; ?>
       <?php
         $collegeTypeLabels = ['Trust HQ' => '🏛️ Trust / मुख्य कार्यालय', 'Primary School' => 'प्राथमिक शाळा', 'Secondary School' => 'माध्यमिक शाळा', 'Junior College' => 'कनिष्ठ महाविद्यालय', 'Arts' => 'कला', 'Science' => 'विज्ञान', 'Commerce' => 'वाणिज्य', 'Engineering' => 'अभियांत्रिकी', 'Pharmacy' => 'औषधनिर्माणशास्त्र', 'Education' => 'शिक्षणशास्त्र', 'Law' => 'विधी', 'Medical' => 'वैद्यकीय', 'Polytechnic' => 'Polytechnic', 'Other' => 'इतर'];
@@ -52,7 +98,13 @@ $campuses = $stmt->fetchAll();
           <td class="font-mono"><?= h($campus['code']) ?></td>
           <td style="font-size:12px;"><?= h($collegeTypeLabels[$campus['college_type']] ?? '—') ?></td>
           <td><?= h($campus['city'] ?: '—') ?></td>
-          <td class="font-mono"><?= $campus['dept_count'] ?></td>
+          <td class="font-mono" data-sort="<?= (int)$campus['dept_active'] ?>"><a href="../departments/index.php" style="color:inherit;"><?= (int)$campus['dept_active'] ?></a><?= $campus['dept_count'] > $campus['dept_active'] ? ' <span style="color:var(--text-dim);font-size:11px;">+' . ($campus['dept_count'] - $campus['dept_active']) . ' निष्क्रिय</span>' : '' ?><?= (int)$campus['dept_nohod'] ? '<div style="font-size:11px;color:var(--amber);">' . (int)$campus['dept_nohod'] . ' HOD विना</div>' : '' ?></td>
+          <td class="font-mono"><?= (int)$campus['staff_active'] ?></td>
+          <td style="font-size:11.5px;white-space:nowrap;">
+            <?php $any = false; foreach (['naac_valid_until' => 'NAAC', 'ugc_valid_until' => 'UGC'] as $col => $lbl): $v = $validity($campus[$col] ?? null); if (!$v) continue; $any = true; ?>
+              <div style="color:<?= $v[0] === 'bad' ? 'var(--rose)' : ($v[0] === 'warn' ? 'var(--amber)' : 'var(--rail)') ?>;font-weight:600;"><?= $lbl ?>: <?= date('d M Y', strtotime($campus[$col])) ?><?= $v[1] ? ' · ' . $v[1] : '' ?></div>
+            <?php endforeach; if (!$any) echo '<span style="color:var(--text-dim);">—</span>'; ?>
+          </td>
           <td><?php if ($campus['is_active']): ?><span class="status-chip done"><?= h(t('s4')) ?></span><?php else: ?><span class="status-chip overdue"><?= h(t('s5')) ?></span><?php endif; ?></td>
           <td>
             <a href="edit.php?id=<?= $campus['id'] ?>" class="btn btn-sm" style="border:1px solid var(--line);border-radius:7px;font-size:12px;padding:5px 12px;"><i class="fa-solid fa-pen me-1"></i>Edit</a>
@@ -91,6 +143,7 @@ $campuses = $stmt->fetchAll();
       <?php endforeach; ?>
     </tbody>
   </table>
+  </div>
 </div>
 
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

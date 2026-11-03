@@ -9,10 +9,34 @@ $orgs = $pdo->query("
       (SELECT COUNT(*) FROM campuses c WHERE c.organization_id = o.id) AS campus_count,
       (SELECT COUNT(*) FROM departments d WHERE d.organization_id = o.id) AS dept_count,
       (SELECT COUNT(*) FROM users u WHERE u.organization_id = o.id) AS user_count,
-      (SELECT COUNT(*) FROM organizations c2 WHERE c2.parent_organization_id = o.id) AS child_org_count
+      (SELECT COUNT(*) FROM organizations c2 WHERE c2.parent_organization_id = o.id) AS child_org_count,
+      (SELECT COUNT(*) FROM users u WHERE u.organization_id = o.id AND u.is_active = 1) AS user_active,
+      (SELECT COUNT(DISTINCT al.user_id) FROM activity_logs al JOIN users u ON u.id = al.user_id
+         WHERE u.organization_id = o.id AND u.is_active = 1 AND al.action LIKE 'Login केलं%' AND al.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)) AS login7,
+      (SELECT COUNT(*) FROM departments d WHERE d.organization_id = o.id AND d.is_active = 1 AND d.hod_id IS NULL) AS dept_nohod
     FROM organizations o LEFT JOIN organizations p ON p.id = o.parent_organization_id
     ORDER BY o.name
 ")->fetchAll();
+require_once __DIR__ . '/../includes/smart-insights.php';
+// शेवटची हालचाल (Activity Log) — संस्था वापरात आहे का
+$lastAct = [];
+try { foreach ($pdo->query("SELECT organization_id o, MAX(created_at) t FROM activity_logs GROUP BY organization_id")->fetchAll() as $r) { $lastAct[(int)$r['o']] = $r['t']; } } catch (PDOException $e) {}
+$curOrg = activeOrgId();
+$alerts = [];
+foreach ($orgs as $o) {
+    if ($o['maintenance_mode']) $alerts[] = ['bad', "'{$o['name']}' — 🛠️ Maintenance Mode चालू आहे; Super Admin सोडून कोणालाही Login करता येत नाही.", '../system-update/maintenance.php'];
+    if (!$o['is_active']) { if ((int)$o['user_active']) $alerts[] = ['warn', "'{$o['name']}' निष्क्रिय आहे — तिचे {$o['user_active']} सक्रिय कर्मचारी Login करू शकत नाहीत.", 'edit.php?id=' . $o['id']]; continue; }
+    if (!(int)$o['dept_count']) $alerts[] = ['info', "'{$o['name']}' मध्ये अजून विभाग नाहीत — रचना पूर्ण करा.", 'edit.php?id=' . $o['id']];
+    elseif ((int)$o['dept_nohod']) $alerts[] = ['info', "'{$o['name']}' — {$o['dept_nohod']} विभागांना HOD नाहीत.", '../departments/index.php'];
+    if ((int)$o['user_active'] && empty($lastAct[(int)$o['id']])) $alerts[] = ['info', "'{$o['name']}' मध्ये अजून कोणतीही हालचाल नोंदलेली नाही.", 'edit.php?id=' . $o['id']];
+    elseif (!empty($lastAct[(int)$o['id']]) && strtotime($lastAct[(int)$o['id']]) < strtotime('-14 days')) $alerts[] = ['warn', "'{$o['name']}' मध्ये १४ दिवसांपेक्षा जास्त काळ कोणतीही हालचाल नाही.", '../activity-log/index.php'];
+}
+$activeOrgs = array_filter($orgs, fn($o) => $o['is_active']);
+$ago = function ($t) {
+    if (!$t) return '—';
+    $d = (int)floor((time() - strtotime($t)) / 86400);
+    return $d <= 0 ? 'आज' : ($d === 1 ? 'काल' : $d . ' दिवसांपूर्वी');
+};
 ?>
 
 <div class="page-eyebrow">Super Admin</div>
@@ -27,16 +51,29 @@ $orgs = $pdo->query("
   </a>
 </div>
 
+<?php if (!empty($_SESSION['flash'])): ?><div class="alert alert-success mt-2" style="border-radius:10px;font-size:13px;"><?= h($_SESSION['flash']) ?></div><?php unset($_SESSION['flash']); endif; ?>
+<?php
+smartTiles([
+    ['label' => 'संस्था', 'value' => count($orgs), 'sub' => count($activeOrgs) . ' सक्रिय · ' . count(array_filter($orgs, fn($o) => $o['parent_organization_id'])) . ' उप-शाखा'],
+    ['label' => 'कॅम्पस', 'value' => array_sum(array_column($activeOrgs, 'campus_count'))],
+    ['label' => 'विभाग', 'value' => array_sum(array_column($activeOrgs, 'dept_count')), 'sub' => array_sum(array_column($activeOrgs, 'dept_nohod')) . ' HOD विना', 'tone' => array_sum(array_column($activeOrgs, 'dept_nohod')) ? 'warn' : ''],
+    ['label' => 'सक्रिय कर्मचारी', 'value' => array_sum(array_column($activeOrgs, 'user_active')), 'sub' => array_sum(array_column($activeOrgs, 'login7')) . ' जणांनी ७ दिवसांत Login केलं', 'tone' => 'ok'],
+    ['label' => 'Maintenance चालू', 'value' => count(array_filter($orgs, fn($o) => $o['maintenance_mode'])), 'tone' => count(array_filter($orgs, fn($o) => $o['maintenance_mode'])) ? 'bad' : 'ok'],
+]);
+smartAlerts(array_slice($alerts, 0, 8));
+?>
+
 <div class="panel mt-3">
+  <div class="table-responsive">
   <table class="rtable">
-    <thead><tr><th><?= h(t('s15')) ?></th><th><?= h(t('s17')) ?></th><th>मुख्य Trust</th><th><?= h(t('s8')) ?></th><th><?= h(t('s1')) ?></th><th><?= h(t('s6')) ?></th><th><?= h(t('s2')) ?></th><th></th></tr></thead>
+    <thead><tr><th><?= h(t('s15')) ?></th><th><?= h(t('s17')) ?></th><th>मुख्य Trust</th><th><?= h(t('s8')) ?></th><th><?= h(t('s1')) ?></th><th><?= h(t('s6')) ?></th><th title="गेल्या ७ दिवसांत Login केलेले सक्रिय कर्मचारी">वापर (७ दि.)</th><th>शेवटची हालचाल</th><th><?= h(t('s2')) ?></th><th data-no-sort></th></tr></thead>
     <tbody>
       <?php if (empty($orgs)): ?>
-        <tr><td colspan="7" style="text-align:center;color:var(--text-dim);padding:24px;"><?= h(t('s345')) ?></td></tr>
+        <tr><td colspan="10" style="text-align:center;color:var(--text-dim);padding:24px;"><?= h(t('s345')) ?></td></tr>
       <?php endif; ?>
       <?php foreach ($orgs as $org): ?>
         <tr>
-          <td style="font-weight:500;"><?= h($org['name']) ?></td>
+          <td style="font-weight:500;"><?= h($org['name']) ?><?= (int)$org['id'] === (int)$curOrg ? ' <span style="font-size:10px;font-weight:700;color:var(--rail);background:var(--rail-soft);padding:2px 8px;border-radius:10px;">सध्याची</span>' : '' ?><?= $org['maintenance_mode'] ? ' <span style="font-size:10px;font-weight:700;color:var(--rose);">🛠️ Maintenance</span>' : '' ?></td>
           <td><?= h(ucfirst($org['type'])) ?></td>
           <td>
             <?php if ($org['parent_name']): ?>
@@ -47,9 +84,19 @@ $orgs = $pdo->query("
           </td>
           <td class="font-mono"><?= $org['campus_count'] ?></td>
           <td class="font-mono"><?= $org['dept_count'] ?></td>
-          <td class="font-mono"><?= $org['user_count'] ?></td>
+          <td class="font-mono" data-sort="<?= (int)$org['user_active'] ?>"><b><?= (int)$org['user_active'] ?></b><?= $org['user_count'] > $org['user_active'] ? ' <span style="color:var(--text-dim);font-size:11px;">+' . ($org['user_count'] - $org['user_active']) . '</span>' : '' ?></td>
+          <?php $lp = (int)$org['user_active'] ? (int)round($org['login7'] * 100 / $org['user_active']) : 0; ?>
+          <td data-sort="<?= $lp ?>"><div class="og-bar"><i style="width:<?= $lp ?>%;background:<?= $lp >= 60 ? 'var(--rail)' : ($lp >= 30 ? 'var(--amber)' : 'var(--rose)') ?>;"></i></div> <span class="font-mono" style="font-size:12px;"><?= (int)$org['login7'] ?>/<?= (int)$org['user_active'] ?></span></td>
+          <?php $la = $lastAct[(int)$org['id']] ?? null; ?>
+          <td data-sort="<?= $la ? strtotime($la) : 0 ?>" style="font-size:12px;<?= $la && strtotime($la) < strtotime('-14 days') ? 'color:var(--amber);font-weight:600;' : '' ?>"><?= $ago($la) ?></td>
           <td><?php if ($org['is_active']): ?><span class="status-chip done"><?= h(t('s4')) ?></span><?php else: ?><span class="status-chip overdue"><?= h(t('s5')) ?></span><?php endif; ?></td>
-          <td>
+          <td style="white-space:nowrap;text-align:right;">
+            <?php if ((int)$org['id'] !== (int)$curOrg && $org['is_active']): ?>
+              <form method="POST" action="switch.php" class="d-inline">
+                <input type="hidden" name="organization_id" value="<?= (int)$org['id'] ?>"><input type="hidden" name="back" value="index.php">
+                <button type="submit" class="btn btn-sm" title="या संस्थेचं काम पाहण्यासाठी तिच्यावर जा" style="border:1px solid var(--rail);color:var(--rail);border-radius:7px;font-size:12px;padding:5px 10px;"><i class="fa-solid fa-right-left me-1"></i>जा</button>
+              </form>
+            <?php endif; ?>
             <a href="edit.php?id=<?= $org['id'] ?>" class="btn btn-sm" style="border:1px solid var(--line);border-radius:7px;font-size:12px;padding:5px 12px;"><i class="fa-solid fa-pen me-1"></i>Edit</a>
             <button type="button" class="btn btn-sm" style="border:1px solid var(--rose);color:var(--rose);border-radius:7px;font-size:12px;padding:5px 12px;"
               data-bs-toggle="modal" data-bs-target="#deleteModal<?= $org['id'] ?>"><i class="fa-solid fa-trash me-1"></i>Delete</button>
@@ -87,6 +134,8 @@ $orgs = $pdo->query("
       <?php endforeach; ?>
     </tbody>
   </table>
+  </div>
 </div>
+<style>.og-bar{display:inline-block;width:60px;height:6px;border-radius:4px;background:var(--canvas);overflow:hidden;vertical-align:middle;}.og-bar i{display:block;height:100%;border-radius:4px;}</style>
 
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>
