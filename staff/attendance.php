@@ -11,6 +11,7 @@ $rootPath = '../';
 require_once __DIR__ . '/../includes/header.php';
 
 $month = $_GET['month'] ?? date('Y-m');
+if (!preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $month)) { $month = date('Y-m'); }
 
 $sql = "
     SELECT sa.*, u.name, u.designation, d.name_local AS dept_name
@@ -55,6 +56,8 @@ $statusChips = ['present' => 'done', 'absent' => 'overdue', 'half_day' => 'pendi
 <form method="GET" class="mb-4">
   <input type="month" name="month" class="form-control-custom" style="width:auto;" value="<?= h($month) ?>" onchange="this.form.submit()">
 </form>
+
+<?php require __DIR__ . '/../includes/attendance-insights.php'; ?>
 
 <?php if (empty($byDate)): ?>
   <div class="panel" style="padding:40px;text-align:center;color:var(--text-dim);">या महिन्यात कुठलीही Attendance नोंदवली गेलेली नाही.</div>

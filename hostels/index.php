@@ -50,6 +50,8 @@ $hostels = $stmt->fetchAll();
   <?php unset($_SESSION['form_error']); ?>
 <?php endif; ?>
 
+<?php require __DIR__ . '/../includes/hostel-insights.php'; ?>
+
 <div class="panel">
   <table class="rtable">
     <thead><tr><th><?= h(t('s37')) ?></th><th><?= h(t('s8')) ?></th><th><?= h(t('s24')) ?></th><th><?= h(t('s25')) ?></th><th><?= h(t('s80')) ?></th><th><?= h(t('s2')) ?></th><th></th></tr></thead>
