@@ -26,14 +26,8 @@ try {
     }
 
     // ---- ओळख पडताळणी (Identity Verification) ----
-    if ($method === 'fingerprint') {
-        $verifiedAt = $_SESSION['identity_verified_at'] ?? 0;
-        $verifiedMethod = $_SESSION['identity_verified_method'] ?? '';
-        if ($verifiedMethod !== 'fingerprint' || (time() - $verifiedAt) > 300) {
-            throw new Exception('Fingerprint पडताळणी वेळेत झाली नाही — पुन्हा प्रयत्न करा.');
-        }
-        unset($_SESSION['identity_verified_at'], $_SESSION['identity_verified_method']); // एकदाच वापरण्यायोग्य
-    } elseif ($method === 'password') {
+    // Fingerprint/Face ID ने Sign करण्याची सुविधा काढून टाकली आहे — फक्त Password
+    if ($method === 'password') {
         $password = $_POST['password'] ?? '';
         if (!$password) { throw new Exception('कृपया Password टाका.'); }
         $pwStmt = $pdo->prepare("SELECT password FROM users WHERE id = ?");

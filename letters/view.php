@@ -210,15 +210,6 @@ if ($isHolder || ($isCreator && $letter['status'] === 'draft') || hasRole('super
     $staffPool = $stmt->fetchAll();
 }
 
-$hasFingerprint = false;
-if ($canSign) {
-    try {
-        $fpStmt = $pdo->prepare("SELECT COUNT(*) c FROM webauthn_credentials WHERE user_id = ?");
-        $fpStmt->execute([$user['id']]);
-        $hasFingerprint = (int)$fpStmt->fetch()['c'] > 0;
-    } catch (PDOException $e) { /* webauthn table not migrated */ }
-}
-
 $priorityLabels = ['low' => 'कमी', 'normal' => 'सामान्य', 'high' => 'जास्त', 'urgent' => 'तातडीचे'];
 $statusLabels = ['draft' => 'Draft', 'in_progress' => 'प्रगतीत', 'completed' => 'पूर्ण/दाखल', 'returned' => 'परत आले'];
 $statusChip = ['draft' => 'pending', 'in_progress' => 'pending', 'completed' => 'done', 'returned' => 'overdue'];
@@ -537,12 +528,6 @@ require_once __DIR__ . '/../includes/header.php';
 
         <div id="signApproveError" class="alert alert-danger" style="display:none;border-radius:8px;font-size:12px;padding:10px 14px;"></div>
 
-        <?php if ($hasFingerprint): ?>
-          <button type="button" onclick="eowmsSignApprove(<?= $letterId ?>, 'fingerprint')" class="btn w-100 mb-2" style="background:var(--rail);color:#fff;border-radius:9px;font-size:13px;padding:10px;font-weight:600;">👆 Fingerprint/Face ID ने Sign करा</button>
-          <div style="display:flex;align-items:center;gap:10px;margin:12px 0;">
-            <div style="flex:1;height:1px;background:var(--line);"></div><span style="font-size:11px;color:var(--text-dim);">किंवा</span><div style="flex:1;height:1px;background:var(--line);"></div>
-          </div>
-        <?php endif; ?>
 
         <label class="form-label-custom">🔑 तुमचा Password टाकून Sign करा</label>
         <input type="password" id="signPassword" class="form-control-custom mb-2" placeholder="Password">
@@ -555,7 +540,6 @@ require_once __DIR__ . '/../includes/header.php';
   </div>
 </div>
 
-<script src="../assets/js/webauthn.js"></script>
 <script>
 async function eowmsSignApprove(letterId, method) {
   const errBox = document.getElementById('signApproveError');
@@ -570,31 +554,9 @@ async function eowmsSignApprove(letterId, method) {
   if (amountField) { payload.set('approved_amount', amountField.value); }
 
   try {
-    if (method === 'fingerprint') {
-      if (!window.PublicKeyCredential) { throw new Error('हा Browser Fingerprint/Face ID ला समर्थन देत नाही.'); }
-      const optRes = await fetch('../webauthn-verify-identity-options.php');
-      const options = await optRes.json();
-      if (!options.challenge) { throw new Error(options.message || 'Fingerprint सुरू केलेलं नाही.'); }
-      options.challenge = b64urlToBuffer(options.challenge);
-      options.allowCredentials = (options.allowCredentials || []).map((c) => ({ ...c, id: b64urlToBuffer(c.id) }));
-
-      const assertion = await navigator.credentials.get({ publicKey: options });
-      const verifyRes = await fetch('../webauthn-verify-identity-verify.php', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: bufferToB64url(assertion.rawId),
-          clientDataJSON: bufferToB64url(assertion.response.clientDataJSON),
-          authenticatorData: bufferToB64url(assertion.response.authenticatorData),
-          signature: bufferToB64url(assertion.response.signature),
-        }),
-      });
-      const verifyResult = await verifyRes.json();
-      if (!verifyResult.success) { throw new Error(verifyResult.message); }
-    } else {
-      const password = document.getElementById('signPassword').value;
-      if (!password) { throw new Error('कृपया Password टाका.'); }
-      payload.set('password', password);
-    }
+    const password = document.getElementById('signPassword').value;
+    if (!password) { throw new Error('कृपया Password टाका.'); }
+    payload.set('password', password);
 
     const res = await fetch('sign-approve.php', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: payload.toString() });
     const result = await res.json();
