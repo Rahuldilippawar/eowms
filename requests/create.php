@@ -168,6 +168,7 @@ $campuses = $campusesStmt->fetchAll();
 
     <label class="form-label-custom">काय काम हवं आहे — तपशीलवार लिहा</label>
     <textarea name="work_description" class="form-control-custom mb-3" rows="4" placeholder="उदा. आमच्या वर्गखोलीतला Fan बंद पडलाय, कृपया दुरुस्त करा" required></textarea>
+    <div id="similarBox" class="as-dup mb-3" hidden></div>
 
     <button type="submit" class="btn w-100" style="background:var(--rail);color:#fff;border-radius:9px;font-size:14px;padding:11px;font-weight:600;">विनंती पाठवा</button>
   </form>
@@ -175,6 +176,45 @@ $campuses = $campusesStmt->fetchAll();
 <?php endif; ?>
 
 <?php if (!$isItForm): ?>
+<script>
+// 🔎 दुहेरी विनंती इशारा — त्याच विभागात आधीच अशीच उघडी विनंती असल्यास दाखवतो (नोंदवणं थांबवत नाही)
+(function () {
+  var box = document.getElementById('similarBox');
+  var dept = document.getElementById('deptSelect');
+  var title = document.querySelector('form input[name="title"]');
+  var desc = document.querySelector('form textarea[name="work_description"]');
+  if (!box || !dept || !desc) return;
+  var t, seq = 0;
+  function check() {
+    var q = ((title && title.value) || '') + ' ' + desc.value;
+    if (!dept.value || q.trim().length < 8) { box.hidden = true; return; }
+    var my = ++seq;
+    fetch('ajax-similar.php?department_id=' + encodeURIComponent(dept.value) + '&q=' + encodeURIComponent(q.slice(0, 300)), { credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (my !== seq) return;
+        var m = d.matches || [];
+        box.hidden = !m.length;
+        if (!m.length) return;
+        box.textContent = '';
+        var head = document.createElement('div');
+        head.style.fontWeight = '700';
+        head.textContent = '⚠️ या विभागात आधीच अशी उघडी विनंती आहे — तीच समस्या असेल तर पुन्हा नोंदवण्याची गरज नाही:';
+        box.appendChild(head);
+        m.forEach(function (x) {
+          var row = document.createElement('div');
+          row.style.marginTop = '4px';
+          row.textContent = '• ' + x.code + ' — ' + x.title + ' (' + x.status + ', ' + x.age + ' जुनी)';
+          box.appendChild(row);
+        });
+      }).catch(function () {});
+  }
+  function later() { clearTimeout(t); t = setTimeout(check, 500); }
+  desc.addEventListener('input', later);
+  if (title) title.addEventListener('input', later);
+  dept.addEventListener('change', check);
+})();
+</script>
 <script>
 (function () {
   var rootPath = '../';

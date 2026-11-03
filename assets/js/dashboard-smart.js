@@ -77,9 +77,11 @@
       first.value = '';
       first.textContent = deptSel.value ? (list.length ? '-- कर्मचारी निवडा --' : 'या विभागात कर्मचारी नाहीत') : '-- आधी विभाग निवडा --';
       userSel.appendChild(first);
-      list.forEach(function (u) {
+      list.forEach(function (u, i) {
         var o = document.createElement('option');
-        o.value = u.id; o.textContent = u.name;
+        o.value = u.id;
+        // कामाचा भार नावासोबत — सर्वात कमी भार असलेल्याला ⭐
+        o.textContent = (i === 0 && list.length > 1 ? '⭐ ' : '') + u.name + ' — ' + (u.open ? u.open + ' उघडे' + (u.overdue ? ' · ' + u.overdue + ' मुदतबाह्य' : '') : 'मोकळे');
         userSel.appendChild(o);
       });
     }
