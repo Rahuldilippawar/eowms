@@ -92,39 +92,7 @@ foreach ($departments as $dept) {
     $deptGroupsForDash[$groupKey]['depts'][] = $dept;
 }
 
-// Last 7 days trend — total vs completed work, for the line chart
-// (HOD/Staff साठी फक्त त्यांच्याच विभागाचा कल — Management ला संपूर्ण संस्थेचा)
-$trendLabels = [];
-$trendTotal = [];
-$trendCompletedSeries = [];
-for ($i = 6; $i >= 0; $i--) {
-    $d = date('Y-m-d', strtotime("-$i days"));
-    $trendLabels[] = date('d M', strtotime($d));
-    $t = $pdo->prepare("SELECT COUNT(*) c FROM work_records WHERE organization_id=? AND work_date=?$deptScopeSql");
-    $t->execute(array_merge([$orgId, $d], $deptScopeParams));
-    $trendTotal[] = (int)$t->fetch()['c'];
-    $c = $pdo->prepare("SELECT COUNT(*) c FROM work_records WHERE organization_id=? AND work_date=? AND status='completed'$deptScopeSql");
-    $c->execute(array_merge([$orgId, $d], $deptScopeParams));
-    $trendCompletedSeries[] = (int)$c->fetch()['c'];
-}
-
-// Department-wise work distribution (last 30 days) — for the doughnut chart
-// Only meaningful (and only shown) for Management — comparing across
-// departments would otherwise reveal other departments' names to HOD/Staff.
-$deptDistribution = [];
-if ($isMgmtView) {
-    $stmt = $pdo->prepare("
-        SELECT d.name_local AS name, COUNT(wr.id) AS cnt
-        FROM departments d
-        LEFT JOIN work_records wr ON wr.department_id = d.id AND wr.work_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
-        WHERE d.organization_id = ? AND d.is_active = 1
-        GROUP BY d.id, d.name_local
-        HAVING cnt > 0
-        ORDER BY cnt DESC
-    ");
-    $stmt->execute([$orgId]);
-    $deptDistribution = $stmt->fetchAll();
-}
+// 📊 कालावधीनुसार Charts — Data ajax-dashboard-charts.php वरून येतो (पान लवकर उघडतं)
 
 // Latest satsang attendance summary — management dashboard widget
 $latestSatsang = null;
@@ -336,26 +304,79 @@ function eowmsSwitchDashTab(which, btn) {
   </div>
 </div>
 
-<?php if (!empty($deptDistribution) || array_sum($trendTotal) > 0): ?>
-<div class="row g-3 mb-3">
-  <?php if (array_sum($trendTotal) > 0): ?>
-  <div class="col-lg-7">
-    <div class="panel">
-      <div class="panel-head"><div class="title">गेल्या ७ दिवसांचा कल</div><div class="sub">रोजची कामं — एकूण vs पूर्ण</div></div>
-      <div style="padding:18px 20px;"><canvas id="trendChart" height="90"></canvas></div>
+<div class="panel mb-3 dash-analytics" id="dashAnalytics" data-mgmt="<?= $isMgmtView ? '1' : '0' ?>">
+  <div class="panel-head dash-an-head">
+    <div>
+      <div class="title">📊 कामाचं विश्लेषण</div>
+      <div class="sub" id="dashRangeLabel"><?= $isMgmtView ? 'संपूर्ण संस्था' : 'माझा विभाग' ?> — कालावधी निवडा</div>
+    </div>
+    <div class="dash-range" role="group" aria-label="कालावधी">
+      <button type="button" data-range="today">आज</button>
+      <button type="button" data-range="7d" class="active">७ दिवस</button>
+      <button type="button" data-range="30d">३० दिवस</button>
+      <button type="button" data-range="month">हा महिना</button>
+      <button type="button" data-range="90d">३ महिने</button>
+      <button type="button" data-range="year">हे वर्ष</button>
+      <button type="button" data-range="custom"><i class="fa-solid fa-calendar-days"></i> Custom</button>
     </div>
   </div>
-  <?php endif; ?>
-  <?php if (!empty($deptDistribution)): ?>
-  <div class="col-lg-5">
-    <div class="panel">
-      <div class="panel-head"><div class="title">विभागनिहाय काम वितरण</div><div class="sub">मागील ३० दिवस</div></div>
-      <div style="padding:18px 20px;"><canvas id="deptDistChart" height="180"></canvas></div>
-    </div>
+  <form class="dash-custom" id="dashCustom" hidden>
+    <label>पासून <input type="date" id="dashFrom" required></label>
+    <label>पर्यंत <input type="date" id="dashTo" required></label>
+    <button type="submit" class="btn btn-sm btn-dark">दाखवा</button>
+  </form>
+  <div class="dash-kpis">
+    <div class="dash-kpi"><span>एकूण कामं</span><b id="dkTotal">—</b></div>
+    <div class="dash-kpi ok"><span>पूर्ण</span><b id="dkDone">—</b></div>
+    <div class="dash-kpi warn"><span>प्रलंबित / सुरू</span><b id="dkOpen">—</b></div>
+    <div class="dash-kpi"><span>पूर्णत्व दर</span><b id="dkRate">—</b><i class="dash-rate-bar"><i id="dkRateBar"></i></i></div>
   </div>
-  <?php endif; ?>
+  <div class="dash-an-body" id="dashAnBody">
+    <div class="row g-3">
+      <div class="col-lg-8">
+        <div class="dash-card">
+          <div class="dash-card-head"><span>कामाचा कल — एकूण vs पूर्ण</span>
+            <span class="dash-toggle"><button type="button" data-trend="bar" class="active" title="Bar Chart"><i class="fa-solid fa-chart-column"></i></button><button type="button" data-trend="line" title="Line Chart"><i class="fa-solid fa-chart-line"></i></button></span>
+          </div>
+          <div class="dash-canvas tall"><canvas id="dcTrend"></canvas></div>
+        </div>
+      </div>
+      <div class="col-lg-4">
+        <div class="dash-card">
+          <div class="dash-card-head"><span>कामाची स्थिती</span></div>
+          <div class="dash-canvas tall"><canvas id="dcStatus"></canvas></div>
+        </div>
+      </div>
+      <?php if ($isMgmtView): ?>
+      <div class="col-lg-5">
+        <div class="dash-card">
+          <div class="dash-card-head"><span>विभागनिहाय वाटा (Pie)</span></div>
+          <div class="dash-canvas tall"><canvas id="dcDeptPie"></canvas></div>
+        </div>
+      </div>
+      <div class="col-lg-7">
+        <div class="dash-card">
+          <div class="dash-card-head"><span>विभागनिहाय — पूर्ण vs प्रलंबित</span></div>
+          <div class="dash-canvas tall"><canvas id="dcDeptBar"></canvas></div>
+        </div>
+      </div>
+      <?php endif; ?>
+      <div class="col-md-6">
+        <div class="dash-card">
+          <div class="dash-card-head"><span>कामाच्या विनंत्या (Work Requests)</span></div>
+          <div class="dash-canvas"><canvas id="dcRequests"></canvas></div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="dash-card">
+          <div class="dash-card-head"><span>Tasks — मुदत या कालावधीत</span></div>
+          <div class="dash-canvas"><canvas id="dcTasks"></canvas></div>
+        </div>
+      </div>
+    </div>
+    <div class="dash-loading" id="dashLoading"><span class="spinner-border spinner-border-sm"></span> लोड होत आहे…</div>
+  </div>
 </div>
-<?php endif; ?>
 
 <div class="row g-3">
   <div class="col-lg-8">
@@ -480,51 +501,7 @@ function eowmsSwitchDashTab(which, btn) {
 </div>
 <?php endif; ?>
 
-<?php if (array_sum($trendTotal) > 0): ?>
-<script>
-window.addEventListener('DOMContentLoaded', function () {
-new Chart(document.getElementById('trendChart'), {
-  type: 'line',
-  data: {
-    labels: <?= json_encode($trendLabels) ?>,
-    datasets: [
-      { label: 'एकूण', data: <?= json_encode($trendTotal) ?>, borderColor: '#6B7080', backgroundColor: 'rgba(107,112,128,.08)', tension: .35, fill: true },
-      { label: 'पूर्ण', data: <?= json_encode($trendCompletedSeries) ?>, borderColor: '#1B8A83', backgroundColor: 'rgba(27,138,131,.12)', tension: .35, fill: true }
-    ]
-  },
-  options: {
-    plugins: { legend: { position: 'bottom', labels: { font: { family: "'Noto Sans Devanagari'", size: 12 }, boxWidth: 12 } } },
-    scales: {
-      x: { grid: { display: false }, ticks: { font: { size: 11 } } },
-      y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 11 } }, grid: { color: '#EEF0F4' } }
-    }
-  }
-});
-});
-</script>
-<?php endif; ?>
-
-<?php if (!empty($deptDistribution)): ?>
-<script>
-window.addEventListener('DOMContentLoaded', function () {
-new Chart(document.getElementById('deptDistChart'), {
-  type: 'doughnut',
-  data: {
-    labels: <?= json_encode(array_column($deptDistribution, 'name'), JSON_UNESCAPED_UNICODE) ?>,
-    datasets: [{
-      data: <?= json_encode(array_map('intval', array_column($deptDistribution, 'cnt'))) ?>,
-      backgroundColor: ['#1B8A83','#C97F1D','#B23A48','#6B7080','#3B6FC9','#8A5CD6','#2FA37A','#D4A017','#5D8AA8','#A0522D'],
-      borderWidth: 2, borderColor: '#fff'
-    }]
-  },
-  options: {
-    plugins: { legend: { position: 'bottom', labels: { font: { family: "'Noto Sans Devanagari'", size: 11 }, boxWidth: 10, padding: 8 } } },
-    cutout: '60%'
-  }
-});
-});
-</script>
-<?php endif; ?>
+<script src="assets/js/dashboard-charts.js?v=1"></script>
 </div>
 
 <?php if ($showCampusBreakdown): ?>

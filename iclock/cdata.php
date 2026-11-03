@@ -33,6 +33,13 @@ try {
     if (!$device) {
         // कुठल्या Organization शी जोडायचं हे आधी माहीत नसतं — पहिल्या Active
         // Organization खाली (फक्त यादीत दिसण्यासाठी) निष्क्रिय नोंद करतो.
+        // 🔒 खोटे SN पाठवून Table भरून टाकणं रोखण्यासाठी — मंजुरी-प्रलंबित
+        // Devices आधीच २० असतील तर नवीन नोंद करत नाही.
+        $pendingCount = (int)$pdo->query("SELECT COUNT(*) FROM biometric_devices WHERE is_approved = 0")->fetchColumn();
+        if ($pendingCount >= 20 || !preg_match('/^[A-Za-z0-9_-]{4,50}$/', $serialNumber)) {
+            echo "OK";
+            exit;
+        }
         $firstOrgStmt = $pdo->query("SELECT id FROM organizations WHERE is_active = 1 ORDER BY id LIMIT 1");
         $firstOrgId = $firstOrgStmt->fetch()['id'] ?? 1;
         $pdo->prepare("INSERT INTO biometric_devices (organization_id, serial_number, device_name, last_seen_at, is_active, is_approved) VALUES (?, ?, ?, NOW(), 0, 0)")

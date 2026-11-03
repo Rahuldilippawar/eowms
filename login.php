@@ -28,6 +28,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
 
+    // 🔒 एकाच IP वरून १५ मिनिटांत २० पेक्षा जास्त चुकीचे प्रयत्न — Brute-force
+    // (अनेक खाती एकामागून एक तपासणं) रोखण्यासाठी तो IP तात्पुरता थांबवतो.
+    if (publicFormRateLimited('login_fail', 20, 900)) {
+        $error = 'या नेटवर्कवरून खूप चुकीचे Login प्रयत्न झाले — कृपया १५ मिनिटांनी पुन्हा प्रयत्न करा.';
+    } else {
     $stmt = $pdo->prepare("SELECT u.*, o.is_active AS org_is_active FROM users u LEFT JOIN organizations o ON o.id = u.organization_id WHERE u.email = ? AND u.is_active = 1");
     $stmt->execute([$email]);
     $user = $stmt->fetch();
@@ -83,6 +88,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Location: ' . $loginRedirect);
         exit;
     } else {
+        publicFormRecordSubmission('login_fail');
         logFailedLogin($pdo, $email, $user ? 'चुकीचा पासवर्ड' : 'अज्ञात / निष्क्रिय खाते');
         if ($user) {
             // Wrong password for a real account — count the attempt
@@ -102,6 +108,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $error = t('s457');
         }
+    }
     }
 }
 

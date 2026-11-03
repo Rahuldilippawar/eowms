@@ -4,6 +4,7 @@
 // Session Cookie ला अतिरिक्त सुरक्षा — session_start() च्या आधीच लावावी लागते.
 // SameSite=Lax मुळे — दुसऱ्या (परक्या) Website वरून चुकून/जाणूनबुजून या Site
 // कडे पाठवलेला Form-Submit (CSRF Attack) Browser आपोआप रोखतो.
+require_once __DIR__ . '/security-headers.php';
 if (session_status() === PHP_SESSION_NONE) {
     $isHttps = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
     session_set_cookie_params([

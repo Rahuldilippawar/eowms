@@ -3,6 +3,7 @@
 // ($_SESSION['student'] वापरतो, $_SESSION['user'] नाही) — जेणेकरून
 // दोन्ही Systems एकमेकांत कधीच मिसळणार नाहीत.
 
+require_once __DIR__ . '/security-headers.php';
 if (session_status() === PHP_SESSION_NONE) {
     $isHttps = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
     session_set_cookie_params([
