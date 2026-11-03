@@ -10,6 +10,8 @@ $backup = buildOrgBackup($pdo, $orgId);
 $orgSlug = preg_replace('/[^a-zA-Z0-9]+/', '-', $backup['organization']['name'] ?? 'organization');
 $filename = 'eowms-backup-' . trim($orgSlug, '-') . '-' . date('Y-m-d') . '.json';
 
+try { logActivity('Backup (Data JSON) Download केलं', 'backup', null, $filename); } catch (Throwable $e) {}
+
 header('Content-Type: application/json; charset=utf-8');
 header('Content-Disposition: attachment; filename="' . $filename . '"');
 echo json_encode($backup, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
