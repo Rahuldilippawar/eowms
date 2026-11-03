@@ -10,7 +10,7 @@ if (!$canViewTracker && !hasPermission('assign_tasks')) {
 
 $orgId = activeOrgId();
 $status = $_GET['status'] ?? 'all';
-if (!in_array($status, ['all', 'pending', 'in_progress', 'completed', 'cancelled'], true)) { $status = 'all'; }
+if (!in_array($status, ['all', 'overdue', 'pending', 'in_progress', 'completed', 'cancelled'], true)) { $status = 'all'; }
 
 // लवचिक Department-Visibility — फक्त तेच विभाग दिसतील जे स्वतःचे आहेत,
 // किंवा Super Admin ने वेगळ्याने Extra-Access दिलेले आहेत — Org-wide
@@ -60,13 +60,25 @@ $sql = "SELECT t.*, d.name_local AS dept_name, u1.name AS assignee_name, u2.name
         JOIN users u1 ON u1.id = t.assigned_to
         JOIN users u2 ON u2.id = t.assigned_by" . $filterSql;
 $params = $filterParams;
-if ($status !== 'all') { $sql .= " AND t.status = ?"; $params[] = $status; }
+if ($status === 'overdue') {
+    $sql .= " AND t.status IN ('pending','in_progress') AND t.target_date < CURDATE()";
+} elseif ($status !== 'all') { $sql .= " AND t.status = ?"; $params[] = $status; }
 $sql .= " ORDER BY t.target_date";
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $tasks = $stmt->fetchAll();
 
-$counts = ['all' => 0, 'pending' => 0, 'in_progress' => 0, 'completed' => 0, 'cancelled' => 0];
+$counts = ['all' => 0, 'overdue' => 0, 'pending' => 0, 'in_progress' => 0, 'completed' => 0, 'cancelled' => 0];
+$odStmt = $pdo->prepare("SELECT COUNT(*) FROM tasks t" . $filterSql . " AND t.status IN ('pending','in_progress') AND t.target_date < CURDATE()");
+$odStmt->execute($filterParams);
+$counts['overdue'] = (int)$odStmt->fetchColumn();
+
+// 👥 कामाचा भार — कोणाकडे किती उघडे / मुदत संपलेले Tasks (त्याच Filter प्रमाणे)
+$wlStmt = $pdo->prepare("SELECT u1.name, COUNT(*) open_cnt, SUM(t.target_date < CURDATE()) overdue_cnt
+    FROM tasks t JOIN users u1 ON u1.id = t.assigned_to" . $filterSql . " AND t.status IN ('pending','in_progress')
+    GROUP BY t.assigned_to, u1.name ORDER BY open_cnt DESC, overdue_cnt DESC LIMIT 8");
+$wlStmt->execute($filterParams);
+$workload = $wlStmt->fetchAll();
 $countStmt = $pdo->prepare("SELECT t.status, COUNT(*) c FROM tasks t" . $filterSql . " GROUP BY t.status");
 $countStmt->execute($filterParams);
 foreach ($countStmt->fetchAll() as $cr) {
@@ -144,12 +156,29 @@ $statusChip = ['pending' => 'pending', 'in_progress' => 'pending', 'completed' =
       <div style="padding:18px 20px;"><canvas id="taskStatusChart" height="140"></canvas></div>
     </div>
   </div>
+  <div class="col-lg-8">
+    <div class="panel h-100">
+      <div class="panel-head"><div class="title">👥 कामाचा भार — कोणाकडे किती उघडे Tasks</div><div class="sub">लाल भाग = मुदत संपलेले · जास्त भार असलेल्यांना नवीन Task देताना विचार करा</div></div>
+      <div style="padding:14px 20px;">
+        <?php if (!$workload): ?><div style="color:var(--text-dim);font-size:13px;padding:10px 0;">✅ कोणाकडेही उघडा Task नाही</div><?php endif; ?>
+        <?php $wlMax = $workload ? max(array_map(fn($w) => (int)$w['open_cnt'], $workload)) : 1;
+        foreach ($workload as $w): $o = (int)$w['open_cnt']; $od = (int)$w['overdue_cnt']; ?>
+          <div class="wl-row">
+            <div class="wl-name" title="<?= h($w['name']) ?>"><?= h($w['name']) ?></div>
+            <div class="wl-bar"><i style="width:<?= round(($o - $od) * 100 / $wlMax) ?>%;background:var(--rail);"></i><i style="width:<?= round($od * 100 / $wlMax) ?>%;background:var(--rose);"></i></div>
+            <div class="wl-num font-mono"><?= $o ?><?= $od ? ' <span style="color:var(--rose);">(' . $od . '⏰)</span>' : '' ?></div>
+          </div>
+        <?php endforeach; ?>
+      </div>
+    </div>
+  </div>
 </div>
 <?php endif; ?>
 
 <div class="d-flex flex-wrap align-items-center justify-content-between mb-3 gap-2">
   <div class="period-toggle">
     <a href="<?= h($statusQs('all')) ?>" class="period-btn <?= $status === 'all' ? 'active' : '' ?>"><?= h(t('s19')) ?></a>
+    <a href="<?= h($statusQs('overdue')) ?>" class="period-btn <?= $status === 'overdue' ? 'active' : '' ?>" style="<?= $counts['overdue'] ? 'color:var(--rose);' : '' ?>">⏰ मुदत संपलेले (<?= $counts['overdue'] ?>)</a>
     <a href="<?= h($statusQs('pending')) ?>" class="period-btn <?= $status === 'pending' ? 'active' : '' ?>"><?= h(t('s7')) ?></a>
     <a href="<?= h($statusQs('in_progress')) ?>" class="period-btn <?= $status === 'in_progress' ? 'active' : '' ?>"><?= h(t('s9')) ?></a>
     <a href="<?= h($statusQs('completed')) ?>" class="period-btn <?= $status === 'completed' ? 'active' : '' ?>"><?= h(t('s10')) ?></a>

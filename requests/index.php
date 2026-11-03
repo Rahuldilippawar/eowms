@@ -205,7 +205,7 @@ $currentUrl = 'index.php' . $qs([]);
   </form>
 </div>
 
-<div class="row g-3">
+<div class="row g-3" data-card-filter="विनंती शोधा — शीर्षक, क्रमांक, विनंती करणारा, विभाग…">
   <?php if (empty($requests)): ?>
     <div class="col-12"><div class="panel" style="padding:30px;text-align:center;color:var(--text-dim);"><?= h(t('s304')) ?></div></div>
   <?php endif; ?>

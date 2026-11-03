@@ -118,3 +118,29 @@ a:focus-visible, button:focus-visible, select:focus-visible, [tabindex]:focus-vi
   .panel { box-shadow: none !important; break-inside: avoid; }
   body { background: #fff !important; }
 }
+
+/* ---------- Column Sort + CSV ---------- */
+.th-sort { cursor: pointer; user-select: none; position: relative; padding-right: 22px !important; }
+.th-sort::after { content: "⇅"; position: absolute; right: 8px; opacity: .35; font-size: 10px; }
+.th-sort:hover { color: var(--rail) !important; }
+.th-sort[aria-sort="ascending"]::after { content: "▲"; opacity: .9; color: var(--rail); }
+.th-sort[aria-sort="descending"]::after { content: "▼"; opacity: .9; color: var(--rail); }
+.tbl-csv { margin-left: auto; border: 1px solid var(--line); background: var(--surface); color: var(--text-dim); border-radius: 8px; font-size: 12px; font-weight: 600; padding: 6px 11px; cursor: pointer; font-family: inherit; display: inline-flex; gap: 6px; align-items: center; }
+.tbl-csv:hover { color: var(--rail); border-color: var(--rail); }
+.tbl-filter .tbl-count { white-space: nowrap; }
+
+/* ---------- माझे Tasks — सारांश ---------- */
+.mt-task-sum { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+.mt-task-sum a { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; text-decoration: none; color: var(--text); box-shadow: var(--shadow-sm); transition: transform .12s ease, box-shadow .15s ease; }
+.mt-task-sum a:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); }
+.mt-task-sum b { display: block; font-family: 'JetBrains Mono', monospace; font-size: 22px; }
+.mt-task-sum span { font-size: 11.5px; color: var(--text-dim); font-weight: 600; }
+.mt-task-sum .bad b { color: var(--rose); } .mt-task-sum .warn b { color: var(--amber); } .mt-task-sum .ok b { color: var(--rail); }
+.mt-countdown { display: inline-block; margin-left: 8px; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 6px; }
+@media (max-width: 767px) { .mt-task-sum { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.wl-row { display: grid; grid-template-columns: minmax(90px, 180px) 1fr auto; gap: 12px; align-items: center; padding: 6px 0; }
+.wl-name { font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wl-bar { height: 10px; background: var(--canvas); border-radius: 6px; overflow: hidden; display: flex; }
+.wl-bar i { display: block; height: 100%; }
+.wl-num { font-size: 12px; min-width: 54px; text-align: right; }
+.card-filter { border: 1px solid var(--line); border-radius: 12px; margin-bottom: 14px; box-shadow: var(--shadow-sm); }
