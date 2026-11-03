@@ -145,6 +145,13 @@ $svcText = ($svc->y ? $svc->y . ' वर्षे ' : '') . $svc->m . ' मह�
 $statusLbl = ['pending' => 'प्रलंबित', 'in_progress' => 'सुरू आहे', 'completed' => 'पूर्ण', 'cancelled' => 'रद्द', 'approved' => 'मंजूर', 'rejected' => 'नामंजूर'];
 $statusChip = ['pending' => 'pending', 'in_progress' => 'pending', 'completed' => 'done', 'cancelled' => 'overdue', 'approved' => 'done', 'rejected' => 'overdue'];
 $qs = fn($r) => '?id=' . $empId . '&range=' . $r;
+
+// मागील / पुढील कर्मचारी (याच विभागातील) — HOD ला एकामागून एक अहवाल पाहता / Print करता यावा
+$sameDept = array_values(array_filter($pickList, fn($p) => $p['dept'] === $emp['dept_name']));
+$pos = array_search($empId, array_map(fn($p) => (int)$p['id'], $sameDept), true);
+$navQs = '&range=' . urlencode($range) . ($range === 'custom' ? '&from=' . urlencode($from) . '&to=' . urlencode($to) : '');
+$prevEmp = ($pos !== false && $pos > 0) ? $sameDept[$pos - 1] : null;
+$nextEmp = ($pos !== false && $pos < count($sameDept) - 1) ? $sameDept[$pos + 1] : null;
 ?>
 
 <div class="page-eyebrow no-print"><a href="profile.php?id=<?= $empId ?>" style="color:inherit;text-decoration:none;">← प्रोफाइल</a></div>
@@ -152,6 +159,11 @@ $qs = fn($r) => '?id=' . $empId . '&range=' . $r;
   <div class="page-title mb-0">📄 कर्मचारी — संपूर्ण अहवाल</div>
   <div class="d-flex gap-2 no-print">
     <?php if ($hasBroadAccess || $visibleDeptIds): ?><a href="department-report.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13px;padding:9px 16px;"><i class="fa-solid fa-people-group me-1"></i>विभाग सारांश</a><?php endif; ?>
+    <?php if (count($sameDept) > 1): ?>
+      <a href="<?= $prevEmp ? h('?id=' . (int)$prevEmp['id'] . $navQs) : '#' ?>" class="btn <?= $prevEmp ? '' : 'disabled' ?>" title="<?= $prevEmp ? h('मागील: ' . $prevEmp['name']) : '' ?>" style="border:1px solid var(--line);border-radius:9px;font-size:13px;padding:9px 12px;"><i class="fa-solid fa-chevron-left"></i></a>
+      <span style="align-self:center;font-size:12px;color:var(--text-dim);white-space:nowrap;"><?= $pos + 1 ?> / <?= count($sameDept) ?></span>
+      <a href="<?= $nextEmp ? h('?id=' . (int)$nextEmp['id'] . $navQs) : '#' ?>" class="btn <?= $nextEmp ? '' : 'disabled' ?>" title="<?= $nextEmp ? h('पुढील: ' . $nextEmp['name']) : '' ?>" style="border:1px solid var(--line);border-radius:9px;font-size:13px;padding:9px 12px;"><i class="fa-solid fa-chevron-right"></i></a>
+    <?php endif; ?>
     <button type="button" class="btn" onclick="window.print()" style="background:var(--rail);color:#fff;border-radius:9px;font-size:13px;padding:9px 18px;font-weight:600;"><i class="fa-solid fa-print"></i> Print / PDF</button>
   </div>
 </div>
@@ -316,4 +328,7 @@ smartTiles([
   }
 </style>
 
+<?php if (($_GET['autoprint'] ?? '') === '1'): ?>
+<script>window.addEventListener('load', function () { setTimeout(function () { window.print(); }, 500); });</script>
+<?php endif; ?>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>
