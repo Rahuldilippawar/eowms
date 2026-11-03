@@ -138,6 +138,7 @@ $statusChip = ['pending' => 'pending', 'in_progress' => 'pending', 'completed' =
   <div class="page-title mb-0"><?= h(t('s285')) ?></div>
   <div class="d-flex gap-2">
     <a href="../letters/create.php?to_user=<?= $emp['id'] ?>" class="btn btn-sm" style="background:var(--rail);color:#fff;border-radius:9px;font-size:12.5px;padding:8px 16px;font-weight:600;"><i class="fa-solid fa-paper-plane me-1"></i>पत्र पाठवा</a>
+    <a href="employee-report.php?id=<?= $emp['id'] ?>" class="btn btn-sm" style="border:1px solid var(--rail);color:var(--rail);border-radius:9px;font-size:12.5px;padding:8px 16px;font-weight:600;"><i class="fa-solid fa-file-lines me-1"></i>संपूर्ण अहवाल</a>
     <a href="id-card.php?id=<?= $emp['id'] ?>" target="_blank" class="btn btn-sm" style="border:1px solid var(--line);border-radius:9px;font-size:12.5px;padding:8px 16px;"><i class="fa-solid fa-id-card me-1"></i>ID Card</a>
     <?php if ($isOwnProfile): ?>
       <a href="#account" class="btn btn-sm" style="border:1px solid var(--rail);color:var(--rail);border-radius:9px;font-size:12.5px;padding:8px 16px;font-weight:600;"><i class="fa-solid fa-lock me-1"></i>पासवर्ड / फोटो / Fingerprint</a>

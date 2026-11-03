@@ -99,6 +99,7 @@ foreach (['urgent', 'high', 'normal', 'low'] as $p) {
     <div style="font-size:12.5px;color:var(--text-dim);margin-bottom:20px;"><?= h(t('s309')) ?> <?= h($department['hod_name'] ?? '—') ?></div>
   </div>
   <div class="d-flex gap-2">
+    <a href="../staff/department-report.php?department_id=<?= $department['id'] ?>" class="btn btn-sm" style="border:1px solid var(--rail);color:var(--rail);border-radius:9px;font-size:12.5px;padding:8px 16px;font-weight:600;align-self:center;"><i class="fa-solid fa-people-group me-1"></i>कर्मचारी अहवाल</a>
     <a href="../letters/create.php?to_dept=<?= $department['id'] ?>" class="btn btn-sm" style="background:var(--rail);color:#fff;border-radius:9px;font-size:12.5px;padding:8px 16px;font-weight:600;align-self:center;"><i class="fa-solid fa-paper-plane me-1"></i>पत्र पाठवा</a>
     <a href="../index.php" style="font-size:12.5px;color:var(--rail);font-weight:600;text-decoration:none;align-self:center;"><i class="fa-solid fa-arrow-left me-1"></i><?= h(t('s310')) ?></a>
   </div>
