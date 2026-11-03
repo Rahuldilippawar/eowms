@@ -61,39 +61,12 @@ $org = $pdo->query("SELECT * FROM organizations WHERE id = " . (int)$orgId)->fet
   th{background:#F3F4F7;text-align:left;padding:8px 10px;font-size:11px;text-transform:uppercase;color:var(--text-dim);}
   td{padding:8px 10px;border-bottom:1px solid #EEF0F4;font-size:12px;}
   h3{font-size:14px;margin:22px 0 4px;}
-  @media print{ .toolbar{display:none;} #eowmsLangSelect, #google_translate_element{display:none !important;} body{background:#fff;} .doc{margin:0;} }
+  @media print{ .toolbar{display:none;} #eowmsLangSelect{display:none !important;} body{background:#fff;} .doc{margin:0;} }
 </style>
 </head>
 <body>
-<select id="eowmsLangSelect" onchange="eowmsChangeLanguage(this.value)" style="position:fixed;top:16px;right:16px;z-index:50;border:1px solid var(--line);border-radius:9px;padding:8px 12px;font-size:12.5px;color:var(--text-dim);background:#fff;cursor:pointer;">
-  <option value="">🌐 भाषा (Language)</option>
-  <option value="en">English</option>
-  <option value="hi">हिंदी (Hindi)</option>
-  <option value="gu">ગુજરાતી (Gujarati)</option>
-  <option value="mr">मराठी (मूळ)</option>
-</select>
-<div id="google_translate_element" style="display:none;"></div>
-<style>body > .skiptranslate{display:none !important;} body{top:0 !important;}</style>
-<script>
-  function googleTranslateElementInit() {
-    new google.translate.TranslateElement({ pageLanguage: 'mr', autoDisplay: false }, 'google_translate_element');
-  }
-  function eowmsChangeLanguage(lang) {
-    var tries = 0;
-    var trigger = function () {
-      var combo = document.querySelector('.goog-te-combo');
-      if (combo) {
-        combo.value = lang;
-        combo.dispatchEvent(new Event('change'));
-      } else if (tries < 20) {
-        tries++;
-        setTimeout(trigger, 250);
-      }
-    };
-    trigger();
-  }
-</script>
-<script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async></script>
+<?= i18nSwitcher('style="position:fixed;top:16px;right:16px;z-index:50;border:1px solid var(--line);border-radius:9px;padding:8px 12px;font-size:12.5px;color:var(--text-dim);background:#fff;cursor:pointer;"') ?>
+<?= i18nClientScript() ?>
 
 <div class="toolbar">
   <a href="bills.php">← मागे</a>

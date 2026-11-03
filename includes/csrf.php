@@ -105,7 +105,7 @@ function csrfRewriteOutput($html) {
 
 /** मोठ्या File Downloads आधी — Output Buffer बंद करतो (पूर्ण File Memory मध्ये धरून ठेवू नये म्हणून) */
 function csrfStopOutputRewrite() {
-    while (ob_get_level() > 0 && in_array('csrfRewriteOutput', ob_list_handlers(), true)) {
+    while (ob_get_level() > 0 && array_intersect(['csrfRewriteOutput', 'i18nFilterOutput'], ob_list_handlers())) {
         ob_end_flush();
     }
 }

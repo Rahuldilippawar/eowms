@@ -113,45 +113,12 @@ if (hasRole('super_admin')) {
         <div style="text-align:center;padding:8px;"><a href="<?= $rootPath ?? '' ?>notifications/index.php" style="font-size:12px;color:var(--rail);font-weight:600;"><?= h(t('s294')) ?></a></div>
       </div>
     </div>
-    <select id="eowmsLangSelect" onchange="eowmsChangeLanguage(this.value)" style="border:1px solid var(--line);border-radius:9px;padding:0 10px;height:38px;font-size:12.5px;color:var(--text-dim);background:var(--canvas);cursor:pointer;">
-      <option value="">🌐 भाषा (Language)</option>
-      <option value="en">English</option>
-      <option value="hi">हिंदी (Hindi)</option>
-      <option value="gu">ગુજરાતી (Gujarati)</option>
-      <option value="mr">मराठी (मूळ)</option>
-    </select>
+    <?= i18nSwitcher('style="border:1px solid var(--line);border-radius:9px;padding:0 10px;height:38px;font-size:12.5px;color:var(--text-dim);background:var(--canvas);cursor:pointer;"') ?>
     <a href="<?= $rootPath ?? '' ?>logout.php" class="icon-btn" title="Logout"><i class="fa-solid fa-right-from-bracket"></i></a>
   </div>
 
-  <!-- ============================================================
-       Google Translate — पानावरचा उर्वरित मजकूर (जो आपल्या स्वतःच्या
-       भाषांतर-यादीत (t()) नाही, उदा. काही ठिकाणचे तांत्रिक शब्द) हवं
-       असल्यास कोणत्याही भाषेत त्वरित भाषांतरित करण्यासाठी. Google चं
-       स्वतःचं Widget UI लपवून, त्याऐवजी वरचा आपला स्वतःचा साधा, स्वच्छ
-       Dropdown वापरला आहे — जो थेट Google च्या Mechanism ला चालवतो.
-       ============================================================ -->
-  <div id="google_translate_element" style="display:none;"></div>
-  <style>body > .skiptranslate{display:none !important;} body{top:0 !important;}</style>
-  <script>
-    function googleTranslateElementInit() {
-      new google.translate.TranslateElement({ pageLanguage: 'mr', autoDisplay: false }, 'google_translate_element');
-    }
-    function eowmsChangeLanguage(lang) {
-      var tries = 0;
-      var trigger = function () {
-        var combo = document.querySelector('.goog-te-combo');
-        if (combo) {
-          combo.value = lang;
-          combo.dispatchEvent(new Event('change'));
-        } else if (tries < 20) {
-          tries++;
-          setTimeout(trigger, 250); // Google चं Script अजून पूर्ण लोड झालेलं नसेल तर थोडं थांबून पुन्हा प्रयत्न
-        }
-      };
-      trigger();
-    }
-  </script>
-  <script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async></script>
+  <?php /* 🌐 भाषा — includes/i18n.php (Google Translate शिवाय, स्वतःचा शब्दकोश) */ ?>
+  <?= i18nClientScript() ?>
 
   <div class="content">
     <?php if (!empty($_SESSION['flash'])):
