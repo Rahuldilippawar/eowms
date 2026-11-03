@@ -97,3 +97,43 @@ body[data-module] .rail-brand { border-bottom-color: rgba(255,255,255,.08); }
 .swipe-row { position: relative; overflow: hidden; touch-action: pan-y; }
 .swipe-row-content { transition: transform .2s ease; background: var(--surface); position: relative; z-index: 1; }
 .swipe-row-action { position: absolute; top: 0; right: 0; bottom: 0; display: flex; align-items: center; padding: 0 20px; color: #fff; font-weight: 700; font-size: 12.5px; }
+
+/* ===== 📊 Dashboard Analytics (कालावधीनुसार Charts) ===== */
+.dash-an-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.dash-range { display: flex; flex-wrap: wrap; gap: 4px; background: var(--canvas); border: 1px solid var(--line); border-radius: 10px; padding: 3px; }
+.dash-range button { border: 0; background: transparent; color: var(--text-dim); font-size: 12.5px; font-weight: 600; padding: 6px 11px; border-radius: 7px; cursor: pointer; font-family: inherit; transition: background .15s, color .15s; }
+.dash-range button:hover { color: var(--text); }
+.dash-range button.active { background: var(--surface); color: var(--rail); box-shadow: 0 1px 3px rgba(16,22,43,.12); }
+.dash-range button:focus-visible, .dash-toggle button:focus-visible { outline: 2px solid var(--rail); outline-offset: 1px; }
+.dash-custom[hidden] { display: none; }
+.dash-custom { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; padding: 12px 20px; border-bottom: 1px solid var(--line); background: var(--canvas); }
+.dash-custom label { display: flex; flex-direction: column; font-size: 11.5px; color: var(--text-dim); gap: 3px; }
+.dash-custom input { border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; background: var(--surface); color: var(--text); font-size: 13px; }
+.dash-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-bottom: 1px solid var(--line); }
+.dash-kpi { padding: 14px 20px; border-right: 1px solid var(--line); display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.dash-kpi:last-child { border-right: 0; }
+.dash-kpi span { font-size: 11.5px; color: var(--text-dim); font-weight: 600; }
+.dash-kpi b { font-family: 'JetBrains Mono', monospace; font-size: 22px; color: var(--text); }
+.dash-kpi.ok b { color: var(--rail); }
+.dash-kpi.warn b { color: var(--amber); }
+.dash-rate-bar { display: block; height: 5px; border-radius: 4px; background: var(--line); overflow: hidden; margin-top: 4px; }
+.dash-rate-bar i { display: block; height: 100%; width: 0; background: var(--rail); border-radius: 4px; transition: width .5s ease; }
+.dash-an-body { padding: 18px 20px; position: relative; }
+.dash-card { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; height: 100%; background: var(--surface); }
+.dash-card-head { display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 8px; gap: 8px; }
+.dash-toggle { display: inline-flex; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; }
+.dash-toggle button { border: 0; background: transparent; color: var(--text-dim); padding: 3px 9px; cursor: pointer; }
+.dash-toggle button.active { background: var(--rail); color: #fff; }
+.dash-canvas { position: relative; height: 220px; }
+.dash-canvas.tall { height: 280px; }
+.dash-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--text-dim); font-size: 12.5px; text-align: center; }
+.dash-loading { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; gap: 8px; background: color-mix(in srgb, var(--surface) 70%, transparent); font-size: 13px; color: var(--text-dim); border-radius: 0 0 14px 14px; }
+.dash-analytics.is-loading .dash-loading { display: flex; }
+@media (max-width: 767px) {
+  .dash-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dash-kpi:nth-child(2) { border-right: 0; }
+  .dash-kpi:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+  .dash-an-body { padding: 14px 12px; }
+  .dash-canvas.tall { height: 240px; }
+  .dash-range button { padding: 6px 8px; }
+}

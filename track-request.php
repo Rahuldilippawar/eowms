@@ -19,6 +19,18 @@ if ($mobile) {
     $mobileLast10 = substr(preg_replace('/\D/', '', $mobile), -10);
 }
 
+// 🔒 Request ID अंदाजाने एकामागून एक शोधणं (Enumeration) रोखण्यासाठी —
+// एका IP वरून १५ मिनिटांत ३० पेक्षा जास्त शोध नाहीत.
+$rateLimited = false;
+if ($code) {
+    if (publicFormRateLimited('track_lookup', 30, 900)) {
+        $rateLimited = true;
+        $code = '';
+    } else {
+        publicFormRecordSubmission('track_lookup');
+    }
+}
+
 if ($code) {
     $stmt = $pdo->prepare("
         SELECT r.*, d.name_local AS dept_name, u.name AS completed_by_name
@@ -167,6 +179,9 @@ $actionLabels = ['created' => 'विनंती नोंदवली गे�
     </div>
   <?php endif; ?>
 
+  <?php if ($rateLimited): ?>
+    <div class="card"><div class="err">खूप शोध झाले — कृपया १५ मिनिटांनी पुन्हा प्रयत्न करा.</div></div>
+  <?php endif; ?>
   <?php if ($notFound): ?>
     <div class="card"><div class="err">"<?= htmlspecialchars($code) ?>" या क्रमांकाची कोणतीही विनंती सापडली नाही<?= $searchMode === 'mobile' ? ' (किंवा Mobile Number जुळत नाही)' : '' ?>. कृपया Request ID तपासा.</div></div>
   <?php elseif ($request): ?>
