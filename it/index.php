@@ -89,6 +89,8 @@ try {
   <div class="col-6 col-lg-3"><div class="kpi-mini"><div class="lbl">🔴 बिघडलेले</div><div class="val" style="color:var(--rose);"><?= $assetStats['faulty'] + $assetStats['under_repair'] ?></div></div></div>
 </div>
 
+<?php require __DIR__ . '/../includes/insights/it.php'; ?>
+
 <div class="panel mb-3" style="border-color:var(--rail);">
   <div class="panel-head"><div class="title">📺 Smart Board — सारांश</div></div>
   <div style="padding:16px 20px;display:flex;gap:24px;flex-wrap:wrap;">

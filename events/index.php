@@ -74,6 +74,8 @@ $statusChips = ['planned' => 'pending', 'ongoing' => 'pending', 'completed' => '
   <?php unset($_SESSION['flash']); ?>
 <?php endif; ?>
 
+<?php require __DIR__ . '/../includes/insights/events.php'; ?>
+
 <div class="d-flex gap-2 mb-4">
   <?php foreach (['all' => 'सगळे'] + $statusLabels as $val => $lbl): ?>
     <a href="?status=<?= $val ?>" class="btn" style="background:<?= $statusFilter === $val ? 'var(--rail)' : '#fff' ?>;color:<?= $statusFilter === $val ? '#fff' : 'inherit' ?>;border:1px solid var(--line);border-radius:9px;font-size:12px;padding:7px 14px;"><?= $lbl ?></a>

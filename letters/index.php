@@ -64,6 +64,8 @@ $letters = $stmt->fetchAll();
   <?php unset($_SESSION['flash']); ?>
 <?php endif; ?>
 
+<?php require __DIR__ . '/../includes/insights/letters.php'; ?>
+
 <div class="period-toggle mb-3">
   <a href="?view=inbox" class="period-btn <?= $view === 'inbox' ? 'active' : '' ?>">माझ्याकडे (Action Needed)</a>
   <a href="?view=sent" class="period-btn <?= $view === 'sent' ? 'active' : '' ?>">मी तयार केलेल्या</a>

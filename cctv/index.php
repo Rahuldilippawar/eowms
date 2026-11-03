@@ -87,6 +87,8 @@ try {
   <div class="col-6 col-lg-3"><div class="kpi-mini"><div class="lbl">🔴 बंद (Not Working)</div><div class="val" style="color:var(--rose);"><?= $statusCounts['not_working'] ?></div></div></div>
 </div>
 
+<?php require __DIR__ . '/../includes/insights/cctv.php'; ?>
+
 <div class="panel">
   <div class="panel-head"><div class="title">📀 DVR-निहाय स्थिती</div></div>
   <table class="rtable">
