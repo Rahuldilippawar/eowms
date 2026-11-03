@@ -65,6 +65,8 @@ try {
   <div class="alert alert-success" style="border-radius:10px;font-size:13px;"><?= h($_SESSION['flash']) ?></div>
   <?php unset($_SESSION['flash']); ?>
 <?php endif; ?>
+
+<?php require __DIR__ . '/../includes/insights/vehicles.php'; ?>
 <?php if (!empty($_SESSION['form_error'])): ?>
   <div class="alert alert-danger" style="border-radius:10px;font-size:13px;"><?= h($_SESSION['form_error']) ?></div>
   <?php unset($_SESSION['form_error']); ?>

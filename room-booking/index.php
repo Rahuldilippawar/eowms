@@ -134,6 +134,8 @@ $campuses = $campusesStmt->fetchAll();
   <?php unset($_SESSION['flash']); ?>
 <?php endif; ?>
 
+<?php require __DIR__ . '/../includes/insights/room-booking.php'; ?>
+
 <form method="GET" class="mb-4">
   <input type="date" name="date" class="form-control-custom" style="width:auto;" value="<?= h($selectedDate) ?>" onchange="this.form.submit()">
 </form>
