@@ -41,6 +41,25 @@ foreach ([
         $counts[$key] = '—';
     }
 }
+
+// 🛟 Backup आरोग्य — शेवटचा Automated व Manual Backup कधी
+$lastAuto = $lastAutoOk = $lastManual = null;
+try {
+    $st = $pdo->prepare("SELECT * FROM scheduled_backups WHERE organization_id = ? ORDER BY created_at DESC LIMIT 1"); $st->execute([$orgId]); $lastAuto = $st->fetch() ?: null;
+    $st = $pdo->prepare("SELECT * FROM scheduled_backups WHERE organization_id = ? AND status = 'success' ORDER BY created_at DESC LIMIT 1"); $st->execute([$orgId]); $lastAutoOk = $st->fetch() ?: null;
+} catch (PDOException $e) {}
+try {
+    $st = $pdo->prepare("SELECT created_at, actor_name, action FROM activity_logs WHERE organization_id = ? AND action LIKE '%Backup%Download%' ORDER BY created_at DESC LIMIT 1"); $st->execute([$orgId]); $lastManual = $st->fetch() ?: null;
+} catch (PDOException $e) {}
+$lastAny = max($lastAutoOk ? strtotime($lastAutoOk['created_at']) : 0, $lastManual ? strtotime($lastManual['created_at']) : 0);
+$daysSince = $lastAny ? (int)floor((time() - $lastAny) / 86400) : null;
+$agoTxt = fn($t) => $t ? (($d = (int)floor((time() - strtotime($t)) / 86400)) <= 0 ? 'आज' : ($d === 1 ? 'काल' : $d . ' दिवसांपूर्वी')) . ' · ' . date('d M Y, h:i A', strtotime($t)) : 'कधीच नाही';
+require_once __DIR__ . '/../includes/smart-insights.php';
+$bkAlerts = [];
+if ($lastAuto && $lastAuto['status'] === 'failed') $bkAlerts[] = ['bad', 'शेवटचा Automated Backup अयशस्वी झाला (' . date('d M, h:i A', strtotime($lastAuto['created_at'])) . ')' . ($lastAuto['error_message'] ? ' — ' . mb_substr($lastAuto['error_message'], 0, 120) : ''), 'scheduled.php'];
+if ($daysSince === null) $bkAlerts[] = ['bad', 'या संस्थेचा अजून एकदाही Backup घेतलेला नाही — आत्ताच Download करा आणि Automated Backup चालू करा.', '#bkActions'];
+elseif ($daysSince > 7) $bkAlerts[] = ['warn', "शेवटचा Backup {$daysSince} दिवसांपूर्वी — आठवड्यातून किमान एकदा Backup घ्या.", '#bkActions'];
+if (!$lastAuto) $bkAlerts[] = ['info', 'Automated (आपोआप) Backup अजून एकदाही चाललेला नाही — Cron Job सेट करा.', 'scheduled.php'];
 ?>
 
 <div class="page-eyebrow"><?= h($orgName) ?></div>
@@ -54,6 +73,16 @@ foreach ([
   <div class="alert alert-success" style="border-radius:10px;font-size:13px;"><?= h($_SESSION['flash']) ?></div>
   <?php unset($_SESSION['flash']); ?>
 <?php endif; ?>
+
+<?php
+smartTiles([
+    ['label' => 'शेवटचा Backup', 'value' => $daysSince === null ? 'कधीच नाही' : ($daysSince === 0 ? 'आज' : $daysSince . ' दिवस'), 'sub' => $daysSince === null ? '' : 'पूर्वी', 'tone' => $daysSince === null ? 'bad' : ($daysSince > 7 ? 'warn' : 'ok')],
+    ['label' => '⏰ Automated', 'value' => $lastAuto ? ($lastAuto['status'] === 'success' ? '✓ यशस्वी' : '✗ अयशस्वी') : '—', 'sub' => $lastAuto ? $agoTxt($lastAuto['created_at']) : 'अजून चाललेला नाही', 'tone' => $lastAuto ? ($lastAuto['status'] === 'success' ? 'ok' : 'bad') : 'warn', 'href' => 'scheduled.php'],
+    ['label' => '⬇️ Manual Download', 'value' => $lastManual ? ($lastManual['actor_name'] ?: '—') : '—', 'sub' => $lastManual ? $agoTxt($lastManual['created_at']) : 'नोंद नाही'],
+    ['label' => 'Data', 'value' => is_numeric($counts['users']) ? array_sum(array_filter($counts, 'is_numeric')) : '—', 'sub' => 'मुख्य नोंदी (सर्व Modules)'],
+]);
+smartAlerts($bkAlerts);
+?>
 
 <div class="panel mb-4">
   <div class="panel-head"><div class="title">📊 सध्या या Organization मध्ये किती डेटा आहे</div><div class="sub">Backup घेण्याआधी एक झलक — सगळे मुख्य Modules</div></div>
@@ -113,7 +142,7 @@ foreach ([
 
 <div class="row g-3">
   <div class="col-md-4">
-    <div class="panel h-100">
+    <div class="panel h-100" id="bkActions">
       <div style="padding:24px;">
         <i class="fa-solid fa-download" style="font-size:24px;color:var(--rail);margin-bottom:12px;display:block;"></i>
         <div class="font-display" style="font-weight:600;font-size:16px;margin-bottom:6px;"><?= h(t('s368')) ?></div>
