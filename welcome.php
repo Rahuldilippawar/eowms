@@ -84,6 +84,43 @@ try {
 } catch (PDOException $e) {}
 $loggedInUser = currentUser();
 
+// 📊 सार्वजनिक सेवा-आकडे — फक्त एकत्रित (Aggregate) संख्या, कोणाचीही वैयक्तिक माहिती नाही
+$publicStats = null;
+try {
+    $psOrg = (int)($org['id'] ?? 0);
+    $ps = $pdo->prepare("SELECT
+            SUM(status IN ('completed','closed') AND completed_at >= DATE_FORMAT(CURDATE(), '%Y-%m-01')) done_month,
+            AVG(CASE WHEN status IN ('completed','closed') AND completed_at >= DATE_SUB(NOW(), INTERVAL 90 DAY) THEN TIMESTAMPDIFF(MINUTE, created_at, completed_at) END) avg_min,
+            SUM(status IN ('completed','closed') AND completed_at >= DATE_SUB(NOW(), INTERVAL 90 DAY) AND due_at IS NOT NULL AND completed_at <= due_at) in_sla,
+            SUM(status IN ('completed','closed') AND completed_at >= DATE_SUB(NOW(), INTERVAL 90 DAY) AND due_at IS NOT NULL) with_sla
+        FROM work_requests WHERE organization_id = ?");
+    $ps->execute([$psOrg]);
+    $psr = $ps->fetch() ?: [];
+    $dc = $pdo->prepare("SELECT (SELECT COUNT(*) FROM departments WHERE organization_id = ? AND is_active = 1) d, (SELECT COUNT(*) FROM campuses WHERE organization_id = ? AND is_active = 1) c");
+    $dc->execute([$psOrg, $psOrg]);
+    $dcr = $dc->fetch() ?: [];
+    $avgMin = (float)($psr['avg_min'] ?? 0);
+    $publicStats = [
+        'done' => (int)($psr['done_month'] ?? 0),
+        'avg' => !$avgMin ? null : ($avgMin >= 1440 ? round($avgMin / 1440, 1) . ' दिवस' : ($avgMin >= 60 ? round($avgMin / 60, 1) . ' तास' : round($avgMin) . ' मिनिटं')),
+        'sla' => (int)($psr['with_sla'] ?? 0) ? (int)round($psr['in_sla'] * 100 / $psr['with_sla']) : null,
+        'depts' => (int)($dcr['d'] ?? 0), 'campuses' => (int)($dcr['c'] ?? 0),
+    ];
+} catch (PDOException $e) {}
+
+// Login केलेले असतील तर — त्यांच्यासाठी आजचं छोटं चित्र
+$mySnapshot = null;
+if ($loggedInUser) {
+    try {
+        $ms = $pdo->prepare("SELECT COUNT(*) c, SUM(target_date < CURDATE()) od FROM tasks WHERE assigned_to = ? AND status IN ('pending','in_progress')");
+        $ms->execute([$loggedInUser['id']]);
+        $msr = $ms->fetch();
+        $ml = $pdo->prepare("SELECT COUNT(*) FROM letters WHERE current_holder_id = ? AND status IN ('in_progress','returned')");
+        $ml->execute([$loggedInUser['id']]);
+        $mySnapshot = ['tasks' => (int)$msr['c'], 'overdue' => (int)$msr['od'], 'letters' => (int)$ml->fetchColumn()];
+    } catch (PDOException $e) {}
+}
+
 // आजच्या दिनांकासाठी — मराठी वार/महिना नावं (PHP च्या date() ला मराठी
 // Locale नसतं, म्हणून इथेच छोटी यादी ठेवतो).
 $marathiDays = [0 => 'रविवार', 1 => 'सोमवार', 2 => 'मंगळवार', 3 => 'बुधवार', 4 => 'गुरुवार', 5 => 'शुक्रवार', 6 => 'शनिवार'];
@@ -275,7 +312,7 @@ $todayLabel = $marathiDays[(int)date('w')] . ', ' . (int)date('j') . ' ' . $mara
     opacity:0;animation:eowms-fade-up .7s .05s ease both;
   }
   .content-title{
-    text-align:center;font-family:'Space Grotesk';font-size:22px;font-weight:700;color:#10162B;margin-bottom:14px;
+    text-align:center;font-family:'Space Grotesk';font-size:22px;font-weight:700;color:#E4E6EC;margin-bottom:14px;
     opacity:0;animation:eowms-fade-up .7s .1s ease both;
   }
   .content-glyph{text-align:center;color:#C97F1D;font-size:12px;margin-bottom:30px;opacity:0;animation:eowms-fade-up .7s .15s ease both;}
@@ -350,18 +387,37 @@ $todayLabel = $marathiDays[(int)date('w')] . ', ' . (int)date('j') . ' ' . $mara
   <?php else: ?>
     <div class="mark"><?= htmlspecialchars(mb_substr($org['name'] ?? 'EO', 0, 2)) ?></div>
   <?php endif; ?>
-  <div class="today-strip"><span class="dot"></span><?= h($todayLabel) ?></div>
+  <div class="today-strip"><span class="dot"></span><span id="wlGreet"></span><?= h($todayLabel) ?> · <span id="wlClock" class="wl-clock"></span></div>
   <div class="hero-eyebrow">!! आत्मा मालिक !!</div>
   <h1><?= htmlspecialchars($org['name'] ?? 'E-Admin — Smart Administration') ?></h1>
   <p><?= h(t('s145')) ?></p>
 
   <div class="action-row">
-    <a href="login.php" class="btn-hero btn-login"><i class="fa-solid fa-right-to-bracket"></i> Login</a>
+    <?php if ($loggedInUser): ?>
+      <a href="index.php" class="btn-hero btn-login"><i class="fa-solid fa-gauge-high"></i> Dashboard उघडा</a>
+    <?php else: ?>
+      <a href="login.php" class="btn-hero btn-login"><i class="fa-solid fa-right-to-bracket"></i> Login</a>
+    <?php endif; ?>
     <a href="student/login.php" class="btn-hero btn-student"><i class="fa-solid fa-graduation-cap"></i> 🎓 विद्यार्थी Login (Virtual Classroom)</a>
     <a href="request.php" class="btn-hero btn-request"><i class="fa-solid fa-clipboard-question"></i> <?= h(t('s146')) ?></a>
     <a href="track-request.php" class="btn-hero btn-request"><i class="fa-solid fa-magnifying-glass"></i> स्थिती तपासा</a>
     <a href="guests/pre-register.php" class="btn-hero btn-request"><i class="fa-solid fa-id-card-clip"></i> 🎫 पाहुणे Pre-Registration</a>
   </div>
+
+  <?php if ($mySnapshot): ?>
+    <div class="wl-me">
+      <span>👋 <?= h(explode(' ', $loggedInUser['name'])[0]) ?>, तुमच्यासाठी आज:</span>
+      <a href="tasks/my-tasks.php"><b><?= $mySnapshot['tasks'] ?></b> उघडे Tasks<?= $mySnapshot['overdue'] ? ' <em>(' . $mySnapshot['overdue'] . ' मुदत संपलेले)</em>' : '' ?></a>
+      <a href="letters/index.php"><b><?= $mySnapshot['letters'] ?></b> पत्रं प्रलंबित</a>
+    </div>
+  <?php endif; ?>
+
+  <form class="wl-track" action="track-request.php" method="GET" role="search">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <input type="text" name="code" placeholder="विनंती क्रमांक टाका (उदा. REQ-…) — स्थिती लगेच पहा" required maxlength="50" aria-label="विनंती क्रमांक">
+    <button type="submit">स्थिती पहा</button>
+  </form>
+  <button type="button" class="wl-install" id="wlInstall" hidden><i class="fa-solid fa-mobile-screen-button"></i> 📲 App म्हणून Install करा</button>
 
   <?php if (!empty($birthdays)): ?>
     <div class="birthday-wrap">
@@ -450,6 +506,15 @@ $todayLabel = $marathiDays[(int)date('w')] . ', ' . (int)date('j') . ' ' . $mara
   </div>
 </div>
 
+<?php if ($publicStats && ($publicStats['done'] || $publicStats['depts'])): ?>
+<div class="wl-stats">
+  <div><b data-count="<?= $publicStats['done'] ?>"><?= $publicStats['done'] ?></b><span>विनंत्या पूर्ण — या महिन्यात</span></div>
+  <?php if ($publicStats['avg']): ?><div><b><?= h($publicStats['avg']) ?></b><span>सरासरी निपटारा-वेळ</span></div><?php endif; ?>
+  <?php if ($publicStats['sla'] !== null): ?><div><b><?= $publicStats['sla'] ?>%</b><span>विनंत्या मुदतीत पूर्ण</span></div><?php endif; ?>
+  <div><b data-count="<?= $publicStats['depts'] ?>"><?= $publicStats['depts'] ?></b><span>विभाग<?= $publicStats['campuses'] > 1 ? ' · ' . $publicStats['campuses'] . ' College/School' : '' ?></span></div>
+</div>
+<?php endif; ?>
+
 <div class="content">
   <div class="content-eyebrow">या System मधून काय करता येईल</div>
   <div class="content-title">रोजच्या कामकाजासाठी, एकाच ठिकाणी</div>
@@ -515,6 +580,60 @@ $todayLabel = $marathiDays[(int)date('w')] . ', ' . (int)date('j') . ' ' . $mara
   <div style="margin-top:3px;">Developed by Rahul Pawar</div>
   <div style="margin-top:8px;"><a href="about.php" style="color:#8A90AC;font-size:11.5px;text-decoration:none;">🕉️ आमच्याबद्दल (About)</a></div>
 </footer>
+<style>
+  .wl-clock{font-family:'JetBrains Mono',monospace;}
+  .wl-me{display:flex;flex-wrap:wrap;gap:8px 14px;justify-content:center;align-items:center;margin:16px auto 0;max-width:640px;font-size:13px;color:#DCE1F0;}
+  .wl-me a{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);border-radius:20px;padding:6px 14px;color:#fff;text-decoration:none;}
+  .wl-me a:hover{background:rgba(255,255,255,.18);}
+  .wl-me em{color:#F3A6B0;font-style:normal;}
+  .wl-track{display:flex;align-items:center;gap:8px;max-width:560px;margin:20px auto 0;background:rgba(255,255,255,.96);border-radius:14px;padding:6px 6px 6px 16px;box-shadow:0 10px 30px rgba(0,0,0,.25);}
+  .wl-track i{color:#6B7080;}
+  .wl-track input{flex:1;border:0;outline:none;font-size:14px;padding:10px 4px;background:transparent;color:#10162B;min-width:0;font-family:inherit;}
+  .wl-track button{border:0;background:#1B8A83;color:#fff;font-weight:700;border-radius:10px;padding:10px 18px;font-size:13.5px;cursor:pointer;white-space:nowrap;font-family:inherit;}
+  .wl-track button:hover{filter:brightness(1.08);}
+  .wl-install{display:block;margin:14px auto 0;border:1px dashed rgba(255,255,255,.4);background:transparent;color:#fff;border-radius:10px;padding:8px 16px;font-size:13px;cursor:pointer;font-family:inherit;}
+  .wl-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;max-width:1000px;margin:-38px auto 46px;padding:0 20px;position:relative;z-index:3;}
+  .wl-stats>div{background:#fff;border-radius:14px;padding:18px 16px;text-align:center;box-shadow:0 12px 30px rgba(16,22,43,.12);border:1px solid #E4E6EC;}
+  .wl-stats b{display:block;font-family:'Space Grotesk',sans-serif;font-size:28px;color:#1B8A83;}
+  .wl-stats span{font-size:12.5px;color:#6B7080;font-weight:600;}
+  @media (max-width:600px){.wl-track{margin-left:12px;margin-right:12px;}.wl-stats{margin-top:-24px;}}
+</style>
+<script>
+(function () {
+  // वेळेनुसार नमस्कार + चालू घड्याळ
+  var g = document.getElementById('wlGreet'), c = document.getElementById('wlClock');
+  function tick() {
+    var d = new Date(), h = d.getHours();
+    if (g) g.textContent = (h < 12 ? '☀️ शुभ सकाळ · ' : h < 17 ? '🌤️ नमस्कार · ' : h < 21 ? '🌇 शुभ संध्याकाळ · ' : '🌙 शुभ रात्री · ');
+    if (c) c.textContent = d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+  }
+  tick(); setInterval(tick, 30000);
+  // आकडे हळूहळू वाढताना
+  document.querySelectorAll('.wl-stats b[data-count]').forEach(function (b) {
+    var n = parseInt(b.getAttribute('data-count'), 10) || 0, i = 0, steps = 30;
+    if (n < 2 || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    var t = setInterval(function () { i++; b.textContent = Math.round(n * i / steps); if (i >= steps) clearInterval(t); }, 25);
+  });
+  // माहिती-Cards — Scroll करून दिसू लागले की हळूच दाखवतो (आधी हे कधीच दिसत नव्हते: opacity 0 राहायचं)
+  var cards = document.querySelectorAll('.info-card');
+  if ('IntersectionObserver' in window && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en, i) {
+        if (!en.isIntersecting) return;
+        setTimeout(function () { en.target.classList.add('is-visible'); }, (i % 3) * 90);
+        io.unobserve(en.target);
+      });
+    }, { threshold: 0.12 });
+    cards.forEach(function (cd) { io.observe(cd); });
+  } else {
+    cards.forEach(function (cd) { cd.classList.add('is-visible'); });
+  }
+  // 📲 App Install (Chrome/Android) — Browser परवानगी देईल तेव्हाच बटण दिसतं
+  var deferred = null, btn = document.getElementById('wlInstall');
+  window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); deferred = e; if (btn) btn.hidden = false; });
+  if (btn) btn.addEventListener('click', function () { if (!deferred) return; deferred.prompt(); deferred.userChoice.finally(function () { deferred = null; btn.hidden = true; }); });
+})();
+</script>
 <script src="assets/js/welcome-chime.js"></script>
 <script>
 if ('serviceWorker' in navigator) {
