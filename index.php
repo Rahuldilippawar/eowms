@@ -35,9 +35,6 @@ $stmt = $pdo->prepare("SELECT COUNT(*) c FROM work_records WHERE organization_id
 $stmt->execute(array_merge([$orgId], $deptScopeParams));
 $todayCompleted = $stmt->fetch()['c'];
 
-$stmt = $pdo->prepare("SELECT COUNT(*) c FROM work_records WHERE organization_id=? AND work_date=CURDATE() AND status!='completed'$deptScopeSql");
-$stmt->execute(array_merge([$orgId], $deptScopeParams));
-$todayPending = $stmt->fetch()['c'];
 
 $stmt = $pdo->prepare("SELECT COUNT(*) c FROM renewal_items WHERE organization_id=? AND status <> 'inactive' AND expiry_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)$deptScopeSql");
 $stmt->execute(array_merge([$orgId], $deptScopeParams));
@@ -81,19 +78,6 @@ if ($isMgmtView) {
 }
 $departments = $stmt->fetchAll();
 
-// Trust-स्तरीय / College/School नुसार गटवार
-$deptGroupsForDash = [];
-foreach ($departments as $dept) {
-    $isTrustLevel = empty($dept['campus_name']) || $dept['college_type'] === 'Trust HQ';
-    $groupKey = $isTrustLevel ? 'trust' : $dept['campus_name'];
-    if (!isset($deptGroupsForDash[$groupKey])) {
-        $deptGroupsForDash[$groupKey] = ['label' => $isTrustLevel ? '🏛️ Trust-स्तरीय' : '🏫 ' . $dept['campus_name'], 'depts' => []];
-    }
-    $deptGroupsForDash[$groupKey]['depts'][] = $dept;
-}
-
-// 📊 कालावधीनुसार Charts — Data ajax-dashboard-charts.php वरून येतो (पान लवकर उघडतं)
-
 // Latest satsang attendance summary — management dashboard widget
 $latestSatsang = null;
 try {
@@ -117,15 +101,6 @@ try {
     // satsang tables not migrated yet — skip widget silently
 }
 
-$upcomingRenewalsSql = "
-    SELECT r.*, d.name_local AS dept_name, DATEDIFF(r.expiry_date, CURDATE()) AS days_left
-    FROM renewal_items r JOIN departments d ON d.id = r.department_id
-    WHERE r.organization_id=? AND r.status <> 'inactive' AND r.expiry_date <= DATE_ADD(CURDATE(), INTERVAL 30 DAY)" . ($isMgmtView ? "" : " AND r.department_id = ?") . "
-    ORDER BY r.expiry_date LIMIT 6
-";
-$stmt = $pdo->prepare($upcomingRenewalsSql);
-$stmt->execute($isMgmtView ? [$orgId] : [$orgId, $myDeptId]);
-$upcomingRenewals = $stmt->fetchAll();
 
 // आज कोण गैरहजर/उशीर — Command Center Widget साठी
 $todayAttendanceStmt = null;
@@ -145,29 +120,9 @@ try {
     $todayAttendanceIssues = [];
 }
 
-// Task tracking summary — visible to management roles only
-$taskSummary = null;
-$recentTasks = [];
-if (hasPermission('view_task_tracker')) {
-    $taskCounts = [];
-    foreach (['pending','in_progress','completed'] as $s) {
-        $st = $pdo->prepare("SELECT COUNT(*) c FROM tasks WHERE organization_id = ? AND status = ?");
-        $st->execute([$orgId, $s]);
-        $taskCounts[$s] = $st->fetch()['c'];
-    }
-    $taskSummary = $taskCounts;
 
-    $stmt = $pdo->prepare("
-        SELECT t.*, d.name_local AS dept_name, u.name AS assignee_name
-        FROM tasks t JOIN departments d ON d.id = t.department_id JOIN users u ON u.id = t.assigned_to
-        WHERE t.organization_id = ? ORDER BY t.target_date LIMIT 6
-    ");
-    $stmt->execute([$orgId]);
-    $recentTasks = $stmt->fetchAll();
-}
-
-$statusLabelsMap = ['pending' => 'प्रलंबित', 'in_progress' => 'सुरू आहे', 'completed' => 'पूर्ण झाले', 'cancelled' => 'रद्द केले'];
-$statusChipMap = ['pending' => 'pending', 'in_progress' => 'pending', 'completed' => 'done', 'cancelled' => 'overdue'];
+// 🧠 Smart Command Center — Requests / Tasks / नूतनीकरण / विभाग-आरोग्य
+require __DIR__ . '/includes/dashboard-smart.php';
 
 // Campus-निहाय संपूर्ण विभाजन — पूर्वी "केंद्रीकृत Dashboard" या वेगळ्या
 // पानावर होतं, आता Command Center चाच एक Section (फक्त manage_campuses
@@ -285,25 +240,44 @@ function eowmsSwitchDashTab(which, btn) {
   </div>
 </div>
 
-<div class="panel mb-4">
-  <div class="panel-head">
-    <div class="title"><?= h(t('s124')) ?></div>
-    <div class="sub"><?= h(t('s125')) ?></div>
-  </div>
-  <div style="padding:18px 20px;display:flex;gap:28px;flex-wrap:wrap;">
-    <div class="d-flex align-items-center gap-2">
-      <span style="width:10px;height:10px;border-radius:50%;background:var(--amber);"></span>
-      <span style="font-size:13px;"><?= h(t('s7')) ?></span>
-      <span class="font-mono" style="font-weight:700;font-size:16px;"><?= $todayPending ?></span>
-    </div>
-    <div class="d-flex align-items-center gap-2">
-      <span style="width:10px;height:10px;border-radius:50%;background:var(--rail);"></span>
-      <span style="font-size:13px;"><?= h(t('s31')) ?></span>
-      <span class="font-mono" style="font-weight:700;font-size:16px;"><?= $todayCompleted ?></span>
-    </div>
+<?php $smartPart = 'alerts'; require __DIR__ . '/includes/dashboard-smart-view.php'; $smartPart = 'main'; ?>
+
+<?php require __DIR__ . '/includes/dashboard-smart-view.php'; ?>
+
+    <?php if (!empty($todayAttendanceIssues)): ?>
+      <div class="panel mt-3">
+        <div class="panel-head d-flex justify-content-between align-items-center">
+          <div><div class="title">👆 आज गैरहजर/उशीर</div><div class="sub"><?= date('d M Y') ?></div></div>
+          <a href="staff/attendance.php" style="font-size:12px;color:var(--rail);font-weight:600;text-decoration:none;">अहवाल →</a>
+        </div>
+        <?php foreach ($todayAttendanceIssues as $ai): ?>
+          <div style="padding:11px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;">
+            <span style="width:8px;height:8px;border-radius:50%;background:<?= $ai['status'] === 'absent' ? 'var(--rose)' : 'var(--amber)' ?>;flex-shrink:0;"></span>
+            <div><div style="font-size:13px;font-weight:500;"><?= h($ai['name']) ?></div><div style="font-size:11px;color:var(--text-dim);"><?= h($ai['dept_name'] ?: '') ?></div></div>
+            <span class="ms-auto" style="font-size:11px;font-weight:600;padding:3px 9px;border-radius:6px;background:<?= $ai['status'] === 'absent' ? 'var(--rose-soft)' : '#FBEBD6' ?>;color:<?= $ai['status'] === 'absent' ? 'var(--rose)' : 'var(--amber)' ?>;">
+              <?= $ai['status'] === 'absent' ? '❌ गैरहजर' : '⏰ उशीर' ?>
+            </span>
+          </div>
+        <?php endforeach; ?>
+      </div>
+    <?php endif; ?>
+
+    <?php if ($latestSatsang && isManagementOrAbove()): ?>
+      <div class="panel mt-3">
+        <div class="panel-head d-flex justify-content-between align-items-center">
+          <div><div class="title">🧘 शेवटच्या सत्संगाची हजेरी</div><div class="sub"><?= date('d M Y', strtotime($latestSatsang['event_date'])) ?><?= $latestSatsang['organizer_dept'] ? ' · ' . h($latestSatsang['organizer_dept']) : '' ?></div></div>
+          <a href="meditation/attendance-report.php?id=<?= $latestSatsang['id'] ?>" target="_blank" style="font-size:12px;color:var(--rail);font-weight:600;text-decoration:none;">अहवाल →</a>
+        </div>
+        <div style="padding:14px 20px;display:flex;gap:24px;">
+          <div><div style="font-size:11px;color:var(--text-dim);">उपस्थित</div><div class="font-mono" style="font-weight:700;font-size:18px;color:var(--rail);"><?= $latestSatsang['present'] ?></div></div>
+          <div><div style="font-size:11px;color:var(--text-dim);">अनुपस्थित</div><div class="font-mono" style="font-weight:700;font-size:18px;color:var(--rose);"><?= $latestSatsang['absent'] ?></div></div>
+        </div>
+      </div>
+    <?php endif; ?>
   </div>
 </div>
 
+<div class="mt-3">
 <div class="panel mb-3 dash-analytics" id="dashAnalytics" data-mgmt="<?= $isMgmtView ? '1' : '0' ?>">
   <div class="panel-head dash-an-head">
     <div>
@@ -377,131 +351,10 @@ function eowmsSwitchDashTab(which, btn) {
     <div class="dash-loading" id="dashLoading"><span class="spinner-border spinner-border-sm"></span> लोड होत आहे…</div>
   </div>
 </div>
-
-<div class="row g-3">
-  <div class="col-lg-8">
-    <div class="panel">
-      <div class="panel-head"><div class="title"><?= $isMgmtView ? h(t('s1')) : 'माझा विभाग' ?></div><div class="sub"><?= h(t('s126')) ?></div></div>
-      <?php if ($isMgmtView && count($deptGroupsForDash) > 1): ?>
-        <?php foreach ($deptGroupsForDash as $group): ?>
-          <div style="padding:10px 20px 4px;font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.04em;background:var(--canvas);"><?= h($group['label']) ?> (<?= count($group['depts']) ?>)</div>
-          <table class="wtable">
-            <tbody>
-              <?php foreach ($group['depts'] as $dept): ?>
-                <tr style="cursor:pointer;" onclick="window.location='departments/dashboard.php?id=<?= $dept['id'] ?>'">
-                  <td style="width:70%;"><i class="<?= h($dept['icon']) ?> me-2"></i><?= h($dept['name_local'] ?: $dept['name']) ?></td>
-                  <td><?= h($dept['hod_name'] ?? '—') ?></td>
-                </tr>
-              <?php endforeach; ?>
-            </tbody>
-          </table>
-        <?php endforeach; ?>
-      <?php else: ?>
-        <table class="wtable">
-          <thead><tr><th><?= h(t('s1')) ?></th><th><?= h(t('s127')) ?></th></tr></thead>
-          <tbody>
-            <?php foreach ($departments as $dept): ?>
-              <tr style="cursor:pointer;" onclick="window.location='departments/dashboard.php?id=<?= $dept['id'] ?>'">
-                <td><i class="<?= h($dept['icon']) ?> me-2"></i><?= h($dept['name_local'] ?: $dept['name']) ?></td>
-                <td><?= h($dept['hod_name'] ?? '—') ?></td>
-              </tr>
-            <?php endforeach; ?>
-          </tbody>
-        </table>
-      <?php endif; ?>
-    </div>
-  </div>
-  <div class="col-lg-4">
-    <div class="panel">
-      <div class="panel-head d-flex justify-content-between align-items-center">
-        <div><div class="title"><?= h(t('s128')) ?></div><div class="sub"><?= h(t('s55')) ?></div></div>
-        <a href="renewals/index.php" style="font-size:12px;color:var(--rail);font-weight:600;text-decoration:none;"><?= h(t('s56')) ?></a>
-      </div>
-      <?php if (empty($upcomingRenewals)): ?>
-        <div style="padding:20px;color:var(--text-dim);font-size:13px;"><?= h(t('s57')) ?></div>
-      <?php endif; ?>
-      <?php foreach ($upcomingRenewals as $item):
-        $days = (int)$item['days_left'];
-        $color = $days < 0 ? 'rose' : ($days <= 7 ? 'rose' : ($days <= 15 ? 'amber' : 'rail'));
-      ?>
-        <div style="padding:13px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;">
-          <span style="width:8px;height:8px;border-radius:50%;background:var(--<?= $color ?>);flex-shrink:0;"></span>
-          <div><div style="font-size:13px;font-weight:500;"><?= h($item['item_name']) ?></div><div style="font-size:11.5px;color:var(--text-dim);"><?= h($item['dept_name']) ?></div></div>
-          <span class="ms-auto font-mono" style="font-size:11px;font-weight:600;padding:3px 9px;border-radius:6px;background:var(--<?= $color ?>-soft);color:var(--<?= $color ?>);">
-            <?= $days < 0 ? 'Expired' : $days . ' दिवस' ?>
-          </span>
-        </div>
-      <?php endforeach; ?>
-    </div>
-
-    <?php if (!empty($todayAttendanceIssues)): ?>
-      <div class="panel mt-3">
-        <div class="panel-head d-flex justify-content-between align-items-center">
-          <div><div class="title">👆 आज गैरहजर/उशीर</div><div class="sub"><?= date('d M Y') ?></div></div>
-          <a href="staff/attendance.php" style="font-size:12px;color:var(--rail);font-weight:600;text-decoration:none;">अहवाल →</a>
-        </div>
-        <?php foreach ($todayAttendanceIssues as $ai): ?>
-          <div style="padding:11px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;">
-            <span style="width:8px;height:8px;border-radius:50%;background:<?= $ai['status'] === 'absent' ? 'var(--rose)' : 'var(--amber)' ?>;flex-shrink:0;"></span>
-            <div><div style="font-size:13px;font-weight:500;"><?= h($ai['name']) ?></div><div style="font-size:11px;color:var(--text-dim);"><?= h($ai['dept_name'] ?: '') ?></div></div>
-            <span class="ms-auto" style="font-size:11px;font-weight:600;padding:3px 9px;border-radius:6px;background:<?= $ai['status'] === 'absent' ? 'var(--rose-soft)' : '#FBEBD6' ?>;color:<?= $ai['status'] === 'absent' ? 'var(--rose)' : 'var(--amber)' ?>;">
-              <?= $ai['status'] === 'absent' ? '❌ गैरहजर' : '⏰ उशीर' ?>
-            </span>
-          </div>
-        <?php endforeach; ?>
-      </div>
-    <?php endif; ?>
-
-    <?php if ($latestSatsang && isManagementOrAbove()): ?>
-      <div class="panel mt-3">
-        <div class="panel-head d-flex justify-content-between align-items-center">
-          <div><div class="title">🧘 शेवटच्या सत्संगाची हजेरी</div><div class="sub"><?= date('d M Y', strtotime($latestSatsang['event_date'])) ?><?= $latestSatsang['organizer_dept'] ? ' · ' . h($latestSatsang['organizer_dept']) : '' ?></div></div>
-          <a href="meditation/attendance-report.php?id=<?= $latestSatsang['id'] ?>" target="_blank" style="font-size:12px;color:var(--rail);font-weight:600;text-decoration:none;">अहवाल →</a>
-        </div>
-        <div style="padding:14px 20px;display:flex;gap:24px;">
-          <div><div style="font-size:11px;color:var(--text-dim);">उपस्थित</div><div class="font-mono" style="font-weight:700;font-size:18px;color:var(--rail);"><?= $latestSatsang['present'] ?></div></div>
-          <div><div style="font-size:11px;color:var(--text-dim);">अनुपस्थित</div><div class="font-mono" style="font-weight:700;font-size:18px;color:var(--rose);"><?= $latestSatsang['absent'] ?></div></div>
-        </div>
-      </div>
-    <?php endif; ?>
-  </div>
 </div>
-
-<?php if ($taskSummary !== null): ?>
-<div class="row g-3 mt-1">
-  <div class="col-12">
-    <div class="panel">
-      <div class="panel-head d-flex justify-content-between align-items-center">
-        <div><div class="title"><?= h(t('s129')) ?></div><div class="sub"><?= h(t('s7')) ?> <?= $taskSummary['pending'] ?> <?= h(t('s58')) ?> <?= $taskSummary['in_progress'] ?> <?= h(t('s59')) ?> <?= $taskSummary['completed'] ?></div></div>
-        <a href="tasks/index.php" style="font-size:12px;color:var(--rail);font-weight:600;text-decoration:none;"><?= h(t('s130')) ?></a>
-      </div>
-      <table class="rtable">
-        <thead><tr><th><?= h(t('s14')) ?></th><th><?= h(t('s1')) ?></th><th><?= h(t('s6')) ?></th><th>Target Date</th><th><?= h(t('s2')) ?></th></tr></thead>
-        <tbody>
-          <?php if (empty($recentTasks)): ?>
-            <tr><td colspan="5" style="text-align:center;color:var(--text-dim);padding:20px;"><?= h(t('s131')) ?></td></tr>
-          <?php endif; ?>
-          <?php foreach ($recentTasks as $task):
-            $isOverdue = strtotime($task['target_date']) < strtotime(date('Y-m-d')) && $task['status'] !== 'completed';
-            $chip = $isOverdue ? 'overdue' : $statusChipMap[$task['status']];
-            $chipText = $isOverdue ? 'मुदत संपली' : $statusLabelsMap[$task['status']];
-          ?>
-            <tr>
-              <td style="font-weight:500;"><?= h($task['title']) ?></td>
-              <td><?= h($task['dept_name']) ?></td>
-              <td><?= h($task['assignee_name']) ?></td>
-              <td class="font-mono"><?= date('d M Y', strtotime($task['target_date'])) ?></td>
-              <td><span class="status-chip <?= $chip ?>"><?= $chipText ?></span></td>
-            </tr>
-          <?php endforeach; ?>
-        </tbody>
-      </table>
-    </div>
-  </div>
-</div>
-<?php endif; ?>
 
 <script src="assets/js/dashboard-charts.js?v=1"></script>
+<script src="assets/js/dashboard-smart.js?v=1"></script>
 </div>
 
 <?php if ($showCampusBreakdown): ?>

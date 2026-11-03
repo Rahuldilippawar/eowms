@@ -78,5 +78,6 @@ notifyUser($assignedTo, $department['organization_id'], 'नवीन टास�
 logActivity('टास्क असाइन केला', 'task', $pdo->lastInsertId(), "$taskCode — $title → user #$assignedTo");
 
 $_SESSION['flash'] = 'टास्क यशस्वीरित्या असाइन केला गेला — ' . $taskCode;
-header('Location: index.php');
+// Dashboard वरच्या "झटपट Task द्या" मधून आलं असेल तर परत Dashboard वर
+header('Location: ' . (($_POST['return_to'] ?? '') === 'dashboard' ? '../index.php' : 'index.php'));
 exit;
