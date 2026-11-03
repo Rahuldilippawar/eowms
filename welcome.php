@@ -351,7 +351,7 @@ $todayLabel = $marathiDays[(int)date('w')] . ', ' . (int)date('j') . ' ' . $mara
     <div class="mark"><?= htmlspecialchars(mb_substr($org['name'] ?? 'EO', 0, 2)) ?></div>
   <?php endif; ?>
   <div class="today-strip"><span class="dot"></span><?= h($todayLabel) ?></div>
-  <div class="hero-eyebrow">ॐ जय जंगली महाराज</div>
+  <div class="hero-eyebrow">!! आत्मा मालिक !!</div>
   <h1><?= htmlspecialchars($org['name'] ?? 'E-Admin — Smart Administration') ?></h1>
   <p><?= h(t('s145')) ?></p>
 
