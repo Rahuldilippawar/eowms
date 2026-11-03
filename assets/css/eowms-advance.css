@@ -137,3 +137,101 @@ body[data-module] .rail-brand { border-bottom-color: rgba(255,255,255,.08); }
   .dash-canvas.tall { height: 240px; }
   .dash-range button { padding: 6px 8px; }
 }
+
+/* ===== 🧠 Smart Command Center (Requests / Tasks / नूतनीकरण / विभाग-आरोग्य) ===== */
+.sm-attn { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; box-shadow: 0 1px 2px rgba(16,22,43,.05); }
+.sm-attn-title { font-weight: 700; font-size: 13px; color: var(--text); display: flex; align-items: center; gap: 7px; white-space: nowrap; }
+.sm-attn-title i { color: var(--amber); }
+.sm-attn-ok { font-size: 13px; color: var(--rail); font-weight: 600; }
+.sm-attn-list { display: flex; flex-wrap: wrap; gap: 8px; flex: 1; }
+.sm-attn-item { display: inline-flex; align-items: center; gap: 7px; padding: 7px 12px; border-radius: 10px; font-size: 12.5px; text-decoration: none; border: 1px solid transparent; transition: transform .12s ease, box-shadow .15s ease; }
+.sm-attn-item:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(16,22,43,.1); }
+.sm-attn-item b { font-family: 'JetBrains Mono', monospace; font-size: 14px; }
+.sm-attn-item .sm-go { font-size: 9px; opacity: .6; }
+.sm-attn-item.bad { background: var(--rose-soft); color: var(--rose); border-color: color-mix(in srgb, var(--rose) 22%, transparent); }
+.sm-attn-item.warn { background: var(--amber-soft); color: var(--amber); border-color: color-mix(in srgb, var(--amber) 22%, transparent); }
+.sm-attn-item.info { background: color-mix(in srgb, #3B6FC9 12%, var(--surface)); color: #3B6FC9; border-color: color-mix(in srgb, #3B6FC9 22%, transparent); }
+.sm-attn-item.bad b { animation: smPulse 1.8s ease-in-out infinite; }
+@keyframes smPulse { 50% { opacity: .55; } }
+
+.sm-panel { display: flex; flex-direction: column; }
+.sm-link { font-size: 12px; color: var(--rail); font-weight: 600; text-decoration: none; white-space: nowrap; }
+.sm-stats { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); border-bottom: 1px solid var(--line); }
+.sm-stats > div { padding: 11px 16px; border-right: 1px solid var(--line); min-width: 0; }
+.sm-stats > div:last-child { border-right: 0; }
+.sm-stats span { display: block; font-size: 11px; color: var(--text-dim); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sm-stats b { font-family: 'JetBrains Mono', monospace; font-size: 20px; color: var(--text); }
+.c-rose { color: var(--rose) !important; } .c-amber { color: var(--amber) !important; } .c-blue { color: #3B6FC9 !important; }
+.sm-stack { display: flex; height: 5px; background: var(--line); }
+.sm-stack i { display: block; min-width: 0; }
+.sm-meter { height: 5px; background: var(--line); } .sm-meter i { display: block; height: 100%; background: var(--rail); }
+.sm-tabs { display: flex; gap: 2px; padding: 8px 12px 0; border-bottom: 1px solid var(--line); overflow-x: auto; }
+.sm-tabs button { border: 0; background: transparent; padding: 8px 12px; font-size: 12.5px; font-weight: 600; color: var(--text-dim); border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; cursor: pointer; font-family: inherit; }
+.sm-tabs button.active { color: var(--rail); border-bottom-color: var(--rail); }
+.sm-tabs em { font-style: normal; font-size: 10.5px; background: var(--canvas); border-radius: 10px; padding: 1px 7px; margin-left: 3px; }
+.sm-list { flex: 1; }
+.sm-row { display: flex; align-items: center; gap: 11px; padding: 11px 16px; border-bottom: 1px solid var(--line); text-decoration: none; color: inherit; transition: background-color .12s ease; }
+.sm-row:last-child { border-bottom: 0; }
+.sm-row:hover { background: color-mix(in srgb, var(--rail) 5%, transparent); color: inherit; }
+.sm-main { flex: 1; min-width: 0; }
+.sm-t { font-size: 13px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sm-s { font-size: 11.5px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sm-side { text-align: right; flex-shrink: 0; }
+.sm-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.sm-dot-inline { display: inline-block; width: 7px; height: 7px; margin-right: 6px; vertical-align: middle; }
+.sm-av { width: 30px; height: 30px; border-radius: 9px; background: var(--rail-soft); color: var(--rail); font-size: 11.5px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.sm-when { font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; white-space: nowrap; display: inline-block; }
+.sm-when.rose { background: var(--rose-soft); color: var(--rose); } .sm-when.amber { background: var(--amber-soft); color: var(--amber); } .sm-when.rail { background: var(--rail-soft); color: var(--rail); }
+.sm-date { font-size: 10.5px; color: var(--text-dim); margin-top: 2px; }
+.sm-empty { padding: 22px 16px; text-align: center; color: var(--text-dim); font-size: 12.5px; }
+.sm-qa-btn { background: var(--amber); color: #fff; border-radius: 8px; font-size: 12px; font-weight: 600; padding: 6px 12px; }
+.sm-qa-btn:hover { color: #fff; }
+.sm-qa-chips { display: flex; gap: 6px; margin-top: 6px; }
+.sm-qa-chips button { border: 1px solid var(--line); background: var(--canvas); color: var(--text-dim); border-radius: 6px; font-size: 11.5px; padding: 3px 9px; cursor: pointer; font-family: inherit; }
+.sm-qa-chips button:hover { color: var(--rail); border-color: var(--rail); }
+
+/* नूतनीकरण */
+.sm-ren-buckets { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); border-bottom: 1px solid var(--line); }
+.sm-ren-buckets a { padding: 10px 6px; text-align: center; text-decoration: none; border-right: 1px solid var(--line); color: var(--text); transition: background-color .12s ease; }
+.sm-ren-buckets a:last-child { border-right: 0; }
+.sm-ren-buckets a:hover { background: var(--canvas); }
+.sm-ren-buckets b { display: block; font-family: 'JetBrains Mono', monospace; font-size: 18px; }
+.sm-ren-buckets span { font-size: 10.5px; color: var(--text-dim); font-weight: 600; }
+.sm-ren-buckets .b-rose b { color: var(--rose); } .sm-ren-buckets .b-amber b { color: var(--amber); }
+.sm-ring { --c: var(--rail); width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0; background: conic-gradient(var(--c) calc(var(--p) * 1%), var(--line) 0); display: flex; align-items: center; justify-content: center; }
+.sm-ring span { width: 26px; height: 26px; border-radius: 50%; background: var(--surface); display: flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; color: var(--c); }
+.sm-ring.rose { --c: var(--rose); } .sm-ring.amber { --c: var(--amber); }
+
+/* विभाग-आरोग्य */
+.sm-dept-tools { display: flex; gap: 6px; flex-wrap: wrap; }
+.sm-dept-tools input, .sm-dept-tools select { border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; font-size: 12.5px; background: var(--canvas); color: var(--text); font-family: inherit; }
+.sm-dept-tools input { width: 150px; }
+.sm-health-sum { display: flex; gap: 6px; padding: 10px 16px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.sm-health-sum button { border: 1px solid var(--line); background: var(--surface); color: var(--text-dim); border-radius: 20px; padding: 4px 12px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-family: inherit; }
+.sm-health-sum button.active { border-color: var(--rail); color: var(--rail); background: var(--rail-soft); }
+.sm-health-sum b { font-family: 'JetBrains Mono', monospace; }
+.sm-lv { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.sm-lv.good { background: var(--rail); } .sm-lv.warn { background: var(--amber); } .sm-lv.bad { background: var(--rose); }
+.sm-dept-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; padding: 14px 16px; max-height: 640px; overflow-y: auto; }
+.sm-dept { --lc: var(--rail); display: block; border: 1px solid var(--line); border-left: 4px solid var(--lc); border-radius: 12px; padding: 12px 13px; text-decoration: none; color: inherit; background: var(--surface); transition: transform .12s ease, box-shadow .15s ease; }
+.sm-dept:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(16,22,43,.08); color: inherit; }
+.sm-dept.warn { --lc: var(--amber); } .sm-dept.bad { --lc: var(--rose); }
+.sm-dept-top { display: flex; align-items: center; gap: 10px; }
+.sm-dept-ic { width: 34px; height: 34px; border-radius: 9px; background: color-mix(in srgb, var(--lc) 14%, var(--surface)); color: var(--lc); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.sm-score { width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; background: conic-gradient(var(--lc) calc(var(--p) * 1%), var(--line) 0); display: flex; align-items: center; justify-content: center; }
+.sm-score span { width: 31px; height: 31px; border-radius: 50%; background: var(--surface); display: flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; font-weight: 700; color: var(--lc); }
+.sm-dept-bar { height: 4px; background: var(--line); border-radius: 4px; overflow: hidden; margin: 10px 0 8px; }
+.sm-dept-bar i { display: block; height: 100%; background: var(--rail); border-radius: 4px; }
+.sm-dept-meta { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 11.5px; color: var(--text-dim); }
+.sm-dept-meta i { font-size: 10.5px; margin-right: 2px; }
+.sm-issues { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+.sm-issues span { font-size: 10.5px; font-weight: 600; background: var(--rose-soft); color: var(--rose); border-radius: 6px; padding: 2px 7px; }
+@media (max-width: 767px) {
+  .sm-stats { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .sm-stats > div:nth-child(2) { border-right: 0; }
+  .sm-stats > div:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+  .sm-dept-tools input { width: 100%; }
+  .sm-dept-grid { grid-template-columns: 1fr; max-height: none; }
+  .sm-attn { flex-direction: column; align-items: stretch; }
+  .sm-attn-item { flex: 1 1 100%; }
+}
