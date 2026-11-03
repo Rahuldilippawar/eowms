@@ -112,6 +112,14 @@ function i18nTranslateRun($run, $lang, $dict, $depth = 0) {
     $lead = substr($run, 0, strlen($run) - strlen(ltrim($run)));
     $trail = substr($run, strlen(rtrim($run)));
     if (isset($dict[$key])) return $lead . $dict[$key] . $trail;
+    // HTML मधलं &quot; / &amp; — शब्दकोशात साधं " असतं; उलगडून पूर्ण प्रक्रिया, मग परत Escape
+    if ($depth < 9 && strpos($key, '&') !== false) {
+        $dk = html_entity_decode($key, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        if ($dk !== $key) {
+            $t = i18nTranslateRun($dk, $lang, $dict, 9);
+            if ($t !== $dk) return $lead . htmlspecialchars($t, ENT_QUOTES, 'UTF-8', false) . $trail;
+        }
+    }
 
     // अंक असलेली वाक्यं — "{n} दिवस बाकी" सारखा साचा
     if (preg_match('/[0-9\x{0966}-\x{096F}]/u', $key)) {
@@ -123,7 +131,7 @@ function i18nTranslateRun($run, $lang, $dict, $depth = 0) {
             return $lead . $out . $trail;
         }
     }
-    if ($depth > 2) { i18nMiss($key, $lang); return $run; }
+    if ($depth > 2 && $depth !== 9) { i18nMiss($key, $lang); return $run; }
 
     // अंक / इंग्रजी Data वर तोडा, मग विरामचिन्हांवर
     foreach (['/([0-9\x{0966}-\x{096F}]+(?:[.,:\/][0-9\x{0966}-\x{096F}]+)*)/u', '/(\s*[\x{2014}\x{2013}:;,.!?()\/|]\s*)/u'] as $splitter) {
@@ -132,7 +140,7 @@ function i18nTranslateRun($run, $lang, $dict, $depth = 0) {
         $out = ''; $any = false;
         foreach ($parts as $i => $p) {
             if ($i % 2 === 1 || !preg_match('/[\x{0900}-\x{097F}]/u', $p)) { $out .= ($i % 2 === 1 ? i18nDigits($p, $lang) : $p); continue; }
-            $t = i18nTranslateRun($p, $lang, $dict, $depth + 1);
+            $t = i18nTranslateRun($p, $lang, $dict, $depth === 9 ? 10 : $depth + 1);
             if ($t !== $p) $any = true;
             $out .= $t;
         }
@@ -262,8 +270,9 @@ function i18nClientScript() {
             . '(function(){var D=window.EOWMS_I18N,R=/[\\u0900-\\u097F][\\u0900-\\u097F\\u200C\\u200DA-Za-z0-9 \\u00A0.,:;!?()\\u2019\-\\u2013\\u2014\/&%+]*[\\u0900-\\u097F.!?)]|[\\u0900-\\u097F]/g;'
             . 'function tr(s){return s.replace(R,function(r){var k=r.replace(/[  ]+/g," ").trim();if(D[k]){var a=r.match(/^\s*/)[0],b=r.match(/\s*$/)[0];return a+D[k]+b;}return r;});}'
             . 'function walk(n){if(n.nodeType===3){if(/[\\u0900-\\u097F]/.test(n.nodeValue)){var t=tr(n.nodeValue);if(t!==n.nodeValue)n.nodeValue=t;}return;}'
-            . 'if(n.nodeType!==1||/^(SCRIPT|STYLE|TEXTAREA|INPUT)$/.test(n.nodeName)||n.isContentEditable)return;'
+            . 'if(n.nodeType!==1||/^(SCRIPT|STYLE)$/.test(n.nodeName)||n.isContentEditable)return;'
             . '["placeholder","title","aria-label"].forEach(function(a){var v=n.getAttribute&&n.getAttribute(a);if(v&&/[\\u0900-\\u097F]/.test(v)){var t=tr(v);if(t!==v)n.setAttribute(a,t);}});'
+            . 'if(/^(TEXTAREA|INPUT|SELECT)$/.test(n.nodeName))return;'
             . 'for(var c=n.firstChild;c;c=c.nextSibling)walk(c);}'
             . 'window.eowmsT=tr;'
             . 'new MutationObserver(function(ms){ms.forEach(function(m){if(m.type==="characterData")walk(m.target);else m.addedNodes.forEach(walk);});})'
@@ -271,5 +280,5 @@ function i18nClientScript() {
     } else {
         $js .= 'window.eowmsT=function(s){return s;};';
     }
-    return '<script>' . $js . '</script>';
+    return '<!--i18n:off--><script>' . $js . '</script><!--i18n:on-->';
 }
