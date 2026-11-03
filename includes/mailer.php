@@ -50,7 +50,7 @@ function sendWelcomeEmail($email, $name, $username, $plainPassword, $orgName, $c
         </div>
         <p style='font-size:13px;color:#B23A48;'>⚠️ पहिल्यांदा Login केल्यावर तुम्हाला स्वतःचा नवीन पासवर्ड तयार करावा लागेल — सुरक्षिततेसाठी हे अनिवार्य आहे.</p>
         <a href='$loginUrl' style='display:inline-block;background:#1B8A83;color:#fff;text-decoration:none;padding:10px 22px;border-radius:8px;font-size:14px;font-weight:bold;margin-top:10px;'>Login करा</a>
-        <p style='font-size:11.5px;color:#8A90AC;margin-top:20px;'>🙏 जय जंगली महाराज — हा ईमेल आपोआप पाठवला गेला आहे.</p>
+        <p style='font-size:11.5px;color:#8A90AC;margin-top:20px;'>!! आत्मा मालिक !! — हा ईमेल आपोआप पाठवला गेला आहे.</p>
       </div>
     </div>";
 
@@ -88,7 +88,7 @@ function sendPasswordResetEmail($email, $name, $code, $orgName) {
           <div style='font-size:32px;font-weight:bold;color:#1B8A83;letter-spacing:6px;'>$code</div>
         </div>
         <p style='font-size:13px;color:#666B7D;'>हा code फक्त १५ मिनिटांसाठी वैध आहे. जर तुम्ही ही विनंती केली नसेल, तर हा ईमेल दुर्लक्षित करा — तुमचा पासवर्ड बदलणार नाही.</p>
-        <p style='font-size:11.5px;color:#8A90AC;margin-top:20px;'>🙏 जय जंगली महाराज — हा ईमेल आपोआप पाठवला गेला आहे.</p>
+        <p style='font-size:11.5px;color:#8A90AC;margin-top:20px;'>!! आत्मा मालिक !! — हा ईमेल आपोआप पाठवला गेला आहे.</p>
       </div>
     </div>";
 
@@ -131,7 +131,7 @@ function sendRenewalReminderEmail($email, $name, $itemName, $daysLeft, $expiryDa
           <div style='font-size:12px;color:#666B7D;margin-top:4px;'>मुदत-दिनांक: $expiryDate</div>
         </div>
         <a href='$link' style='display:inline-block;background:#1B8A83;color:#fff;text-decoration:none;padding:10px 22px;border-radius:8px;font-size:14px;font-weight:bold;margin-top:6px;'>System मध्ये बघा</a>
-        <p style='font-size:11.5px;color:#8A90AC;margin-top:20px;'>🙏 जय जंगली महाराज — हा ईमेल आपोआप पाठवला गेला आहे.</p>
+        <p style='font-size:11.5px;color:#8A90AC;margin-top:20px;'>!! आत्मा मालिक !! — हा ईमेल आपोआप पाठवला गेला आहे.</p>
       </div>
     </div>";
 
@@ -178,7 +178,7 @@ function sendPurchasePendingSummaryEmail($email, $name, $orgName, $fy, $totalCou
           <tbody>$deptRowsHtml</tbody>
         </table>
         <a href='$link' style='display:inline-block;background:#1B8A83;color:#fff;text-decoration:none;padding:10px 22px;border-radius:8px;font-size:14px;font-weight:bold;margin-top:20px;'>संपूर्ण Register बघा</a>
-        <p style='font-size:11.5px;color:#8A90AC;margin-top:20px;'>🙏 जय जंगली महाराज — हा ईमेल आपोआप, दर आठवड्याला पाठवला जातो.</p>
+        <p style='font-size:11.5px;color:#8A90AC;margin-top:20px;'>!! आत्मा मालिक !! — हा ईमेल आपोआप, दर आठवड्याला पाठवला जातो.</p>
       </div>
     </div>";
 
@@ -209,7 +209,7 @@ function sendBirthdayEmail($email, $name, $orgName) {
         <p style='font-size:16px;color:#1A1D29;'>प्रिय <strong>$name</strong>,</p>
         <p style='font-size:14px;color:#1A1D29;line-height:1.7;'>आजच्या तुमच्या वाढदिवसानिमित्त $orgName परिवाराकडून तुम्हाला मनःपूर्वक शुभेच्छा! तुमचं हे वर्ष आरोग्यदायी, आनंदी आणि यशस्वी जावो अशी सद्गुरूंच्या चरणी प्रार्थना.</p>
         <p style='font-size:24px;margin:16px 0;'>🎈🎁🎊</p>
-        <p style='font-size:11.5px;color:#8A90AC;margin-top:20px;'>🙏 जय जंगली महाराज — हा ईमेल आपोआप पाठवला गेला आहे.</p>
+        <p style='font-size:11.5px;color:#8A90AC;margin-top:20px;'>!! आत्मा मालिक !! — हा ईमेल आपोआप पाठवला गेला आहे.</p>
       </div>
     </div>";
     $headers = "MIME-Version: 1.0\r\n";
@@ -237,7 +237,7 @@ function sendWorkAnniversaryEmail($email, $name, $yearsCompleted, $orgName) {
         <div style='font-size:36px;margin-bottom:10px;'>🏆🎊</div>
         <p style='font-size:16px;color:#1A1D29;'>प्रिय <strong>$name</strong>,</p>
         <p style='font-size:14px;color:#1A1D29;line-height:1.7;'>आज तुम्ही $orgName परिवारासोबत <strong style='color:#1B8A83;'>$yearsCompleted वर्षं</strong> पूर्ण करत आहात. तुमच्या समर्पणाबद्दल आणि योगदानाबद्दल मनःपूर्वक धन्यवाद — पुढील वाटचालीसाठी शुभेच्छा!</p>
-        <p style='font-size:11.5px;color:#8A90AC;margin-top:20px;'>🙏 जय जंगली महाराज — हा ईमेल आपोआप पाठवला गेला आहे.</p>
+        <p style='font-size:11.5px;color:#8A90AC;margin-top:20px;'>!! आत्मा मालिक !! — हा ईमेल आपोआप पाठवला गेला आहे.</p>
       </div>
     </div>";
     $headers = "MIME-Version: 1.0\r\n";
