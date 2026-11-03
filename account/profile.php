@@ -27,9 +27,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $_SESSION['user']['must_change_password'] = 0;
         $success = t('s505');
     }
-} elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'remove_webauthn') {
-    $pdo->prepare("DELETE FROM webauthn_credentials WHERE id = ? AND user_id = ?")->execute([(int)($_POST['webauthn_id'] ?? 0), $user['id']]);
-    $success = 'डिव्हाइस काढलं गेलं.';
 } elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'update_photo') {
     if (!empty($_FILES['photo']['name']) && $_FILES['photo']['error'] === UPLOAD_ERR_OK) {
         $allowedExt = ['jpg', 'jpeg', 'png', 'webp'];
