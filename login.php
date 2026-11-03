@@ -228,7 +228,7 @@ $loginOrgName = $loginOrg['name'] ?? 'VJMAT';
       <ul class="lg-feat">
         <li><i class="fa-solid fa-gauge-high"></i>Smart Command Center — आजचं संपूर्ण चित्र</li>
         <li><i class="fa-solid fa-list-check"></i>Tasks, विनंत्या व मुदतींची आपोआप आठवण</li>
-        <li><i class="fa-solid fa-fingerprint"></i>Fingerprint / Face ID ने झटपट Login</li>
+        <li><i class="fa-solid fa-shield-halved"></i>सुरक्षित Login — चुकीच्या प्रयत्नांवर आपोआप Lock</li>
       </ul>
     </div>
     <div class="lg-time"><span id="lgGreet"></span><b id="lgClock"></b></div>
@@ -276,11 +276,6 @@ $loginOrgName = $loginOrg['name'] ?? 'VJMAT';
         <button type="submit" class="lg-btn" id="lgSubmit"><i class="fa-solid fa-right-to-bracket"></i> <span><?= h(t('s158')) ?></span></button>
       </form>
 
-      <div id="lgFpWrap" hidden>
-        <div class="lg-or">किंवा</div>
-        <button type="button" class="lg-fp" id="lgFp"><i class="fa-solid fa-fingerprint"></i> Fingerprint / Face ID ने Login</button>
-      </div>
-
       <div class="lg-links">
         <a href="index.php"><i class="fa-solid fa-house"></i> मुख्य पान</a>
         <a href="student/login.php"><i class="fa-solid fa-graduation-cap"></i> विद्यार्थी Login</a>
@@ -291,7 +286,6 @@ $loginOrgName = $loginOrg['name'] ?? 'VJMAT';
   </main>
 </div>
 
-<script src="assets/js/webauthn.js"></script>
 <script>
 (function () {
   var email = document.getElementById('loginEmailField'), pass = document.getElementById('loginPassField');
@@ -325,14 +319,6 @@ $loginOrgName = $loginOrg['name'] ?? 'VJMAT';
     btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Login होत आहे…';
   });
   window.addEventListener('pageshow', function () { btn.disabled = false; });
-  // Fingerprint / Face ID — Browser समर्थन देत असेल तरच बटण
-  if (window.PublicKeyCredential && typeof eowmsLoginWithFingerprint === 'function') {
-    document.getElementById('lgFpWrap').hidden = false;
-    document.getElementById('lgFp').addEventListener('click', function () {
-      if (!email.value.trim()) { email.focus(); email.setCustomValidity('आधी तुमचा ईमेल टाका'); email.reportValidity(); setTimeout(function () { email.setCustomValidity(''); }, 2000); return; }
-      eowmsLoginWithFingerprint(email.value.trim());
-    });
-  }
   // नमस्कार + घड्याळ
   var g = document.getElementById('lgGreet'), c = document.getElementById('lgClock');
   function tick() {

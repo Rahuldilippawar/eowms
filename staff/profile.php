@@ -141,7 +141,7 @@ $statusChip = ['pending' => 'pending', 'in_progress' => 'pending', 'completed' =
     <a href="employee-report.php?id=<?= $emp['id'] ?>" class="btn btn-sm" style="border:1px solid var(--rail);color:var(--rail);border-radius:9px;font-size:12.5px;padding:8px 16px;font-weight:600;"><i class="fa-solid fa-file-lines me-1"></i>संपूर्ण अहवाल</a>
     <a href="id-card.php?id=<?= $emp['id'] ?>" target="_blank" class="btn btn-sm" style="border:1px solid var(--line);border-radius:9px;font-size:12.5px;padding:8px 16px;"><i class="fa-solid fa-id-card me-1"></i>ID Card</a>
     <?php if ($isOwnProfile): ?>
-      <a href="#account" class="btn btn-sm" style="border:1px solid var(--rail);color:var(--rail);border-radius:9px;font-size:12.5px;padding:8px 16px;font-weight:600;"><i class="fa-solid fa-lock me-1"></i>पासवर्ड / फोटो / Fingerprint</a>
+      <a href="#account" class="btn btn-sm" style="border:1px solid var(--rail);color:var(--rail);border-radius:9px;font-size:12.5px;padding:8px 16px;font-weight:600;"><i class="fa-solid fa-lock me-1"></i>पासवर्ड / फोटो</a>
     <?php endif; ?>
     <?php if (hasRole('super_admin')): ?>
       <a href="edit.php?id=<?= $emp['id'] ?>" class="btn btn-sm" style="border:1px solid var(--line);border-radius:9px;font-size:12.5px;padding:8px 16px;"><i class="fa-solid fa-pen me-1"></i>Edit</a>
@@ -359,14 +359,9 @@ $statusChip = ['pending' => 'pending', 'in_progress' => 'pending', 'completed' =
 
 <?php if ($isOwnProfile):
   // 🔐 खाते — पूर्वीचं account/profile.php इथेच (Form अजूनही ../account/profile.php ला Submit होतात)
-  try {
-      $wcStmt = $pdo->prepare("SELECT * FROM webauthn_credentials WHERE user_id = ? ORDER BY created_at DESC");
-      $wcStmt->execute([$user['id']]);
-      $webauthnDevices = $wcStmt->fetchAll();
-  } catch (PDOException $e) { $webauthnDevices = []; }
 ?>
 <div id="account" class="row g-3 mt-1" style="scroll-margin-top:80px;">
-  <div class="col-12"><div style="font-family:'Space Grotesk';font-weight:700;font-size:16px;color:var(--ink);margin-top:8px;">🔐 माझं खाते — पासवर्ड, फोटो, Fingerprint</div></div>
+  <div class="col-12"><div style="font-family:'Space Grotesk';font-weight:700;font-size:16px;color:var(--ink);margin-top:8px;">🔐 माझं खाते — पासवर्ड व फोटो</div></div>
   <div class="col-lg-4">
     <div class="panel h-100">
       <div class="panel-head"><div class="title">📷 Profile फोटो</div></div>
@@ -398,32 +393,7 @@ $statusChip = ['pending' => 'pending', 'in_progress' => 'pending', 'completed' =
       </form>
     </div>
   </div>
-  <div class="col-lg-4">
-    <div class="panel h-100">
-      <div class="panel-head"><div class="title">👆 Fingerprint / Face ID Login</div><div class="sub">पासवर्ड न टाकता, फक्त बोटाच्या ठशाने/चेहऱ्याने Login</div></div>
-      <div style="padding:16px 22px;">
-        <?php if (empty($webauthnDevices)): ?>
-          <p style="font-size:12.5px;color:var(--text-dim);margin-bottom:10px;">अजून कुठलंही डिव्हाइस नोंदवलेलं नाही.</p>
-        <?php endif; ?>
-        <?php foreach ($webauthnDevices as $d): ?>
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);">
-            <div>
-              <div style="font-size:13px;font-weight:600;">📱 <?= h($d['device_label']) ?></div>
-              <div style="font-size:11px;color:var(--text-dim);">नोंदवलं: <?= date('d M Y', strtotime($d['created_at'])) ?><?= $d['last_used_at'] ? ' · शेवटचा वापर: ' . date('d M Y', strtotime($d['last_used_at'])) : '' ?></div>
-            </div>
-            <form method="POST" action="../account/profile.php" onsubmit="return confirm('हे डिव्हाइस काढायचं? — तिथून Fingerprint Login बंद होईल.');">
-              <input type="hidden" name="action" value="remove_webauthn">
-              <input type="hidden" name="webauthn_id" value="<?= $d['id'] ?>">
-              <button type="submit" style="border:none;background:none;color:var(--rose);font-size:12px;cursor:pointer;">काढा</button>
-            </form>
-          </div>
-        <?php endforeach; ?>
-        <button type="button" onclick="eowmsRegisterFingerprint('../')" class="btn mt-3" style="border:1.5px solid var(--rail);color:var(--rail);background:#fff;border-radius:9px;font-size:13px;padding:8px 18px;font-weight:600;">+ हे डिव्हाइस नोंदवा</button>
-      </div>
-    </div>
-  </div>
 </div>
-<script src="../assets/js/webauthn.js"></script>
 <?php endif; ?>
 
 <?php if ($canEditProfile): ?>
