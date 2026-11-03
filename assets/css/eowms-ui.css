@@ -112,7 +112,8 @@ a:focus-visible, button:focus-visible, select:focus-visible, [tabindex]:focus-vi
 
 /* ---------- Print — Sidebar/Topbar शिवाय स्वच्छ प्रिंट ---------- */
 @media print {
-  .rail-sidebar, .topbar, .sidebar-backdrop, .to-top, .tbl-filter, .alert .alert-x, .btn { display: none !important; }
+  .rail-sidebar, .topbar, .sidebar-backdrop, .to-top, .tbl-filter, .alert .alert-x, .btn, #sosFloatBtn, .sm-attn { display: none !important; }
+  .th-sort::after { display: none !important; }
   .main-wrap { margin-left: 0 !important; }
   .content { padding: 0 !important; animation: none; }
   .panel { box-shadow: none !important; break-inside: avoid; }
