@@ -51,7 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'तुमची संस्था सध्या निष्क्रिय (Inactive) आहे — Login करता येणार नाही. कृपया Super Admin शी संपर्क साधा.';
     } elseif ($user && password_verify($password, $user['password'])) {
         // Correct password — reset any prior failed-attempt counter
-        $pdo->prepare("UPDATE users SET failed_login_attempts = 0, locked_until = NULL WHERE id = ?")->execute([$user['id']]);
+        $pdo->prepare("UPDATE users SET failed_login_attempts = 0, locked_until = NULL, last_login_at = NOW() WHERE id = ?")->execute([$user['id']]);
 
         session_regenerate_id(true); // prevents session-fixation attacks
         $mustChange = !empty($user['must_change_password']);
