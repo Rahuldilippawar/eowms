@@ -81,6 +81,8 @@ $occupiedCount = count($rooms) - $vacantCount;
   <div class="col-6 col-lg-3"><div class="kpi-mini"><div class="lbl">🔴 भरलेल्या (Occupied)</div><div class="val" style="color:var(--amber);"><?= $occupiedCount ?></div></div></div>
 </div>
 
+<?php require __DIR__ . '/../includes/insights/residency.php'; ?>
+
 <?php if ($canManage): ?>
   <div class="mb-3" style="font-size:12.5px;">
     <?php if ($showNonRes): ?>

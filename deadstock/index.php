@@ -107,6 +107,8 @@ $totalValue = array_sum(array_column($items, 'purchase_cost'));
   <div class="col-6 col-lg-3"><div class="kpi-mini"><div class="lbl">एकूण किंमत</div><div class="val" style="color:var(--rail);">₹<?= number_format($totalValue, 0) ?></div></div></div>
 </div>
 
+<?php require __DIR__ . '/../includes/insights/deadstock.php'; ?>
+
 <div class="panel">
   <table class="rtable">
     <thead>

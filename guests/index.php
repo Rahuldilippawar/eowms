@@ -112,6 +112,8 @@ $allStaffForGuest = $staffStmt->fetchAll();
   <div class="col-6 col-lg-3"><div class="kpi-mini"><div class="lbl">📱 आज Expected (Pre-Reg)</div><div class="val" style="color:var(--amber);"><?= count($preRegToday) ?></div></div></div>
 </div>
 
+<?php require __DIR__ . '/../includes/insights/guests.php'; ?>
+
 <?php if (!empty($preRegToday)): ?>
 <div class="panel mb-4">
   <div class="panel-head"><div class="title">📱 आज येण्याची अपेक्षा असलेले पाहुणे (Pre-Registered)</div></div>
