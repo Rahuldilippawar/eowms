@@ -4,15 +4,30 @@ $rootPath = '../';
 require_once __DIR__ . '/../includes/header.php';
 
 $status = $_GET['status'] ?? 'all';
-if (!in_array($status, ['all', 'pending', 'in_progress', 'completed', 'cancelled'], true)) { $status = 'all'; }
+if (!in_array($status, ['all', 'overdue', 'pending', 'in_progress', 'completed', 'cancelled'], true)) { $status = 'all'; }
 
 $sql = "SELECT t.*, u.name AS assigner_name FROM tasks t JOIN users u ON u.id = t.assigned_by WHERE t.assigned_to = ? AND t.organization_id = ?";
 $params = [$user['id'], activeOrgId()];
-if ($status !== 'all') { $sql .= " AND t.status = ?"; $params[] = $status; }
-$sql .= " ORDER BY t.target_date";
+if ($status === 'overdue') {
+    $sql .= " AND t.status IN ('pending','in_progress') AND t.target_date < CURDATE()";
+} elseif ($status !== 'all') { $sql .= " AND t.status = ?"; $params[] = $status; }
+// उघडे Tasks आधी (जवळची मुदत आधी), मग पूर्ण/रद्द (अलीकडचे आधी)
+$sql .= " ORDER BY t.status IN ('completed','cancelled'), CASE WHEN t.status IN ('completed','cancelled') THEN NULL ELSE t.target_date END, t.target_date DESC";
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $tasks = $stmt->fetchAll();
+
+// 📊 सारांश — मुदत संपलेले / आज / आठवडा / सुरू / या महिन्यात पूर्ण
+$sumStmt = $pdo->prepare("SELECT
+    SUM(status IN ('pending','in_progress') AND target_date < CURDATE()) overdue,
+    SUM(status IN ('pending','in_progress') AND target_date = CURDATE()) today,
+    SUM(status IN ('pending','in_progress') AND target_date BETWEEN DATE_ADD(CURDATE(), INTERVAL 1 DAY) AND DATE_ADD(CURDATE(), INTERVAL 7 DAY)) week,
+    SUM(status = 'in_progress') progress,
+    SUM(status = 'completed' AND completed_at >= DATE_FORMAT(CURDATE(), '%Y-%m-01')) done_month,
+    SUM(status = 'completed' AND completed_at >= DATE_FORMAT(CURDATE(), '%Y-%m-01') AND DATE(completed_at) <= target_date) ontime_month
+    FROM tasks WHERE assigned_to = ? AND organization_id = ?");
+$sumStmt->execute([$user['id'], activeOrgId()]);
+$mySum = array_map('intval', $sumStmt->fetch() ?: []);
 
 $statusLabels = ['pending' => 'प्रलंबित', 'in_progress' => 'सुरू आहे', 'completed' => 'पूर्ण झाले', 'cancelled' => 'रद्द केले'];
 $statusChip = ['pending' => 'pending', 'in_progress' => 'pending', 'completed' => 'done', 'cancelled' => 'overdue'];
@@ -26,15 +41,24 @@ $statusChip = ['pending' => 'pending', 'in_progress' => 'pending', 'completed' =
   <?php endif; ?>
 </div>
 
+<div class="mt-task-sum mb-3">
+  <a href="?status=overdue" class="bad"><b><?= $mySum['overdue'] ?? 0 ?></b><span>मुदत संपली</span></a>
+  <a href="?status=pending" class="warn"><b><?= $mySum['today'] ?? 0 ?></b><span>आज मुदत</span></a>
+  <a href="?status=pending"><b><?= $mySum['week'] ?? 0 ?></b><span>पुढील ७ दिवस</span></a>
+  <a href="?status=in_progress"><b><?= $mySum['progress'] ?? 0 ?></b><span>सुरू आहे</span></a>
+  <a href="?status=completed" class="ok"><b><?= $mySum['done_month'] ?? 0 ?></b><span>या महिन्यात पूर्ण<?php if (!empty($mySum['done_month'])): ?> · वेळेत <?= (int)round(($mySum['ontime_month'] ?? 0) * 100 / $mySum['done_month']) ?>%<?php endif; ?></span></a>
+</div>
+
 <div class="period-toggle mb-3">
   <a href="?status=all" class="period-btn <?= $status === 'all' ? 'active' : '' ?>"><?= h(t('s19')) ?></a>
+  <a href="?status=overdue" class="period-btn <?= $status === 'overdue' ? 'active' : '' ?>">⏰ मुदत संपलेले</a>
   <a href="?status=pending" class="period-btn <?= $status === 'pending' ? 'active' : '' ?>"><?= h(t('s7')) ?></a>
   <a href="?status=in_progress" class="period-btn <?= $status === 'in_progress' ? 'active' : '' ?>"><?= h(t('s9')) ?></a>
   <a href="?status=completed" class="period-btn <?= $status === 'completed' ? 'active' : '' ?>"><?= h(t('s10')) ?></a>
   <a href="?status=cancelled" class="period-btn <?= $status === 'cancelled' ? 'active' : '' ?>">रद्द</a>
 </div>
 
-<div class="row g-3">
+<div class="row g-3" data-card-filter="Task शोधा — शीर्षक, क्रमांक, कोणी दिला…">
   <?php if (empty($tasks)): ?>
     <div class="col-12"><div class="panel" style="padding:30px;text-align:center;color:var(--text-dim);"><?= h(t('s83')) ?></div></div>
   <?php endif; ?>
@@ -43,9 +67,14 @@ $statusChip = ['pending' => 'pending', 'in_progress' => 'pending', 'completed' =
     $chip = $isOverdue ? 'overdue' : $statusChip[$task['status']];
     $chipText = $isOverdue ? 'मुदत संपली' : $statusLabels[$task['status']];
     if ($task['status'] === 'completed' && !empty($task['verified_at'])) { $chipText .= ' ✔ पडताळले'; }
+    // मुदतीची उलटगणती — कार्डच्या डाव्या कडेचा रंगही त्यानुसार
+    $isOpenTask = !in_array($task['status'], ['completed', 'cancelled'], true);
+    $daysLeft = (int)floor((strtotime($task['target_date']) - strtotime(date('Y-m-d'))) / 86400);
+    $edge = !$isOpenTask ? 'var(--line)' : ($daysLeft < 0 ? 'var(--rose)' : ($daysLeft <= 1 ? 'var(--amber)' : 'var(--rail)'));
+    $countdown = !$isOpenTask ? '' : ($daysLeft < 0 ? abs($daysLeft) . ' दिवस उशीर' : ($daysLeft === 0 ? 'आज मुदत' : ($daysLeft === 1 ? 'उद्या मुदत' : $daysLeft . ' दिवस बाकी')));
   ?>
     <div class="col-md-6">
-      <div class="panel h-100">
+      <div class="panel h-100" style="border-left:4px solid <?= $edge ?>;">
         <div style="padding:18px 20px;">
           <div class="d-flex justify-content-between align-items-start mb-2">
             <div class="font-display" style="font-weight:600;font-size:15px;"><?= h($task['title']) ?></div>
@@ -61,6 +90,7 @@ $statusChip = ['pending' => 'pending', 'in_progress' => 'pending', 'completed' =
           <?php endif; ?>
           <div style="font-size:12.5px;color:var(--text-dim);" class="mb-3">
             <i class="fa-regular fa-calendar me-1"></i>Target: <span class="font-mono"><?= date('d M Y', strtotime($task['target_date'])) ?></span>
+            <?php if ($countdown): ?><span class="mt-countdown" style="color:<?= $edge ?>;background:color-mix(in srgb, <?= $edge ?> 12%, transparent);"><?= h($countdown) ?></span><?php endif; ?>
             &nbsp;·&nbsp; असाइन केले: <?= h($task['assigner_name']) ?>
           </div>
 
