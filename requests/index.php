@@ -140,7 +140,7 @@ $currentUrl = 'index.php' . $qs([]);
 <div class="d-flex justify-content-between align-items-start mb-1 flex-wrap gap-2">
   <div class="page-title mb-0"><?= $category === 'it' ? '🖥️ IT Requests' : h(t('s301')) ?></div>
   <div class="d-flex gap-2">
-    <a href="create.php<?= $category === 'it' ? '?category=it' : '' ?>" class="btn" style="background:var(--rail);color:#fff;border-radius:9px;font-size:13px;padding:9px 16px;"><i class="fa-solid fa-plus me-1"></i>नवीन</a>
+    <a href="create.php" class="btn" style="background:var(--rail);color:#fff;border-radius:9px;font-size:13px;padding:9px 16px;"><i class="fa-solid fa-plus me-1"></i>नवीन</a>
     <a href="report.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13px;padding:9px 16px;"><i class="fa-solid fa-chart-column me-1"></i>Report</a>
   </div>
 </div>

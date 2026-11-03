@@ -110,6 +110,35 @@ if ($currentDir === 'staff' && $currentPage === 'import.php') { $activeGroup = '
 if ($currentDir === 'it' && in_array($currentPage, ['general-request.php', 'my-general-requests.php'])) { $activeGroup = 'letters'; }
 if ($currentDir === 'about-manage' || $currentPage === 'about-manage.php') { $activeGroup = 'admin'; }
 
+// 🔢 Sidebar वरचे Live आकडे — माझे उघडे Tasks (मुदत संपलेले लाल), नूतनीकरण (संपलेले/७ दिवस),
+// रजा-अर्ज मंजुरी प्रलंबित. प्रत्येक पानावर चालतं म्हणून फक्त हलक्या COUNT Queries.
+$navBadge = ['myTasks' => 0, 'myTasksOverdue' => 0, 'renewals' => 0, 'leaveApprovals' => 0];
+try {
+    $nb = $pdo->prepare("SELECT COUNT(*) c, SUM(target_date < CURDATE()) od FROM tasks WHERE assigned_to = ? AND status IN ('pending','in_progress')");
+    $nb->execute([$user['id']]);
+    $nbr = $nb->fetch();
+    $navBadge['myTasks'] = (int)$nbr['c']; $navBadge['myTasksOverdue'] = (int)$nbr['od'];
+} catch (PDOException $e) {}
+try {
+    $nbSql = "SELECT COUNT(*) FROM renewal_items WHERE organization_id = ? AND status <> 'inactive' AND expiry_date <= DATE_ADD(CURDATE(), INTERVAL 7 DAY)";
+    $nbParams = [$activeOrgId];
+    if (isDeptScoped()) { $nbSql .= " AND department_id = ?"; $nbParams[] = (int)($user['department_id'] ?? 0); }
+    $nb = $pdo->prepare($nbSql); $nb->execute($nbParams);
+    $navBadge['renewals'] = (int)$nb->fetchColumn();
+} catch (PDOException $e) {}
+if (hasCategory('hod') || hasPermission('view_org_wide_dashboards') || hasRole('super_admin')) {
+    try {
+        $nbSql = "SELECT COUNT(*) FROM leave_applications la JOIN users u ON u.id = la.user_id WHERE la.organization_id = ? AND la.status = 'pending'";
+        $nbParams = [$activeOrgId];
+        if (!hasPermission('view_org_wide_dashboards') && !hasRole('super_admin')) { $nbSql .= " AND u.department_id = ? AND u.id <> ?"; $nbParams[] = (int)($user['department_id'] ?? 0); $nbParams[] = (int)$user['id']; }
+        $nb = $pdo->prepare($nbSql); $nb->execute($nbParams);
+        $navBadge['leaveApprovals'] = (int)$nb->fetchColumn();
+    } catch (PDOException $e) {}
+}
+function navCount($n, $tone = 'amber') {
+    return $n > 0 ? '<span class="count nav-count ' . $tone . '">' . ($n > 99 ? '99+' : (int)$n) . '</span>' : '';
+}
+
 function navGroupOpen($groupKey, $activeGroup) { return $groupKey === $activeGroup ? 'show' : ''; }
 function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activeGroup ? 'true' : 'false'; }
 ?>
@@ -145,17 +174,23 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
   <?php endif; ?>
 
   <div style="padding:0 12px;">
-    <input type="text" id="navQuickFind" placeholder="🔍 शोधा..." style="width:100%;background:#1B2340;border:1px solid rgba(255,255,255,.1);color:#fff;border-radius:8px;padding:8px 10px;font-size:12.5px;margin-bottom:8px;">
+    <input type="search" id="navQuickFind" placeholder="🔍 पान शोधा… (Enter = उघडा)" autocomplete="off" style="width:100%;background:#1B2340;border:1px solid rgba(255,255,255,.1);color:#fff;border-radius:8px;padding:8px 10px;font-size:12.5px;margin-bottom:8px;">
   </div>
 
   <div class="org-tree" id="navTreeRoot">
 
+    <!-- ⭐ आवडते व 🕘 अलीकडे — assets/js/sidebar-smart.js भरतो (या Browser पुरतं) -->
+    <div id="navSmartTop" hidden>
+      <div id="navFavWrap" hidden><div class="tier-label">⭐ आवडते</div><div id="navFavList"></div></div>
+      <div id="navRecentWrap" hidden><div class="tier-label">🕘 अलीकडे</div><div id="navRecentList"></div></div>
+    </div>
+
     <!-- ==================== मुख्य कामकाज (नेहमी उघडं) ==================== -->
     <div class="tier-label"><?= h(t('nav_command_center')) ?></div>
-    <a href="<?= $rp ?>index.php" class="tree-node <?= $currentPage === 'index.php' && $currentDir !== 'daily-work' ? 'active' : '' ?>">
+    <a href="<?= $rp ?>index.php" class="tree-node <?= $currentPage === 'index.php' && $rp === '' ? 'active' : '' ?>">
       <i class="fa-solid fa-gauge-high fa-fw"></i><span><?= h(t('nav_command_center')) ?></span>
     </a>
-    <a href="<?= $rp ?>daily-work/entry.php" class="tree-node <?= $currentDir === 'daily-work' && in_array($currentPage, ['entry.php','report.php','save.php']) ? 'active' : '' ?>">
+    <a href="<?= $rp ?>daily-work/entry.php" class="tree-node <?= $currentDir === 'daily-work' && in_array($currentPage, ['entry.php','save.php','edit.php','import.php']) ? 'active' : '' ?>">
       <i class="fa-regular fa-clipboard fa-fw"></i><span><?= h(t('nav_daily_work')) ?></span>
     </a>
     <a href="<?= $rp ?>daily-work/my-work.php" class="tree-node <?= $currentDir === 'daily-work' && $currentPage === 'my-work.php' ? 'active' : '' ?>">
@@ -169,9 +204,11 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
     <?php // टास्क कोणालाही (HOD/Management सुद्धा) मिळू शकतो — म्हणून "माझे टास्क" नेहमी दिसतो ?>
     <a href="<?= $rp ?>tasks/my-tasks.php" class="tree-node <?= $currentDir === 'tasks' && $currentPage === 'my-tasks.php' ? 'active' : '' ?>">
       <i class="fa-solid fa-user-check fa-fw"></i><span><?= h(t('nav_my_tasks')) ?></span>
+      <?= navCount($navBadge['myTasks'], $navBadge['myTasksOverdue'] ? 'rose' : 'amber') ?>
     </a>
     <a href="<?= $rp ?>renewals/index.php" class="tree-node <?= $currentDir === 'renewals' ? 'active' : '' ?>">
       <i class="fa-solid fa-shield-halved fa-fw"></i><span><?= h(t('nav_renewals')) ?></span>
+      <?= navCount($navBadge['renewals'], 'rose') ?>
     </a>
     <a href="<?= $rp ?>daily-work/report.php" class="tree-node <?= $currentDir === 'daily-work' && in_array($currentPage, ['report.php', 'report-print.php'], true) ? 'active' : '' ?>">
       <i class="fa-solid fa-file-pdf fa-fw"></i><span><?= h(t('nav_reports')) ?></span>
@@ -215,9 +252,6 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
       <a href="<?= $rp ?>requests/my-requests.php" class="tree-node <?= $currentDir === 'requests' && $currentPage === 'my-requests.php' ? 'active' : '' ?>">
         <i class="fa-solid fa-list-check fa-fw"></i><span>माझ्या पाठवलेल्या विनंत्या</span>
       </a>
-      <a href="<?= $rp ?>requests/create.php?category=it" class="tree-node <?= $currentDir === 'requests' && $currentPage === 'create.php' && ($_GET['category'] ?? '') === 'it' ? 'active' : '' ?>">
-        <i class="fa-solid fa-headset fa-fw"></i><span>🖥️ IT तक्रार/विनंती नोंदवा</span>
-      </a>
       <a href="<?= $rp ?>staff/index.php?view=tree" class="tree-node <?= $currentDir === 'staff' && $currentPage === 'index.php' && ($_GET['view'] ?? '') === 'tree' ? 'active' : '' ?>">
         <i class="fa-solid fa-address-book fa-fw"></i><span>📇 कर्मचारी Directory</span>
       </a>
@@ -241,6 +275,7 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
     <?php // Attendance/रजा सगळ्यांनाच लागू — हा Group नेहमी दिसतो (आतले Staff-Directory/पगार-अहवाल Links मात्र फक्त Permission असलेल्यांनाच). ?>
       <div class="nav-group-header" data-bs-toggle="collapse" data-bs-target="#navGroupStaff" aria-expanded="<?= navGroupExpanded('staff', $activeGroup) ?>">
         <span class="label"><i class="fa-solid fa-address-book fa-fw"></i> कर्मचारी</span>
+        <?php if ($navBadge['leaveApprovals'] > 0): ?><span class="nav-group-badge"><?= $navBadge['leaveApprovals'] ?></span><?php endif; ?>
         <i class="fa-solid fa-chevron-right chevron"></i>
       </div>
       <div class="collapse nav-group-body <?= navGroupOpen('staff', $activeGroup) ?>" id="navGroupStaff">
@@ -258,6 +293,7 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
         <?php /* staff/leave-approvals.php मधलीच अट — दोन्ही ठिकाणी सारखीच */ if (hasCategory('hod') || hasPermission('view_org_wide_dashboards') || hasRole('super_admin')): ?>
           <a href="<?= $rp ?>staff/leave-approvals.php" class="tree-node <?= $currentDir === 'staff' && $currentPage === 'leave-approvals.php' ? 'active' : '' ?>">
             <i class="fa-solid fa-clipboard-check fa-fw"></i><span>✅ रजा-अर्ज मंजुरी</span>
+            <?= navCount($navBadge['leaveApprovals']) ?>
           </a>
         <?php endif; ?>
         <?php if (isManagementOrAbove()): ?>
@@ -629,27 +665,4 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
   </div>
 </aside>
 
-<script>
-window.addEventListener('DOMContentLoaded', function () {
-  var input = document.getElementById('navQuickFind');
-  if (!input) return;
-  input.addEventListener('input', function () {
-    var q = input.value.trim().toLowerCase();
-    var nodes = document.querySelectorAll('#navTreeRoot .tree-node');
-    if (!q) {
-      nodes.forEach(function (n) { n.style.display = 'flex'; });
-      return;
-    }
-    // शोध चालू असताना — सगळे Groups उघडे ठेवा, आणि न-जुळणारे links लपवा
-    if (window.bootstrap && window.bootstrap.Collapse) {
-      document.querySelectorAll('#navTreeRoot .nav-group-body').forEach(function (g) {
-        window.bootstrap.Collapse.getOrCreateInstance(g, { toggle: false }).show();
-      });
-    }
-    nodes.forEach(function (n) {
-      var text = n.textContent.toLowerCase();
-      n.style.display = text.indexOf(q) !== -1 ? 'flex' : 'none';
-    });
-  });
-});
-</script>
+<script src="<?= $rp ?>assets/js/sidebar-smart.js?v=1" defer></script>
