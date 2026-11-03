@@ -136,5 +136,11 @@ Legend: ✅ in the ERP · 🟡 partly (gaps listed) · ⏳ scheduled (phase) · 
 
 ## Data migration
 
-The old data (both organizations) is imported by an importer in Phase 11, table by table, with a dry
-run report of anything it cannot map. Until cutover the old app stays live.
+The old data (both organizations) is imported by an importer in Phase 11d, table by table, with a dry
+run report of anything it cannot map ([`erp/docs/LEGACY-IMPORT.md`](../../erp/docs/LEGACY-IMPORT.md)).
+Until cutover the old app stays live.
+
+- ✅ 11d-1: organizations, campuses, departments, accounts (passwords kept) and roles, employees with
+  private details, family, achievements, students.
+- ⏳ 11d-2 attendance, leave, work, tasks · 11d-3 letters, finance, renewals, vehicles, maintenance,
+  requests, grievances · 11d-4 hostels, residency, store, purchasing, assets, IT, CCTV, files.

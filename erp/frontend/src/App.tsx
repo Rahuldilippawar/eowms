@@ -56,6 +56,7 @@ import { TvDisplaysPage } from '@/features/about/TvDisplaysPage'
 import { TvScreenPage } from '@/features/about/TvScreenPage'
 import { ActivityLogPage } from '@/features/audit/ActivityLogPage'
 import { DeviceKeysPage } from '@/features/auth/DeviceKeysPage'
+import { LegacyImportPage } from '@/features/legacy/LegacyImportPage'
 import { SystemPage } from '@/features/system/SystemPage'
 import { BackupsPage } from '@/features/backup/BackupsPage'
 import { OrganizationDataPage } from '@/features/backup/OrganizationDataPage'
@@ -265,6 +266,14 @@ export function AppRoutes() {
           <Route path="organization" element={guard('organizations.edit', <OrganizationSettingsPage />)} />
           <Route path="about" element={<AboutPage />} />
           <Route path="organization/tv" element={guard('organizations.edit', <TvDisplaysPage />)} />
+          <Route
+            path="admin/legacy-import"
+            element={
+              <RequirePermission superAdmin>
+                <LegacyImportPage />
+              </RequirePermission>
+            }
+          />
           <Route
             path="admin/system"
             element={

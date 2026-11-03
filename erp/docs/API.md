@@ -491,3 +491,13 @@ Rules: [`ABOUT-AND-TV.md`](ABOUT-AND-TV.md), [`SYSTEM.md`](SYSTEM.md). "Org admi
 | GET | `/admin/system` | super admin | Versions, checks, pending migrations, scheduler heartbeat, latest backup |
 | POST | `/admin/system/migrate` | super admin | `password, confirmation: "MIGRATE"`; safety backup first; returns `ran`, `safety_backup` |
 
+## Phase 11d — old data import
+
+Rules: [`LEGACY-IMPORT.md`](LEGACY-IMPORT.md). Super admins only.
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/admin/legacy-import` | `source{connected, error?, tables?}`, the last 20 runs |
+| GET | `/admin/legacy-import/runs/{id}` | One run with its report (per step: read, created, existing, matched, skipped, skips[], warnings[]) |
+| POST | `/admin/legacy-import` | `mode: dry_run` or `mode: import` with `password, confirmation: "IMPORT"`; 409 when the copy is not connected |
+

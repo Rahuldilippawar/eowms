@@ -19,7 +19,7 @@ final class DatabaseBackup
 {
     public const HEADER = '-- ERP database backup v1';
 
-    public const KINDS = ['manual', 'scheduled', 'uploaded', 'pre_restore', 'pre_clear', 'pre_migrate'];
+    public const KINDS = ['manual', 'scheduled', 'uploaded', 'pre_restore', 'pre_clear', 'pre_migrate', 'pre_import'];
 
     /** Scheduled backups kept; the others stay until someone deletes them. */
     public const KEEP_SCHEDULED = 14;
@@ -27,7 +27,7 @@ final class DatabaseBackup
     /** Per-request state that is never worth restoring. */
     private const SKIP_TABLES = ['sessions', 'cache', 'cache_locks', 'jobs', 'job_batches', 'failed_jobs', 'password_reset_tokens'];
 
-    private const NAME = '/^erp-backup-(\d{8}-\d{6})-(manual|scheduled|uploaded|pre_restore|pre_clear|pre_migrate)(?:-\d+)?\.sql\.gz$/';
+    private const NAME = '/^erp-backup-(\d{8}-\d{6})-(manual|scheduled|uploaded|pre_restore|pre_clear|pre_migrate|pre_import)(?:-\d+)?\.sql\.gz$/';
 
     public function directory(): string
     {
