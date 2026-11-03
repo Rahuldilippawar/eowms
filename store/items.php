@@ -69,6 +69,32 @@ $itemsStmt = $pdo->prepare("
 $itemsStmt->execute([$orgId]);
 $items = $itemsStmt->fetchAll();
 
+// 📊 वापराचं विश्लेषण — कामाच्या नोंदींमध्ये (work_record_materials) वापरलेलं साहित्य
+$usage = [];
+try {
+    $uStmt = $pdo->prepare("SELECT m.item_id,
+            SUM(CASE WHEN wr.work_date >= DATE_SUB(CURDATE(), INTERVAL 29 DAY) THEN m.quantity_used ELSE 0 END) q30,
+            SUM(CASE WHEN wr.work_date BETWEEN DATE_SUB(CURDATE(), INTERVAL 59 DAY) AND DATE_SUB(CURDATE(), INTERVAL 30 DAY) THEN m.quantity_used ELSE 0 END) qprev,
+            SUM(wr.work_date >= DATE_SUB(CURDATE(), INTERVAL 29 DAY)) uses30,
+            MAX(wr.work_date) last_used
+        FROM work_record_materials m JOIN work_records wr ON wr.id = m.work_record_id
+        WHERE wr.organization_id = ? GROUP BY m.item_id");
+    $uStmt->execute([$orgId]);
+    foreach ($uStmt->fetchAll() as $u) { $usage[(int)$u['item_id']] = $u; }
+} catch (PDOException $e) {}
+$activeItems = array_filter($items, fn($i) => $i['is_active']);
+$usedIn30 = 0; $deadItems = []; $topUsed = []; $catCounts = [];
+foreach ($activeItems as $it) {
+    $u = $usage[(int)$it['id']] ?? null;
+    if ($u && (float)$u['q30'] > 0) { $usedIn30++; $topUsed[] = ['name' => $it['item_name'], 'unit' => $it['unit'], 'q' => (float)$u['q30'], 'uses' => (int)$u['uses30']]; }
+    if (!$u || !$u['last_used'] || strtotime($u['last_used']) < strtotime('-90 days')) { $deadItems[] = $it['item_name']; }
+    $cat = trim((string)$it['category']) ?: 'इतर';
+    $catCounts[$cat] = ($catCounts[$cat] ?? 0) + 1;
+}
+usort($topUsed, fn($a, $b) => $b['uses'] <=> $a['uses'] ?: $b['q'] <=> $a['q']);
+$topUsed = array_slice($topUsed, 0, 6);
+arsort($catCounts);
+
 $deptsStmt = $pdo->prepare("SELECT id, name_local, name FROM departments WHERE organization_id = ? AND is_active = 1 ORDER BY name_local");
 $deptsStmt->execute([$orgId]);
 $deptsForItems = $deptsStmt->fetchAll();
@@ -132,13 +158,53 @@ $campusesForCascade = $campusesForCascade->fetchAll();
   </form>
 </div>
 
+<?php if ($activeItems): ?>
+<div class="hi-totals mb-3">
+  <div><span>सक्रिय वस्तू</span><b><?= count($activeItems) ?></b><small><?= count($catCounts) ?> प्रकार</small></div>
+  <div><span>३० दिवसांत वापरलेल्या</span><b class="c-ok"><?= $usedIn30 ?></b><small><?= count($activeItems) ? (int)round($usedIn30 * 100 / count($activeItems)) : 0 ?>% वस्तू</small></div>
+  <div><span>९० दिवस न वापरलेल्या</span><b class="c-amber"><?= count($deadItems) ?></b><small>यादी स्वच्छ करण्याचा विचार करा</small></div>
+  <div><span>सर्वाधिक प्रकार</span><b style="font-size:16px;"><?= h(array_key_first($catCounts) ?? '—') ?></b><small><?= reset($catCounts) ?: 0 ?> वस्तू</small></div>
+</div>
+<div class="row g-3 mb-3">
+  <div class="col-lg-7">
+    <div class="panel h-100">
+      <div class="panel-head"><div class="title">🔥 सर्वाधिक वापरलेलं साहित्य — मागील ३० दिवस</div><div class="sub">कामाच्या नोंदींमधून · किती वेळा व किती प्रमाणात</div></div>
+      <div style="padding:12px 20px;">
+        <?php if (!$topUsed): ?><div class="sm-empty">मागील ३० दिवसांत कामात साहित्य वापर नोंदवलेला नाही</div><?php endif; ?>
+        <?php $maxUses = $topUsed ? max(array_column($topUsed, 'uses')) : 1; foreach ($topUsed as $t): ?>
+          <div class="wl-row"><div class="wl-name" title="<?= h($t['name']) ?>"><?= h($t['name']) ?></div>
+            <div class="wl-bar"><i style="width:<?= round($t['uses'] * 100 / max(1, $maxUses)) ?>%;background:var(--amber);"></i></div>
+            <div class="wl-num font-mono"><?= rtrim(rtrim(number_format($t['q'], 2), '0'), '.') ?> <?= h($t['unit']) ?> · <?= $t['uses'] ?>×</div></div>
+        <?php endforeach; ?>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="panel h-100">
+      <div class="panel-head"><div class="title">💤 ९० दिवस न वापरलेल्या वस्तू</div><div class="sub">गरज नसल्यास निष्क्रिय करा — यादी सुटसुटीत राहील</div></div>
+      <div style="padding:12px 20px;display:flex;flex-wrap:wrap;gap:6px;max-height:220px;overflow:auto;">
+        <?php if (!$deadItems): ?><div class="sm-empty" style="width:100%;">✅ सर्व वस्तू वापरात आहेत</div><?php endif; ?>
+        <?php foreach (array_slice($deadItems, 0, 40) as $dn): ?><span class="st-dead"><?= h($dn) ?></span><?php endforeach; ?>
+        <?php if (count($deadItems) > 40): ?><span class="st-dead">+<?= count($deadItems) - 40 ?> आणखी</span><?php endif; ?>
+      </div>
+    </div>
+  </div>
+</div>
+<?php endif; ?>
+
 <div class="panel">
   <table class="rtable">
-    <thead><tr><th>वस्तू</th><th>प्रकार</th><th>विभाग</th><th>एकक</th><th>किमान मर्यादा</th><th></th></tr></thead>
+    <thead><tr><th>वस्तू</th><th>प्रकार</th><th>विभाग</th><th>एकक</th><th>किमान मर्यादा</th><th title="मागील ३० दिवसांत कामात वापरलेलं प्रमाण">३० दिवस वापर</th><th>शेवटचा वापर</th><th></th></tr></thead>
     <tbody>
       <?php foreach ($items as $it): ?>
         <tr style="<?= $it['is_active'] ? '' : 'opacity:.55;' ?>">
           <td style="font-weight:500;"><?= h($it['item_name']) ?><?= $it['is_active'] ? '' : ' <span class="status-chip overdue">निष्क्रिय</span>' ?></td><td><?= h($it['category']) ?></td><td><?= h($it['dept_name'] ?: '⚪ सामायिक') ?></td><td><?= h($it['unit']) ?></td><td><?= number_format($it['reorder_level'], 2) ?></td>
+          <?php $u = $usage[(int)$it['id']] ?? null; $q30 = $u ? (float)$u['q30'] : 0; $qp = $u ? (float)$u['qprev'] : 0; ?>
+          <td class="font-mono" data-sort="<?= $q30 ?>"><?= $q30 > 0 ? rtrim(rtrim(number_format($q30, 2), '0'), '.') : '—' ?>
+            <?php if ($q30 > 0 || $qp > 0): $chg = $qp > 0 ? (int)round(($q30 - $qp) * 100 / $qp) : null; ?>
+              <span style="font-size:10.5px;color:<?= $chg === null ? 'var(--rail)' : ($chg > 0 ? 'var(--amber)' : 'var(--rail)') ?>;"><?= $chg === null ? '▲ नवीन' : ($chg > 0 ? '▲' : ($chg < 0 ? '▼' : '→')) . ' ' . abs($chg ?? 0) . '%' ?></span>
+            <?php endif; ?></td>
+          <td class="font-mono" style="font-size:12px;"><?= $u && $u['last_used'] ? date('d M Y', strtotime($u['last_used'])) : '<span style="color:var(--text-dim);">कधीच नाही</span>' ?></td>
           <td style="white-space:nowrap;">
             <button type="button" class="btn btn-sm" style="border:1px solid var(--line);border-radius:7px;font-size:11px;padding:3px 10px;" onclick="document.getElementById('itemEdit<?= $it['id'] ?>').classList.toggle('d-none')">Edit</button>
             <form method="POST" style="display:inline;" onsubmit="return confirm('<?= $it['is_active'] ? 'ही वस्तू निष्क्रिय करायची?' : 'ही वस्तू पुन्हा सक्रिय करायची?' ?>')">
@@ -148,7 +214,7 @@ $campusesForCascade = $campusesForCascade->fetchAll();
           </td>
         </tr>
         <tr id="itemEdit<?= $it['id'] ?>" class="d-none">
-          <td colspan="6">
+          <td colspan="8">
             <form method="POST" class="row g-2 align-items-end">
               <input type="hidden" name="action" value="update"><input type="hidden" name="item_id" value="<?= $it['id'] ?>">
               <div class="col-md-3"><input type="text" name="item_name" class="form-control-custom" value="<?= h($it['item_name']) ?>" required></div>

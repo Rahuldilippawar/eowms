@@ -77,6 +77,26 @@ $countExpired = (int)$countRow['expired'];
 
 $countHealthy = max(0, $countAll - $countDue - $countExpired);
 
+// 📊 Smart — पुढील १२ महिन्यांचा खर्च-अंदाज व "आत्ता कृती करा" यादी (त्याच विभाग-Filter प्रमाणे)
+$forecast = [];
+for ($i = 0; $i < 12; $i++) { $k = date('Y-m', strtotime(date('Y-m-01') . " +$i month")); $forecast[$k] = ['label' => date('M y', strtotime($k . '-01')), 'cost' => 0.0, 'cnt' => 0]; }
+$fcStmt = $pdo->prepare("SELECT DATE_FORMAT(expiry_date, '%Y-%m') ym, COUNT(*) cnt, SUM(COALESCE(renewal_cost, 0)) cost
+    FROM renewal_items WHERE $countScopeSql AND expiry_date BETWEEN DATE_FORMAT(CURDATE(), '%Y-%m-01') AND LAST_DAY(DATE_ADD(CURDATE(), INTERVAL 11 MONTH))
+    GROUP BY ym");
+$fcStmt->execute($countScopeParams);
+foreach ($fcStmt->fetchAll() as $r) { if (isset($forecast[$r['ym']])) { $forecast[$r['ym']]['cost'] = (float)$r['cost']; $forecast[$r['ym']]['cnt'] = (int)$r['cnt']; } }
+$forecastTotal = array_sum(array_column($forecast, 'cost'));
+$overdueCostStmt = $pdo->prepare("SELECT SUM(COALESCE(renewal_cost, 0)) FROM renewal_items WHERE $countScopeSql AND expiry_date < CURDATE()");
+$overdueCostStmt->execute($countScopeParams);
+$overdueCost = (float)$overdueCostStmt->fetchColumn();
+$compliancePct = $countAll > 0 ? (int)round(($countAll - $countExpired) * 100 / $countAll) : null;
+$actStmt = $pdo->prepare("SELECT r.id, r.item_name, r.expiry_date, r.renewal_cost, d.name_local AS dept_name, DATEDIFF(r.expiry_date, CURDATE()) days_left
+    FROM renewal_items r JOIN departments d ON d.id = r.department_id
+    WHERE r.id IN (SELECT id FROM renewal_items WHERE $countScopeSql AND expiry_date <= DATE_ADD(CURDATE(), INTERVAL 7 DAY))
+    ORDER BY r.expiry_date LIMIT 6");
+$actStmt->execute($countScopeParams);
+$actionItems = $actStmt->fetchAll();
+
 // Government Compliance Overview — Regulatory Body-निहाय सारांश
 $regBodyStmt = $pdo->prepare("
     SELECT regulatory_body,
@@ -176,12 +196,53 @@ if ($showGrouped) {
 <?php if ($countAll > 0): ?>
 <div class="row g-3 mt-2 mb-1">
   <div class="col-lg-4">
-    <div class="panel">
-      <div class="panel-head"><div class="title">नूतनीकरण स्थिती</div></div>
+    <div class="panel h-100">
+      <div class="panel-head d-flex justify-content-between align-items-center"><div class="title">नूतनीकरण स्थिती</div>
+        <?php if ($compliancePct !== null): ?><span class="rn-compliance <?= $compliancePct >= 95 ? 'ok' : ($compliancePct >= 80 ? 'warn' : 'bad') ?>" title="मुदत न संपलेल्या नोंदींचं प्रमाण">Compliance <?= $compliancePct ?>%</span><?php endif; ?></div>
       <div style="padding:16px 18px;"><canvas id="renewalStatusChart" height="130"></canvas></div>
     </div>
   </div>
+  <div class="col-lg-8">
+    <div class="panel h-100">
+      <div class="panel-head d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div><div class="title">💰 पुढील १२ महिन्यांचा नूतनीकरण-खर्च अंदाज</div><div class="sub">कोणत्या महिन्यात किती रक्कम लागेल — आधीच Budget ठरवा</div></div>
+        <div class="ai-month-kpis"><span>१२ महिने <b>₹<?= number_format($forecastTotal) ?></b></span><?php if ($overdueCost > 0): ?><span>संपलेल्यांचा <b class="c-rose">₹<?= number_format($overdueCost) ?></b></span><?php endif; ?></div>
+      </div>
+      <div style="padding:12px 18px;height:220px;position:relative;"><canvas id="renewalForecastChart"></canvas></div>
+    </div>
+  </div>
+  <?php if ($actionItems): ?>
+  <div class="col-12">
+    <div class="panel" style="border-left:4px solid var(--rose);">
+      <div class="panel-head"><div class="title">🚨 आत्ता कृती करा — संपलेली व ७ दिवसांत संपणारी</div><div class="sub">नोंद उघडून "नूतनीकरण करा" दाबा</div></div>
+      <div class="rn-action-grid">
+        <?php foreach ($actionItems as $ai): $dl = (int)$ai['days_left']; ?>
+          <a class="rn-action" href="?item=<?= (int)$ai['id'] ?>">
+            <span class="sm-when <?= $dl < 0 ? 'rose' : 'amber' ?>"><?= $dl < 0 ? abs($dl) . ' दिवसांपूर्वी संपलं' : ($dl === 0 ? 'आज संपतं' : $dl . ' दिवस बाकी') ?></span>
+            <div class="sm-t mt-1"><?= h($ai['item_name']) ?></div>
+            <div class="sm-s"><?= h($ai['dept_name']) ?> · <?= date('d M Y', strtotime($ai['expiry_date'])) ?><?= $ai['renewal_cost'] ? ' · ₹' . number_format((float)$ai['renewal_cost']) : '' ?></div>
+          </a>
+        <?php endforeach; ?>
+      </div>
+    </div>
+  </div>
+  <?php endif; ?>
 </div>
+<script>
+window.addEventListener('DOMContentLoaded', function () {
+  if (typeof Chart === 'undefined') return;
+  var fc = <?= json_encode(array_values($forecast), JSON_UNESCAPED_UNICODE) ?>;
+  var dim = getComputedStyle(document.documentElement).getPropertyValue('--text-dim').trim() || '#6B7080';
+  var line = getComputedStyle(document.documentElement).getPropertyValue('--line').trim() || '#E4E6EC';
+  new Chart(document.getElementById('renewalForecastChart'), {
+    type: 'bar',
+    data: { labels: fc.map(function (x) { return x.label; }), datasets: [{ label: 'खर्च (₹)', data: fc.map(function (x) { return x.cost; }), backgroundColor: fc.map(function (x, i) { return i === 0 ? '#B23A48' : (i < 3 ? '#C97F1D' : '#1B8A83'); }), borderRadius: 5, maxBarThickness: 34 }] },
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: function (c) { return ' ₹' + c.raw.toLocaleString('en-IN') + ' · ' + fc[c.dataIndex].cnt + ' नोंदी'; } } } },
+      scales: { x: { grid: { display: false }, ticks: { color: dim, font: { size: 10.5 } } }, y: { beginAtZero: true, ticks: { color: dim, callback: function (v) { return '₹' + Number(v).toLocaleString('en-IN'); } }, grid: { color: line } } } }
+  });
+});
+</script>
 <?php endif; ?>
 
 <?php if ($showGrouped): ?>
