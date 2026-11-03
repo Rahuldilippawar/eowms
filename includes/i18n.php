@@ -173,7 +173,11 @@ function i18nTranslateHtml($html, $lang = null) {
         function ($m) use ($lang, $safeAttrs) {
             if (!empty($m[1])) {                       // <script> — JSON-LD / Template वगळून, JS मधली वाक्यं
                 if (preg_match('/type="(?!text\/javascript|module)/i', $m[1])) return $m[0];
-                return $m[1] . i18nText($m[2], $lang, true) . $m[3];
+                // फक्त JS Strings मधली वाक्यं (Comments नाहीत)
+                $js = preg_replace_callback('/(["\'`])((?:\\\\.|(?!\1)[^\\\\\n])*)\1/u', function ($s) use ($lang) {
+                    return $s[1] . i18nText($s[2], $lang, true) . $s[1];
+                }, $m[2]);
+                return $m[1] . $js . $m[3];
             }
             if (!empty($m[4])) {                       // <textarea> — फक्त Placeholder, आतला मजकूर नाही
                 return i18nTag($m[4], $lang, $safeAttrs) . $m[5] . $m[6];
