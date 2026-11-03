@@ -52,7 +52,6 @@ $statusChips = TICKET_STATUS_CHIPS;
     <a href="create.php" class="btn" style="background:var(--rail);color:#fff;border-radius:9px;font-size:13px;padding:9px 18px;font-weight:600;">
       <i class="fa-solid fa-plus me-1"></i>नवीन विनंती पाठवा
     </a>
-    <a href="create.php?category=it" class="btn" style="border:1px solid var(--rail);color:var(--rail);border-radius:9px;font-size:13px;padding:9px 18px;font-weight:600;">🖥️ IT विनंती</a>
   </div>
 </div>
 <div class="period-toggle mb-3">

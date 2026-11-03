@@ -5,8 +5,11 @@ requireLogin('../');
 $user = currentUser();
 $orgId = activeOrgId();
 
-// एकच विनंती-प्रणाली — ?category=it असेल तर IT चा Form (it/general-request.php इथेच येतो)
-$isItForm = (($_GET['category'] ?? $_POST['category'] ?? '') === 'it');
+// एकच विनंती-प्रणाली — वेगळा "IT तक्रार" Form काढून टाकला आहे. IT ला विनंती याच
+// Form मधून IT विभाग निवडून जाते (आणि आपोआप IT रांगेत — category = it).
+// जुने ?category=it Links / it/general-request.php इथेच साध्या Form वर येतात.
+if (($_GET['category'] ?? '') === 'it' && $_SERVER['REQUEST_METHOD'] !== 'POST') { header('Location: create.php'); exit; }
+$isItForm = false;
 $itDeptIdForJs = ticketItDepartmentId($pdo, $orgId) ?? 0;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -34,9 +37,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $deptIsValid = (bool)$deptCheckStmt->fetch();
     }
 
-    if (!$isItForm && $deptId && $itDeptIdForJs && (int)$deptId === (int)$itDeptIdForJs) {
-        $_SESSION['form_error'] = 'IT विभागाला विनंती पाठवण्यासाठी कृपया "IT तक्रार/विनंती नोंदवा" हा Form वापरा.';
-    } elseif (!$isItForm && $deptId && $deptIsValid && (int)$deptId === (int)($user['department_id'] ?? 0)) {
+    // IT विभागाला गेलेली विनंती — IT रांगेत दिसावी म्हणून category = it
+    if ($deptId && $itDeptIdForJs && (int)$deptId === (int)$itDeptIdForJs) { $category = 'it'; }
+    if (!$isItForm && $deptId && $deptIsValid && (int)$deptId === (int)($user['department_id'] ?? 0)) {
         $_SESSION['form_error'] = 'तुम्ही तुमच्याच विभागाला विनंती पाठवू शकत नाही.';
     } elseif (($isItForm || ($deptId && $deptIsValid)) && $workDescription && (!$isItForm || $title)) {
         try {
@@ -141,7 +144,7 @@ $campuses = $campusesStmt->fetchAll();
     <select name="department_id" id="deptSelect" class="form-select-custom mb-2" required disabled>
       <option value="">-- आधी College/School निवडा --</option>
     </select>
-    <p style="font-size:11px;color:var(--text-dim);margin-bottom:14px;">💡 <strong>IT/Internet/Software संबंधित</strong> असल्यास — <a href="create.php?category=it" style="color:var(--rail);font-weight:600;">इथे थेट IT ला कळवा</a> (जास्त जलद, Category/प्राधान्यसह).</p>
+    <p style="font-size:11px;color:var(--text-dim);margin-bottom:14px;">💡 IT / Internet / Software संबंधित काम असल्यास — वर IT विभाग निवडा.</p>
 
     <label class="form-label-custom">3️⃣ कोणाकडे पाठवायचं</label>
     <select name="assigned_to_user_id" id="personSelect" class="form-select-custom mb-3" disabled>
@@ -234,7 +237,7 @@ $campuses = $campusesStmt->fetchAll();
     fetch(rootPath + 'ajax-cascade.php?action=departments_for_campus&campus_id=' + (campusId === '0' ? '' : campusId))
       .then(function (r) { return r.json(); })
       .then(function (data) {
-        var depts = (data.departments || []).filter(function (d) { return String(d.id) !== String(myDeptId) && String(d.id) !== String(itDeptId); });
+        var depts = (data.departments || []).filter(function (d) { return String(d.id) !== String(myDeptId); });
         if (depts.length === 0) {
           deptSelect.innerHTML = '<option value="">-- या अंतर्गत कोणताही विभाग नाही --</option>';
           return;
