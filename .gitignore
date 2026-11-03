@@ -5,3 +5,8 @@ backups/*.zip
 *.log
 .DS_Store
 config/app-secret.php
+
+# Backup files never belong in git (contain staff data / password hashes)
+backups/auto/
+backups/update-safety/
+update-staging/

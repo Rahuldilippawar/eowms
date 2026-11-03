@@ -2,23 +2,7 @@
 require_once __DIR__ . '/../includes/auth.php';
 requireLogin('../');
 requireRole(['super_admin'], '../');
-require_once __DIR__ . '/../includes/update-helpers.php';
 $user = currentUser();
-
-$stagingDir = __DIR__ . '/../update-staging';
-$hasStaged = is_dir($stagingDir) && count(array_diff(scandir($stagingDir), ['.', '..', '.htaccess'])) > 0;
-
-$stagedFiles = [];
-if ($hasStaged) {
-    $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($stagingDir, RecursiveDirectoryIterator::SKIP_DOTS));
-    foreach ($iterator as $file) {
-        if (!$file->isFile()) continue;
-        $rel = str_replace('\\', '/', substr($file->getRealPath(), strlen($stagingDir) + 1));
-        if ($rel === '.htaccess') continue;
-        $stagedFiles[] = $rel;
-    }
-    sort($stagedFiles);
-}
 
 $pageTitle = 'System Update';
 $rootPath = '../';
@@ -43,7 +27,7 @@ if (is_dir($backupHistoryDir)) {
     <a href="push-setup.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13px;padding:9px 16px;"><i class="fa-solid fa-bell me-1"></i>📲 Push Notification Setup</a>
   </div>
 </div>
-<p style="font-size:12.5px;color:var(--text-dim);margin-bottom:20px;">Developer कडून मिळालेली नवीन ZIP Upload करून, App स्वतःच Update करा — FTP/File Manager ची गरज नाही.</p>
+<p style="font-size:12.5px;color:var(--text-dim);margin-bottom:20px;">App चे Updates आता थेट GitHub वरून आपोआप Live होतात — इथून ZIP Upload करण्याची गरज नाही (ती सुविधा सुरक्षिततेसाठी काढली आहे).</p>
 
 <?php if (!empty($_SESSION['flash'])): ?>
   <div class="alert alert-success" style="border-radius:10px;font-size:13px;"><?= h($_SESSION['flash']) ?></div>
@@ -54,66 +38,27 @@ if (is_dir($backupHistoryDir)) {
   <?php unset($_SESSION['form_error']); ?>
 <?php endif; ?>
 
-<?php if (!class_exists('ZipArchive')): ?>
-  <div class="alert alert-danger" style="border-radius:10px;font-size:12.5px;padding:16px 20px;">
-    ❌ <strong>Server वर PHP चा "zip" Extension Enabled नाही</strong> — त्यामुळे हे Feature सध्या वापरता येणार नाही.<br><br>
-    <strong>जर Localhost/XAMPP वर असाल:</strong>
-    <ol style="margin:6px 0 0 18px;padding:0;">
-      <li><span class="font-mono">C:\xampp\php\php.ini</span> ही File Notepad ने उघडा</li>
-      <li>त्यात <span class="font-mono">;extension=zip</span> असं शोधा — सुरुवातीचा <span class="font-mono">;</span> (Semicolon) काढून टाका</li>
-      <li>Save करा, मग XAMPP Control Panel मधून Apache **Stop → Start** करा</li>
-      <li>हे पान Refresh करा</li>
-    </ol>
-    <strong>जर Live Hosting (Hostinger) वर असाल:</strong> hPanel → PHP Configuration मध्ये जाऊन "zip" Extension चालू करा, किंवा Hosting Support ला विचारा.
+<div class="row g-3">
+  <div class="col-md-4">
+    <a href="db-update.php" class="panel su-card"><i class="fa-solid fa-database"></i><b>🛠️ Database Update</b><span>नवीन Version नंतर लागणारे Database बदल (Migrations) तपासा व लागू करा</span></a>
   </div>
-<?php endif; ?>
-
-<div class="alert alert-warning" style="border-radius:10px;font-size:12.5px;">
-  🛡️ <strong>सुरक्षा:</strong> हे Folders कधीही बदलले जात नाहीत — <span class="font-mono">assets/uploads/, assets/audio/, backups/, config/</span>.
-  Apply करण्याआधी सध्याच्या सगळ्या Files चा आपोआप Backup घेतला जातो.
+  <div class="col-md-4">
+    <a href="maintenance.php" class="panel su-card"><i class="fa-solid fa-screwdriver-wrench"></i><b>🛠️ Site Maintenance Mode</b><span>काम चालू असताना Super Admin सोडून इतरांचा Login तात्पुरता थांबवा</span></a>
+  </div>
+  <div class="col-md-4">
+    <a href="push-setup.php" class="panel su-card"><i class="fa-solid fa-bell"></i><b>📲 Push Notification Setup</b><span>Browser / Mobile वर सूचना पाठवण्याची व्यवस्था</span></a>
+  </div>
 </div>
-
-<?php if (!$hasStaged): ?>
-  <div class="panel mt-3">
-    <div class="panel-head"><div class="title">1️⃣ नवीन Update ZIP Upload करा</div></div>
-    <form method="POST" action="upload.php" enctype="multipart/form-data" style="padding:22px 24px;">
-      <input type="file" name="update_zip" accept=".zip" required class="form-control-custom mb-3">
-      <button type="submit" class="btn" style="background:var(--rail);color:#fff;border-radius:9px;font-size:13.5px;padding:9px 22px;font-weight:600;">
-        <i class="fa-solid fa-upload me-1"></i>Upload करून तपासा
-      </button>
-    </form>
-  </div>
-<?php else: ?>
-  <div class="panel mt-3" style="border-color:var(--amber);">
-    <div class="panel-head"><div class="title">2️⃣ काय-काय बदलणार आहे — तपासा</div></div>
-    <div style="padding:16px 24px;">
-      <p style="font-size:12.5px;color:var(--text-dim);">एकूण <strong><?= count($stagedFiles) ?></strong> Files Update होतील:</p>
-      <div style="max-height:280px;overflow-y:auto;background:var(--canvas);border-radius:10px;padding:12px 16px;font-family:'JetBrains Mono',monospace;font-size:11.5px;">
-        <?php foreach ($stagedFiles as $f): ?>
-          <div><?= h($f) ?></div>
-        <?php endforeach; ?>
-      </div>
-    </div>
-  </div>
-
-  <div class="panel mt-3" style="border-color:var(--rose);">
-    <div class="panel-head"><div class="title">3️⃣ Apply करा (अंतिम पायरी)</div></div>
-    <form method="POST" action="apply.php" style="padding:22px 24px;">
-      <p style="font-size:12.5px;color:var(--text-dim);margin-bottom:14px;">Apply करण्याआधी सध्याच्या सगळ्या Files चा Backup आपोआप घेतला जाईल. खात्री करण्यासाठी खाली <strong>CONFIRM</strong> टाईप करा.</p>
-      <input type="text" name="confirm_text" class="form-control-custom mb-3" placeholder="CONFIRM असं टाईप करा" required style="max-width:280px;">
-      <div class="d-flex gap-2">
-        <button type="submit" class="btn" style="background:var(--rose);color:#fff;border-radius:9px;font-size:13.5px;padding:9px 22px;font-weight:600;">
-          <i class="fa-solid fa-triangle-exclamation me-1"></i>Update Apply करा
-        </button>
-        <button type="submit" formaction="cancel.php" formnovalidate class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13.5px;padding:9px 22px;">रद्द करा</button>
-      </div>
-    </form>
-  </div>
-<?php endif; ?>
+<style>
+  .su-card { display: flex; flex-direction: column; gap: 6px; padding: 18px 20px; text-decoration: none; color: inherit; height: 100%; transition: border-color .15s, transform .15s; }
+  .su-card:hover { border-color: var(--rail); transform: translateY(-2px); }
+  .su-card i { font-size: 20px; color: var(--rail); }
+  .su-card b { font-size: 14px; } .su-card span { font-size: 12px; color: var(--text-dim); }
+</style>
 
 <?php if (!empty($safetyBackups)): ?>
   <div class="panel mt-4">
-    <div class="panel-head"><div class="title">🛡️ अलीकडचे Safety Backups (Update करण्याआधीचे)</div></div>
+    <div class="panel-head"><div class="title">🛡️ जुने Safety Backups</div><div class="sub">आधीच्या ZIP Updates वेळी घेतलेले — गरज असल्यास Download करता येतात</div></div>
     <table class="rtable">
       <thead><tr><th>File</th><th>आकार</th><th>दिनांक</th><th></th></tr></thead>
       <tbody>
