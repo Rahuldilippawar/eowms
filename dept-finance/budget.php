@@ -103,7 +103,8 @@ document.addEventListener('DOMContentLoaded', function () {
   <div style="padding:16px 20px;"><canvas id="budgetDrilldownChart" height="90"></canvas></div>
 </div>
 <script>
-(function () {
+// Chart.js Footer मध्ये लोड होतं — म्हणून पान पूर्ण लोड झाल्यावरच Chart काढतो
+document.addEventListener('DOMContentLoaded', function () {
   const deptData = <?= json_encode(array_map(fn($d) => ['name' => $d['name_local'] ?: $d['name'], 'id' => $d['id'], 'spent' => $budgetRows[$d['id']]['spent'], 'by_category' => $budgetRows[$d['id']]['by_category'] ?? []], array_values($departments))) ?>;
   const ctx = document.getElementById('budgetDrilldownChart');
   const palette = ['#1B8A83','#C97F1D','#B23A48','#8A5CD6','#2255AA','#666B7D','#2FA37A','#D4A017'];
@@ -149,7 +150,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   renderDeptLevel();
-})();
+});
 </script>
 
 <div class="panel">

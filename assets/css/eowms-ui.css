@@ -1,0 +1,120 @@
+/* ============================================================
+   EOWMS UI Polish — सगळ्या पानांसाठी एकसमान, आधुनिक दिसणं
+   (Buttons, Tables, Forms, Alerts, Panels, Dark Mode, Print)
+   फक्त दिसणं बदलतं — कुठल्याही पानाचं काम/Logic बदलत नाही.
+   ============================================================ */
+
+:root { --shadow-sm: 0 1px 2px rgba(16,22,43,.05); --shadow-md: 0 6px 18px rgba(16,22,43,.08); --ring: 0 0 0 3px rgba(27,138,131,.22); }
+[data-theme="dark"] { --shadow-sm: 0 1px 2px rgba(0,0,0,.3); --shadow-md: 0 8px 22px rgba(0,0,0,.35); --ring: 0 0 0 3px rgba(47,179,168,.3); }
+
+/* ---------- पान उघडताना हलकं Fade-in ---------- */
+.content { animation: eowmsPageIn .25s ease-out; }
+@keyframes eowmsPageIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .content, .kpi-card, .btn { animation: none !important; transition: none !important; } }
+
+/* ---------- Page Title ---------- */
+.page-title { letter-spacing: -.01em; }
+.page-eyebrow { display: inline-flex; align-items: center; gap: 6px; }
+
+/* ---------- Panels / Cards ---------- */
+.panel { box-shadow: var(--shadow-sm); transition: box-shadow .2s ease; }
+.panel:hover { box-shadow: var(--shadow-md); }
+.panel-head { background: linear-gradient(180deg, var(--surface), color-mix(in srgb, var(--canvas) 35%, var(--surface))); }
+.kpi-card, .kpi-mini { box-shadow: var(--shadow-sm); }
+
+/* ---------- Buttons (Inline Style असलेल्यांनाही Hover/Focus/Press) ---------- */
+.btn { transition: transform .12s ease, box-shadow .15s ease, filter .15s ease, background-color .15s ease; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.btn.w-100 { display: flex; }
+.btn:hover { filter: brightness(1.06); box-shadow: var(--shadow-md); }
+.btn:active { transform: translateY(1px) scale(.99); box-shadow: none; }
+.btn:focus-visible { outline: none; box-shadow: var(--ring); }
+.btn:disabled, .btn.is-busy { opacity: .7; cursor: progress; }
+.btn.is-busy::before { content: ""; width: 13px; height: 13px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: eowmsSpin .7s linear infinite; }
+@keyframes eowmsSpin { to { transform: rotate(360deg); } }
+[data-theme="dark"] .btn[style*="var(--line)"] { color: var(--text); }
+
+/* ---------- Tables ---------- */
+.rtable, .wtable { border-collapse: separate; border-spacing: 0; }
+.rtable tbody tr, .wtable tbody tr { transition: background-color .12s ease; }
+.rtable tbody tr:hover, .wtable tbody tr:hover { background: color-mix(in srgb, var(--rail) 5%, transparent); }
+.rtable tbody tr:last-child td, .wtable tbody tr:last-child td { border-bottom: 0; }
+.rtable td a, .wtable td a { color: var(--rail); font-weight: 600; text-decoration: none; }
+.rtable td a:hover, .wtable td a:hover { text-decoration: underline; }
+.rtable th, .wtable th { white-space: nowrap; }
+[data-theme="dark"] .rtable th, [data-theme="dark"] .wtable th { background: #1C2338; color: var(--text-dim); }
+[data-theme="dark"] .rtable td, [data-theme="dark"] .wtable td { color: var(--text); }
+
+/* Table Quick-Filter (JS ने मोठ्या Tables वर आपोआप) */
+.tbl-filter { display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--surface); }
+.tbl-filter input { flex: 1; max-width: 320px; border: 1px solid var(--line); border-radius: 8px; padding: 7px 12px; font-size: 13px; background: var(--canvas); color: var(--text); font-family: inherit; }
+.tbl-filter input:focus { outline: none; border-color: var(--rail); box-shadow: var(--ring); }
+.tbl-filter .tbl-count { font-size: 11.5px; color: var(--text-dim); white-space: nowrap; }
+.tbl-filter .fa-magnifying-glass { color: var(--text-dim); font-size: 12px; }
+
+/* ---------- Forms ---------- */
+.form-control-custom, .form-select-custom, .form-select, .form-control { transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease; }
+.form-control-custom:hover, .form-select-custom:hover { border-color: color-mix(in srgb, var(--rail) 35%, var(--line)); }
+.form-control-custom:focus, .form-select-custom:focus, .form-select:focus, .form-control:focus { outline: none; border-color: var(--rail); box-shadow: var(--ring); background: var(--surface); }
+.form-select, .form-control { border-color: var(--line); border-radius: 9px; font-size: 13.5px; }
+.form-label-custom .req, label .text-danger { color: var(--rose) !important; }
+input[type="checkbox"], input[type="radio"] { accent-color: var(--rail); }
+input[type="file"].form-control-custom { padding: 7px 10px; }
+input[type="file"]::file-selector-button { border: 0; background: var(--rail-soft); color: var(--rail); border-radius: 6px; padding: 5px 12px; margin-right: 10px; font-weight: 600; cursor: pointer; font-family: inherit; }
+[data-theme="dark"] .form-select, [data-theme="dark"] .form-control { background-color: var(--surface); border-color: var(--line); color: var(--text); }
+::placeholder { color: color-mix(in srgb, var(--text-dim) 75%, transparent) !important; }
+
+/* ---------- Alerts — थीमशी जुळणारे, डाव्या बाजूला रंगीत पट्टी ---------- */
+.alert { border: 1px solid transparent; border-left-width: 4px; border-radius: 10px; font-size: 13.5px; padding: 12px 16px; box-shadow: var(--shadow-sm); position: relative; animation: eowmsPageIn .25s ease-out; }
+.alert-success { background: var(--rail-soft); color: color-mix(in srgb, var(--rail) 75%, #000); border-color: color-mix(in srgb, var(--rail) 25%, transparent); border-left-color: var(--rail); }
+.alert-danger { background: var(--rose-soft); color: color-mix(in srgb, var(--rose) 80%, #000); border-color: color-mix(in srgb, var(--rose) 25%, transparent); border-left-color: var(--rose); }
+.alert-warning { background: var(--amber-soft); color: color-mix(in srgb, var(--amber) 70%, #000); border-color: color-mix(in srgb, var(--amber) 25%, transparent); border-left-color: var(--amber); }
+.alert-info { background: #E3ECFA; color: #1F4C94; border-color: #C9D9F3; border-left-color: #3B6FC9; }
+[data-theme="dark"] .alert-success { color: #8FE0D8; }
+[data-theme="dark"] .alert-danger { color: #F3A6B0; }
+[data-theme="dark"] .alert-warning { color: #F2C58C; }
+[data-theme="dark"] .alert-info { background: #18233D; color: #9DB8EA; border-color: #24345A; }
+.alert .alert-x { position: absolute; top: 8px; right: 10px; border: 0; background: transparent; color: inherit; opacity: .55; font-size: 16px; line-height: 1; cursor: pointer; padding: 2px 6px; border-radius: 6px; }
+.alert .alert-x:hover { opacity: 1; background: rgba(0,0,0,.06); }
+.alert.has-x { padding-right: 38px; }
+.alert.is-hiding { opacity: 0; transform: translateY(-4px); transition: opacity .3s ease, transform .3s ease; }
+
+/* ---------- Status Chips ---------- */
+.status-chip { display: inline-flex; align-items: center; gap: 5px; }
+.status-chip::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: .8; }
+
+/* ---------- Empty State ---------- */
+.empty-state { padding: 36px 20px; text-align: center; color: var(--text-dim); }
+
+/* ---------- Bootstrap घटक — Dark Mode मध्ये सुसंगत ---------- */
+[data-theme="dark"] .modal-content, [data-theme="dark"] .dropdown-menu, [data-theme="dark"] .card, [data-theme="dark"] .list-group-item { background: var(--surface); color: var(--text); border-color: var(--line); }
+[data-theme="dark"] .modal-header, [data-theme="dark"] .modal-footer { border-color: var(--line); }
+[data-theme="dark"] .btn-close { filter: invert(1) grayscale(1) brightness(1.6); }
+[data-theme="dark"] .text-muted { color: var(--text-dim) !important; }
+[data-theme="dark"] .table { --bs-table-bg: var(--surface); --bs-table-color: var(--text); --bs-table-border-color: var(--line); }
+.modal-content { border-radius: 14px; border: 1px solid var(--line); box-shadow: 0 24px 60px rgba(16,22,43,.25); }
+
+/* ---------- Sidebar: सक्रिय पानाचा डावा पट्टा ---------- */
+.tree-node { position: relative; transition: background-color .15s ease, color .15s ease; }
+.tree-node.active::before { content: ""; position: absolute; left: -4px; top: 7px; bottom: 7px; width: 3px; border-radius: 3px; background: var(--rail); }
+
+/* ---------- Scrollbars ---------- */
+* { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--text-dim) 45%, transparent) transparent; }
+::-webkit-scrollbar { width: 9px; height: 9px; }
+::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--text-dim) 40%, transparent); border-radius: 8px; border: 2px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* ---------- Keyboard Focus — सर्व Links/Controls ---------- */
+a:focus-visible, button:focus-visible, select:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--rail); outline-offset: 2px; border-radius: 4px; }
+
+/* ---------- वर जा (Back-to-top) ---------- */
+.to-top { position: fixed; right: 30px; bottom: 84px; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); color: var(--text); box-shadow: var(--shadow-md); display: flex; align-items: center; justify-content: center; cursor: pointer; opacity: 0; pointer-events: none; transform: translateY(8px); transition: opacity .2s ease, transform .2s ease; z-index: 35; }
+.to-top.show { opacity: 1; pointer-events: auto; transform: none; }
+
+/* ---------- Print — Sidebar/Topbar शिवाय स्वच्छ प्रिंट ---------- */
+@media print {
+  .rail-sidebar, .topbar, .sidebar-backdrop, .to-top, .tbl-filter, .alert .alert-x, .btn { display: none !important; }
+  .main-wrap { margin-left: 0 !important; }
+  .content { padding: 0 !important; animation: none; }
+  .panel { box-shadow: none !important; break-inside: avoid; }
+  body { background: #fff !important; }
+}
