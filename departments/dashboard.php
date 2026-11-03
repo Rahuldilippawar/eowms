@@ -154,6 +154,8 @@ foreach (['urgent', 'high', 'normal', 'low'] as $p) {
   </div>
 </div>
 
+<?php require __DIR__ . '/../includes/insights/department.php'; ?>
+
 <div class="row g-3 mb-4">
   <div class="col-12">
     <div class="panel">
@@ -179,6 +181,7 @@ foreach (['urgent', 'high', 'normal', 'low'] as $p) {
   </div>
 </div>
 
+<?php if (!$canSeeTeam): // HOD/व्यवस्थापनाला वरचा टीम-तक्ता दिसतो ?>
 <div class="row g-3 mb-4">
   <div class="col-12">
     <div class="panel">
@@ -198,6 +201,7 @@ foreach (['urgent', 'high', 'normal', 'low'] as $p) {
     </div>
   </div>
 </div>
+<?php endif; ?>
 
 <?php if (array_sum($statusCounts) > 0): ?>
 <div class="row g-3 mb-4">

@@ -250,6 +250,7 @@ $statusChip = ['pending' => 'pending', 'in_progress' => 'pending', 'completed' =
   </div>
 
   <div class="col-lg-8">
+    <?php require __DIR__ . '/../includes/insights/profile.php'; ?>
     <div class="panel mb-3">
       <div class="panel-head"><div class="title"><?= h(t('s287')) ?></div></div>
       <table class="rtable">
