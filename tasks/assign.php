@@ -29,6 +29,20 @@ $staffByDept = [];
 foreach ($allStaff as $s) {
     $staffByDept[$s['department_id']][] = $s;
 }
+
+// 🧠 प्रत्येक कर्मचाऱ्याकडे सध्या किती उघडे / मुदत संपलेले Tasks — Assign करताना भार दिसावा
+// आणि त्याच व्यक्तीकडे आधीच असाच उघडा Task आहे का ते तपासता यावं (दुहेरी काम टाळण्यासाठी)
+$staffLoad = []; $openTitles = [];
+try {
+    $ldStmt = $pdo->prepare("SELECT assigned_to, title, target_date FROM tasks WHERE organization_id = ? AND status IN ('pending','in_progress')");
+    $ldStmt->execute([activeOrgId()]);
+    foreach ($ldStmt->fetchAll() as $ld) {
+        $u = (int)$ld['assigned_to'];
+        $staffLoad[$u]['open'] = ($staffLoad[$u]['open'] ?? 0) + 1;
+        if ($ld['target_date'] < date('Y-m-d')) { $staffLoad[$u]['overdue'] = ($staffLoad[$u]['overdue'] ?? 0) + 1; }
+        if (count($openTitles[$u] ?? []) < 40) { $openTitles[$u][] = $ld['title']; }
+    }
+} catch (PDOException $e) {}
 ?>
 
 <div class="page-eyebrow"><?= h(activeOrgName()) ?></div>
@@ -127,15 +141,87 @@ foreach ($allStaff as $s) {
 </div>
 
 <script>
-const deptStaff = <?= json_encode(array_map(fn($rows) => array_map(fn($s) => ['id' => $s['id'], 'name' => $s['name']], $rows), $staffByDept), JSON_UNESCAPED_UNICODE) ?>;
+const deptStaff = <?= json_encode(array_map(fn($rows) => array_map(fn($s) => ['id' => (int)$s['id'], 'name' => $s['name'], 'open' => (int)($staffLoad[(int)$s['id']]['open'] ?? 0), 'overdue' => (int)($staffLoad[(int)$s['id']]['overdue'] ?? 0)], $rows), $staffByDept), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) ?>;
+const openTitles = <?= json_encode($openTitles, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) ?>;
 
+const assigneeSel = document.getElementById('task_assigned_to');
+const loadBox = document.createElement('div'); loadBox.className = 'as-load'; loadBox.hidden = true;
+assigneeSel.parentNode.appendChild(loadBox);
+
+// विभाग निवडल्यावर — कर्मचारी कमी भारानुसार क्रमाने, प्रत्येकाचा भार नावासोबत, सर्वात कमी भाराला "सुचवलेलं"
 document.getElementById('task_department_id').addEventListener('change', function () {
-  const select = document.getElementById('task_assigned_to');
-  const staff = deptStaff[this.value] || [];
-  select.innerHTML = staff.length
-    ? staff.map(s => `<option value="${s.id}">${s.name}</option>`).join('')
-    : '<option value=""><?= h(t('s214')) ?></option>';
+  const staff = (deptStaff[this.value] || []).slice().sort((a, b) => (a.overdue - b.overdue) || (a.open - b.open) || a.name.localeCompare(b.name));
+  assigneeSel.innerHTML = '';
+  if (!staff.length) {
+    const o = document.createElement('option'); o.value = ''; o.textContent = <?= json_encode(t('s214'), JSON_UNESCAPED_UNICODE) ?>; assigneeSel.appendChild(o);
+  }
+  staff.forEach((st, i) => {
+    const o = document.createElement('option');
+    o.value = st.id;
+    o.textContent = (i === 0 && staff.length > 1 ? '⭐ ' : '') + st.name + ' — ' + (st.open ? st.open + ' उघडे' + (st.overdue ? ' · ' + st.overdue + ' मुदतबाह्य' : '') : 'मोकळे');
+    assigneeSel.appendChild(o);
+  });
+  showLoad();
 });
+
+function showLoad() {
+  const deptSel = document.getElementById('task_department_id');
+  const st = (deptStaff[deptSel.value] || []).find(x => String(x.id) === assigneeSel.value);
+  if (!st) { loadBox.hidden = true; return; }
+  loadBox.hidden = false;
+  loadBox.className = 'as-load' + (st.open >= 5 || st.overdue ? ' heavy' : '');
+  loadBox.textContent = st.open
+    ? '📋 ' + st.name + ' यांच्याकडे सध्या ' + st.open + ' उघडे Tasks' + (st.overdue ? ' (' + st.overdue + ' मुदत संपलेले)' : '') + (st.open >= 5 || st.overdue ? ' — भार जास्त आहे, दुसऱ्याचा विचार करा' : '')
+    : '✅ ' + st.name + ' यांच्याकडे सध्या कोणताही उघडा Task नाही';
+  checkDup();
+}
+assigneeSel.addEventListener('change', showLoad);
+
+// दुहेरी Task इशारा — त्याच व्यक्तीकडे आधीच जवळजवळ असाच उघडा Task आहे का
+const titleInput = document.querySelector('input[name="title"]');
+const dupBox = document.createElement('div'); dupBox.className = 'as-dup'; dupBox.hidden = true;
+titleInput.parentNode.appendChild(dupBox);
+const tokens = t => (t || '').toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, ' ').split(/\s+/).filter(Boolean);
+const norm = t => tokens(t).filter(w => w.length > 2 && !/^\d+$/.test(w));
+const nums = t => tokens(t).filter(w => /^\d+$/.test(w));
+function checkDup() {
+  const words = norm(titleInput.value), myNums = nums(titleInput.value);
+  const list = openTitles[assigneeSel.value] || [];
+  let best = null, bestScore = 0;
+  if (words.length >= 2) {
+    list.forEach(t => {
+      const tw = norm(t); if (!tw.length) return;
+      // दोन्हीमध्ये क्रमांक असतील आणि वेगळे असतील (उदा. खोली 101 / 102) — तर वेगळं काम
+      const tn = nums(t);
+      if (myNums.length && tn.length && !myNums.some(n => tn.includes(n))) return;
+      const common = words.filter(w => tw.includes(w)).length;
+      const score = common >= 2 ? common / Math.max(words.length, tw.length) : 0;
+      if (score > bestScore) { bestScore = score; best = t; }
+    });
+  }
+  dupBox.hidden = !(best && bestScore >= 0.6);
+  if (!dupBox.hidden) dupBox.textContent = '⚠️ या व्यक्तीकडे आधीच असाच उघडा Task आहे: "' + best + '" — दुहेरी काम तर नाही ना?';
+}
+let dupT; titleInput.addEventListener('input', () => { clearTimeout(dupT); dupT = setTimeout(checkDup, 250); });
+
+// प्राधान्यानुसार मुदत सुचवा + झटपट तारखा
+const dateInput = document.querySelector('input[name="target_date"]');
+const prioSel = document.querySelector('select[name="priority"]');
+const ymd = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+const plus = n => { const d = new Date(); d.setDate(d.getDate() + n); return ymd(d); };
+const prioDays = { urgent: 1, high: 3, normal: 7, low: 14 };
+let dateTouched = false;
+dateInput.addEventListener('change', () => { dateTouched = true; });
+function suggestDate() { if (!dateTouched) dateInput.value = plus(prioDays[prioSel.value] ?? 7); }
+prioSel.addEventListener('change', suggestDate);
+suggestDate();
+const chips = document.createElement('div'); chips.className = 'as-chips';
+[['आज', 0], ['उद्या', 1], ['३ दिवस', 3], ['१ आठवडा', 7], ['१५ दिवस', 15], ['१ महिना', 30]].forEach(([l, n]) => {
+  const b = document.createElement('button'); b.type = 'button'; b.textContent = l;
+  b.addEventListener('click', () => { dateInput.value = plus(n); dateTouched = true; });
+  chips.appendChild(b);
+});
+dateInput.parentNode.appendChild(chips);
 
 <?php if ($isDeptScopedAssigner && !empty($departments)): ?>
   // विभाग प्रमुखांसाठी — पानच उघडताच त्यांच्या एकमेव विभागाचे कर्मचारी आपोआप दाखवा

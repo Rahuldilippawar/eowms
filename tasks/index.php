@@ -79,6 +79,17 @@ $wlStmt = $pdo->prepare("SELECT u1.name, COUNT(*) open_cnt, SUM(t.target_date < 
     GROUP BY t.assigned_to, u1.name ORDER BY open_cnt DESC, overdue_cnt DESC LIMIT 8");
 $wlStmt->execute($filterParams);
 $workload = $wlStmt->fetchAll();
+
+// 📊 मागील ३० दिवसांची कामगिरी — त्याच Filter प्रमाणे
+$perfStmt = $pdo->prepare("SELECT COUNT(*) done, SUM(DATE(t.completed_at) <= t.target_date) ontime,
+        ROUND(AVG(TIMESTAMPDIFF(HOUR, t.created_at, t.completed_at)) / 24, 1) avg_days,
+        SUM(t.verified_at IS NULL) unverified
+    FROM tasks t" . $filterSql . " AND t.status = 'completed' AND t.completed_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)");
+$perfStmt->execute($filterParams);
+$perf30 = $perfStmt->fetch() ?: [];
+$dueSoonStmt = $pdo->prepare("SELECT COUNT(*) FROM tasks t" . $filterSql . " AND t.status IN ('pending','in_progress') AND t.target_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 3 DAY)");
+$dueSoonStmt->execute($filterParams);
+$dueSoon = (int)$dueSoonStmt->fetchColumn();
 $countStmt = $pdo->prepare("SELECT t.status, COUNT(*) c FROM tasks t" . $filterSql . " GROUP BY t.status");
 $countStmt->execute($filterParams);
 foreach ($countStmt->fetchAll() as $cr) {
@@ -147,6 +158,16 @@ $statusChip = ['pending' => 'pending', 'in_progress' => 'pending', 'completed' =
   <div class="col-6 col-lg-3"><div class="kpi-mini"><div class="lbl"><?= h(t('s9')) ?></div><div class="val" style="color:var(--rail);"><?= $counts['in_progress'] ?></div></div></div>
   <div class="col-6 col-lg-3"><div class="kpi-mini"><div class="lbl"><?= h(t('s10')) ?></div><div class="val" style="color:var(--rail);"><?= $counts['completed'] ?></div></div></div>
 </div>
+
+<?php require_once __DIR__ . '/../includes/smart-insights.php';
+$p30done = (int)($perf30['done'] ?? 0);
+smartTiles([
+    ['label' => '⏰ मुदत संपलेले', 'value' => $counts['overdue'], 'tone' => $counts['overdue'] ? 'bad' : 'ok', 'href' => $statusQs('overdue')],
+    ['label' => '३ दिवसांत मुदत', 'value' => $dueSoon, 'tone' => $dueSoon ? 'warn' : ''],
+    ['label' => 'वेळेत पूर्ण (३० दिवस)', 'value' => $p30done ? round((int)$perf30['ontime'] * 100 / $p30done) . '%' : '—', 'sub' => $p30done . ' पूर्ण झाले', 'tone' => $p30done && $perf30['ontime'] * 100 / $p30done >= 80 ? 'ok' : 'warn'],
+    ['label' => 'सरासरी पूर्णत्व-वेळ', 'value' => $perf30['avg_days'] !== null && $p30done ? $perf30['avg_days'] . ' दिवस' : '—'],
+    ['label' => 'पडताळणी बाकी', 'value' => (int)($perf30['unverified'] ?? 0), 'sub' => 'पूर्ण पण तपासलेले नाहीत', 'tone' => !empty($perf30['unverified']) ? 'warn' : ''],
+]); ?>
 
 <?php if ($counts['all'] > 0): ?>
 <div class="row g-3 mb-3">
@@ -232,7 +253,64 @@ $statusChip = ['pending' => 'pending', 'in_progress' => 'pending', 'completed' =
   </form>
 </div>
 
-<div class="panel">
+<div class="tk-viewbar">
+  <button type="button" data-tkview="list" class="active"><i class="fa-solid fa-list"></i> यादी</button>
+  <button type="button" data-tkview="board"><i class="fa-solid fa-table-columns"></i> Board</button>
+</div>
+<?php
+  $todayYmd = date('Y-m-d');
+  $cols = ['overdue' => ['⏰ मुदत संपलेले', 'var(--rose)'], 'pending' => ['⏳ प्रलंबित', 'var(--amber)'], 'in_progress' => ['🔧 सुरू आहे', '#3B6FC9'], 'completed' => ['✅ पूर्ण', 'var(--rail)']];
+  $board = array_fill_keys(array_keys($cols), []);
+  foreach ($tasks as $bt) {
+      if ($bt['status'] === 'cancelled') continue;
+      $k = in_array($bt['status'], ['pending', 'in_progress'], true) && $bt['target_date'] < $todayYmd ? 'overdue' : $bt['status'];
+      if (isset($board[$k])) $board[$k][] = $bt;
+  }
+  usort($board['completed'], fn($a, $b) => strcmp((string)$b['completed_at'], (string)$a['completed_at']));
+  $prioCol = ['urgent' => 'var(--rose)', 'high' => 'var(--amber)', 'normal' => '#3B6FC9', 'low' => 'var(--text-dim)'];
+?>
+<div class="tk-board" id="tkBoard" hidden>
+  <?php foreach ($cols as $k => [$lbl, $col]): $items = $k === 'completed' ? array_slice($board[$k], 0, 20) : $board[$k]; ?>
+    <div class="tk-col">
+      <div class="tk-col-head" style="border-top-color:<?= $col ?>;"><?= $lbl ?> <em><?= count($board[$k]) ?></em></div>
+      <div class="tk-col-body">
+        <?php if (!$items): ?><div class="tk-empty">—</div><?php endif; ?>
+        <?php foreach ($items as $bt):
+          $dl = (int)floor((strtotime($bt['target_date']) - strtotime($todayYmd)) / 86400); ?>
+          <button type="button" class="tk-card" data-bs-toggle="modal" data-bs-target="#taskDetailModal<?= (int)$bt['id'] ?>" style="border-left-color:<?= $prioCol[$bt['priority']] ?? 'var(--line)' ?>;">
+            <div class="tk-card-t"><?= h($bt['title']) ?></div>
+            <div class="tk-card-m">
+              <span class="tk-av" title="<?= h($bt['assignee_name']) ?>"><?= h(mb_strtoupper(mb_substr($bt['assignee_name'], 0, 1))) ?></span>
+              <span><?= h($bt['assignee_name']) ?></span>
+              <span class="tk-due <?= $k === 'completed' ? '' : ($dl < 0 ? 'bad' : ($dl <= 1 ? 'warn' : '')) ?>"><?= $k === 'completed' ? '✔ ' . ($bt['completed_at'] ? date('d M', strtotime($bt['completed_at'])) : '') : ($dl < 0 ? abs($dl) . ' दि. उशीर' : ($dl === 0 ? 'आज' : ($dl === 1 ? 'उद्या' : date('d M', strtotime($bt['target_date']))))) ?></span>
+            </div>
+            <div class="tk-card-d"><?= h($bt['dept_name']) ?></div>
+          </button>
+        <?php endforeach; ?>
+        <?php if ($k === 'completed' && count($board[$k]) > 20): ?><div class="tk-empty">+<?= count($board[$k]) - 20 ?> आणखी</div><?php endif; ?>
+      </div>
+    </div>
+  <?php endforeach; ?>
+</div>
+<script>
+(function () {
+  var bar = document.querySelectorAll('[data-tkview]'), board = document.getElementById('tkBoard');
+  function show(v) {
+    var list = document.getElementById('tkList'); // यादी या Script नंतर येते — म्हणून इथेच शोधतो
+    board.hidden = v !== 'board'; if (list) list.hidden = v === 'board';
+    bar.forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-tkview') === v); });
+    try { localStorage.setItem('eowmsTaskView', v); } catch (e) {}
+  }
+  bar.forEach(function (b) { b.addEventListener('click', function () { show(b.getAttribute('data-tkview')); }); });
+  // तपशील-Modals यादीच्या Table मध्ये आहेत — Board दिसताना यादी लपते, म्हणून Modals body मध्ये हलवतो
+  document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('#tkList .modal').forEach(function (m) { document.body.appendChild(m); });
+    try { if (localStorage.getItem('eowmsTaskView') === 'board') show('board'); } catch (e) {}
+  });
+})();
+</script>
+
+<div class="panel" id="tkList">
   <table class="rtable">
     <thead><tr><th><?= h(t('s14')) ?></th><th><?= h(t('s1')) ?></th><th><?= h(t('s6')) ?></th><th><?= h(t('s205')) ?></th><th>Target Date</th><th><?= h(t('s2')) ?></th><th></th></tr></thead>
     <tbody>

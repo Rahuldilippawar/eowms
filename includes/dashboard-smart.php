@@ -229,8 +229,20 @@ if (hasPermission('assign_tasks')) {
     $qaDepts = $st->fetchAll();
     $st = $pdo->prepare('SELECT id, name, department_id FROM users WHERE organization_id = ? AND is_active = 1 ORDER BY name');
     $st->execute([$orgId]);
+    $qaLoad = [];
+    try {
+        foreach ($pdo->query("SELECT assigned_to, COUNT(*) c, SUM(target_date < CURDATE()) od FROM tasks WHERE organization_id = " . (int)$orgId . " AND status IN ('pending','in_progress') GROUP BY assigned_to")->fetchAll() as $l) {
+            $qaLoad[(int)$l['assigned_to']] = [(int)$l['c'], (int)$l['od']];
+        }
+    } catch (PDOException $e) {}
     $qaStaff = [];
-    foreach ($st->fetchAll() as $s) { $qaStaff[(int)$s['department_id']][] = ['id' => (int)$s['id'], 'name' => $s['name']]; }
+    foreach ($st->fetchAll() as $s) {
+        $ld = $qaLoad[(int)$s['id']] ?? [0, 0];
+        $qaStaff[(int)$s['department_id']][] = ['id' => (int)$s['id'], 'name' => $s['name'], 'open' => $ld[0], 'overdue' => $ld[1]];
+    }
+    // कमी भार असलेले आधी
+    foreach ($qaStaff as &$lst) { usort($lst, fn($a, $b) => [$a['overdue'], $a['open'], $a['name']] <=> [$b['overdue'], $b['open'], $b['name']]); }
+    unset($lst);
     if ($qaDepts) $quickAssign = ['depts' => $qaDepts, 'staff' => $qaStaff];
 }
 

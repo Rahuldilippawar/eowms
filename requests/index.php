@@ -160,6 +160,8 @@ $currentUrl = 'index.php' . $qs([]);
   <div class="col-6 col-lg-3"><div class="kpi-mini"><div class="lbl"><?= h(t('s10')) ?></div><div class="val" style="color:var(--rail);"><?= $counts['completed'] ?></div></div></div>
 </div>
 
+<?php require __DIR__ . '/../includes/insights/requests.php'; ?>
+
 <div class="d-flex flex-wrap align-items-center justify-content-between mb-3 gap-2">
   <div class="period-toggle" style="flex-wrap:wrap;">
     <?php foreach (['open' => 'उघड्या', 'pending' => t('s7'), 'in_progress' => t('s9'), 'overdue' => '⏰ SLA ओलांडलेल्या', 'completed' => t('s10'), 'cancelled' => 'रद्द', 'all' => t('s19')] as $k => $lbl): ?>
