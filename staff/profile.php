@@ -67,6 +67,10 @@ try {
 // Access — कोण Edit करू शकतो (Emergency Contact, Documents, Achievements —
 // फक्त स्वतः किंवा Super Admin)
 $isOwnProfile = (int)$user['id'] === $empId;
+// अहवाल / Print बटण — employee-report.php चाच नियम (स्वतःचा, HOD = विभागातील कर्मचारी, Management = सगळे)
+require_once __DIR__ . '/../includes/employee-report-access.php';
+$reportDeptIds = employeeReportVisibleDeptIds();
+$canReport = $isOwnProfile || $reportDeptIds === null || in_array((int)($emp['department_id'] ?? 0), $reportDeptIds, true);
 $canEditProfile = $isOwnProfile || hasRole('super_admin');
 
 // 1. Profile Completeness Meter
@@ -138,7 +142,10 @@ $statusChip = ['pending' => 'pending', 'in_progress' => 'pending', 'completed' =
   <div class="page-title mb-0"><?= h(t('s285')) ?></div>
   <div class="d-flex gap-2">
     <a href="../letters/create.php?to_user=<?= $emp['id'] ?>" class="btn btn-sm" style="background:var(--rail);color:#fff;border-radius:9px;font-size:12.5px;padding:8px 16px;font-weight:600;"><i class="fa-solid fa-paper-plane me-1"></i>पत्र पाठवा</a>
-    <a href="employee-report.php?id=<?= $emp['id'] ?>" class="btn btn-sm" style="border:1px solid var(--rail);color:var(--rail);border-radius:9px;font-size:12.5px;padding:8px 16px;font-weight:600;"><i class="fa-solid fa-file-lines me-1"></i>संपूर्ण अहवाल</a>
+    <?php if ($canReport): ?>
+      <a href="employee-report.php?id=<?= $emp['id'] ?>" class="btn btn-sm" style="border:1px solid var(--rail);color:var(--rail);border-radius:9px;font-size:12.5px;padding:8px 16px;font-weight:600;"><i class="fa-solid fa-file-lines me-1"></i>संपूर्ण अहवाल</a>
+      <a href="employee-report.php?id=<?= $emp['id'] ?>&autoprint=1" target="_blank" class="btn btn-sm" title="रुजू झाल्यापासूनचा संपूर्ण अहवाल Print / PDF" style="border:1px solid var(--rail);color:var(--rail);border-radius:9px;font-size:12.5px;padding:8px 16px;font-weight:600;"><i class="fa-solid fa-print me-1"></i>अहवाल Print</a>
+    <?php endif; ?>
     <a href="id-card.php?id=<?= $emp['id'] ?>" target="_blank" class="btn btn-sm" style="border:1px solid var(--line);border-radius:9px;font-size:12.5px;padding:8px 16px;"><i class="fa-solid fa-id-card me-1"></i>ID Card</a>
     <?php if ($isOwnProfile): ?>
       <a href="#account" class="btn btn-sm" style="border:1px solid var(--rail);color:var(--rail);border-radius:9px;font-size:12.5px;padding:8px 16px;font-weight:600;"><i class="fa-solid fa-lock me-1"></i>पासवर्ड / फोटो</a>
