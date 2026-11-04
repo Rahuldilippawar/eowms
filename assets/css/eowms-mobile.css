@@ -1,0 +1,121 @@
+/* ============================================================
+   📱 EOWMS Mobile — App-सारखा अनुभव (≤ 767px)
+   तळाचा Menu, सुटसुटीत Topbar, "अधिक" Sheet, आडवी बटण-पट्टी,
+   Safe-area (iPhone notch), मोठी Touch-जागा.
+   ============================================================ */
+.mb-nav, .mb-sheet, .mb-sheet-back, .tb-more { display: none; }
+
+@media (max-width: 767px) {
+  :root { --mb-nav-h: 64px; --mb-safe: env(safe-area-inset-bottom, 0px); }
+  html, body { overflow-x: hidden; }
+  body { padding-bottom: calc(var(--mb-nav-h) + var(--mb-safe)); -webkit-tap-highlight-color: transparent; }
+
+  /* ---------- Topbar ---------- */
+  .topbar { padding: calc(8px + env(safe-area-inset-top, 0px)) 12px 8px; gap: 8px; }
+  .topbar .theme-toggle-btn, .topbar [data-theme-studio], .topbar .tb-help, .topbar .tb-lang, .topbar .tb-logout { display: none !important; }
+  .topbar .tb-more { display: flex; }
+  .topbar .icon-btn { width: 40px; height: 40px; border-radius: 12px; }
+  .global-search { flex: 1; min-width: 0; max-width: none; padding: 9px 12px; border-radius: 12px; }
+  .global-search input { min-width: 0; font-size: 14px !important; }
+  .cmdk-trigger-hint { display: none; }
+  .topbar .dropdown-menu { width: calc(100vw - 24px) !important; max-width: 360px; }
+
+  /* ---------- Content ---------- */
+  .content { padding: 16px 14px 24px; }
+  .page-title { font-size: 21px; margin-bottom: 14px; }
+  .page-eyebrow { font-size: 10.5px; }
+
+  /* पानाच्या शीर्षकाशेजारची बटणं — खाली येतात आणि आडवी सरकतात */
+  .content > .d-flex.justify-content-between { flex-direction: column; align-items: stretch !important; gap: 10px; }
+  .content > .d-flex.justify-content-between > .d-flex { flex-wrap: nowrap !important; overflow-x: auto; gap: 8px; padding-bottom: 4px; margin: 0 -14px; padding-left: 14px; padding-right: 14px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .content > .d-flex.justify-content-between > .d-flex::-webkit-scrollbar { display: none; }
+  .content > .d-flex.justify-content-between > .d-flex > .btn, .content > .d-flex.justify-content-between > .d-flex > a { flex-shrink: 0; white-space: nowrap; font-size: 13px !important; padding: 8px 14px !important; }
+
+  /* Cards / KPI */
+  .kpi-card { padding: 14px; border-radius: 16px; }
+  .kpi-card .font-display, .kpi-card [style*="font-size:32px"], .kpi-card [style*="font-size:30px"] { font-size: 26px !important; }
+  .panel { border-radius: 16px; }
+  .panel-head { padding: 12px 14px; }
+
+  /* Tables — आडवे सरकतात, पहिला Column स्थिर */
+  .panel:has(> .rtable), .panel:has(> .wtable), .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .rtable, .wtable { font-size: 12.5px; }
+  .rtable th, .rtable td, .wtable th, .wtable td { padding: 9px 12px; }
+  .rtable th:first-child, .rtable td:first-child { position: sticky; left: 0; background: var(--surface); z-index: 1; box-shadow: 1px 0 0 var(--line); }
+  .rtable thead th:first-child { background: color-mix(in srgb, var(--canvas) 70%, var(--surface)); }
+
+  /* Dashboard Banner */
+  .dash-hero { padding: 18px; border-radius: 18px; }
+  .dash-hero [style*="font-size:26px"] { font-size: 21px !important; }
+
+  /* Modal — तळापासून वर येणारी Sheet */
+  .modal-dialog { margin: 0; position: fixed; left: 0; right: 0; bottom: 0; max-width: none; }
+  .modal.fade .modal-dialog { transform: translateY(40px); }
+  .modal.show .modal-dialog { transform: none; }
+  .modal-content { border-radius: 22px 22px 0 0 !important; padding-bottom: var(--mb-safe); max-height: 92vh; overflow-y: auto; }
+  .modal-dialog-centered { min-height: auto; align-items: flex-end; }
+
+  /* SOS — तळाच्या Menu च्या वर, लहान */
+  #sosFloatBtn { bottom: calc(var(--mb-nav-h) + var(--mb-safe) + 14px) !important; right: 14px !important; width: 46px !important; height: 46px !important; font-size: 18px !important; }
+  #sosFloatBtn.mb-hide { transform: scale(.85); opacity: .9; }
+
+  /* Sidebar Drawer */
+  .rail-sidebar { width: min(86vw, 320px); box-shadow: 0 0 40px rgba(0,0,0,.35); padding-top: calc(18px + env(safe-area-inset-top, 0px)); }
+  .sidebar-backdrop { backdrop-filter: blur(2px); }
+
+  /* ---------- तळाचा App-Menu ---------- */
+  .mb-nav { display: grid; grid-template-columns: repeat(5, 1fr); position: fixed; left: 0; right: 0; bottom: 0; z-index: 1400;
+    height: calc(var(--mb-nav-h) + var(--mb-safe)); padding: 0 6px var(--mb-safe);
+    background: color-mix(in srgb, var(--surface) 88%, transparent); backdrop-filter: saturate(1.5) blur(16px); -webkit-backdrop-filter: saturate(1.5) blur(16px);
+    border-top: 1px solid var(--line); box-shadow: 0 -6px 24px rgba(15,23,42,.08); transition: transform .28s cubic-bezier(.2,.8,.2,1); }
+  .mb-nav.hide { transform: translateY(110%); }
+  .mb-nav > a, .mb-nav > button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; border: 0; background: none; color: var(--text-dim);
+    font-size: 10.5px; font-weight: 600; text-decoration: none; font-family: inherit; position: relative; padding: 0; transition: color .15s, transform .12s; }
+  .mb-nav > a i, .mb-nav > button i { font-size: 19px; }
+  .mb-nav > a:active, .mb-nav > button:active { transform: scale(.92); }
+  .mb-nav > .on { color: var(--rail); }
+  .mb-nav > .on:not(.mb-fab)::before { content: ''; position: absolute; top: 0; width: 28px; height: 3px; border-radius: 0 0 4px 4px; background: var(--rail); }
+  .mb-fab .mb-fab-in { width: 52px; height: 52px; border-radius: 18px; margin-top: -26px; display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, var(--rail), var(--rail-2)); color: #fff; box-shadow: 0 10px 22px -6px color-mix(in srgb, var(--rail) 70%, transparent), 0 0 0 5px var(--surface); }
+  .mb-fab .mb-fab-in i { font-size: 22px; }
+  .mb-fab { color: var(--text) !important; }
+
+  /* ---------- "अधिक" Sheet ---------- */
+  .mb-sheet-back { display: block; position: fixed; inset: 0; background: rgba(8,12,24,.45); z-index: 1980; opacity: 0; pointer-events: none; transition: opacity .2s; }
+  .mb-sheet-back.open { opacity: 1; pointer-events: auto; }
+  .mb-sheet { display: block; position: fixed; left: 0; right: 0; bottom: 0; z-index: 1981; background: var(--surface); color: var(--text);
+    border-radius: 24px 24px 0 0; padding: 8px 16px calc(18px + var(--mb-safe)); box-shadow: 0 -20px 50px rgba(0,0,0,.25);
+    transform: translateY(105%); transition: transform .3s cubic-bezier(.2,.8,.2,1); max-height: 88vh; overflow-y: auto; }
+  .mb-sheet.open { transform: none; }
+  .mb-sheet-grab { width: 40px; height: 5px; border-radius: 5px; background: var(--line); margin: 4px auto 14px; }
+  .mb-user { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 16px; background: var(--canvas); text-decoration: none; color: inherit; margin-bottom: 14px; }
+  .mb-user .mb-av { width: 44px; height: 44px; border-radius: 14px; background: linear-gradient(135deg, var(--rail), var(--rail-2)); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 18px; flex-shrink: 0; }
+  .mb-user b { display: block; font-size: 15px; } .mb-user small { font-size: 12px; color: var(--text-dim); }
+  .mb-user > i { margin-left: auto; color: var(--text-dim); }
+  .mb-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 14px; }
+  .mb-grid > a, .mb-grid > button { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 4px; border-radius: 14px; border: 1px solid var(--line);
+    background: var(--surface); color: var(--text); font-size: 11px; font-weight: 600; text-decoration: none; font-family: inherit; text-align: center; }
+  .mb-grid i { font-size: 18px; color: var(--rail); }
+  .mb-grid > *:active { transform: scale(.95); background: var(--rail-soft); }
+  .mb-label { font-size: 12px; font-weight: 700; color: var(--text-dim); margin: 2px 2px 8px; }
+  .mb-langs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; background: var(--canvas); padding: 4px; border-radius: 12px; border: 1px solid var(--line); margin-bottom: 14px; }
+  .mb-langs button { border: 0; background: none; padding: 9px 4px; border-radius: 9px; font-size: 13px; font-weight: 600; color: var(--text-dim); font-family: inherit; }
+  .mb-langs button.on { background: var(--surface); color: var(--rail); box-shadow: var(--shadow-sm); }
+  .mb-logout { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; border-radius: 14px; background: var(--rose-soft); color: var(--rose); font-weight: 700; text-decoration: none; }
+
+  /* Theme Studio — Mobile वर तळापासून */
+  .ts-panel { top: auto; left: 0; width: 100vw; height: 88vh; border-radius: 24px 24px 0 0; transform: translateY(105%); border-left: 0; }
+  .ts-panel.open { transform: none; }
+  .ts-foot { padding-bottom: calc(14px + var(--mb-safe)); }
+  .cmdk-overlay { padding-top: calc(10px + env(safe-area-inset-top, 0px)) !important; }
+
+  /* Footer मधला लांब मजकूर — Menu खाली लपू नये */
+  .main-wrap > div[style*="text-align:center"] { padding-bottom: 12px !important; }
+}
+
+/* App म्हणून Install केलं असताना (Standalone) — Browser ची पट्टी नसते */
+@media (max-width: 767px) and (display-mode: standalone) {
+  .topbar { padding-top: calc(12px + env(safe-area-inset-top, 0px)); }
+}
+@media print { .mb-nav, .mb-sheet, .mb-sheet-back { display: none !important; } body { padding-bottom: 0 !important; } }
+@media (prefers-reduced-motion: reduce) { .mb-nav, .mb-sheet, .ts-panel { transition: none !important; } }

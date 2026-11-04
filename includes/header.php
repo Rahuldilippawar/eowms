@@ -9,7 +9,7 @@ $titleOrgName = activeOrgName();
 <html lang="mr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title><?= h($titleOrgName) ?> — <?= h($pageTitle ?? 'Command Center') ?></title>
 
 <!-- PWA: installable "Add to Home Screen" support -->
@@ -29,6 +29,7 @@ $titleOrgName = activeOrgName();
 <link rel="stylesheet" href="<?= $rootPath ?? '' ?>assets/css/eowms-advance.css?v=5">
 <link rel="stylesheet" href="<?= $rootPath ?? '' ?>assets/css/eowms-ui.css?v=7">
 <link rel="stylesheet" href="<?= $rootPath ?? '' ?>assets/css/eowms-theme.css?v=3">
+<link rel="stylesheet" href="<?= $rootPath ?? '' ?>assets/css/eowms-mobile.css?v=1">
 <script>
   // Theme Studio च्या निवडी — Body Render होण्याआधीच लागू, नाहीतर रंग "Flash" होतात.
   (function () {
@@ -79,7 +80,7 @@ if (hasRole('super_admin')) {
     <button type="button" class="icon-btn" data-theme-studio title="Theme Studio — रंग व मांडणी" aria-label="Theme Studio">
       <i class="fa-solid fa-palette"></i>
     </button>
-    <a href="<?= $rootPath ?? '' ?>help/index.php" class="icon-btn" title="मदत / Help">
+    <a href="<?= $rootPath ?? '' ?>help/index.php" class="icon-btn tb-help" title="मदत / Help">
       <i class="fa-solid fa-circle-question"></i>
     </a>
     <?php
@@ -121,8 +122,9 @@ if (hasRole('super_admin')) {
         <div style="text-align:center;padding:8px;"><a href="<?= $rootPath ?? '' ?>notifications/index.php" style="font-size:12px;color:var(--rail);font-weight:600;"><?= h(t('s294')) ?></a></div>
       </div>
     </div>
-    <?= i18nSwitcher('style="border:1px solid var(--line);border-radius:9px;padding:0 10px;height:38px;font-size:12.5px;color:var(--text-dim);background:var(--canvas);cursor:pointer;"') ?>
-    <a href="<?= $rootPath ?? '' ?>logout.php" class="icon-btn" title="Logout"><i class="fa-solid fa-right-from-bracket"></i></a>
+    <span class="tb-lang"><?= i18nSwitcher('style="border:1px solid var(--line);border-radius:9px;padding:0 10px;height:38px;font-size:12.5px;color:var(--text-dim);background:var(--canvas);cursor:pointer;"') ?></span>
+    <a href="<?= $rootPath ?? '' ?>logout.php" class="icon-btn tb-logout" title="Logout"><i class="fa-solid fa-right-from-bracket"></i></a>
+    <button type="button" class="icon-btn tb-more" data-mobile-more aria-label="अधिक पर्याय" title="अधिक पर्याय"><i class="fa-solid fa-ellipsis-vertical"></i></button>
   </div>
 
   <?php /* 🌐 भाषा — includes/i18n.php (Google Translate शिवाय, स्वतःचा शब्दकोश) */ ?>
