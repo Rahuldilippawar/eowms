@@ -53,7 +53,7 @@ $conditionColor = ['चांगली' => '#1B8A83', 'दुरुस्ती�
 <title>Dead Stock Register — अहवाल</title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  :root{ --ink:#10162B; --rail:#1B8A83; --line:#D7DAE0; --text:#1A1D29; --text-dim:#666B7D; }
+  :root{ --ink:#10162B; --rail:#D9530F; --line:#D7DAE0; --text:#1A1D29; --text-dim:#666B7D; }
   *{box-sizing:border-box;}
   body{font-family:'Noto Sans Devanagari','Segoe UI',sans-serif;color:var(--text);margin:0;background:#F0F1F4;font-size:13px;}
   .toolbar{position:sticky;top:0;background:var(--ink);padding:14px 24px;display:flex;justify-content:space-between;align-items:center;z-index:10;}
@@ -93,7 +93,7 @@ $conditionColor = ['चांगली' => '#1B8A83', 'दुरुस्ती�
   <div class="summary-row">
     <div class="summary-box"><div class="lbl">एकूण नोंदी</div><div class="val"><?= count($items) ?></div></div>
     <div class="summary-box"><div class="lbl">एकूण संख्या</div><div class="val"><?= number_format($totalQty) ?></div></div>
-    <div class="summary-box"><div class="lbl">एकूण किंमत</div><div class="val" style="color:#1B8A83;">₹<?= number_format($totalValue, 0) ?></div></div>
+    <div class="summary-box"><div class="lbl">एकूण किंमत</div><div class="val" style="color:#D9530F;">₹<?= number_format($totalValue, 0) ?></div></div>
     <div class="summary-box"><div class="lbl">दुरुस्ती/खराब</div><div class="val" style="color:#B23A48;"><?= $conditionCounts['दुरुस्तीयोग्य'] + $conditionCounts['खराब'] + $conditionCounts['भंगार'] ?></div></div>
   </div>
 

@@ -22,7 +22,7 @@ $sig = $stmt->fetch();
   body{font-family:'Noto Sans Devanagari',sans-serif;background:#10162B;margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
   .card{background:#fff;border-radius:20px;padding:36px 30px;max-width:420px;width:100%;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,.3);}
   .icon{width:70px;height:70px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 18px;font-size:34px;}
-  .icon.valid{background:#DCEFEC;color:#0F5E58;}
+  .icon.valid{background:#DCEFEC;color:#B6420A;}
   .icon.invalid{background:#F7E2E3;color:#B23A48;}
   h1{font-family:'Space Grotesk';font-size:19px;margin:0 0 6px;color:#10162B;}
   .sub{font-size:13px;color:#666B7D;margin-bottom:22px;}

@@ -99,10 +99,10 @@ $actionLabels = ['created' => 'विनंती नोंदवली गे�
   .searchcard p{color:#9FA6C0;font-size:13px;margin:0 0 18px;}
   .searchcard form{display:flex;gap:10px;}
   .searchcard input{flex:1;padding:12px 16px;border-radius:9px;border:none;font-size:14px;font-family:'JetBrains Mono',monospace;}
-  .searchcard button{background:#1B8A83;color:#fff;border:none;border-radius:9px;padding:12px 22px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;}
+  .searchcard button{background:#D9530F;color:#fff;border:none;border-radius:9px;padding:12px 22px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;}
   .tabrow{display:flex;gap:8px;margin-bottom:16px;}
   .tabrow a{flex:1;text-align:center;padding:10px;border-radius:9px;background:#1B2340;color:#9FA6C0;text-decoration:none;font-size:13px;font-weight:600;}
-  .tabrow a.active{background:#1B8A83;color:#fff;}
+  .tabrow a.active{background:#D9530F;color:#fff;}
   .result-row{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid #EEF0F4;text-decoration:none;color:inherit;}
   .result-row:last-child{border-bottom:none;}
   .result-row:hover{background:#FAFBFC;}
@@ -112,10 +112,10 @@ $actionLabels = ['created' => 'विनंती नोंदवली गे�
   h3{font-family:'Space Grotesk';font-size:15px;color:#10162B;margin:0 0 12px;}
   .timeline-item{display:flex;gap:10px;padding:9px 0;border-bottom:1px solid #EEF0F4;}
   .timeline-item:last-child{border-bottom:none;}
-  .dot{width:28px;height:28px;border-radius:50%;background:#DCEFEC;color:#0F5E58;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;}
+  .dot{width:28px;height:28px;border-radius:50%;background:#DCEFEC;color:#B6420A;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;}
   .err{background:#F7E2E3;color:#8A1F2B;border-radius:8px;padding:12px 16px;font-size:13px;}
   .viewer-chip{display:inline-block;background:#F3F4F7;border-radius:20px;padding:6px 14px;font-size:12px;margin:0 6px 6px 0;}
-  a.back{color:#1B8A83;text-decoration:none;font-size:13px;font-weight:600;}
+  a.back{color:#D9530F;text-decoration:none;font-size:13px;font-weight:600;}
 </style>
 </head>
 <body>
@@ -168,7 +168,7 @@ $actionLabels = ['created' => 'विनंती नोंदवली गे�
       </div>
       <p style="font-size:14px;color:#1A1D29;margin-top:16px;line-height:1.6;"><?= nl2br(htmlspecialchars($request['work_description'])) ?></p>
       <?php if ($request['status'] === 'completed'): ?>
-        <div style="background:#DCEFEC;color:#0F5E58;border-radius:8px;padding:10px 14px;font-size:13px;margin-top:10px;">
+        <div style="background:#DCEFEC;color:#B6420A;border-radius:8px;padding:10px 14px;font-size:13px;margin-top:10px;">
           ✅ <?= htmlspecialchars($request['completed_by_name'] ?? '') ?> यांनी <?= $request['completed_at'] ? date('d M Y, h:i A', strtotime($request['completed_at'])) : '' ?> रोजी पूर्ण केले
         </div>
       <?php endif; ?>

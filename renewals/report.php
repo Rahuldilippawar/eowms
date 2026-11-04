@@ -62,7 +62,7 @@ if ($filterDeptId) {
 <meta charset="UTF-8">
 <title>नूतनीकरण अहवाल</title>
 <style>
-  :root{ --ink:#10162B; --rail:#1B8A83; --line:#D7DAE0; --text-dim:#666B7D; --amber:#C97F1D; --rose:#B23A48; }
+  :root{ --ink:#10162B; --rail:#D9530F; --line:#D7DAE0; --text-dim:#666B7D; --amber:#C97F1D; --rose:#B23A48; }
   *{box-sizing:border-box;}
   body{font-family:'Segoe UI',sans-serif;color:#1A1D29;margin:0;background:#F0F1F4;font-size:13px;}
   .toolbar{position:sticky;top:0;background:var(--ink);padding:14px 24px;display:flex;justify-content:space-between;z-index:10;}

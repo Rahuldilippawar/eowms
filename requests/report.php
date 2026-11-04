@@ -138,10 +138,10 @@ $totalCost = array_sum(array_map(fn($r) => (float)($r['cost_incurred'] ?? 0), $r
   *{box-sizing:border-box;}
   body{font-family:'Segoe UI',sans-serif;color:#1A1D29;margin:0;background:#F0F1F4;font-size:13px;}
   .toolbar{position:sticky;top:0;background:#10162B;padding:14px 24px;display:flex;justify-content:space-between;z-index:10;}
-  .toolbar button, .toolbar a{color:#fff;text-decoration:none;font-size:13px;background:#1B8A83;border:none;border-radius:8px;padding:9px 20px;font-weight:600;cursor:pointer;}
+  .toolbar button, .toolbar a{color:#fff;text-decoration:none;font-size:13px;background:var(--rail);border:none;border-radius:8px;padding:9px 20px;font-weight:600;cursor:pointer;}
   .doc{max-width:1100px;margin:24px auto;background:#fff;padding:32px 40px;border-radius:6px;}
   .org-name{font-weight:700;font-size:18px;text-align:center;}
-  .report-title{text-align:center;font-weight:600;font-size:14px;margin-top:4px;color:#1B8A83;}
+  .report-title{text-align:center;font-weight:600;font-size:14px;margin-top:4px;color:var(--rail);}
   .period{text-align:center;font-size:11.5px;color:#666B7D;margin-top:2px;}
   table{width:100%;border-collapse:collapse;margin-top:14px;}
   th{background:#F3F4F7;text-align:left;padding:7px 9px;font-size:10.5px;text-transform:uppercase;color:#666B7D;}

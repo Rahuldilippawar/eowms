@@ -73,24 +73,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  :root{ --ink:#10162B; --rail:#1B8A83; --amber:#C97F1D; --rose:#B23A48; --line:#E4E7ED; --text-dim:#666B7D; --canvas:#F3F4F7; }
+  :root{ --ink:#10162B; --rail:#D9530F; --amber:#C97F1D; --rose:#B23A48; --line:#E4E7ED; --text-dim:#666B7D; --canvas:#F3F4F7; }
   *{box-sizing:border-box;}
   body{font-family:'Noto Sans Devanagari','Segoe UI',sans-serif;background:var(--canvas);color:#1A1D29;margin:0;}
 
   .hero{
-    background:linear-gradient(160deg,#0A0E1A 0%,#1B2340 55%,#0F5E58 130%);
+    background:linear-gradient(160deg,#0A0E1A 0%,#1B2340 55%,#B6420A 130%);
     padding:44px 20px 76px;position:relative;overflow:hidden;text-align:center;
   }
   .hero-ring{position:absolute;top:50%;left:50%;width:340px;height:340px;transform:translate(-50%,-50%);border:1px solid rgba(220,239,236,.08);border-radius:50%;animation:eowms-spin 100s linear infinite;}
   .hero-ring::before{content:'';position:absolute;inset:30px;border:1px dashed rgba(201,127,29,.12);border-radius:50%;}
   .hero-ring::after{content:'';position:absolute;inset:58px;border:1px solid rgba(220,239,236,.06);border-radius:50%;}
   @keyframes eowms-spin{from{transform:translate(-50%,-50%) rotate(0deg);}to{transform:translate(-50%,-50%) rotate(360deg);}}
-  .mark{width:58px;height:58px;border-radius:17px;background:linear-gradient(150deg,#1B8A83,#0F5E58);display:flex;align-items:center;justify-content:center;margin:0 auto 18px;box-shadow:0 0 0 1px rgba(220,239,236,.15), 0 10px 26px rgba(27,138,131,.4);position:relative;z-index:1;}
+  .mark{width:58px;height:58px;border-radius:17px;background:linear-gradient(150deg,#D9530F,#B6420A);display:flex;align-items:center;justify-content:center;margin:0 auto 18px;box-shadow:0 0 0 1px rgba(220,239,236,.15), 0 10px 26px rgba(217,83,15,.4);position:relative;z-index:1;}
   .mark img{width:100%;height:100%;object-fit:contain;border-radius:17px;background:#fff;padding:6px;}
   .mark i{color:#fff;font-size:24px;}
   .hero-eyebrow{display:inline-flex;align-items:center;gap:8px;font-family:'Space Grotesk';font-size:10.5px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#7FC9C2;margin-bottom:10px;position:relative;z-index:1;}
-  .hero-eyebrow::before,.hero-eyebrow::after{content:'';width:18px;height:1px;background:linear-gradient(90deg,transparent,#1B8A83);}
-  .hero-eyebrow::after{background:linear-gradient(90deg,#1B8A83,transparent);}
+  .hero-eyebrow::before,.hero-eyebrow::after{content:'';width:18px;height:1px;background:linear-gradient(90deg,transparent,#D9530F);}
+  .hero-eyebrow::after{background:linear-gradient(90deg,#D9530F,transparent);}
   .hero h1{font-family:'Space Grotesk';font-weight:700;font-size:21px;color:#fff;margin:0 0 8px;position:relative;z-index:1;}
   .hero p{font-size:12.5px;color:#B7BBD6;max-width:340px;margin:0 auto;position:relative;z-index:1;line-height:1.65;}
 
@@ -110,14 +110,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
   label.field-label{font-size:11.5px;font-weight:500;display:block;margin-bottom:6px;color:var(--text-dim);}
   input,select,textarea{width:100%;padding:12px 14px 12px 40px;border:1.5px solid var(--line);border-radius:12px;font-size:14.5px;box-sizing:border-box;font-family:inherit;background:#FAFBFC;transition:border-color .15s ease, background .15s ease, box-shadow .15s ease;}
-  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--rail);background:#fff;box-shadow:0 0 0 4px rgba(27,138,131,.08);}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--rail);background:#fff;box-shadow:0 0 0 4px rgba(217,83,15,.08);}
   textarea{resize:vertical;min-height:90px;}
   select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23666B7D' stroke-width='1.5' fill='none' fill-rule='evenodd'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;}
 
   .char-count{font-size:10.5px;color:var(--text-dim);text-align:right;margin-top:4px;}
 
-  button{width:100%;margin-top:26px;padding:15px;border:none;border-radius:13px;background:linear-gradient(135deg,#1B8A83,#0F5E58);color:#fff;font-weight:600;font-size:14.5px;cursor:pointer;box-shadow:0 10px 24px rgba(27,138,131,.32);transition:transform .15s ease, box-shadow .15s ease;}
-  button:hover{box-shadow:0 12px 28px rgba(27,138,131,.42);}
+  button{width:100%;margin-top:26px;padding:15px;border:none;border-radius:13px;background:linear-gradient(135deg,#D9530F,#B6420A);color:#fff;font-weight:600;font-size:14.5px;cursor:pointer;box-shadow:0 10px 24px rgba(217,83,15,.32);transition:transform .15s ease, box-shadow .15s ease;}
+  button:hover{box-shadow:0 12px 28px rgba(217,83,15,.42);}
   button:active{transform:scale(.98);}
 
   .msg{padding:14px 16px;border-radius:11px;font-size:13.5px;margin-bottom:6px;display:flex;gap:10px;align-items:flex-start;}
@@ -129,7 +129,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   .success-code{text-align:center;font-family:'Space Grotesk';font-weight:700;font-size:15px;color:var(--rail);background:#DCEFEC;display:inline-block;padding:6px 16px;border-radius:9px;letter-spacing:.5px;}
   .success-code-wrap{text-align:center;margin-bottom:14px;}
   .success-sub{text-align:center;font-size:13px;color:var(--text-dim);line-height:1.6;margin-bottom:6px;}
-  .track-btn{display:block;text-align:center;margin-top:16px;background:var(--rail);color:#fff;text-decoration:none;padding:13px 18px;border-radius:12px;font-size:13.5px;font-weight:600;box-shadow:0 8px 20px rgba(27,138,131,.28);}
+  .track-btn{display:block;text-align:center;margin-top:16px;background:var(--rail);color:#fff;text-decoration:none;padding:13px 18px;border-radius:12px;font-size:13.5px;font-weight:600;box-shadow:0 8px 20px rgba(217,83,15,.28);}
   .hint{font-size:11.5px;color:var(--text-dim);margin-top:14px;text-align:center;line-height:1.6;}
 
   a.back{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:22px;font-size:13px;color:var(--rail);text-decoration:none;font-weight:600;}

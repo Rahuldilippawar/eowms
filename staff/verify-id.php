@@ -33,10 +33,10 @@ if ($code !== '') {
   .card{background:#fff;max-width:380px;width:100%;border-radius:16px;padding:32px 28px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3);}
   .icon{font-size:44px;margin-bottom:12px;}
   h1{font-family:'Space Grotesk';font-size:18px;margin:0 0 6px;color:#10162B;}
-  .name{font-size:16px;font-weight:700;color:#1B8A83;margin:14px 0 2px;}
+  .name{font-size:16px;font-weight:700;color:#D9530F;margin:14px 0 2px;}
   .sub{font-size:13px;color:#666B7D;}
   .badge{display:inline-block;margin-top:14px;padding:6px 16px;border-radius:20px;font-size:12px;font-weight:700;}
-  .badge.valid{background:#DCEFEC;color:#0F5E58;}
+  .badge.valid{background:#DCEFEC;color:#B6420A;}
   .badge.inactive{background:#F7E2E3;color:#8A1F2B;}
   .err{color:#8A1F2B;font-size:14px;}
 </style>

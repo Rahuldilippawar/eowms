@@ -6,23 +6,23 @@
 
 /* ---------- 1. मूळ Tokens (Light) ---------- */
 :root {
-  --ink:#0F172A; --ink-soft:#1E293B; --canvas:#F4F6FA; --surface:#FFFFFF;
-  --line:#E3E7EF; --text:#172033; --text-dim:#64708A;
+  --ink:#14162B; --ink-soft:#23263F; --canvas:#F7F5F2; --surface:#FFFFFF;
+  --line:#EAE5DF; --text:#1B1D2E; --text-dim:#6A6E80;
   --amber:#C47A12; --amber-soft:#FCEFD9; --rose:#C2364A; --rose-soft:#FBE4E7;
   --sky:#0B83C9; --sky-soft:#DDF0FB; --violet:#7048E8; --violet-soft:#ECE6FD; --green:#1E9E5A; --green-soft:#DDF4E7;
-  --rail:#138A80; --rail-soft:#DCF1EE; --rail-2:#0E6F67;
+  --rail:#D9530F; --rail-soft:#FCE9DE; --rail-2:#B6420A;
   --shadow-sm:0 1px 2px rgba(15,23,42,.05), 0 1px 1px rgba(15,23,42,.03);
   --shadow-md:0 10px 24px -8px rgba(15,23,42,.14), 0 2px 6px rgba(15,23,42,.05);
   --shadow-lg:0 24px 48px -16px rgba(15,23,42,.24);
   --ring:0 0 0 3px color-mix(in srgb, var(--rail) 28%, transparent);
   --radius:14px;
-  --side-bg:linear-gradient(180deg,#0E1730 0%,#0B1224 60%,#091020 100%);
+  --side-bg:linear-gradient(180deg,#191C3A 0%,#13152D 55%,#0E1024 100%);
   --side-text:#AEB6D3; --side-strong:#FFFFFF; --side-dim:#6C76A0; --side-hover:rgba(255,255,255,.06);
 }
 
-/* ---------- 2. Accent रंग (Theme Studio) ---------- */
+/* ---------- 2. Accent रंग (Theme Studio) — मूळ: भगवा ---------- */
+html[data-accent="teal"]    { --rail:#138A80; --rail-soft:#DCF1EE; --rail-2:#0E6F67; }
 html[data-accent="blue"]    { --rail:#2563EB; --rail-soft:#E0EAFE; --rail-2:#1D4ED8; }
-html[data-accent="saffron"] { --rail:#D9530F; --rail-soft:#FDE8DC; --rail-2:#B6420A; }
 html[data-accent="purple"]  { --rail:#7C3AED; --rail-soft:#EEE6FE; --rail-2:#6025D0; }
 html[data-accent="green"]   { --rail:#15803D; --rail-soft:#DDF3E5; --rail-2:#116A32; }
 html[data-accent="maroon"]  { --rail:#A3123A; --rail-soft:#FBE2E9; --rail-2:#850E2F; }
@@ -33,13 +33,13 @@ html[data-theme="dark"] {
   --line:#253049; --text:#E3E8F2; --text-dim:#8E99B6;
   --amber:#E9A54F; --amber-soft:#3A2B14; --rose:#EE6B7D; --rose-soft:#3D1C23;
   --sky:#4FB3EC; --sky-soft:#12324A; --violet:#9F85F5; --violet-soft:#2A2350; --green:#4CC685; --green-soft:#153523;
-  --rail:#2FB8AC; --rail-soft:#123A36; --rail-2:#5ED3C8;
+  --rail:#F2803F; --rail-soft:#3C2214; --rail-2:#F7A574;
   --shadow-sm:0 1px 2px rgba(0,0,0,.35); --shadow-md:0 12px 28px -10px rgba(0,0,0,.6); --shadow-lg:0 24px 48px -16px rgba(0,0,0,.7);
-  --side-bg:linear-gradient(180deg,#0A0F1E 0%,#080C18 100%);
+  --side-bg:linear-gradient(180deg,#10122A 0%,#0A0B1C 100%);
   color-scheme: dark;
 }
+html[data-theme="dark"][data-accent="teal"]    { --rail:#2FB8AC; --rail-soft:#123A36; --rail-2:#5ED3C8; }
 html[data-theme="dark"][data-accent="blue"]    { --rail:#5B8DEF; --rail-soft:#1A2848; --rail-2:#8CB0F5; }
-html[data-theme="dark"][data-accent="saffron"] { --rail:#F2803F; --rail-soft:#3C2214; --rail-2:#F7A574; }
 html[data-theme="dark"][data-accent="purple"]  { --rail:#A57BF5; --rail-soft:#2B2048; --rail-2:#C4A6F9; }
 html[data-theme="dark"][data-accent="green"]   { --rail:#44C27A; --rail-soft:#163423; --rail-2:#78D7A0; }
 html[data-theme="dark"][data-accent="maroon"]  { --rail:#E85B80; --rail-soft:#3C1724; --rail-2:#F08BA6; }
@@ -173,3 +173,17 @@ html[data-motion="off"] *, html[data-motion="off"] *::before, html[data-motion="
 .ts-done { border: 0; background: var(--rail); color: #fff; }
 .ts-note { font-size: 11.5px; color: var(--text-dim); margin-top: 8px; }
 @media print { .ts-panel, .ts-backdrop { display: none !important; } }
+
+/* ---------- 12. "उत्तम / पूर्ण / यशस्वी" — मुख्य रंग कोणताही असो, हे नेहमी हिरवे ---------- */
+.alert-success { background: var(--green-soft); color: color-mix(in srgb, var(--green) 75%, #000); border-color: color-mix(in srgb, var(--green) 25%, transparent); border-left-color: var(--green); }
+html[data-theme="dark"] .alert-success { color: var(--green); }
+.dash-kpi.ok b, .mt-task-sum .ok b, .ai-chips .ok b { color: var(--green); }
+.c-ok { color: var(--green) !important; }
+.rn-compliance.ok, .status-chip.done { background: var(--green-soft); color: var(--green); }
+.sm-lv.good, .sm-all-stack i.good, .sm-dept-bar i { background: var(--green); }
+.sm-dept { --lc: var(--green); }
+
+/* ---------- 13. Dashboard चं स्वागत-Banner — दोन्ही Mode मध्ये गडद Navy + मुख्य रंगाची चमक ---------- */
+.dash-hero { background: linear-gradient(135deg, #191C3A 0%, #13152D 60%, #0E1024 100%); box-shadow: var(--shadow-md); }
+.dash-hero-bg { background: radial-gradient(circle at 88% -20%, color-mix(in srgb, var(--rail) 45%, transparent), transparent 55%), radial-gradient(circle at 5% 120%, rgba(224,160,67,.22), transparent 50%); }
+html[data-theme="dark"] .dash-hero { background: linear-gradient(135deg, #1B1E3D 0%, #141631 60%, #0F1128 100%); border: 1px solid var(--line); }

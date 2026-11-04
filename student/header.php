@@ -30,7 +30,7 @@ $pdo->prepare("UPDATE student_notifications SET is_read = 1 WHERE student_id = ?
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  :root{ --ink:#10162B; --rail:#1B8A83; --amber:#C97F1D; --rose:#B23A48; --line:#D7DAE0; --text-dim:#666B7D; --canvas:#F7F8FA; --rail-soft:#DCEFEC; --rose-soft:#F7E2E3; }
+  :root{ --ink:#10162B; --rail:#D9530F; --amber:#C97F1D; --rose:#B23A48; --line:#D7DAE0; --text-dim:#666B7D; --canvas:#F7F8FA; --rail-soft:#DCEFEC; --rose-soft:#F7E2E3; }
   *{box-sizing:border-box;}
   body{font-family:'Noto Sans Devanagari','Segoe UI',sans-serif;margin:0;background:var(--canvas);color:#1A1D29;}
   .topbar{background:var(--ink);padding:14px 20px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:10;}

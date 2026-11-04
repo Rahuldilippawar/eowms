@@ -44,12 +44,12 @@ function sendWelcomeEmail($email, $name, $username, $plainPassword, $orgName, $c
         <p style='font-size:14px;color:#1A1D29;line-height:1.6;'>$orgName च्या E-Admin प्रणालीमध्ये तुमचं खातं तयार करण्यात आलं आहे. $intro</p>
         <div style='background:#F3F4F7;border-radius:8px;padding:16px 20px;margin:18px 0;'>
           <div style='font-size:12px;color:#666B7D;text-transform:uppercase;'>Login ID</div>
-          <div style='font-size:16px;font-weight:bold;color:#1B8A83;margin-bottom:10px;'>$username</div>
+          <div style='font-size:16px;font-weight:bold;color:#D9530F;margin-bottom:10px;'>$username</div>
           <div style='font-size:12px;color:#666B7D;text-transform:uppercase;'>तात्पुरता पासवर्ड</div>
-          <div style='font-size:16px;font-weight:bold;color:#1B8A83;'>$plainPassword</div>
+          <div style='font-size:16px;font-weight:bold;color:#D9530F;'>$plainPassword</div>
         </div>
         <p style='font-size:13px;color:#B23A48;'>⚠️ पहिल्यांदा Login केल्यावर तुम्हाला स्वतःचा नवीन पासवर्ड तयार करावा लागेल — सुरक्षिततेसाठी हे अनिवार्य आहे.</p>
-        <a href='$loginUrl' style='display:inline-block;background:#1B8A83;color:#fff;text-decoration:none;padding:10px 22px;border-radius:8px;font-size:14px;font-weight:bold;margin-top:10px;'>Login करा</a>
+        <a href='$loginUrl' style='display:inline-block;background:#D9530F;color:#fff;text-decoration:none;padding:10px 22px;border-radius:8px;font-size:14px;font-weight:bold;margin-top:10px;'>Login करा</a>
         <p style='font-size:11.5px;color:#8A90AC;margin-top:20px;'>!! आत्मा मालिक !! — हा ईमेल आपोआप पाठवला गेला आहे.</p>
       </div>
     </div>";
@@ -85,7 +85,7 @@ function sendPasswordResetEmail($email, $name, $code, $orgName) {
         <p style='font-size:14px;color:#1A1D29;'>नमस्कार <strong>$name</strong>,</p>
         <p style='font-size:14px;color:#1A1D29;line-height:1.6;'>तुमच्या खात्यासाठी पासवर्ड रिसेट करण्याची विनंती आली आहे. खालील verification code वापरा:</p>
         <div style='background:#F3F4F7;border-radius:8px;padding:18px 20px;margin:18px 0;text-align:center;'>
-          <div style='font-size:32px;font-weight:bold;color:#1B8A83;letter-spacing:6px;'>$code</div>
+          <div style='font-size:32px;font-weight:bold;color:#D9530F;letter-spacing:6px;'>$code</div>
         </div>
         <p style='font-size:13px;color:#666B7D;'>हा code फक्त १५ मिनिटांसाठी वैध आहे. जर तुम्ही ही विनंती केली नसेल, तर हा ईमेल दुर्लक्षित करा — तुमचा पासवर्ड बदलणार नाही.</p>
         <p style='font-size:11.5px;color:#8A90AC;margin-top:20px;'>!! आत्मा मालिक !! — हा ईमेल आपोआप पाठवला गेला आहे.</p>
@@ -130,7 +130,7 @@ function sendRenewalReminderEmail($email, $name, $itemName, $daysLeft, $expiryDa
           <div style='font-size:13px;color:#666B7D;margin-top:6px;'>$statusLine</div>
           <div style='font-size:12px;color:#666B7D;margin-top:4px;'>मुदत-दिनांक: $expiryDate</div>
         </div>
-        <a href='$link' style='display:inline-block;background:#1B8A83;color:#fff;text-decoration:none;padding:10px 22px;border-radius:8px;font-size:14px;font-weight:bold;margin-top:6px;'>System मध्ये बघा</a>
+        <a href='$link' style='display:inline-block;background:#D9530F;color:#fff;text-decoration:none;padding:10px 22px;border-radius:8px;font-size:14px;font-weight:bold;margin-top:6px;'>System मध्ये बघा</a>
         <p style='font-size:11.5px;color:#8A90AC;margin-top:20px;'>!! आत्मा मालिक !! — हा ईमेल आपोआप पाठवला गेला आहे.</p>
       </div>
     </div>";
@@ -177,7 +177,7 @@ function sendPurchasePendingSummaryEmail($email, $name, $orgName, $fy, $totalCou
           <thead><tr style='background:#F3F4F7;'><th style='padding:8px 12px;text-align:left;'>विभाग</th><th style='padding:8px 12px;'>नोंदी</th><th style='padding:8px 12px;text-align:right;'>रक्कम</th></tr></thead>
           <tbody>$deptRowsHtml</tbody>
         </table>
-        <a href='$link' style='display:inline-block;background:#1B8A83;color:#fff;text-decoration:none;padding:10px 22px;border-radius:8px;font-size:14px;font-weight:bold;margin-top:20px;'>संपूर्ण Register बघा</a>
+        <a href='$link' style='display:inline-block;background:#D9530F;color:#fff;text-decoration:none;padding:10px 22px;border-radius:8px;font-size:14px;font-weight:bold;margin-top:20px;'>संपूर्ण Register बघा</a>
         <p style='font-size:11.5px;color:#8A90AC;margin-top:20px;'>!! आत्मा मालिक !! — हा ईमेल आपोआप, दर आठवड्याला पाठवला जातो.</p>
       </div>
     </div>";
@@ -236,7 +236,7 @@ function sendWorkAnniversaryEmail($email, $name, $yearsCompleted, $orgName) {
       <div style='background:#fff;padding:28px 24px;border-radius:0 0 10px 10px;text-align:center;'>
         <div style='font-size:36px;margin-bottom:10px;'>🏆🎊</div>
         <p style='font-size:16px;color:#1A1D29;'>प्रिय <strong>$name</strong>,</p>
-        <p style='font-size:14px;color:#1A1D29;line-height:1.7;'>आज तुम्ही $orgName परिवारासोबत <strong style='color:#1B8A83;'>$yearsCompleted वर्षं</strong> पूर्ण करत आहात. तुमच्या समर्पणाबद्दल आणि योगदानाबद्दल मनःपूर्वक धन्यवाद — पुढील वाटचालीसाठी शुभेच्छा!</p>
+        <p style='font-size:14px;color:#1A1D29;line-height:1.7;'>आज तुम्ही $orgName परिवारासोबत <strong style='color:#D9530F;'>$yearsCompleted वर्षं</strong> पूर्ण करत आहात. तुमच्या समर्पणाबद्दल आणि योगदानाबद्दल मनःपूर्वक धन्यवाद — पुढील वाटचालीसाठी शुभेच्छा!</p>
         <p style='font-size:11.5px;color:#8A90AC;margin-top:20px;'>!! आत्मा मालिक !! — हा ईमेल आपोआप पाठवला गेला आहे.</p>
       </div>
     </div>";

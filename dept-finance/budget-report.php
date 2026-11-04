@@ -74,7 +74,7 @@ if (!$isAllView) {
 <title>Budget अहवाल<?= $isAllView ? ' — सर्व विभाग' : ' — ' . h($dept['name_local'] ?: $dept['name']) ?></title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  :root{ --ink:#10162B; --rail:#1B8A83; --line:#D7DAE0; --text:#1A1D29; --text-dim:#666B7D; }
+  :root{ --ink:#10162B; --rail:#D9530F; --line:#D7DAE0; --text:#1A1D29; --text-dim:#666B7D; }
   *{box-sizing:border-box;}
   body{font-family:'Noto Sans Devanagari','Segoe UI',sans-serif;color:var(--text);margin:0;background:#F0F1F4;font-size:12.5px;}
   .toolbar{position:sticky;top:0;background:var(--ink);padding:14px 24px;display:flex;justify-content:space-between;align-items:center;z-index:10;flex-wrap:wrap;gap:10px;}
@@ -156,9 +156,9 @@ if (!$isAllView) {
   <?php if ($isAllView): ?>
 
     <div class="summary-row">
-      <div class="summary-box"><div class="lbl">एकूण दिलेलं Budget</div><div class="val" style="color:#1B8A83;">₹<?= number_format($grandAllocated, 0) ?></div></div>
+      <div class="summary-box"><div class="lbl">एकूण दिलेलं Budget</div><div class="val" style="color:#D9530F;">₹<?= number_format($grandAllocated, 0) ?></div></div>
       <div class="summary-box"><div class="lbl">एकूण खर्च</div><div class="val" style="color:#C97F1D;">₹<?= number_format($grandSpent, 0) ?></div></div>
-      <div class="summary-box"><div class="lbl">एकूण शिल्लक</div><div class="val" style="color:<?= ($grandAllocated - $grandSpent) < 0 ? '#B23A48' : '#1B8A83' ?>;">₹<?= number_format($grandAllocated - $grandSpent, 0) ?></div></div>
+      <div class="summary-box"><div class="lbl">एकूण शिल्लक</div><div class="val" style="color:<?= ($grandAllocated - $grandSpent) < 0 ? '#B23A48' : '#D9530F' ?>;">₹<?= number_format($grandAllocated - $grandSpent, 0) ?></div></div>
     </div>
 
     <h3>विभाग-निहाय तुलना</h3>
@@ -184,9 +184,9 @@ if (!$isAllView) {
   <?php else: ?>
 
     <div class="summary-row">
-      <div class="summary-box"><div class="lbl">दिलेलं Budget</div><div class="val" style="color:#1B8A83;">₹<?= number_format($budget['allocated'], 0) ?></div></div>
+      <div class="summary-box"><div class="lbl">दिलेलं Budget</div><div class="val" style="color:#D9530F;">₹<?= number_format($budget['allocated'], 0) ?></div></div>
       <div class="summary-box"><div class="lbl">एकूण खर्च</div><div class="val" style="color:#C97F1D;">₹<?= number_format($budget['spent'], 0) ?></div></div>
-      <div class="summary-box"><div class="lbl">शिल्लक</div><div class="val" style="color:<?= $budget['remaining'] < 0 ? '#B23A48' : '#1B8A83' ?>;">₹<?= number_format($budget['remaining'], 0) ?></div></div>
+      <div class="summary-box"><div class="lbl">शिल्लक</div><div class="val" style="color:<?= $budget['remaining'] < 0 ? '#B23A48' : '#D9530F' ?>;">₹<?= number_format($budget['remaining'], 0) ?></div></div>
       <div class="summary-box"><div class="lbl">वापर</div><div class="val"><?= $budget['percent_used'] ?>%</div></div>
     </div>
 

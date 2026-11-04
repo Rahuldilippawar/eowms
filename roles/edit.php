@@ -233,7 +233,7 @@ require_once __DIR__ . '/../includes/header.php';
 </div>
 
 <style>
-  .rp-count { font-size: 12px; font-weight: 600; color: var(--rail); background: rgba(27,138,131,.1); border-radius: 999px; padding: 2px 10px; margin-left: 6px; }
+  .rp-count { font-size: 12px; font-weight: 600; color: var(--rail); background: color-mix(in srgb,var(--rail) 10%,transparent); border-radius: 999px; padding: 2px 10px; margin-left: 6px; }
   .rp-tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 14px 24px 6px; }
   .rp-search { position: relative; flex: 1; min-width: 200px; }
   .rp-search i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-dim); font-size: 12px; }
@@ -244,7 +244,7 @@ require_once __DIR__ . '/../includes/header.php';
   .rp-gtoggle { border: 1px solid var(--line); background: transparent; border-radius: 999px; font-size: 11px; padding: 2px 10px; color: var(--text-dim); cursor: pointer; }
   .rp-gtoggle:hover { border-color: var(--rail); color: var(--rail); }
   .rp-label { display: flex; align-items: center; gap: 10px; font-size: 13px; background: var(--canvas); padding: 10px 14px; border-radius: 9px; margin-bottom: 2px; cursor: pointer; border: 1px solid transparent; transition: border-color .15s, background .15s; }
-  .rp-label.on { border-color: rgba(27,138,131,.45); background: rgba(27,138,131,.07); }
+  .rp-label.on { border-color: color-mix(in srgb,var(--rail) 45%,transparent); background: color-mix(in srgb,var(--rail) 7%,transparent); }
   .rp-label.changed { box-shadow: inset 3px 0 0 var(--amber); }
   .rp-holders { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; padding: 14px 20px; }
   .rp-holder { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; text-decoration: none; color: inherit; }

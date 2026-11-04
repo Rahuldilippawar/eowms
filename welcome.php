@@ -157,7 +157,7 @@ $todayLabel = $marathiDays[(int)date('w')] . ', ' . (int)date('j') . ' ' . $mara
   .hero::before, .hero::after{
     content:'';position:absolute;border-radius:50%;filter:blur(60px);opacity:.22;pointer-events:none;
   }
-  .hero::before{width:420px;height:420px;background:#1B8A83;top:-160px;left:-100px;animation:eowms-float1 14s ease-in-out infinite;}
+  .hero::before{width:420px;height:420px;background:#D9530F;top:-160px;left:-100px;animation:eowms-float1 14s ease-in-out infinite;}
   .hero::after{width:380px;height:380px;background:#C97F1D;bottom:-180px;right:-100px;animation:eowms-float2 16s ease-in-out infinite;}
   @keyframes eowms-float1{0%,100%{transform:translate(0,0);}50%{transform:translate(40px,30px);}}
   @keyframes eowms-float2{0%,100%{transform:translate(0,0);}50%{transform:translate(-30px,-40px);}}
@@ -203,24 +203,24 @@ $todayLabel = $marathiDays[(int)date('w')] . ', ' . (int)date('j') . ' ' . $mara
     border:1px solid rgba(220,239,236,.12);border-radius:30px;background:rgba(255,255,255,.03);
     animation:eowms-fade-up .8s -.1s ease both;
   }
-  .today-strip .dot{width:5px;height:5px;border-radius:50%;background:#1B8A83;box-shadow:0 0 8px #1B8A83;}
+  .today-strip .dot{width:5px;height:5px;border-radius:50%;background:#D9530F;box-shadow:0 0 8px #D9530F;}
 
   .hero-eyebrow{
     display:inline-flex;align-items:center;gap:10px;font-family:'Space Grotesk';font-size:11.5px;font-weight:600;
     letter-spacing:3px;text-transform:uppercase;color:#7FC9C2;margin-bottom:20px;
     animation:eowms-fade-up .8s -.05s ease both;
   }
-  .hero-eyebrow::before,.hero-eyebrow::after{content:'';width:28px;height:1px;background:linear-gradient(90deg,transparent,#1B8A83);}
-  .hero-eyebrow::after{background:linear-gradient(90deg,#1B8A83,transparent);}
+  .hero-eyebrow::before,.hero-eyebrow::after{content:'';width:28px;height:1px;background:linear-gradient(90deg,transparent,#D9530F);}
+  .hero-eyebrow::after{background:linear-gradient(90deg,#D9530F,transparent);}
 
   .hero-inner{position:relative;z-index:2;}
 
   .mark{
     width:88px;height:88px;border-radius:24px;
-    background:linear-gradient(150deg,#1B8A83,#0F5E58);
+    background:linear-gradient(150deg,#D9530F,#B6420A);
     display:flex;align-items:center;justify-content:center;
     font-family:'Space Grotesk';font-weight:700;font-size:32px;margin:0 auto 24px;
-    box-shadow:0 0 0 1px rgba(220,239,236,.15), 0 12px 34px rgba(27,138,131,.35);
+    box-shadow:0 0 0 1px rgba(220,239,236,.15), 0 12px 34px rgba(217,83,15,.35);
     animation:eowms-fade-up .8s ease both;
   }
   .mark img{width:100%;height:100%;object-fit:contain;border-radius:24px;background:#fff;padding:7px;}
@@ -236,7 +236,7 @@ $todayLabel = $marathiDays[(int)date('w')] . ', ' . (int)date('j') . ' ' . $mara
 
   .quote-card{
     max-width:600px;margin:40px auto 0;padding:34px 38px 28px;position:relative;
-    background:linear-gradient(160deg,rgba(27,138,131,.16),rgba(255,255,255,.03));
+    background:linear-gradient(160deg,rgba(217,83,15,.16),rgba(255,255,255,.03));
     border:1px solid rgba(220,239,236,.22);border-radius:20px;
     box-shadow:0 10px 40px rgba(0,0,0,.25);
     animation:eowms-fade-up .9s .35s ease both;
@@ -258,7 +258,7 @@ $todayLabel = $marathiDays[(int)date('w')] . ', ' . (int)date('j') . ' ' . $mara
   }
   .quote-divider{display:flex;align-items:center;justify-content:center;gap:10px;margin:18px 0 10px;}
   .quote-divider span{height:1px;width:46px;background:linear-gradient(90deg,transparent,rgba(220,239,236,.45),transparent);}
-  .quote-divider i{font-style:normal;color:#1B8A83;font-size:11px;}
+  .quote-divider i{font-style:normal;color:#D9530F;font-size:11px;}
   .quote-author{font-size:12.5px;color:#9FB0C3;font-weight:500;letter-spacing:.3px;}
 
   .action-row{display:flex;gap:14px;justify-content:center;margin-top:34px;flex-wrap:wrap;animation:eowms-fade-up .9s .45s ease both;}
@@ -290,7 +290,7 @@ $todayLabel = $marathiDays[(int)date('w')] . ', ' . (int)date('j') . ' ' . $mara
   .wish-form{display:flex;gap:6px;margin-top:10px;}
   .wish-form input[type=text]{flex:1;min-width:0;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:7px;padding:6px 10px;font-size:11.5px;color:#fff;}
   .wish-form input[type=text]::placeholder{color:rgba(255,255,255,.5);}
-  .wish-form button{background:#1B8A83;color:#fff;border:none;border-radius:7px;padding:6px 12px;font-size:11.5px;font-weight:600;cursor:pointer;white-space:nowrap;}
+  .wish-form button{background:#D9530F;color:#fff;border:none;border-radius:7px;padding:6px 12px;font-size:11.5px;font-weight:600;cursor:pointer;white-space:nowrap;}
   .wish-login-link{display:inline-block;margin-top:10px;font-size:11px;color:#FBEBD6;text-decoration:underline;}
 
   .btn-hero{
@@ -298,8 +298,8 @@ $todayLabel = $marathiDays[(int)date('w')] . ', ' . (int)date('j') . ' ' . $mara
     display:inline-flex;align-items:center;gap:8px;transition:transform .2s ease, box-shadow .2s ease;
   }
   .btn-hero:hover{transform:translateY(-2px);}
-  .btn-login{background:linear-gradient(135deg,#1B8A83,#0F5E58);color:#fff;box-shadow:0 8px 24px rgba(27,138,131,.35);}
-  .btn-login:hover{box-shadow:0 12px 30px rgba(27,138,131,.5);}
+  .btn-login{background:linear-gradient(135deg,#D9530F,#B6420A);color:#fff;box-shadow:0 8px 24px rgba(217,83,15,.35);}
+  .btn-login:hover{box-shadow:0 12px 30px rgba(217,83,15,.5);}
   .btn-student{background:linear-gradient(135deg,#C97F1D,#8A5A14);color:#fff;box-shadow:0 8px 24px rgba(201,127,29,.35);}
   .btn-student:hover{box-shadow:0 12px 30px rgba(201,127,29,.5);}
   .btn-request{background:rgba(255,255,255,.08);color:#fff;border:1.5px solid rgba(255,255,255,.22);backdrop-filter:blur(6px);}
@@ -308,7 +308,7 @@ $todayLabel = $marathiDays[(int)date('w')] . ', ' . (int)date('j') . ' ' . $mara
   .content{max-width:960px;margin:-20px auto 60px;padding:0 20px;position:relative;z-index:3;}
   .content-eyebrow{
     text-align:center;font-family:'Space Grotesk';font-size:11px;font-weight:600;letter-spacing:2px;
-    text-transform:uppercase;color:#1B8A83;margin-bottom:8px;
+    text-transform:uppercase;color:#D9530F;margin-bottom:8px;
     opacity:0;animation:eowms-fade-up .7s .05s ease both;
   }
   .content-title{
@@ -324,14 +324,14 @@ $todayLabel = $marathiDays[(int)date('w')] . ', ' . (int)date('j') . ' ' . $mara
     opacity:0;transform:translateY(18px);
   }
   .info-card.is-visible{opacity:1;transform:translateY(0);transition:transform .6s ease, box-shadow .3s ease, border-color .3s ease, opacity .6s ease;}
-  .info-card:nth-child(odd){border-top-color:#1B8A83;}
+  .info-card:nth-child(odd){border-top-color:#D9530F;}
   .info-card:nth-child(even){border-top-color:#C97F1D;}
   .info-card:hover{transform:translateY(-6px);box-shadow:0 16px 36px rgba(16,22,43,.12);}
   .info-card .icon-chip{
     width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;
     margin-bottom:14px;font-size:19px;
   }
-  .info-card:nth-child(odd) .icon-chip{background:#DCEFEC;color:#0F5E58;}
+  .info-card:nth-child(odd) .icon-chip{background:#DCEFEC;color:#B6420A;}
   .info-card:nth-child(even) .icon-chip{background:#FBEBD6;color:#8A5A14;}
   .info-card h3{font-family:'Space Grotesk';font-size:15px;font-weight:600;margin-bottom:6px;color:#10162B;}
   .info-card p{font-size:13px;color:#666B7D;margin:0;line-height:1.6;}
@@ -562,12 +562,12 @@ $todayLabel = $marathiDays[(int)date('w')] . ', ' . (int)date('j') . ' ' . $mara
   .wl-track{display:flex;align-items:center;gap:8px;max-width:560px;margin:20px auto 0;background:rgba(255,255,255,.96);border-radius:14px;padding:6px 6px 6px 16px;box-shadow:0 10px 30px rgba(0,0,0,.25);}
   .wl-track i{color:#6B7080;}
   .wl-track input{flex:1;border:0;outline:none;font-size:14px;padding:10px 4px;background:transparent;color:#10162B;min-width:0;font-family:inherit;}
-  .wl-track button{border:0;background:#1B8A83;color:#fff;font-weight:700;border-radius:10px;padding:10px 18px;font-size:13.5px;cursor:pointer;white-space:nowrap;font-family:inherit;}
+  .wl-track button{border:0;background:#D9530F;color:#fff;font-weight:700;border-radius:10px;padding:10px 18px;font-size:13.5px;cursor:pointer;white-space:nowrap;font-family:inherit;}
   .wl-track button:hover{filter:brightness(1.08);}
   .wl-install{display:block;margin:14px auto 0;border:1px dashed rgba(255,255,255,.4);background:transparent;color:#fff;border-radius:10px;padding:8px 16px;font-size:13px;cursor:pointer;font-family:inherit;}
   .wl-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;max-width:1000px;margin:-38px auto 46px;padding:0 20px;position:relative;z-index:3;}
   .wl-stats>div{background:#fff;border-radius:14px;padding:18px 16px;text-align:center;box-shadow:0 12px 30px rgba(16,22,43,.12);border:1px solid #E4E6EC;}
-  .wl-stats b{display:block;font-family:'Space Grotesk',sans-serif;font-size:28px;color:#1B8A83;}
+  .wl-stats b{display:block;font-family:'Space Grotesk',sans-serif;font-size:28px;color:#D9530F;}
   .wl-stats span{font-size:12.5px;color:#6B7080;font-weight:600;}
   @media (max-width:600px){.wl-track{margin-left:12px;margin-right:12px;}.wl-stats{margin-top:-24px;}}
 </style>

@@ -70,16 +70,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   *{box-sizing:border-box;}
-  body{font-family:'Noto Sans Devanagari','Segoe UI',sans-serif;background:linear-gradient(160deg,#0A0E1A,#1B2340,#0F5E58);margin:0;min-height:100vh;padding:24px;display:flex;align-items:center;justify-content:center;}
+  body{font-family:'Noto Sans Devanagari','Segoe UI',sans-serif;background:linear-gradient(160deg,#0A0E1A,#1B2340,#B6420A);margin:0;min-height:100vh;padding:24px;display:flex;align-items:center;justify-content:center;}
   .card{background:#fff;border-radius:20px;padding:32px 28px;max-width:420px;width:100%;box-shadow:0 20px 50px rgba(0,0,0,.3);}
   h1{font-family:'Space Grotesk';font-size:19px;text-align:center;margin:0 0 6px;color:#10162B;}
   p.sub{text-align:center;color:#666B7D;font-size:12.5px;margin:0 0 22px;}
   label{font-size:12px;font-weight:600;display:block;margin-bottom:6px;color:#10162B;}
   input,select{width:100%;padding:11px 14px;border:1.5px solid #D7DAE0;border-radius:10px;font-size:14px;margin-bottom:14px;font-family:inherit;}
-  button{width:100%;padding:13px;background:#1B8A83;color:#fff;border:none;border-radius:11px;font-size:14.5px;font-weight:600;cursor:pointer;font-family:inherit;}
+  button{width:100%;padding:13px;background:#D9530F;color:#fff;border:none;border-radius:11px;font-size:14.5px;font-weight:600;cursor:pointer;font-family:inherit;}
   .success-box{text-align:center;}
-  .success-icon{width:60px;height:60px;border-radius:50%;background:#DCEFEC;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:26px;color:#1B8A83;}
-  .code-badge{font-family:'Space Grotesk';font-weight:700;font-size:17px;color:#1B8A83;background:#DCEFEC;padding:8px 20px;border-radius:9px;display:inline-block;margin:10px 0;}
+  .success-icon{width:60px;height:60px;border-radius:50%;background:#DCEFEC;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:26px;color:#D9530F;}
+  .code-badge{font-family:'Space Grotesk';font-weight:700;font-size:17px;color:#D9530F;background:#DCEFEC;padding:8px 20px;border-radius:9px;display:inline-block;margin:10px 0;}
 </style>
 </head>
 <body>

@@ -48,7 +48,7 @@ $totalStaff = count($rows);
 <title>सत्संग हजेरी अहवाल</title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  :root{ --ink:#10162B; --rail:#1B8A83; --line:#D7DAE0; --text:#1A1D29; --text-dim:#666B7D; }
+  :root{ --ink:#10162B; --rail:#D9530F; --line:#D7DAE0; --text:#1A1D29; --text-dim:#666B7D; }
   *{box-sizing:border-box;}
   body{font-family:'Noto Sans Devanagari','Segoe UI',sans-serif;color:var(--text);margin:0;background:#F0F1F4;font-size:13px;}
   .toolbar{position:sticky;top:0;background:var(--ink);padding:14px 24px;display:flex;justify-content:space-between;align-items:center;z-index:10;}
@@ -65,7 +65,7 @@ $totalStaff = count($rows);
   th{background:#F3F4F7;text-align:left;padding:8px 10px;font-size:11px;text-transform:uppercase;color:var(--text-dim);border-bottom:1px solid var(--line);}
   td{padding:8px 10px;border-bottom:1px solid #EEF0F4;font-size:12.5px;}
   .chip{padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600;}
-  .chip.present{background:#DCEFEC;color:#0F5E58;}
+  .chip.present{background:#DCEFEC;color:#B6420A;}
   .chip.absent{background:#F7E2E3;color:#8A1F2B;}
   .chip.not_marked{background:#F3F4F7;color:var(--text-dim);}
   @media print{ .toolbar{display:none;} #eowmsLangSelect{display:none !important;} body{background:#fff;} .doc{margin:0;box-shadow:none;} }
@@ -92,7 +92,7 @@ $totalStaff = count($rows);
 
   <div class="summary-row">
     <div class="summary-box"><div class="lbl">एकूण कर्मचारी</div><div class="val"><?= $totalStaff ?></div></div>
-    <div class="summary-box"><div class="lbl">उपस्थित</div><div class="val" style="color:#1B8A83;"><?= $totalPresent ?></div></div>
+    <div class="summary-box"><div class="lbl">उपस्थित</div><div class="val" style="color:#D9530F;"><?= $totalPresent ?></div></div>
     <div class="summary-box"><div class="lbl">अनुपस्थित</div><div class="val" style="color:#B23A48;"><?= $totalAbsent ?></div></div>
   </div>
 

@@ -6,9 +6,9 @@
 (function () {
   'use strict';
   var KEYS = { theme: 'eowms_theme', accent: 'eowms_accent', fs: 'eowms_fs', density: 'eowms_density', sidebar: 'eowms_sidebar', motion: 'eowms_motion' };
-  var DEF = { theme: 'light', accent: 'teal', fs: 'md', density: 'cozy', sidebar: 'dark', motion: 'on' };
+  var DEF = { theme: 'light', accent: 'saffron', fs: 'md', density: 'cozy', sidebar: 'dark', motion: 'on' };
   var ACCENTS = [
-    ['teal', 'मोरपंखी', '#138A80'], ['blue', 'निळा', '#2563EB'], ['saffron', 'भगवा', '#D9530F'],
+    ['saffron', 'भगवा', '#D9530F'], ['blue', 'निळा', '#2563EB'], ['teal', 'मोरपंखी', '#138A80'],
     ['purple', 'जांभळा', '#7C3AED'], ['green', 'हिरवा', '#15803D'], ['maroon', 'मरून', '#A3123A']
   ];
   function get(k) { try { return localStorage.getItem(KEYS[k]) || DEF[k]; } catch (e) { return DEF[k]; } }
@@ -22,7 +22,7 @@
       var v = get(k); if (v === DEF[k]) h.removeAttribute('data-' + k); else h.setAttribute('data-' + k, v);
     });
     var meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute('content', dark ? '#0B1020' : getComputedStyle(h).getPropertyValue('--rail').trim() || '#138A80');
+    if (meta) meta.setAttribute('content', dark ? '#0B1020' : getComputedStyle(h).getPropertyValue('--rail').trim() || '#D9530F');
   }
   window.eowmsApplyPrefs = apply;
   // सध्याचं Sun/Moon बटण — Light ↔ Dark

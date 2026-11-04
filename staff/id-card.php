@@ -40,7 +40,7 @@ $branchLine = trim(implode(', ', array_filter([$emp['campus_address'] ?? null, $
   body{font-family:'Poppins','Segoe UI',sans-serif;background:#F0F1F4;margin:0;padding:30px;}
   .toolbar{position:fixed;top:0;left:0;right:0;background:#10162B;padding:14px 24px;display:flex;justify-content:space-between;align-items:center;z-index:10;}
   .toolbar a{color:#fff;text-decoration:none;font-size:13px;}
-  .toolbar button{background:#1B8A83;color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:13.5px;font-weight:600;cursor:pointer;font-family:inherit;}
+  .toolbar button{background:#D9530F;color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:13.5px;font-weight:600;cursor:pointer;font-family:inherit;}
   .stage{margin-top:70px;display:flex;justify-content:center;}
 
   /* Portrait ID card, matching the physical Trust card sample */
@@ -87,11 +87,11 @@ $branchLine = trim(implode(', ', array_filter([$emp['campus_address'] ?? null, $
   /* Special QR treatment — bordered "scan" tag, clearly set apart */
   .qr-block{
     position:absolute;bottom:0.85in;right:0.28in;z-index:3;
-    background:#fff;border:2px solid #1B8A83;border-radius:8px;
+    background:#fff;border:2px solid #D9530F;border-radius:8px;
     padding:5px;box-shadow:0 3px 10px rgba(0,0,0,.15);
   }
   .qr-block img{width:0.72in;height:0.72in;display:block;}
-  .qr-caption{font-size:5.6pt;color:#1B8A83;font-weight:700;text-align:center;margin-top:2px;letter-spacing:.3px;}
+  .qr-caption{font-size:5.6pt;color:#D9530F;font-weight:700;text-align:center;margin-top:2px;letter-spacing:.3px;}
 
   .sig-area{margin-top:6px;text-align:center;}
   .sig-line{font-size:7.8pt;color:#C4293D;font-weight:700;letter-spacing:.3px;border-top:1px solid #999;padding-top:5px;display:inline-block;margin-top:8px;min-width:1.6in;}

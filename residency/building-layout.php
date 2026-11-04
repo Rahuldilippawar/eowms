@@ -97,7 +97,7 @@ function floorLabel($f) {
 </div>
 
 <div class="d-flex gap-4 mt-4" style="font-size:12px;color:var(--text-dim);">
-  <div><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#1B8A83;margin-right:6px;"></span>रिकामी खोली</div>
+  <div><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--rail);margin-right:6px;"></span>रिकामी खोली</div>
   <div><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#C97F1D;margin-right:6px;"></span>भरलेली खोली</div>
 </div>
 
@@ -151,17 +151,17 @@ function floorLabel($f) {
     transform:translateY(-6px) rotateX(4deg) rotateY(-3deg);
     box-shadow:0 3px 0 rgba(16,22,43,.06), 0 18px 30px rgba(16,22,43,.14);
   }
-  .room-card-3d.vacant .room-card-face{border-top:3px solid #1B8A83;}
+  .room-card-3d.vacant .room-card-face{border-top:3px solid var(--rail);}
   .room-card-3d.occupied .room-card-face{border-top:3px solid #C97F1D;}
   .room-status-dot{
     position:absolute;top:10px;right:10px;width:8px;height:8px;border-radius:50%;
   }
-  .room-card-3d.vacant .room-status-dot{background:#1B8A83;box-shadow:0 0 0 3px rgba(27,138,131,.18);}
+  .room-card-3d.vacant .room-status-dot{background:var(--rail);box-shadow:0 0 0 3px color-mix(in srgb,var(--rail) 18%,transparent);}
   .room-card-3d.occupied .room-status-dot{background:#C97F1D;box-shadow:0 0 0 3px rgba(201,127,29,.18);}
   .room-name{font-size:12.5px;font-weight:700;color:var(--ink);margin-top:6px;}
   .room-code{font-size:10px;color:var(--text-dim);font-family:'JetBrains Mono',monospace;margin-top:2px;}
   .room-occupants{font-size:11px;font-weight:600;color:#C97F1D;margin-top:8px;}
-  .room-occupants.vacant-text{color:#1B8A83;}
+  .room-occupants.vacant-text{color:var(--rail);}
 
   @media (max-width: 767px){
     .floor-level{flex-direction:column;}
