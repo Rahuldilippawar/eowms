@@ -16,7 +16,7 @@
   // ---------- विभाग-आरोग्य: शोध / Campus / स्तर / क्रम ----------
   var grid = document.getElementById('smDeptGrid');
   if (grid) {
-    var cards = Array.prototype.slice.call(grid.querySelectorAll('.sm-dept'));
+    var cards = Array.prototype.slice.call(grid.querySelectorAll('.sm-dept:not(.sm-dept-all)'));
     var search = document.getElementById('smDeptSearch');
     var group = document.getElementById('smDeptGroup');
     var sort = document.getElementById('smDeptSort');

@@ -354,7 +354,7 @@ function eowmsSwitchDashTab(which, btn) {
 </div>
 
 <script src="assets/js/dashboard-charts.js?v=1"></script>
-<script src="assets/js/dashboard-smart.js?v=2"></script>
+<script src="assets/js/dashboard-smart.js?v=3"></script>
 </div>
 
 <?php if ($showCampusBreakdown): ?>

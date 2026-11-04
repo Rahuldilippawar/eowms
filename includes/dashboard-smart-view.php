@@ -217,6 +217,33 @@
       <?php endif; ?>
       <div class="sm-dept-grid" id="smDeptGrid">
         <?php if (!$smart['health']): ?><div class="sm-empty">विभाग सापडले नाहीत</div><?php endif; ?>
+        <?php if (count($smart['health']) > 1 && hasPermission('view_org_wide_dashboards')): $hs = $smart['healthSum']; ?>
+          <a class="sm-dept sm-dept-all <?= $hs['level'] ?>" href="departments/all.php" title="सर्व विभागांचा Showroom उघडा">
+            <div class="sm-all-ring" style="--p:<?= $hs['score'] ?>;"><span><b data-count="<?= $hs['score'] ?>"><?= $hs['score'] ?></b><small>आरोग्य</small></span></div>
+            <div class="sm-all-body">
+              <div class="sm-all-head">
+                <div><div class="sm-t"><i class="fa-solid fa-layer-group"></i> सर्व विभाग</div>
+                  <div class="sm-s"><?= $hs['count'] ?> विभागांचं एकत्रित आरोग्य</div></div>
+                <span class="sm-all-cta">Showroom उघडा <i class="fa-solid fa-arrow-right"></i></span>
+              </div>
+              <div class="sm-all-stack" title="उत्तम / लक्ष द्या / गंभीर">
+                <i class="good" style="flex:<?= $hs['good'] ?>"></i><i class="warn" style="flex:<?= $hs['warn'] ?>"></i><i class="bad" style="flex:<?= $hs['bad'] ?>"></i>
+              </div>
+              <div class="sm-all-legend">
+                <span><span class="sm-lv good"></span>उत्तम <b><?= $hs['good'] ?></b></span>
+                <span><span class="sm-lv warn"></span>लक्ष द्या <b><?= $hs['warn'] ?></b></span>
+                <span><span class="sm-lv bad"></span>गंभीर <b><?= $hs['bad'] ?></b></span>
+              </div>
+              <div class="sm-dept-meta">
+                <span title="आज नोंदवलेली कामं"><i class="fa-regular fa-clipboard"></i> आज <?= $hs['today'] ?></span>
+                <span title="३० दिवसांतील पूर्णता"><i class="fa-solid fa-chart-simple"></i> <?= $hs['rate'] === null ? '—' : $hs['rate'] . '%' ?></span>
+                <span title="उघडे Tasks"><i class="fa-solid fa-list-check"></i> <?= $hs['openTasks'] ?><?php if ($hs['overdueTasks']): ?> <em><?= $hs['overdueTasks'] ?> उशीर</em><?php endif; ?></span>
+                <span title="उघड्या विनंत्या"><i class="fa-solid fa-inbox"></i> <?= $hs['openReq'] ?></span>
+                <?php if ($hs['renDue'] || $hs['expired']): ?><span title="नूतनीकरण"><i class="fa-solid fa-shield-halved"></i> <?= $hs['renDue'] + $hs['expired'] ?></span><?php endif; ?>
+              </div>
+            </div>
+          </a>
+        <?php endif; ?>
         <?php foreach ($smart['health'] as $hd): ?>
           <a class="sm-dept <?= $hd['level'] ?>" href="departments/dashboard.php?id=<?= $hd['id'] ?>"
              data-name="<?= h(mb_strtolower($hd['name'] . ' ' . $hd['hod'])) ?>" data-group="<?= h($hd['group']) ?>"
