@@ -1,0 +1,175 @@
+/* ============================================================
+   EOWMS Theme — सुधारलेली रंगसंगती + Theme Studio (Accent,
+   Mode, अक्षर-आकार, मांडणी, Sidebar शैली, Animation)
+   सगळे रंग Tokens मधून — एक बदलला की संपूर्ण प्रणाली बदलते.
+   ============================================================ */
+
+/* ---------- 1. मूळ Tokens (Light) ---------- */
+:root {
+  --ink:#0F172A; --ink-soft:#1E293B; --canvas:#F4F6FA; --surface:#FFFFFF;
+  --line:#E3E7EF; --text:#172033; --text-dim:#64708A;
+  --amber:#C47A12; --amber-soft:#FCEFD9; --rose:#C2364A; --rose-soft:#FBE4E7;
+  --sky:#0B83C9; --sky-soft:#DDF0FB; --violet:#7048E8; --violet-soft:#ECE6FD; --green:#1E9E5A; --green-soft:#DDF4E7;
+  --rail:#138A80; --rail-soft:#DCF1EE; --rail-2:#0E6F67;
+  --shadow-sm:0 1px 2px rgba(15,23,42,.05), 0 1px 1px rgba(15,23,42,.03);
+  --shadow-md:0 10px 24px -8px rgba(15,23,42,.14), 0 2px 6px rgba(15,23,42,.05);
+  --shadow-lg:0 24px 48px -16px rgba(15,23,42,.24);
+  --ring:0 0 0 3px color-mix(in srgb, var(--rail) 28%, transparent);
+  --radius:14px;
+  --side-bg:linear-gradient(180deg,#0E1730 0%,#0B1224 60%,#091020 100%);
+  --side-text:#AEB6D3; --side-strong:#FFFFFF; --side-dim:#6C76A0; --side-hover:rgba(255,255,255,.06);
+}
+
+/* ---------- 2. Accent रंग (Theme Studio) ---------- */
+html[data-accent="blue"]    { --rail:#2563EB; --rail-soft:#E0EAFE; --rail-2:#1D4ED8; }
+html[data-accent="saffron"] { --rail:#D9530F; --rail-soft:#FDE8DC; --rail-2:#B6420A; }
+html[data-accent="purple"]  { --rail:#7C3AED; --rail-soft:#EEE6FE; --rail-2:#6025D0; }
+html[data-accent="green"]   { --rail:#15803D; --rail-soft:#DDF3E5; --rail-2:#116A32; }
+html[data-accent="maroon"]  { --rail:#A3123A; --rail-soft:#FBE2E9; --rail-2:#850E2F; }
+
+/* ---------- 3. Dark Mode ---------- */
+html[data-theme="dark"] {
+  --ink:#F1F4FA; --ink-soft:#DCE3F0; --canvas:#0B1020; --surface:#141B2D;
+  --line:#253049; --text:#E3E8F2; --text-dim:#8E99B6;
+  --amber:#E9A54F; --amber-soft:#3A2B14; --rose:#EE6B7D; --rose-soft:#3D1C23;
+  --sky:#4FB3EC; --sky-soft:#12324A; --violet:#9F85F5; --violet-soft:#2A2350; --green:#4CC685; --green-soft:#153523;
+  --rail:#2FB8AC; --rail-soft:#123A36; --rail-2:#5ED3C8;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.35); --shadow-md:0 12px 28px -10px rgba(0,0,0,.6); --shadow-lg:0 24px 48px -16px rgba(0,0,0,.7);
+  --side-bg:linear-gradient(180deg,#0A0F1E 0%,#080C18 100%);
+  color-scheme: dark;
+}
+html[data-theme="dark"][data-accent="blue"]    { --rail:#5B8DEF; --rail-soft:#1A2848; --rail-2:#8CB0F5; }
+html[data-theme="dark"][data-accent="saffron"] { --rail:#F2803F; --rail-soft:#3C2214; --rail-2:#F7A574; }
+html[data-theme="dark"][data-accent="purple"]  { --rail:#A57BF5; --rail-soft:#2B2048; --rail-2:#C4A6F9; }
+html[data-theme="dark"][data-accent="green"]   { --rail:#44C27A; --rail-soft:#163423; --rail-2:#78D7A0; }
+html[data-theme="dark"][data-accent="maroon"]  { --rail:#E85B80; --rail-soft:#3C1724; --rail-2:#F08BA6; }
+
+/* ---------- 4. पाया ---------- */
+::selection { background: color-mix(in srgb, var(--rail) 26%, transparent); }
+html { scrollbar-color: color-mix(in srgb, var(--text-dim) 45%, transparent) transparent; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--text-dim) 35%, transparent); border-radius: 10px; border: 2px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background-color: color-mix(in srgb, var(--text-dim) 55%, transparent); }
+body { background: var(--canvas); color: var(--text); }
+a { color: var(--rail); }
+a:hover { color: var(--rail-2); }
+
+/* ---------- 5. Sidebar ---------- */
+.rail-sidebar { background: var(--side-bg); color: var(--side-text); border-right: 1px solid rgba(255,255,255,.04); }
+.rail-brand .mark { background: linear-gradient(135deg, var(--rail), var(--rail-2)); box-shadow: 0 6px 16px -4px color-mix(in srgb, var(--rail) 60%, transparent); }
+.tree-node { color: var(--side-text); position: relative; transition: background-color .15s, color .15s; }
+.tree-node:hover:not(.active) { background: var(--side-hover); color: var(--side-strong); }
+.tree-node.active { background: color-mix(in srgb, var(--rail) 22%, transparent); color: var(--side-strong); }
+.tree-node.active::before { content: ''; position: absolute; left: -4px; top: 7px; bottom: 7px; width: 3px; border-radius: 3px; background: var(--rail); box-shadow: 0 0 10px var(--rail); }
+.tree-node.active i { color: color-mix(in srgb, var(--rail) 55%, #fff); }
+.nav-group-header .label { color: color-mix(in srgb, var(--side-strong) 85%, var(--rail)); }
+.org-tree .tier-label, .nav-group-header .chevron { color: var(--side-dim); }
+
+/* Sidebar — हलकी शैली */
+html[data-sidebar="light"] { --side-bg: var(--surface); --side-text: var(--text-dim); --side-strong: var(--text); --side-dim: color-mix(in srgb, var(--text-dim) 80%, transparent); --side-hover: color-mix(in srgb, var(--rail) 7%, transparent); }
+html[data-sidebar="light"] .rail-sidebar { border-right: 1px solid var(--line); box-shadow: var(--shadow-sm); }
+html[data-sidebar="light"] .rail-brand, html[data-sidebar="light"] .rail-foot { border-color: var(--line); }
+html[data-sidebar="light"] .rail-brand .org-name, html[data-sidebar="light"] .rail-foot .user-chip { color: var(--text); }
+html[data-sidebar="light"] .tree-node.active { background: var(--rail-soft); color: var(--rail-2); }
+html[data-sidebar="light"] .tree-node.active i { color: var(--rail); }
+html[data-sidebar="light"] .nav-group-header:hover { background: var(--side-hover); }
+html[data-sidebar="light"] .nav-group-body { border-left-color: var(--line); }
+html[data-sidebar="light"] .rail-sidebar .form-select, html[data-sidebar="light"] .rail-sidebar select,
+html[data-sidebar="light"] .rail-sidebar input { background: var(--canvas) !important; color: var(--text) !important; border-color: var(--line) !important; }
+html[data-sidebar="light"] .rail-sidebar [style*="color:#fff"], html[data-sidebar="light"] .rail-sidebar [style*="color: #fff"] { color: var(--text) !important; }
+
+/* ---------- 6. Topbar ---------- */
+.topbar { background: color-mix(in srgb, var(--surface) 82%, transparent); backdrop-filter: saturate(1.4) blur(12px); -webkit-backdrop-filter: saturate(1.4) blur(12px); border-bottom-color: color-mix(in srgb, var(--line) 80%, transparent); }
+.icon-btn { background: var(--surface); border-color: var(--line); transition: background-color .15s, color .15s, border-color .15s, transform .12s; position: relative; }
+.icon-btn:hover { color: var(--rail); border-color: color-mix(in srgb, var(--rail) 40%, var(--line)); background: var(--rail-soft); }
+.icon-btn:active { transform: scale(.96); }
+.global-search { background: var(--canvas); transition: border-color .15s, box-shadow .15s; }
+.global-search:hover { border-color: color-mix(in srgb, var(--rail) 40%, var(--line)); box-shadow: var(--ring); }
+
+/* ---------- 7. Panels, Cards, Tables, Forms ---------- */
+.panel, .kpi-card, .kpi-mini { border-color: var(--line); border-radius: var(--radius); box-shadow: var(--shadow-sm); }
+.kpi-card:hover, .panel:hover { box-shadow: var(--shadow-md); }
+.page-eyebrow { color: var(--rail); }
+.page-title { color: var(--ink); }
+.rtable th, .wtable th { background: color-mix(in srgb, var(--canvas) 70%, var(--surface)); }
+.rtable tbody tr:hover, .wtable tbody tr:hover { background: color-mix(in srgb, var(--rail) 6%, transparent); }
+.form-control-custom, .form-select-custom { transition: border-color .15s, box-shadow .15s; }
+.form-control-custom:focus, .form-select-custom:focus { outline: none; border-color: var(--rail); box-shadow: var(--ring); }
+.form-control:focus, .form-select:focus { border-color: var(--rail); box-shadow: var(--ring); }
+.form-check-input:checked { background-color: var(--rail); border-color: var(--rail); }
+.btn-primary { --bs-btn-bg: var(--rail); --bs-btn-border-color: var(--rail); --bs-btn-hover-bg: var(--rail-2); --bs-btn-hover-border-color: var(--rail-2); --bs-btn-active-bg: var(--rail-2); }
+.btn-outline-primary { --bs-btn-color: var(--rail); --bs-btn-border-color: var(--rail); --bs-btn-hover-bg: var(--rail); --bs-btn-hover-border-color: var(--rail); }
+.text-primary { color: var(--rail) !important; }
+.bg-primary { background-color: var(--rail) !important; }
+.nav-pills .nav-link.active, .nav-pills .show > .nav-link { background: var(--rail); }
+.progress-bar { background-color: var(--rail); }
+.dropdown-menu { border-color: var(--line); border-radius: 12px; box-shadow: var(--shadow-lg); background: var(--surface); color: var(--text); }
+.dropdown-item { color: var(--text); } .dropdown-item:hover, .dropdown-item:focus { background: var(--rail-soft); color: var(--rail-2); }
+.modal-content { border-radius: 16px; border-color: var(--line); background: var(--surface); color: var(--text); box-shadow: var(--shadow-lg); }
+
+/* Dark Mode मध्ये Bootstrap चे पांढरे भाग */
+html[data-theme="dark"] .card, html[data-theme="dark"] .list-group-item, html[data-theme="dark"] .table { --bs-table-bg: transparent; background-color: var(--surface); color: var(--text); border-color: var(--line); }
+html[data-theme="dark"] .form-control, html[data-theme="dark"] .form-select { background-color: var(--surface); color: var(--text); border-color: var(--line); }
+html[data-theme="dark"] .btn-close { filter: invert(1) grayscale(1); }
+html[data-theme="dark"] .text-muted { color: var(--text-dim) !important; }
+
+/* ---------- 8. अक्षरांचा आकार ---------- */
+html[data-fs="sm"] body { font-size: 13px; }
+html[data-fs="lg"] body { font-size: 15.5px; }
+html[data-fs="lg"] .rtable, html[data-fs="lg"] .wtable { font-size: 14px; }
+html[data-fs="lg"] .tree-node { font-size: 14px; }
+html[data-fs="xl"] body { font-size: 17px; }
+html[data-fs="xl"] .rtable, html[data-fs="xl"] .wtable, html[data-fs="xl"] .tree-node { font-size: 15px; }
+
+/* ---------- 9. मांडणी — Compact ---------- */
+html[data-density="compact"] .content { padding: 16px 18px 40px; }
+html[data-density="compact"] .topbar { padding: 9px 18px; }
+html[data-density="compact"] .rtable td, html[data-density="compact"] .wtable td { padding: 7px 12px; }
+html[data-density="compact"] .rtable th, html[data-density="compact"] .wtable th { padding: 7px 12px; }
+html[data-density="compact"] .kpi-card { padding: 12px 14px; }
+html[data-density="compact"] .page-title { margin-bottom: 14px; font-size: 22px; }
+html[data-density="compact"] .tree-node { padding: 5px 10px; }
+
+/* ---------- 10. Animation बंद ---------- */
+html[data-motion="off"] *, html[data-motion="off"] *::before, html[data-motion="off"] *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
+
+/* ---------- 11. Theme Studio ---------- */
+.ts-backdrop { position: fixed; inset: 0; background: rgba(8,12,24,.35); backdrop-filter: blur(2px); z-index: 1990; opacity: 0; pointer-events: none; transition: opacity .2s; }
+.ts-backdrop.open { opacity: 1; pointer-events: auto; }
+.ts-panel { position: fixed; top: 0; right: 0; bottom: 0; width: min(380px, 100vw); z-index: 1991; background: var(--surface); color: var(--text); border-left: 1px solid var(--line);
+  box-shadow: var(--shadow-lg); transform: translateX(105%); transition: transform .3s cubic-bezier(.2,.8,.2,1); display: flex; flex-direction: column; }
+.ts-panel.open { transform: none; }
+.ts-head { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px; border-bottom: 1px solid var(--line); }
+.ts-head h3 { font-size: 17px; font-weight: 700; margin: 0; display: flex; gap: 8px; align-items: center; }
+.ts-head h3 i { color: var(--rail); }
+.ts-close { width: 34px; height: 34px; border-radius: 10px; border: 1px solid var(--line); background: var(--canvas); color: var(--text-dim); cursor: pointer; }
+.ts-body { flex: 1; overflow-y: auto; padding: 6px 20px 20px; }
+.ts-sec { padding: 14px 0; border-bottom: 1px dashed var(--line); }
+.ts-sec:last-child { border-bottom: 0; }
+.ts-label { font-size: 12px; font-weight: 700; color: var(--text-dim); margin-bottom: 10px; display: flex; justify-content: space-between; }
+.ts-seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 6px; background: var(--canvas); padding: 4px; border-radius: 12px; border: 1px solid var(--line); }
+.ts-seg button { border: 0; background: transparent; color: var(--text-dim); border-radius: 9px; padding: 8px 6px; font-size: 12.5px; font-weight: 600; cursor: pointer; font-family: inherit; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.ts-seg button i { font-size: 15px; }
+.ts-seg button.on { background: var(--surface); color: var(--rail); box-shadow: var(--shadow-sm); }
+.ts-swatches { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.ts-sw { border: 1.5px solid var(--line); background: var(--surface); border-radius: 12px; padding: 9px 8px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 600; color: var(--text); font-family: inherit; transition: border-color .15s, transform .12s; }
+.ts-sw:hover { transform: translateY(-1px); }
+.ts-sw .dot { width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0; box-shadow: inset 0 0 0 2px rgba(255,255,255,.5); }
+.ts-sw.on { border-color: var(--sw); box-shadow: 0 0 0 3px color-mix(in srgb, var(--sw) 22%, transparent); }
+.ts-preview { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; display: grid; grid-template-columns: 64px 1fr; height: 104px; margin-top: 4px; }
+.ts-preview .s { background: var(--side-bg); padding: 10px 8px; display: flex; flex-direction: column; gap: 6px; }
+.ts-preview .s i { height: 6px; border-radius: 4px; background: var(--side-text); opacity: .35; }
+.ts-preview .s i.a { background: var(--rail); opacity: 1; }
+.ts-preview .m { background: var(--canvas); padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+.ts-preview .m .bar { height: 10px; border-radius: 6px; background: var(--surface); border: 1px solid var(--line); }
+.ts-preview .m .row { display: flex; gap: 6px; }
+.ts-preview .m .card { flex: 1; height: 38px; border-radius: 8px; background: var(--surface); border: 1px solid var(--line); position: relative; overflow: hidden; }
+.ts-preview .m .card::after { content: ''; position: absolute; left: 8px; right: 30%; bottom: 8px; height: 5px; border-radius: 4px; background: var(--rail); }
+.ts-preview .m .card:nth-child(2)::after { background: var(--amber); right: 50%; }
+.ts-preview .m .card:nth-child(3)::after { background: var(--rose); right: 60%; }
+.ts-foot { padding: 14px 20px; border-top: 1px solid var(--line); display: flex; gap: 8px; }
+.ts-foot button { flex: 1; border-radius: 10px; padding: 9px; font-weight: 600; font-size: 13px; cursor: pointer; font-family: inherit; }
+.ts-reset { border: 1px solid var(--line); background: var(--canvas); color: var(--text); }
+.ts-done { border: 0; background: var(--rail); color: #fff; }
+.ts-note { font-size: 11.5px; color: var(--text-dim); margin-top: 8px; }
+@media print { .ts-panel, .ts-backdrop { display: none !important; } }

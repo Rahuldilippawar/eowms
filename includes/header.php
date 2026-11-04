@@ -14,7 +14,7 @@ $titleOrgName = activeOrgName();
 
 <!-- PWA: installable "Add to Home Screen" support -->
 <link rel="manifest" href="<?= $rootPath ?? '' ?>manifest.php">
-<meta name="theme-color" content="#1B8A83">
+<meta name="theme-color" content="#138A80">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -28,10 +28,15 @@ $titleOrgName = activeOrgName();
 <link rel="stylesheet" href="<?= $rootPath ?? '' ?>assets/css/eowms.css?v=4">
 <link rel="stylesheet" href="<?= $rootPath ?? '' ?>assets/css/eowms-advance.css?v=5">
 <link rel="stylesheet" href="<?= $rootPath ?? '' ?>assets/css/eowms-ui.css?v=7">
+<link rel="stylesheet" href="<?= $rootPath ?? '' ?>assets/css/eowms-theme.css?v=1">
 <script>
-  // Dark Mode — Body Render होण्याआधीच लागू करतो, नाहीतर आधी पांढरं
-  // दिसून मग एकदम काळं होईल असं "Flash" दिसेल.
-  (function () { if (localStorage.getItem('eowms_theme') === 'dark') { document.documentElement.setAttribute('data-theme', 'dark'); } })();
+  // Theme Studio च्या निवडी — Body Render होण्याआधीच लागू, नाहीतर रंग "Flash" होतात.
+  (function () {
+    var h = document.documentElement, g = function (k) { try { return localStorage.getItem('eowms_' + k); } catch (e) { return null; } };
+    var t = g('theme');
+    if (t === 'dark' || (t === 'auto' && window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches)) h.setAttribute('data-theme', 'dark');
+    ['accent', 'fs', 'density', 'sidebar', 'motion'].forEach(function (k) { var v = g(k); if (v) h.setAttribute('data-' + k, v); });
+  })();
 </script>
 </head>
 <?php
@@ -70,6 +75,9 @@ if (hasRole('super_admin')) {
     <button type="button" class="icon-btn theme-toggle-btn" onclick="eowmsToggleTheme()" title="Dark/Light Mode">
       <i class="fa-solid fa-sun theme-icon-sun"></i>
       <i class="fa-solid fa-moon theme-icon-moon"></i>
+    </button>
+    <button type="button" class="icon-btn" data-theme-studio title="Theme Studio — रंग व मांडणी" aria-label="Theme Studio">
+      <i class="fa-solid fa-palette"></i>
     </button>
     <a href="<?= $rootPath ?? '' ?>help/index.php" class="icon-btn" title="मदत / Help">
       <i class="fa-solid fa-circle-question"></i>

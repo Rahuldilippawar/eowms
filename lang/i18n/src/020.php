@@ -1,0 +1,26 @@
+<?php
+// Theme Studio
+return [
+'Theme Studio — रंग व मांडणी' => ['Theme Studio — रंग व लेआउट', 'Theme Studio — colours & layout'],
+'पूर्वावलोकन' => ['पूर्वावलोकन', 'Preview'],
+'आपोआप' => ['अपने आप', 'Auto'],
+'आपोआप निवडलं तर तुमच्या Phone / Computer च्या सेटिंगनुसार दिवसा Light, रात्री Dark.' => ['अपने आप चुनने पर आपके Phone / Computer की सेटिंग के अनुसार दिन में Light, रात में Dark।', 'Auto follows your phone / computer setting — Light by day, Dark at night.'],
+'मुख्य रंग' => ['मुख्य रंग', 'Accent colour'],
+'मोरपंखी' => ['मोरपंखी', 'Teal'],
+'निळा' => ['नीला', 'Blue'],
+'भगवा' => ['भगवा', 'Saffron'],
+'जांभळा' => ['बैंगनी', 'Purple'],
+'हिरवा' => ['हरा', 'Green'],
+'मरून' => ['मैरून', 'Maroon'],
+'गडद' => ['गहरा', 'Dark'],
+'हलका' => ['हल्का', 'Light'],
+'अक्षरांचा आकार' => ['अक्षरों का आकार', 'Text size'],
+'लहान' => ['छोटा', 'Small'],
+'नेहमीचा' => ['सामान्य', 'Normal'],
+'मोठा' => ['बड़ा', 'Large'],
+'खूप मोठा' => ['बहुत बड़ा', 'Extra large'],
+'मांडणी' => ['लेआउट', 'Layout'],
+'आरामदायक' => ['आरामदायक', 'Comfortable'],
+'Compact — एका पानावर जास्त माहिती (मोठ्या याद्यांसाठी उपयुक्त).' => ['Compact — एक पेज पर अधिक जानकारी (बड़ी सूचियों के लिए उपयोगी)।', 'Compact — more on one screen (useful for long lists).'],
+'मूळ सेटिंग' => ['मूल सेटिंग', 'Reset'],
+];
