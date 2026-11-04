@@ -1,7 +1,6 @@
 <?php
-// फक्त मराठी — Native Multi-Language System काढून टाकलं आहे.
-// इतर कुठलीही भाषा हवी असल्यास — header.php मधलं Google Translate
-// Widget वापरून संपूर्ण पान भाषांतरित करता येतं.
+// t('sNNN') → lang/mr.php मधला मराठी मजकूर.
+// हिंदी / English भाषांतर includes/i18n.php (lang/i18n शब्दकोश) आपोआप करतं.
 
 function currentLang() {
     return 'mr';
