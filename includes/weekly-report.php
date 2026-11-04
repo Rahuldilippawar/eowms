@@ -292,8 +292,8 @@ function weeklyReportBar($pct, $color, $fullMm = 110) {
     return '<img src="' . weeklyReportPixel($color) . '" style="width:' . $w . 'mm;height:2.6mm;">';
 }
 
-/** PDF (bytes) */
-function weeklyReportPdf(array $d) {
+/** HTML → PDF (bytes) — साप्ताहिक व दैनिक दोन्ही अहवालांसाठी एकच mPDF सेटअप */
+function mgmtReportPdf($html, $title, $orgName) {
     require_once __DIR__ . '/../lib/vendor/autoload.php';
     $tmp = __DIR__ . '/../storage/tmp/mpdf';
     if (!is_dir($tmp)) { @mkdir($tmp, 0755, true); }
@@ -310,11 +310,16 @@ function weeklyReportPdf(array $d) {
         'backupSubsFont' => ['dejavusans'],
         'useSubstitutions' => true,
     ]);
-    $mpdf->SetTitle('साप्ताहिक अहवाल — ' . $d['org']);
+    $mpdf->SetTitle($title);
     $mpdf->SetAuthor('E-Admin');
-    $mpdf->SetFooter($d['org'] . '||पान {PAGENO} / {nbpg}');
-    $mpdf->WriteHTML(weeklyReportPdfHtml($d));
+    $mpdf->SetFooter($orgName . '||पान {PAGENO} / {nbpg}');
+    $mpdf->WriteHTML($html);
     return $mpdf->Output('', \Mpdf\Output\Destination::STRING_RETURN);
+}
+
+/** साप्ताहिक PDF (bytes) */
+function weeklyReportPdf(array $d) {
+    return mgmtReportPdf(weeklyReportPdfHtml($d), 'साप्ताहिक अहवाल — ' . $d['org'], $d['org']);
 }
 
 function weeklyReportFileName(array $d) {
