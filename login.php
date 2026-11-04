@@ -123,31 +123,48 @@ $loginOrgName = $loginOrg['name'] ?? 'VJMAT';
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title><?= h(t('s157')) ?> <?= h($loginOrgName) ?></title>
 <link rel="icon" type="image/png" href="assets/brand/favicon-32.png">
-<meta name="theme-color" content="#10162B">
+<script>
+  // App मधल्या Theme Studio च्या निवडी (रंग + Mode) Login पानावरही — निवड नसेल तर Device नुसार
+  (function () {
+    var h = document.documentElement, g = function (k) { try { return localStorage.getItem('eowms_' + k); } catch (e) { return null; } };
+    var t = g('theme'), sys = window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches;
+    if (t === 'dark' || ((t === 'auto' || !t) && sys)) h.setAttribute('data-theme', 'dark');
+    var a = g('accent'); if (a) h.setAttribute('data-accent', a);
+  })();
+</script>
+<meta name="theme-color" content="#0B1224">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --lg-teal:#1B8A83;--lg-teal-d:#0F5E58;--lg-amber:#E0A043;--lg-ink:#10162B;--lg-muted:#6B7080;
-    --lg-side:#F3F4F7;--lg-card:#ffffff;--lg-line:#E4E6EC;--lg-field:#F8F9FB;--lg-text:#10162B;--lg-sub:#4B5063;
+    --lg-teal:#138A80;--lg-teal-d:#0E6F67;--lg-teal-l:#5ED3C8;--lg-amber:#E0A043;--lg-ink:#0F172A;--lg-muted:#64708A;
+    --lg-side:#F4F6FA;--lg-card:#ffffff;--lg-line:#E3E7EF;--lg-field:#F8FAFC;--lg-text:#0F172A;--lg-sub:#475069;
     --lg-err-bg:#FDECEC;--lg-err:#B42318;--lg-ok-bg:#E7F6EF;--lg-ok:#137A4B;--lg-warn-bg:#FFF4E0;--lg-warn:#9A5B07;
+    --lg-brand:linear-gradient(160deg,#0F1A36 0%,#0B1224 55%,#080E1C 100%);
   }
-  @media (prefers-color-scheme:dark){
-    :root{--lg-side:#0C1120;--lg-card:#141B2E;--lg-line:#26304A;--lg-field:#0F1526;--lg-text:#EEF1F8;--lg-sub:#B7BDD3;--lg-muted:#8E95AE;
-      --lg-err-bg:rgba(240,68,56,.14);--lg-err:#FDA29B;--lg-ok-bg:rgba(18,183,106,.14);--lg-ok:#6CE9A6;--lg-warn-bg:rgba(247,144,9,.14);--lg-warn:#FEC84B;}
-  }
+  /* Theme Studio मधला मुख्य रंग — Login पानावरही तोच */
+  html[data-accent="blue"]{--lg-teal:#2563EB;--lg-teal-d:#1D4ED8;--lg-teal-l:#8CB0F5;}
+  html[data-accent="saffron"]{--lg-teal:#D9530F;--lg-teal-d:#B6420A;--lg-teal-l:#F7A574;}
+  html[data-accent="purple"]{--lg-teal:#7C3AED;--lg-teal-d:#6025D0;--lg-teal-l:#C4A6F9;}
+  html[data-accent="green"]{--lg-teal:#15803D;--lg-teal-d:#116A32;--lg-teal-l:#78D7A0;}
+  html[data-accent="maroon"]{--lg-teal:#A3123A;--lg-teal-d:#850E2F;--lg-teal-l:#F08BA6;}
+  html[data-theme="dark"]{--lg-side:#0B1020;--lg-card:#141B2D;--lg-line:#253049;--lg-field:#0F1626;--lg-text:#E3E8F2;--lg-sub:#B7BFD6;--lg-muted:#8E99B6;
+    --lg-err-bg:rgba(240,68,56,.14);--lg-err:#FDA29B;--lg-ok-bg:rgba(18,183,106,.14);--lg-ok:#6CE9A6;--lg-warn-bg:rgba(247,144,9,.14);--lg-warn:#FEC84B;color-scheme:dark;}
+  html[data-theme="dark"] .lg-card{box-shadow:0 30px 60px -20px rgba(0,0,0,.6);}
+  html[data-theme="dark"] .lg-btn{--lg-teal-d:color-mix(in srgb,var(--lg-teal) 70%,#000);}
   *{box-sizing:border-box;}
   html,body{margin:0;min-height:100%;}
   body{min-height:100vh;background:var(--lg-side);color:var(--lg-text);font-family:'Noto Sans Devanagari','Segoe UI',sans-serif;}
   .lg-wrap{min-height:100vh;display:grid;grid-template-columns:1.1fr 1fr;}
 
   /* ---------- डावी बाजू : ब्रँड ---------- */
-  .lg-brand{position:relative;overflow:hidden;color:#fff;padding:48px 56px 36px;display:flex;flex-direction:column;justify-content:space-between;gap:32px;background:#0B1022;isolation:isolate;}
+  .lg-brand{position:relative;overflow:hidden;color:#fff;padding:48px 56px 36px;display:flex;flex-direction:column;justify-content:space-between;gap:32px;background:var(--lg-brand);isolation:isolate;}
+  .lg-brand::after{content:'';position:absolute;left:0;right:0;top:0;height:3px;background:linear-gradient(90deg,var(--lg-teal),var(--lg-amber),var(--lg-teal));opacity:.9;}
   .lg-blob{position:absolute;border-radius:50%;filter:blur(70px);opacity:.55;z-index:-1;animation:lgFloat 18s ease-in-out infinite alternate;}
-  .lg-blob.b1{width:460px;height:460px;background:#1B8A83;left:-120px;top:-140px;}
-  .lg-blob.b2{width:380px;height:380px;background:#C97F1D;right:-120px;bottom:-120px;opacity:.38;animation-delay:-6s;}
-  .lg-blob.b3{width:300px;height:300px;background:#4C5FD5;right:12%;top:30%;opacity:.25;animation-delay:-12s;}
+  .lg-blob.b1{width:460px;height:460px;background:var(--lg-teal);left:-120px;top:-140px;opacity:.45;}
+  .lg-blob.b2{width:380px;height:380px;background:#C47A12;right:-120px;bottom:-120px;opacity:.26;animation-delay:-6s;}
+  .lg-blob.b3{width:300px;height:300px;background:#3B5BDB;right:12%;top:30%;opacity:.18;animation-delay:-12s;}
   @keyframes lgFloat{0%{transform:translate(0,0) scale(1);}100%{transform:translate(40px,30px) scale(1.12);}}
   .lg-grid{position:absolute;inset:0;z-index:-1;opacity:.5;background-image:radial-gradient(rgba(255,255,255,.12) 1px,transparent 1px);background-size:22px 22px;
     -webkit-mask-image:radial-gradient(ellipse at 30% 40%,#000 20%,transparent 75%);mask-image:radial-gradient(ellipse at 30% 40%,#000 20%,transparent 75%);}
@@ -157,9 +174,9 @@ $loginOrgName = $loginOrg['name'] ?? 'VJMAT';
   .lg-org b{display:block;font-family:'Space Grotesk','Noto Sans Devanagari';font-size:18px;font-weight:700;letter-spacing:.01em;}
   .lg-org span{font-size:12.5px;color:#A9B0CC;}
   .lg-mid{max-width:520px;}
-  .lg-mantra{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:999px;background:rgba(127,209,200,.12);border:1px solid rgba(127,209,200,.28);color:#9FE3DA;font-size:13px;font-weight:600;letter-spacing:.06em;margin-bottom:18px;}
+  .lg-mantra{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:999px;background:color-mix(in srgb,var(--lg-teal-l) 12%,transparent);border:1px solid color-mix(in srgb,var(--lg-teal-l) 30%,transparent);color:var(--lg-teal-l);font-size:13px;font-weight:600;letter-spacing:.06em;margin-bottom:18px;}
   .lg-mid h1{font-family:'Space Grotesk','Noto Sans Devanagari';font-size:36px;font-weight:700;line-height:1.3;margin:0 0 14px;}
-  .lg-mid h1 em{font-style:normal;background:linear-gradient(90deg,#7FD1C8,#F2C27B);-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .lg-mid h1 em{font-style:normal;background:linear-gradient(90deg,var(--lg-teal-l),#F2C27B);-webkit-background-clip:text;background-clip:text;color:transparent;}
   .lg-mid p{color:#B7BDD6;font-size:14.5px;line-height:1.8;margin:0 0 26px;max-width:460px;}
   .lg-feat{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
   .lg-feat div{display:flex;gap:11px;align-items:flex-start;padding:13px 14px;border-radius:14px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);backdrop-filter:blur(6px);font-size:13px;line-height:1.5;color:#DCE1F0;transition:background .2s,transform .2s;}
@@ -167,7 +184,7 @@ $loginOrgName = $loginOrg['name'] ?? 'VJMAT';
   .lg-feat i{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;}
   .lg-feat b{display:block;color:#fff;font-size:13.5px;font-weight:600;}
   .lg-feat small{color:#9FA6C0;font-size:12px;}
-  .ic-teal{background:rgba(27,138,131,.25);color:#7FD1C8;} .ic-amber{background:rgba(224,160,67,.2);color:#F2C27B;}
+  .ic-teal{background:color-mix(in srgb,var(--lg-teal) 28%,transparent);color:var(--lg-teal-l);} .ic-amber{background:rgba(224,160,67,.2);color:#F2C27B;}
   .ic-blue{background:rgba(76,95,213,.25);color:#A9B5FF;} .ic-rose{background:rgba(232,90,112,.2);color:#FFA3B1;}
   .lg-foot{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;}
   .lg-clock{display:flex;align-items:center;gap:14px;padding:12px 16px;border-radius:14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);}
@@ -187,7 +204,7 @@ $loginOrgName = $loginOrg['name'] ?? 'VJMAT';
   .lg-badge .dot{width:7px;height:7px;border-radius:50%;background:#12B76A;box-shadow:0 0 0 3px rgba(18,183,106,.25);}
   .lg-lang{position:relative;margin-left:auto;}
   .lg-lang i{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--lg-muted);font-size:12px;pointer-events:none;}
-  .lg-lang select{appearance:none;-webkit-appearance:none;border:1px solid var(--lg-line);border-radius:999px;padding:6px 28px 6px 28px;font-size:12px;color:var(--lg-sub);background:var(--lg-field) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238E95AE' fill='none' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 11px center;cursor:pointer;font-family:inherit;}
+  .lg-lang select{appearance:none;-webkit-appearance:none;border:1px solid var(--lg-line);border-radius:999px;padding:6px 28px 6px 12px;font-size:12px;color:var(--lg-sub);background:var(--lg-field) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238E95AE' fill='none' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 11px center;cursor:pointer;font-family:inherit;}
   .lg-tabs{display:grid;grid-template-columns:1fr 1fr;background:var(--lg-field);border:1px solid var(--lg-line);border-radius:12px;padding:4px;margin-bottom:22px;}
   .lg-tabs a,.lg-tabs span{display:flex;align-items:center;justify-content:center;gap:7px;padding:8px;border-radius:9px;font-size:13px;font-weight:600;color:var(--lg-muted);text-decoration:none;}
   .lg-tabs span{background:var(--lg-card);color:var(--lg-teal);box-shadow:0 1px 3px rgba(16,22,43,.1);}
@@ -204,7 +221,7 @@ $loginOrgName = $loginOrg['name'] ?? 'VJMAT';
   .lg-field input{width:100%;height:56px;border:1.5px solid var(--lg-line);border-radius:13px;padding:20px 46px 6px 44px;font-size:15px;background:var(--lg-field);font-family:inherit;color:var(--lg-text);transition:border-color .15s,box-shadow .15s,background .15s;}
   .lg-field label{position:absolute;left:44px;top:50%;transform:translateY(-50%);font-size:14px;color:var(--lg-muted);pointer-events:none;transition:all .15s ease;}
   .lg-field input:focus + label,.lg-field input:not(:placeholder-shown) + label{top:17px;font-size:11px;font-weight:600;color:var(--lg-teal);}
-  .lg-field input:focus{outline:none;border-color:var(--lg-teal);box-shadow:0 0 0 4px rgba(27,138,131,.15);background:var(--lg-card);}
+  .lg-field input:focus{outline:none;border-color:var(--lg-teal);box-shadow:0 0 0 4px color-mix(in srgb,var(--lg-teal) 15%,transparent);background:var(--lg-card);}
   .lg-field .lead{position:absolute;left:16px;top:50%;transform:translateY(-50%);color:var(--lg-muted);font-size:15px;transition:color .15s;}
   .lg-field input:focus ~ .lead{color:var(--lg-teal);}
   .lg-field.bad input{border-color:#E5484D;} .lg-field.bad input:focus{box-shadow:0 0 0 4px rgba(229,72,77,.15);}
@@ -213,21 +230,21 @@ $loginOrgName = $loginOrg['name'] ?? 'VJMAT';
   .lg-hint{font-size:11.5px;color:#E5484D;margin:-8px 0 10px 4px;display:none;}
   .lg-field.bad + .lg-hint{display:block;}
   .lg-eye{position:absolute;right:8px;top:50%;transform:translateY(-50%);border:0;background:transparent;color:var(--lg-muted);width:36px;height:36px;cursor:pointer;border-radius:9px;}
-  .lg-eye:hover{color:var(--lg-teal);background:rgba(27,138,131,.08);}
+  .lg-eye:hover{color:var(--lg-teal);background:color-mix(in srgb,var(--lg-teal) 8%,transparent);}
   .lg-caps{display:none;align-items:center;gap:6px;font-size:12px;color:var(--lg-warn);background:var(--lg-warn-bg);border-radius:8px;padding:5px 10px;font-weight:600;margin:-6px 0 12px;}
 
   .lg-row{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin:4px 0 20px;font-size:13px;}
   .lg-row label{display:flex;align-items:center;gap:8px;color:var(--lg-sub);cursor:pointer;}
   .lg-row input{accent-color:var(--lg-teal);width:16px;height:16px;}
   .lg-row a{color:var(--lg-teal);font-weight:600;text-decoration:none;} .lg-row a:hover{text-decoration:underline;}
-  .lg-btn{position:relative;overflow:hidden;width:100%;height:52px;border:0;border-radius:13px;font-size:15.5px;font-weight:700;color:#fff;background:linear-gradient(135deg,#1FA096,#0F5E58);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-family:inherit;box-shadow:0 10px 24px -8px rgba(27,138,131,.6);transition:filter .15s,transform .1s,box-shadow .15s;}
-  .lg-btn:hover{filter:brightness(1.07);box-shadow:0 14px 28px -8px rgba(27,138,131,.7);}
+  .lg-btn{position:relative;overflow:hidden;width:100%;height:52px;border:0;border-radius:13px;font-size:15.5px;font-weight:700;color:#fff;background:linear-gradient(135deg,var(--lg-teal),var(--lg-teal-d));cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-family:inherit;box-shadow:0 10px 24px -8px color-mix(in srgb,var(--lg-teal) 60%,transparent);transition:filter .15s,transform .1s,box-shadow .15s;}
+  .lg-btn:hover{filter:brightness(1.07);box-shadow:0 14px 28px -8px color-mix(in srgb,var(--lg-teal) 70%,transparent);}
   .lg-btn:active{transform:translateY(1px);}
   .lg-btn .arr{transition:transform .2s;} .lg-btn:hover .arr{transform:translateX(4px);}
   .lg-btn::after{content:'';position:absolute;top:0;left:-60%;width:40%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.25),transparent);transform:skewX(-20deg);transition:left .6s;}
   .lg-btn:hover::after{left:120%;}
   .lg-btn[disabled]{opacity:.8;cursor:progress;}
-  .lg-btn:focus-visible,.lg-eye:focus-visible,.lg-tabs a:focus-visible{outline:3px solid rgba(27,138,131,.45);outline-offset:2px;}
+  .lg-btn:focus-visible,.lg-eye:focus-visible,.lg-tabs a:focus-visible{outline:3px solid color-mix(in srgb,var(--lg-teal) 45%,transparent);outline-offset:2px;}
 
   .lg-links{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:22px;}
   .lg-links a{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 6px;border-radius:12px;border:1px solid var(--lg-line);color:var(--lg-sub);text-decoration:none;font-size:11.5px;text-align:center;transition:border-color .15s,color .15s,transform .15s;}
@@ -278,7 +295,6 @@ $loginOrgName = $loginOrg['name'] ?? 'VJMAT';
       <div class="lg-top">
         <div class="lg-badge"><span class="dot"></span> सुरक्षित प्रवेश</div>
         <div class="lg-lang">
-          <i class="fa-solid fa-globe"></i>
           <?= i18nSwitcher('') ?>
         </div>
       </div>
