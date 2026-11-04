@@ -356,9 +356,16 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
       <a href="<?= $rp ?>meditation/index.php" class="tree-node <?= $currentDir === 'meditation' ? 'active' : '' ?>">
         <i class="fa-solid fa-spa fa-fw"></i><span>ध्यान व सत्संग</span>
       </a>
+      <?php
+        // संगीत विभाग — music/index.php सारखाच नियम: संगीत विभागाचा Staff, manage_music, किंवा Management
+        $__musicOk = hasPermission('manage_music') || isManagementOrAbove();
+        if (!$__musicOk) { try { $__mq = $pdo->prepare("SELECT code FROM departments WHERE id = ?"); $__mq->execute([$user['department_id'] ?? 0]); $__musicOk = ($__mq->fetchColumn() ?: '') === 'MUS'; } catch (PDOException $e) {} }
+      ?>
+      <?php if ($__musicOk): ?>
       <a href="<?= $rp ?>music/index.php" class="tree-node <?= $currentDir === 'music' ? 'active' : '' ?>">
         <i class="fa-solid fa-music fa-fw"></i><span>🎵 संगीत विभाग</span>
       </a>
+      <?php endif; ?>
       <a href="<?= $rp ?>events/index.php" class="tree-node <?= $currentDir === 'events' ? 'active' : '' ?>">
         <i class="fa-solid fa-calendar-days fa-fw"></i><span>🎉 कार्यक्रम व्यवस्थापन</span>
       </a>

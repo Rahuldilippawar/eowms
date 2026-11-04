@@ -28,16 +28,16 @@ if (!$department) {
 }
 
 // Staff counts
-$stmt = $pdo->prepare("SELECT COUNT(*) c FROM users WHERE department_id = ?");
-$stmt->execute([$deptId]);
+$stmt = $pdo->prepare("SELECT COUNT(*) c FROM users WHERE department_id = ? AND organization_id = ?");
+$stmt->execute([$deptId, activeOrgId()]);
 $totalStaff = $stmt->fetch()['c'];
-$stmt = $pdo->prepare("SELECT COUNT(*) c FROM users WHERE department_id = ? AND is_active = 1");
-$stmt->execute([$deptId]);
+$stmt = $pdo->prepare("SELECT COUNT(*) c FROM users WHERE department_id = ? AND organization_id = ? AND is_active = 1");
+$stmt->execute([$deptId, activeOrgId()]);
 $activeStaff = $stmt->fetch()['c'];
 
 // Full list of this department's employees (names) — shown in its own panel
-$stmt = $pdo->prepare("SELECT id, name, designation, is_active FROM users WHERE department_id = ? ORDER BY name");
-$stmt->execute([$deptId]);
+$stmt = $pdo->prepare("SELECT id, name, designation, is_active FROM users WHERE department_id = ? AND organization_id = ? ORDER BY name");
+$stmt->execute([$deptId, activeOrgId()]);
 $deptStaffList = $stmt->fetchAll();
 
 // Today's work status
@@ -99,7 +99,16 @@ foreach (['urgent', 'high', 'normal', 'low'] as $p) {
     <div style="font-size:12.5px;color:var(--text-dim);margin-bottom:20px;"><?= h(t('s309')) ?> <?= h($department['hod_name'] ?? '—') ?></div>
   </div>
   <div class="d-flex gap-2">
+    <?php
+      require_once __DIR__ . '/../includes/employee-report-access.php';
+      $__rv = employeeReportVisibleDeptIds();
+      $__canDeptReport = $__rv === null || in_array((int)$department['id'], array_map('intval', (array)$__rv), true);
+      $__staffVis = getVisibleDepartmentIdsForStaffTracking();
+      $__canProfiles = $__staffVis === null || in_array((int)$department['id'], array_map('intval', (array)$__staffVis), true);
+    ?>
+    <?php if ($__canDeptReport): ?>
     <a href="../staff/department-report.php?department_id=<?= $department['id'] ?>" class="btn btn-sm" style="border:1px solid var(--rail);color:var(--rail);border-radius:9px;font-size:12.5px;padding:8px 16px;font-weight:600;align-self:center;"><i class="fa-solid fa-people-group me-1"></i>कर्मचारी अहवाल</a>
+    <?php endif; ?>
     <a href="../letters/create.php?to_dept=<?= $department['id'] ?>" class="btn btn-sm" style="background:var(--rail);color:#fff;border-radius:9px;font-size:12.5px;padding:8px 16px;font-weight:600;align-self:center;"><i class="fa-solid fa-paper-plane me-1"></i>पत्र पाठवा</a>
     <a href="../index.php" style="font-size:12.5px;color:var(--rail);font-weight:600;text-decoration:none;align-self:center;"><i class="fa-solid fa-arrow-left me-1"></i><?= h(t('s310')) ?></a>
   </div>
@@ -190,12 +199,12 @@ foreach (['urgent', 'high', 'normal', 'low'] as $p) {
         <?php if (empty($deptStaffList)): ?>
           <p style="font-size:12.5px;color:var(--text-dim);">या विभागात अजून कोणीही कर्मचारी नेमलेला नाही.</p>
         <?php endif; ?>
-        <?php foreach ($deptStaffList as $ds): ?>
-          <a href="../staff/profile.php?id=<?= $ds['id'] ?>" style="display:inline-flex;align-items:center;gap:8px;background:var(--canvas);border-radius:20px;padding:7px 16px 7px 8px;font-size:12.5px;margin:0 8px 8px 0;text-decoration:none;color:var(--ink);<?= !$ds['is_active'] ? 'opacity:.5;' : '' ?>">
+        <?php foreach ($deptStaffList as $ds): $__pTag = ($__canProfiles || (int)$ds['id'] === (int)$user['id']) ? 'a' : 'span'; ?>
+          <<?= $__pTag ?> <?= $__pTag === 'a' ? 'href="../staff/profile.php?id=' . (int)$ds['id'] . '"' : '' ?> style="display:inline-flex;align-items:center;gap:8px;background:var(--canvas);border-radius:20px;padding:7px 16px 7px 8px;font-size:12.5px;margin:0 8px 8px 0;text-decoration:none;color:var(--ink);<?= !$ds['is_active'] ? 'opacity:.5;' : '' ?>">
             <span class="font-mono" style="width:24px;height:24px;border-radius:50%;background:var(--rail);color:#fff;font-size:10px;display:flex;align-items:center;justify-content:center;font-weight:600;flex-shrink:0;"><?= h(mb_substr($ds['name'], 0, 2)) ?></span>
             <span style="font-weight:500;"><?= h($ds['name']) ?></span>
             <?php if ($ds['designation']): ?><span style="color:var(--text-dim);">— <?= h($ds['designation']) ?></span><?php endif; ?>
-          </a>
+          </<?= $__pTag ?>>
         <?php endforeach; ?>
       </div>
     </div>

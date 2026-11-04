@@ -52,7 +52,7 @@ $myOccupancy = $occStmt->fetch();
         <div class="panel-head"><div class="title">🏢 तपशील</div></div>
         <div style="padding:20px 24px;">
           <div style="font-size:20px;font-weight:700;color:var(--ink);"><?= h($myOccupancy['building_name'] ? $myOccupancy['building_name'] . ' — ' : '') ?><?= h($myOccupancy['room_name']) ?></div>
-          <div style="font-size:12.5px;color:var(--text-dim);margin-top:4px;">राहायला सुरुवात: <?= date('d M Y', strtotime($myOccupancy['moved_in_date'])) ?></div>
+          <div style="font-size:12.5px;color:var(--text-dim);margin-top:4px;">राहायला सुरुवात: <?= !empty($myOccupancy['moved_in_date']) ? date('d M Y', strtotime($myOccupancy['moved_in_date'])) : '—' ?></div>
 
           <?php if (!empty($roommates)): ?>
             <div style="margin-top:16px;">

@@ -261,7 +261,11 @@ try {
           </td>
           <td onclick="event.stopPropagation()">
             <?php if ($person['department_id']): ?>
-              <a href="../departments/dashboard.php?id=<?= $person['department_id'] ?>" style="color:var(--rail);font-weight:600;text-decoration:none;"><?= h($person['dept_name'] ?? $person['dept_name_en'] ?? '—') ?></a>
+              <?php if (!isDeptScoped() || (int)$person['department_id'] === (int)($user['department_id'] ?? 0)): ?>
+                <a href="../departments/dashboard.php?id=<?= $person['department_id'] ?>" style="color:var(--rail);font-weight:600;text-decoration:none;"><?= h($person['dept_name'] ?? $person['dept_name_en'] ?? '—') ?></a>
+              <?php else: ?>
+                <span style="font-weight:600;"><?= h($person['dept_name'] ?? $person['dept_name_en'] ?? '—') ?></span>
+              <?php endif; ?>
             <?php else: ?>
               —
             <?php endif; ?>

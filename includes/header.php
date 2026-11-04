@@ -29,7 +29,7 @@ $titleOrgName = activeOrgName();
 <link rel="stylesheet" href="<?= $rootPath ?? '' ?>assets/css/eowms-advance.css?v=5">
 <link rel="stylesheet" href="<?= $rootPath ?? '' ?>assets/css/eowms-ui.css?v=7">
 <link rel="stylesheet" href="<?= $rootPath ?? '' ?>assets/css/eowms-theme.css?v=3">
-<link rel="stylesheet" href="<?= $rootPath ?? '' ?>assets/css/eowms-mobile.css?v=1">
+<link rel="stylesheet" href="<?= $rootPath ?? '' ?>assets/css/eowms-mobile.css?v=2">
 <script>
   // Theme Studio च्या निवडी — Body Render होण्याआधीच लागू, नाहीतर रंग "Flash" होतात.
   (function () {
