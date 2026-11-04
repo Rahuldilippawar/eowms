@@ -122,3 +122,14 @@
     else { ptr.style.opacity = 0; ptr.style.transform = 'translateY(-60px)'; ptr.classList.remove('ready'); }
   });
 })();
+
+/* ---------- Keyboard उघडा → तळचा Menu लपवा · Menu ला हलका Haptic प्रतिसाद ---------- */
+(function () {
+  'use strict';
+  if (!window.matchMedia || !matchMedia('(max-width: 767px)').matches) return;
+  var typing = function (el) { return el && (el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || (el.tagName === 'INPUT' && !/^(checkbox|radio|button|submit|reset|file|range|color)$/i.test(el.type))); };
+  var t = null;
+  document.addEventListener('focusin', function (e) { if (typing(e.target) && !e.target.closest('.mb-sheet, .cmdk-overlay')) { clearTimeout(t); document.body.classList.add('kb-open'); } });
+  document.addEventListener('focusout', function () { clearTimeout(t); t = setTimeout(function () { if (!typing(document.activeElement)) document.body.classList.remove('kb-open'); }, 150); });
+  document.addEventListener('click', function (e) { if (e.target.closest('.mb-nav a, .mb-nav button, .mb-grid > *') && navigator.vibrate) { try { navigator.vibrate(8); } catch (x) {} } });
+})();

@@ -29,7 +29,7 @@ $titleOrgName = activeOrgName();
 <link rel="stylesheet" href="<?= $rootPath ?? '' ?>assets/css/eowms-advance.css?v=5">
 <link rel="stylesheet" href="<?= $rootPath ?? '' ?>assets/css/eowms-ui.css?v=7">
 <link rel="stylesheet" href="<?= $rootPath ?? '' ?>assets/css/eowms-theme.css?v=3">
-<link rel="stylesheet" href="<?= $rootPath ?? '' ?>assets/css/eowms-mobile.css?v=2">
+<link rel="stylesheet" href="<?= $rootPath ?? '' ?>assets/css/eowms-mobile.css?v=3">
 <script>
   // Theme Studio च्या निवडी — Body Render होण्याआधीच लागू, नाहीतर रंग "Flash" होतात.
   (function () {
@@ -152,6 +152,7 @@ if (hasRole('super_admin')) {
     </div>
     <span class="tb-lang"><?= i18nSwitcher('style="border:1px solid var(--line);border-radius:9px;padding:0 10px;height:38px;font-size:12.5px;color:var(--text-dim);background:var(--canvas);cursor:pointer;"') ?></span>
     <a href="<?= $rootPath ?? '' ?>logout.php" class="icon-btn tb-logout" title="Logout"><i class="fa-solid fa-right-from-bracket"></i></a>
+    <button type="button" class="icon-btn tb-sos" data-bs-toggle="modal" data-bs-target="#sosModal" aria-label="आणीबाणी सूचना (SOS)" title="आणीबाणी सूचना (SOS)">SOS</button>
     <button type="button" class="icon-btn tb-more" data-mobile-more aria-label="अधिक पर्याय" title="अधिक पर्याय"><i class="fa-solid fa-ellipsis-vertical"></i></button>
   </div>
 

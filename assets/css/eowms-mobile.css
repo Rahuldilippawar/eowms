@@ -137,3 +137,80 @@
 @media (max-width: 767px) {
   .to-top { right: auto; left: 14px; bottom: calc(var(--mb-nav-h) + var(--mb-safe) + 14px); width: 42px; height: 42px; }
 }
+
+/* ============================================================
+   📱 Mobile v3 — सापडलेल्या अडचणी दुरुस्त + अधिक Smart
+   ============================================================ */
+.tb-sos { display: none; }
+@media (max-width: 767px) {
+  /* SOS — तरंगणाऱ्या बटणाऐवजी वरच्या पट्टीत (मजकुरावर येत नाही) */
+  #sosFloatBtn { display: none !important; }
+  .topbar .tb-sos { display: flex; width: auto !important; padding: 0 10px; background: #C2364A !important; border-color: #C2364A !important; color: #fff !important;
+    font-weight: 800; font-size: 12px; letter-spacing: .5px; box-shadow: 0 4px 12px rgba(194,54,74,.35); animation: tbSosPulse 2.6s ease-in-out infinite; }
+  @keyframes tbSosPulse { 50% { box-shadow: 0 0 0 5px rgba(194,54,74,.18), 0 4px 12px rgba(194,54,74,.35); } }
+  .topbar { gap: 6px; }
+
+  /* आकड्यांच्या Tiles — 4/5/6 एका ओळीत दाबू नयेत: 2 Columns, आकडे कापू नयेत */
+  .hi-totals { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 8px; }
+  .hi-totals > div, .hi-totals > a { padding: 11px 12px; }
+  .hi-totals b { white-space: normal; overflow: visible; font-size: 19px; line-height: 1.25; overflow-wrap: anywhere; }
+  .mt-task-sum { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .content [style*="grid-template-columns:repeat(4"], .content [style*="grid-template-columns: repeat(4"],
+  .content [style*="grid-template-columns:repeat(5"], .content [style*="grid-template-columns: repeat(5"],
+  .content [style*="grid-template-columns:repeat(6"], .content [style*="grid-template-columns: repeat(6"] { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+
+  /* दोन Column चे माहिती-Tables (उदा. Profile) — मजकूर कापू नये, ओळ तुटावी */
+  table.rtable:not(:has(th:nth-child(3))):not(:has(td:nth-child(3))) { min-width: 0 !important; width: 100%; table-layout: fixed; }
+  .rtable:not(:has(th:nth-child(3))):not(:has(td:nth-child(3))) td { white-space: normal; overflow-wrap: anywhere; }
+  .rtable:not(:has(th:nth-child(3))):not(:has(td:nth-child(3))) td:first-child { position: static; box-shadow: none; width: 40%; color: var(--text-dim); }
+  .rtable td .font-mono, .rtable td code { overflow-wrap: anywhere; }
+
+  /* Tabs / Period बटणं — दोन ओळींत चुरगळण्याऐवजी आडवी सरकणारी एक ओळ */
+  .period-toggle, .nav-tabs, .nav-pills, .sm-tabs, .sr-tools { flex-wrap: nowrap !important; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .period-toggle::-webkit-scrollbar, .nav-tabs::-webkit-scrollbar, .nav-pills::-webkit-scrollbar, .sm-tabs::-webkit-scrollbar { display: none; }
+  .period-btn, .nav-tabs .nav-link, .nav-pills .nav-link, .sm-tabs button { white-space: nowrap; flex-shrink: 0; }
+  .period-btn { padding: 8px 14px; }
+
+  /* Dashboard Banner ची बटणं — एक ओळ, आडवी सरकणारी */
+  .dash-hero .dash-quick-btn { flex-shrink: 0; white-space: nowrap; padding: 9px 13px; }
+  .dash-hero div:has(> .dash-quick-btn) { flex-wrap: nowrap !important; overflow-x: auto; max-width: 100%; scrollbar-width: none; padding-bottom: 2px; }
+
+  /* खूप लहान अक्षरं — Mobile वर वाचता येतील इतकी */
+  .content [style*="font-size:9px"], .content [style*="font-size:9.5px"], .content [style*="font-size:10px"], .content [style*="font-size:10.5px"] { font-size: 11px !important; }
+  .content small, .hi-totals small, .hi-totals span { font-size: 11.5px; }
+
+  /* Forms — मोठी, बोटाने सहज दाबता येणारी बटणं व Fields */
+  .content form button[type="submit"]:not(.btn-sm):not(.icon-btn), .content form input[type="submit"] { min-height: 48px; font-size: 15px !important; border-radius: 12px !important; }
+  .content .form-control-custom, .content .form-select-custom, .content .form-control, .content .form-select { min-height: 46px; border-radius: 11px; }
+  .content textarea.form-control-custom, .content textarea.form-control { min-height: 96px; }
+  .content label, .content .form-label-custom { font-size: 13px; }
+  input[type="checkbox"], input[type="radio"] { width: 20px; height: 20px; }
+
+  /* Panels ची शीर्षक-ओळ — Tools खाली येतात */
+  .panel-head.d-flex { flex-wrap: wrap; gap: 8px; }
+  .panel-head .sub { font-size: 12px; }
+
+  /* Keyboard उघडा असताना तळचा Menu लपवा (Form साठी जागा) */
+  body.kb-open .mb-nav { transform: translateY(110%); }
+  body.kb-open { padding-bottom: 0; }
+
+  /* Charts — Mobile वर फार उंच नकोत */
+  .content canvas { max-height: 260px; }
+}
+
+@media (max-width: 767px) {
+  /* शीर्षक + बटणांची ओळ — कुठेही असली तरी (थेट .content खाली नसली तरी) */
+  .d-flex.justify-content-between:has(> .page-title), .d-flex.justify-content-between:has(> div > .page-title) { flex-direction: column; align-items: stretch !important; gap: 10px; min-width: 0; }
+  .d-flex.justify-content-between:has(> .page-title) .page-title, .d-flex.justify-content-between:has(> div > .page-title) .page-title { white-space: normal; min-width: 0; }
+  .d-flex.justify-content-between:has(> .page-title) > .d-flex, .d-flex.justify-content-between:has(> div > .page-title) > .d-flex {
+    flex-wrap: nowrap !important; overflow-x: auto; min-width: 0; max-width: calc(100% + 28px) !important; margin: 0 -14px; padding: 0 14px 4px; scrollbar-width: none; justify-content: flex-start !important; }
+  .d-flex.justify-content-between:has(> .page-title) > .d-flex > *, .d-flex.justify-content-between:has(> div > .page-title) > .d-flex > * { flex-shrink: 0; white-space: nowrap; }
+
+  /* Filter ओळी — Tabs आडवे सरकतात, Selects ओळीत बसतात */
+  .content .d-flex.flex-wrap > * { min-width: 0; max-width: 100%; }
+  .period-toggle { max-width: 100%; min-width: 0; }
+  .content .d-flex.flex-wrap > .d-flex { flex-wrap: wrap !important; }
+  .content select, .content input:not([type="checkbox"]):not([type="radio"]) { max-width: 100%; }
+  .tbl-filter { flex-wrap: wrap; min-width: 0; }
+  .tbl-filter input { min-width: 0; flex: 1 1 140px; }
+}
