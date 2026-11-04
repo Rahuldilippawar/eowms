@@ -138,64 +138,9 @@ try {
 } catch (PDOException $e) {}
 
 // ===================== 4. विभाग-आरोग्य (Health) =====================
-$deptIds = array_map(fn($d) => (int)$d['id'], $departments);
-if ($deptIds) {
-    $ph = implode(',', array_fill(0, count($deptIds), '?'));
-    $metric = function ($sql, $params) use ($pdo) {
-        $out = [];
-        try {
-            $st = $pdo->prepare($sql);
-            $st->execute($params);
-            foreach ($st->fetchAll() as $r) { $out[(int)$r['department_id']] = $r; }
-        } catch (PDOException $e) {}
-        return $out;
-    };
-    $mToday = $metric("SELECT department_id, COUNT(*) c FROM work_records WHERE organization_id = ? AND work_date = CURDATE() AND department_id IN ($ph) GROUP BY department_id", array_merge([$orgId], $deptIds));
-    $m30 = $metric("SELECT department_id, COUNT(*) total, SUM(status = 'completed') done FROM work_records WHERE organization_id = ? AND work_date >= DATE_SUB(CURDATE(), INTERVAL 29 DAY) AND department_id IN ($ph) GROUP BY department_id", array_merge([$orgId], $deptIds));
-    $mTasks = $metric("SELECT department_id, SUM(status IN ('pending','in_progress')) open_cnt, SUM(status IN ('pending','in_progress') AND target_date < CURDATE()) overdue FROM tasks WHERE organization_id = ? AND department_id IN ($ph) GROUP BY department_id", array_merge([$orgId], $deptIds));
-    $mReq = $metric("SELECT department_id, SUM(status IN ('pending','in_progress')) open_cnt, SUM(status IN ('pending','in_progress') AND due_at < NOW()) overdue FROM work_requests WHERE organization_id = ? AND department_id IN ($ph) GROUP BY department_id", array_merge([$orgId], $deptIds));
-    $mRen = $metric("SELECT department_id, SUM(expiry_date < CURDATE()) expired, SUM(expiry_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)) due30 FROM renewal_items WHERE organization_id = ? AND status <> 'inactive' AND department_id IN ($ph) GROUP BY department_id", array_merge([$orgId], $deptIds));
-
-    foreach ($departments as $d) {
-        $id = (int)$d['id'];
-        $total = (int)($m30[$id]['total'] ?? 0);
-        $done = (int)($m30[$id]['done'] ?? 0);
-        $rate = $total > 0 ? (int)round($done * 100 / $total) : null;
-        $tOver = (int)($mTasks[$id]['overdue'] ?? 0);
-        $rOver = (int)($mReq[$id]['overdue'] ?? 0);
-        $expired = (int)($mRen[$id]['expired'] ?? 0);
-        // आरोग्य गुण — १०० पासून सुरू, अडचणींनुसार कमी
-        $score = 100;
-        if ($rate !== null) { $score -= (int)round((100 - $rate) * 0.4); }
-        $score -= min(30, $tOver * 8);
-        $score -= min(24, $rOver * 6);
-        $score -= min(20, $expired * 10);
-        $score = max(0, $score);
-        $issues = [];
-        if ($tOver) $issues[] = $tOver . ' Task मुदतबाह्य';
-        if ($rOver) $issues[] = $rOver . ' विनंत्या SLA बाहेर';
-        if ($expired) $issues[] = $expired . ' नूतनीकरण संपलं';
-        $smart['health'][] = [
-            'id' => $id,
-            'name' => $d['name_local'] ?: $d['name'],
-            'icon' => $d['icon'] ?: 'fa-solid fa-building',
-            'hod' => $d['hod_name'] ?? '',
-            'group' => (empty($d['campus_name']) || $d['college_type'] === 'Trust HQ') ? 'Trust-स्तरीय' : $d['campus_name'],
-            'today' => (int)($mToday[$id]['c'] ?? 0),
-            'total30' => $total,
-            'rate' => $rate,
-            'openTasks' => (int)($mTasks[$id]['open_cnt'] ?? 0),
-            'overdueTasks' => $tOver,
-            'openReq' => (int)($mReq[$id]['open_cnt'] ?? 0),
-            'overdueReq' => $rOver,
-            'renDue' => (int)($mRen[$id]['due30'] ?? 0),
-            'expired' => $expired,
-            'score' => $score,
-            'level' => $score >= 75 ? 'good' : ($score >= 50 ? 'warn' : 'bad'),
-            'issues' => $issues,
-        ];
-    }
-}
+require_once __DIR__ . '/dept-health.php';
+$smart['health'] = deptHealthRows($pdo, $orgId, $departments);
+$smart['healthSum'] = deptHealthSummary($smart['health']);
 
 // ===================== 5. "आज लक्ष द्या" — Smart सूचना =====================
 $addAlert = function ($cnt, $sev, $icon, $text, $href) use (&$smart) {

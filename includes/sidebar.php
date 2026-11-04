@@ -572,6 +572,12 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
       // विभाग आहेत" हे कायम स्पष्ट राहील, System च्या इतर सगळ्या
       // ठिकाणांप्रमाणेच Consistent Campus-Context. ?>
       <?php $activeDeptId = (int)($_GET['id'] ?? 0); ?>
+      <?php if (count($sidebarDepartments) > 1 && hasPermission('view_org_wide_dashboards')): ?>
+        <a href="<?= $rp ?>departments/all.php" class="tree-node <?= $currentDir === 'departments' && $currentPage === 'all.php' ? 'active' : '' ?>">
+          <i class="fa-solid fa-layer-group fa-fw"></i>
+          <span>सर्व विभाग — Showroom</span>
+        </a>
+      <?php endif; ?>
       <?php foreach ($deptGroups as $groupKey => $group): $groupNodeId = 'deptGroup' . md5($groupKey);
         $groupHasActive = $currentDir === 'departments' && $currentPage === 'dashboard.php' && in_array($activeDeptId, array_column($group['depts'], 'id'));
         $onlyOneGroup = count($deptGroups) <= 1;
