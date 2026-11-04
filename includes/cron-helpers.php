@@ -18,6 +18,7 @@ function cronRunAllJobs() {
         'scheduled-backup'                 => ['daily' => 2],
         'offsite-backup'                   => ['daily' => 3],
         'weekly-management-report'         => ['weekly' => [1, 7]], // सोमवार, सकाळी 7 नंतर
+        'daily-management-report'          => ['every' => 15],      // संस्थेने ठरवलेल्या वेळेनंतर (default 8 PM) रोज एकदा
         'send-birthday-anniversary-emails' => ['daily' => 7],
         'send-renewal-reminders'           => ['daily' => 8],
         'vehicle-service-due'              => ['daily' => 8],
