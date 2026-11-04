@@ -117,8 +117,8 @@ function ticketLog($pdo, $requestId, $type, $oldStatus, $newStatus, $remark, $us
 /** ही विनंती कोणाला नेमता येईल — स्वीकारणाऱ्या विभागातले सक्रिय कर्मचारी (IT विभाग नसेल तर manage_it असलेले) */
 function ticketAssignableUsers($pdo, array $req, $orgId) {
     if (!empty($req['department_id'])) {
-        $st = $pdo->prepare("SELECT id, name FROM users WHERE department_id = ? AND is_active = 1 ORDER BY name");
-        $st->execute([$req['department_id']]);
+        $st = $pdo->prepare("SELECT id, name FROM users WHERE department_id = ? AND organization_id = ? AND is_active = 1 ORDER BY name");
+        $st->execute([$req['department_id'], $orgId]);
         return $st->fetchAll();
     }
     $ids = notifyUserIdsByPermission($orgId, 'manage_it', false);

@@ -117,8 +117,8 @@ function notifyUsers(array $userIds, $orgId, $title, $message = null, $link = nu
 function notifyDepartment($departmentId, $orgId, $title, $message = null, $link = null) {
     global $pdo;
     try {
-        $stmt = $pdo->prepare("SELECT id FROM users WHERE department_id = ? AND is_active = 1");
-        $stmt->execute([$departmentId]);
+        $stmt = $pdo->prepare("SELECT id FROM users WHERE department_id = ? AND organization_id = ? AND is_active = 1");
+        $stmt->execute([$departmentId, $orgId]);
         notifyUsers($stmt->fetchAll(PDO::FETCH_COLUMN), $orgId, $title, $message, $link);
     } catch (PDOException $e) {
         // ignore

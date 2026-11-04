@@ -73,3 +73,52 @@
   // भाषांतर (JS ने टाकलेला मजकूर)
   if (window.eowmsT && sheet) sheet.querySelectorAll('.mb-label').forEach(function (e) { e.textContent = eowmsT(e.textContent); });
 })();
+
+/* ---------- Loading पट्टी + खाली ओढून Refresh ---------- */
+(function () {
+  'use strict';
+  var bar = document.createElement('div'); bar.className = 'eo-progress'; document.body.appendChild(bar);
+  var timer = null, safety = null;
+  function start() {
+    clearInterval(timer); var w = 8; bar.style.transition = 'none'; bar.style.width = '0'; void bar.offsetWidth;
+    bar.style.transition = ''; bar.classList.add('run'); bar.style.width = w + '%';
+    timer = setInterval(function () { w += (90 - w) * 0.12; bar.style.width = w + '%'; }, 250);
+    clearTimeout(safety); safety = setTimeout(done, 8000); // Download/Export नंतर पान बदलत नाही — पट्टी अडकू नये
+  }
+  function done() { clearInterval(timer); bar.style.width = '100%'; setTimeout(function () { bar.classList.remove('run'); bar.style.width = '0'; }, 300); }
+  window.eowmsProgress = { start: start, done: done };
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest('a[href]'); if (!a || e.defaultPrevented || e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey) return;
+    var h = a.getAttribute('href'); if (!h || h.charAt(0) === '#' || /^(javascript:|mailto:|tel:)/i.test(h) || a.target === '_blank' || a.hasAttribute('download') || a.hasAttribute('data-bs-toggle')) return;
+    if (/\.(csv|pdf|xlsx?|zip)(\?|$)|export|download/i.test(h)) return;
+    try { var u = new URL(a.href, location.href); if (u.origin !== location.origin || (u.pathname === location.pathname && u.search === location.search && u.hash)) return; } catch (x) { return; }
+    start();
+  });
+  document.addEventListener('submit', function (e) { if (e.defaultPrevented || e.target.target) return; start(); });
+  window.addEventListener('pageshow', done);
+  window.addEventListener('pagehide', function () { clearInterval(timer); });
+
+  // खाली ओढून Refresh — फक्त Touch, पानाच्या अगदी वर असताना
+  if (!('ontouchstart' in window) || !window.matchMedia || !matchMedia('(max-width: 767px)').matches) return;
+  var ptr = document.createElement('div'); ptr.className = 'eo-ptr'; ptr.innerHTML = '<i class="fa-solid fa-arrow-rotate-right"></i>'; document.body.appendChild(ptr);
+  var y0 = null, dy = 0, MAX = 110, GO = 75;
+  var blocked = function (t) { return t.closest('.mb-sheet, .ts-panel, .rail-sidebar, .modal, .cmdk-overlay, input, textarea, select, [contenteditable]'); };
+  document.addEventListener('touchstart', function (e) {
+    if (window.scrollY > 0 || document.body.style.overflow === 'hidden' || blocked(e.target)) { y0 = null; return; }
+    y0 = e.touches[0].clientY; dy = 0;
+  }, { passive: true });
+  document.addEventListener('touchmove', function (e) {
+    if (y0 === null) return; dy = e.touches[0].clientY - y0;
+    if (dy <= 0 || window.scrollY > 0) { ptr.style.opacity = 0; ptr.style.transform = 'translateY(-60px)'; return; }
+    var d = Math.min(MAX, dy * 0.55);
+    ptr.style.transition = 'none'; ptr.style.opacity = Math.min(1, d / GO);
+    ptr.style.transform = 'translateY(' + (d - 20) + 'px) rotate(' + (d * 3) + 'deg)';
+    ptr.classList.toggle('ready', d >= GO);
+  }, { passive: true });
+  document.addEventListener('touchend', function () {
+    if (y0 === null) return; y0 = null;
+    var d = Math.min(MAX, dy * 0.55); ptr.style.transition = 'transform .25s, opacity .25s';
+    if (d >= GO) { ptr.classList.add('spin'); ptr.style.transform = 'translateY(' + (GO - 20) + 'px)'; start(); setTimeout(function () { location.reload(); }, 150); }
+    else { ptr.style.opacity = 0; ptr.style.transform = 'translateY(-60px)'; ptr.classList.remove('ready'); }
+  });
+})();

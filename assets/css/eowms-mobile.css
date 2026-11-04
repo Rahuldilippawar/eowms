@@ -119,3 +119,21 @@
 }
 @media print { .mb-nav, .mb-sheet, .mb-sheet-back { display: none !important; } body { padding-bottom: 0 !important; } }
 @media (prefers-reduced-motion: reduce) { .mb-nav, .mb-sheet, .ts-panel { transition: none !important; } }
+
+/* ---------- Loading पट्टी (सगळ्या आकारांवर) — Link / Form दाबल्यावर ---------- */
+.eo-progress { position: fixed; top: 0; left: 0; height: 3px; width: 0; z-index: 3000; pointer-events: none;
+  background: linear-gradient(90deg, var(--rail), #E0A043); box-shadow: 0 0 10px color-mix(in srgb, var(--rail) 60%, transparent);
+  transition: width .4s ease, opacity .3s ease; opacity: 0; }
+.eo-progress.run { opacity: 1; }
+
+/* ---------- खाली ओढून Refresh (Mobile) ---------- */
+.eo-ptr { position: fixed; left: 50%; top: 0; z-index: 2500; width: 42px; height: 42px; margin-left: -21px; border-radius: 50%;
+  background: var(--surface); color: var(--rail); box-shadow: var(--shadow-md); display: flex; align-items: center; justify-content: center;
+  transform: translateY(-60px); opacity: 0; pointer-events: none; font-size: 17px; }
+.eo-ptr.ready i { color: #fff; } .eo-ptr.ready { background: var(--rail); }
+.eo-ptr.spin i { animation: eoSpin .7s linear infinite; }
+@keyframes eoSpin { to { transform: rotate(360deg); } }
+
+@media (max-width: 767px) {
+  .to-top { right: auto; left: 14px; bottom: calc(var(--mb-nav-h) + var(--mb-safe) + 14px); width: 42px; height: 42px; }
+}

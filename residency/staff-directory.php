@@ -130,7 +130,7 @@ foreach ($activeGrouped as $groupName => $rows):
             <td><?= h($r['dept_name'] ?: '—') ?></td>
             <?php if ($view === 'residential'): ?>
               <td><?= h($r['building_name'] ?: '') ?><?= $r['building_name'] && $r['room_name'] ? ' — ' : '' ?><?= h($r['room_name'] ?: '') ?></td>
-              <td class="font-mono"><?= date('d M Y', strtotime($r['moved_in_date'])) ?></td>
+              <td class="font-mono"><?= !empty($r['moved_in_date']) ? date('d M Y', strtotime($r['moved_in_date'])) : '—' ?></td>
             <?php endif; ?>
             <td class="font-mono"><?= h($r['mobile'] ?: '—') ?></td>
             <td style="font-size:12px;"><?= h($r['email'] ?: '—') ?></td>

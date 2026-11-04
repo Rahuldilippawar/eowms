@@ -22,7 +22,7 @@ $openReq = $one("SELECT COUNT(*) FROM work_requests WHERE organization_id = ? AN
 $expired = $one("SELECT COUNT(*) FROM renewal_items WHERE organization_id = ? AND department_id = ? AND status <> 'inactive' AND expiry_date < CURDATE()", [$dOrg, $deptId]);
 $todayWork = $one("SELECT COUNT(*) FROM work_records WHERE organization_id = ? AND department_id = ? AND work_date = CURDATE()", [$dOrg, $deptId]);
 $al = [];
-if ($overdueTasks) $al[] = ['bad', $overdueTasks . ' Tasks ची मुदत संपली', '../tasks/index.php?status=overdue&department_id=' . $deptId];
+if ($overdueTasks) $al[] = ['bad', $overdueTasks . ' Tasks ची मुदत संपली', (hasPermission('view_task_tracker') || hasPermission('assign_tasks')) ? '../tasks/index.php?status=overdue&department_id=' . $deptId : '../tasks/my-tasks.php'];
 if ($slaReq) $al[] = ['bad', $slaReq . ' कामाच्या विनंत्या SLA बाहेर (एकूण उघड्या ' . $openReq . ')', '../requests/index.php?status=overdue&department_id=' . $deptId];
 if ($expired) $al[] = ['bad', $expired . ' नूतनीकरणांची मुदत संपली', '../renewals/index.php?filter=expired&department_id=' . $deptId];
 if (!empty($budgetStatus['has_budget']) && $budgetStatus['remaining'] < 0) $al[] = ['bad', 'Budget पेक्षा ₹' . number_format(abs($budgetStatus['remaining'])) . ' जास्त खर्च', ''];

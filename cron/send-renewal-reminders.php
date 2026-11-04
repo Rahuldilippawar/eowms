@@ -82,8 +82,8 @@ foreach ($items as $item) {
         if (!empty($item['responsible_user_id'])) {
             $notifyIds[] = (int)$item['responsible_user_id'];
         } else {
-            $staffStmt = $pdo->prepare("SELECT id FROM users WHERE department_id = ? AND is_active = 1");
-            $staffStmt->execute([$item['department_id']]);
+            $staffStmt = $pdo->prepare("SELECT id FROM users WHERE department_id = ? AND organization_id = ? AND is_active = 1");
+            $staffStmt->execute([$item['department_id'], $item['organization_id']]);
             $notifyIds = array_merge($notifyIds, array_map('intval', $staffStmt->fetchAll(PDO::FETCH_COLUMN)));
         }
 
