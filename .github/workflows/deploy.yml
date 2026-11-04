@@ -126,4 +126,5 @@ jobs:
             update-staging/**
             docs/**
             erp/**
+            storage/logs/*.log
             README.md
