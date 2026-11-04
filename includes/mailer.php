@@ -249,3 +249,46 @@ function sendWorkAnniversaryEmail($email, $name, $yearsCompleted, $orgName) {
         return false;
     }
 }
+
+/** From-पत्त्याचं Domain — Cron (CLI) मधून HTTP_HOST नसतो, म्हणून SITE_BASE_URL वरून */
+function eowmsMailDomain() {
+    $host = $_SERVER['HTTP_HOST'] ?? '';
+    if ((!$host || $host === 'localhost') && defined('SITE_BASE_URL')) { $host = parse_url(SITE_BASE_URL, PHP_URL_HOST) ?: $host; }
+    $host = preg_replace('/:\d+$/', '', strtolower((string)$host));
+    $host = preg_replace('/^www\./', '', $host);
+    return $host ?: 'localhost';
+}
+
+/**
+ * HTML Email — हवं तर Attachments सह (PDF, Encrypted ZIP).
+ * $attachments = [['name' => 'report.pdf', 'data' => <bytes>, 'type' => 'application/pdf'], ...]
+ * $to = एक पत्ता किंवा पत्त्यांची यादी (प्रत्येकाला वेगळा Email — एकमेकांचे पत्ते दिसत नाहीत).
+ * परत: किती पत्त्यांवर mail() यशस्वी झालं.
+ */
+function eowmsSendMail($to, $subject, $html, array $attachments = [], $fromName = 'E-Admin') {
+    $list = array_values(array_filter((array)$to, fn($e) => $e && filter_var($e, FILTER_VALIDATE_EMAIL)));
+    if (!$list) { return 0; }
+    $fromName = trim(preg_replace('/[\r\n"]+/', ' ', (string)$fromName)) ?: 'E-Admin';
+    $from = 'no-reply@' . eowmsMailDomain();
+    $headers = "MIME-Version: 1.0\r\nFrom: =?UTF-8?B?" . base64_encode($fromName) . "?= <$from>\r\n";
+    if (!$attachments) {
+        $headers .= "Content-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n";
+        $body = chunk_split(base64_encode($html));
+    } else {
+        $b = 'eowms-' . bin2hex(random_bytes(12));
+        $headers .= "Content-Type: multipart/mixed; boundary=\"$b\"\r\n";
+        $body = "--$b\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n" . chunk_split(base64_encode($html));
+        foreach ($attachments as $a) {
+            $fname = preg_replace('/[^A-Za-z0-9._-]+/', '-', (string)($a['name'] ?? 'file'));
+            $type = preg_match('#^[\w.+-]+/[\w.+-]+$#', $a['type'] ?? '') ? $a['type'] : 'application/octet-stream';
+            $body .= "--$b\r\nContent-Type: $type; name=\"$fname\"\r\nContent-Transfer-Encoding: base64\r\nContent-Disposition: attachment; filename=\"$fname\"\r\n\r\n" . chunk_split(base64_encode((string)$a['data']));
+        }
+        $body .= "--$b--\r\n";
+    }
+    $subj = '=?UTF-8?B?' . base64_encode((string)$subject) . '?=';
+    $sent = 0;
+    foreach ($list as $addr) {
+        try { if (@mail($addr, $subj, $body, $headers)) { $sent++; } } catch (Throwable $e) {}
+    }
+    return $sent;
+}

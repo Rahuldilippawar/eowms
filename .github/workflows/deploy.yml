@@ -127,4 +127,5 @@ jobs:
             docs/**
             erp/**
             storage/logs/*.log
+            storage/tmp/**
             README.md

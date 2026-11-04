@@ -13,3 +13,4 @@ update-staging/
 
 # Error logs (server वरच तयार होतात)
 storage/logs/*.log
+storage/tmp/

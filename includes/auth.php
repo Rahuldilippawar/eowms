@@ -183,6 +183,13 @@ function requireLogin($rootPath = '') {
         header('Location: ' . $rootPath . 'force-password-change.php');
         exit;
     }
+
+    // 🔐 2-Step Login अनिवार्य (उदा. Super Admin) पण अजून चालू केलं नाही — आधी ते चालू करा
+    if (!empty($_SESSION['tfa_setup_required'])
+        && !in_array($currentScript, ['two-factor.php', 'logout.php', 'force-password-change.php', 'js-error.php'], true)) {
+        header('Location: ' . $rootPath . 'account/two-factor.php');
+        exit;
+    }
 }
 
 /**

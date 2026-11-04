@@ -7,7 +7,7 @@ if (PHP_SAPI !== 'cli') { http_response_code(404); exit; }
 require_once __DIR__ . '/../includes/i18n.php';
 
 $root = realpath(__DIR__ . '/..');
-$skipDirs = ['erp', 'database', 'lang/i18n', 'docs', 'tools', 'vendor', 'node_modules', '.git', '.claude', 'backups', 'update-staging', 'assets/uploads'];
+$skipDirs = ['erp', 'database', 'lang/i18n', 'docs', 'tools', 'vendor', 'node_modules', '.git', '.claude', 'backups', 'update-staging', 'assets/uploads', 'lib', 'storage'];
 $phrases = []; $jsPhrases = [];
 
 $add = function ($text, $file, $isJs) use (&$phrases, &$jsPhrases) {

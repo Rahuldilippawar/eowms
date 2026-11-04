@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../includes/auth.php';
 requireLogin('../');
 requireRole(['super_admin'], '../');
+require_once __DIR__ . '/../includes/offsite-backup.php';
 $user = currentUser();
 
 $orgId = activeOrgId();
@@ -91,6 +92,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                 }
                 $zip->close();
             }
+        }
+    } elseif (offsiteIsEncryptedFile($uploadedFilePath)) {
+        // ☁️ Email वर आलेली Encrypted Backup (.eadmin) — Password ने उघडतो
+        $json = offsiteDecrypt(file_get_contents($uploadedFilePath), $_POST['backup_password'] ?? '');
+        if ($json === null) {
+            $error = 'ही Encrypted Backup (.eadmin) आहे — Backup Password चुकीचा आहे किंवा दिलेला नाही.';
+            $json = false;
         }
     } else {
         $json = file_get_contents($uploadedFilePath);
@@ -1992,8 +2000,12 @@ require_once __DIR__ . '/../includes/header.php';
     <div class="panel-head"><div class="title"><?= h(t('s361')) ?></div><div class="sub"><?= h(t('s362')) ?></div></div>
     <form method="POST" enctype="multipart/form-data" style="padding:22px 24px;">
       <div class="upload-box mb-3">
-        <input type="file" name="backup_file" accept=".json,.zip" required style="width:100%;">
-        <div style="font-size:11px;color:var(--text-dim);margin-top:4px;">साधी Backup (.json) किंवा Full Backup (.zip — Files सकट) — दोन्ही चालतील.</div>
+        <input type="file" name="backup_file" accept=".json,.zip,.eadmin" required style="width:100%;">
+        <div style="font-size:11px;color:var(--text-dim);margin-top:4px;">साधी Backup (.json), Full Backup (.zip — Files सकट) किंवा Email वर आलेली Encrypted Backup (.eadmin) — सगळ्या चालतील.</div>
+      </div>
+      <div class="mb-3">
+        <label class="form-label-custom">Backup Password <span style="font-weight:400;color:var(--text-dim);">(फक्त .eadmin File साठी)</span></label>
+        <input type="password" name="backup_password" class="form-control-custom" style="max-width:320px;" autocomplete="off">
       </div>
       <p style="font-size:12px;color:var(--text-dim);margin-bottom:16px;"><?= h(t('s363')) ?><b><?= h(activeOrgName()) ?></b>) जोडला जाईल. आधीच अस्तित्वात असलेले कर्मचारी (email जुळल्यास) duplicate होणार नाहीत — automatically skip होतील. <strong>पण बाकीच्या नोंदी (कामाचे अहवाल, पत्रे, Budget, इ.) — जर हीच Backup आधीही एकदा Restore केलेली असेल, तर पुन्हा Restore केल्यास त्या नोंदी Duplicate होतील.</strong></p>
       <?php if ($hasExistingData): ?>
