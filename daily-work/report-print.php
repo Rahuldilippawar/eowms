@@ -79,7 +79,7 @@ if ($scope === 'organization') {
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
-  :root{ --ink:#10162B; --rail:#1B8A83; --amber:#C97F1D; --rose:#B23A48; --line:#D7DAE0; --text:#1A1D29; --text-dim:#666B7D; }
+  :root{ --ink:#10162B; --rail:#D9530F; --amber:#C97F1D; --rose:#B23A48; --line:#D7DAE0; --text:#1A1D29; --text-dim:#666B7D; }
   *{box-sizing:border-box;}
   body{font-family:'Noto Sans Devanagari','Segoe UI',sans-serif;color:var(--text);margin:0;background:#F0F1F4;font-size:13px;}
   .toolbar{position:sticky;top:0;background:var(--ink);padding:14px 24px;display:flex;justify-content:space-between;align-items:center;z-index:10;}
@@ -89,7 +89,7 @@ if ($scope === 'organization') {
 
   .doc-header{text-align:center;border-bottom:3px solid var(--ink);padding-bottom:20px;margin-bottom:22px;}
   .doc-header .logo-img{width:64px;height:64px;object-fit:contain;margin:0 auto 10px;display:block;}
-  .doc-header .mark{width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg,var(--rail),#0F5E58);display:flex;align-items:center;justify-content:center;color:#fff;font-family:'Space Grotesk';font-weight:700;font-size:20px;margin:0 auto 10px;}
+  .doc-header .mark{width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg,var(--rail),#B6420A);display:flex;align-items:center;justify-content:center;color:#fff;font-family:'Space Grotesk';font-weight:700;font-size:20px;margin:0 auto 10px;}
   .doc-header .org-name{font-family:'Space Grotesk';font-weight:700;font-size:22px;color:var(--ink);}
   .doc-header .org-address{font-size:12px;color:var(--text-dim);margin-top:4px;}
   .doc-header .org-contact{font-size:11px;color:var(--text-dim);margin-top:2px;}

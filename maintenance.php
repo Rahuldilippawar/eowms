@@ -43,7 +43,7 @@ $customMessage = $org['maintenance_message'] ?? '';
   body{
     font-family:'Noto Sans Devanagari','Segoe UI',sans-serif;margin:0;min-height:100vh;
     display:flex;align-items:center;justify-content:center;
-    background:linear-gradient(160deg,#0A0E1A 0%,#1B2340 55%,#0F5E58 130%);
+    background:linear-gradient(160deg,#0A0E1A 0%,#1B2340 55%,#B6420A 130%);
     padding:24px;position:relative;overflow:hidden;
   }
   .ring{position:absolute;top:50%;left:50%;width:420px;height:420px;transform:translate(-50%,-50%);border:1px solid rgba(220,239,236,.08);border-radius:50%;animation:spin 60s linear infinite;}
@@ -51,12 +51,12 @@ $customMessage = $org['maintenance_message'] ?? '';
   @keyframes spin{from{transform:translate(-50%,-50%) rotate(0deg);}to{transform:translate(-50%,-50%) rotate(360deg);}}
 
   .card{background:#fff;border-radius:22px;padding:44px 36px;max-width:440px;width:100%;text-align:center;box-shadow:0 24px 60px rgba(0,0,0,.35);position:relative;z-index:1;}
-  .gear-wrap{width:76px;height:76px;border-radius:50%;background:linear-gradient(150deg,#1B8A83,#0F5E58);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;box-shadow:0 10px 26px rgba(27,138,131,.4);}
+  .gear-wrap{width:76px;height:76px;border-radius:50%;background:linear-gradient(150deg,#D9530F,#B6420A);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;box-shadow:0 10px 26px rgba(217,83,15,.4);}
   .gear-wrap i{font-size:32px;color:#fff;animation:rotate-gear 3s linear infinite;}
   @keyframes rotate-gear{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
   h1{font-family:'Space Grotesk';font-weight:700;font-size:22px;color:#10162B;margin:0 0 10px;}
   p.sub{color:#666B7D;font-size:14px;line-height:1.7;margin:0 0 6px;}
-  .org-name{font-family:'Space Grotesk';font-weight:600;font-size:13px;color:#1B8A83;text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;}
+  .org-name{font-family:'Space Grotesk';font-weight:600;font-size:13px;color:#D9530F;text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;}
   .pulse-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#C97F1D;margin-right:8px;animation:pulse 1.5s ease-in-out infinite;}
   @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
   .status-line{font-size:12px;color:#8A90AC;margin-top:22px;}

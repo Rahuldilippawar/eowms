@@ -54,7 +54,7 @@ function requireMigratedTable($pdo, $tableName, $rootPath = '', $requiredColumn 
             ? 'हा Feature वापरण्याआधी Database मध्ये नवीन Tables जोडाव्या लागतील — खालचं बटण दाबा, एका Click मध्ये होईल.'
             : 'हा Feature वापरण्याआधी Database Update करावं लागेल — कृपया Super Admin ला सांगा (System Update → Database Update).';
         $updateBtn = $isSuperAdmin
-            ? '<a href="' . htmlspecialchars($rootPath) . 'system-update/db-update.php" style="display:inline-block;margin:14px 6px 0;background:#1B8A83;color:#fff;text-decoration:none;padding:10px 22px;border-radius:9px;font-size:13px;font-weight:600;">🛠️ Database Update करा</a>'
+            ? '<a href="' . htmlspecialchars($rootPath) . 'system-update/db-update.php" style="display:inline-block;margin:14px 6px 0;background:#D9530F;color:#fff;text-decoration:none;padding:10px 22px;border-radius:9px;font-size:13px;font-weight:600;">🛠️ Database Update करा</a>'
             : '';
         die('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Database Update आवश्यक</title>
         <meta name="viewport" content="width=device-width, initial-scale=1"></head>
@@ -64,7 +64,7 @@ function requireMigratedTable($pdo, $tableName, $rootPath = '', $requiredColumn 
           <div style="font-size:17px;font-weight:700;margin:12px 0 8px;color:#10162B;">Database Update आवश्यक आहे</div>
           <p style="font-size:13px;color:#666B7D;line-height:1.8;">' . $howTo . '</p>
           ' . $updateBtn . '
-          <a href="' . htmlspecialchars($rootPath) . 'index.php" style="display:inline-block;margin:14px 6px 0;border:1px solid #1B8A83;color:#1B8A83;text-decoration:none;padding:10px 22px;border-radius:9px;font-size:13px;font-weight:600;">Dashboard वर परत जा</a>
+          <a href="' . htmlspecialchars($rootPath) . 'index.php" style="display:inline-block;margin:14px 6px 0;border:1px solid #D9530F;color:#D9530F;text-decoration:none;padding:10px 22px;border-radius:9px;font-size:13px;font-weight:600;">Dashboard वर परत जा</a>
         </div>
         </body></html>');
     }

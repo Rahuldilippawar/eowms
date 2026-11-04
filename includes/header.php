@@ -14,7 +14,7 @@ $titleOrgName = activeOrgName();
 
 <!-- PWA: installable "Add to Home Screen" support -->
 <link rel="manifest" href="<?= $rootPath ?? '' ?>manifest.php">
-<meta name="theme-color" content="#138A80">
+<meta name="theme-color" content="#13152D">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -28,7 +28,7 @@ $titleOrgName = activeOrgName();
 <link rel="stylesheet" href="<?= $rootPath ?? '' ?>assets/css/eowms.css?v=4">
 <link rel="stylesheet" href="<?= $rootPath ?? '' ?>assets/css/eowms-advance.css?v=5">
 <link rel="stylesheet" href="<?= $rootPath ?? '' ?>assets/css/eowms-ui.css?v=7">
-<link rel="stylesheet" href="<?= $rootPath ?? '' ?>assets/css/eowms-theme.css?v=1">
+<link rel="stylesheet" href="<?= $rootPath ?? '' ?>assets/css/eowms-theme.css?v=3">
 <script>
   // Theme Studio च्या निवडी — Body Render होण्याआधीच लागू, नाहीतर रंग "Flash" होतात.
   (function () {

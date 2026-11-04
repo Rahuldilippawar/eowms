@@ -35,7 +35,7 @@ if (!empty($classroomIds)) {
 
 <div class="page-title">🏠 माझं Dashboard</div>
 <p class="sub">नमस्कार, <?= h($student['name']) ?>!</p>
-<a href="give-feedback.php" style="display:inline-block;background:#DCEFEC;color:#1B8A83;font-size:12px;font-weight:700;padding:7px 16px;border-radius:20px;text-decoration:none;margin-bottom:16px;">💬 शिक्षकांना Feedback द्या →</a>
+<a href="give-feedback.php" style="display:inline-block;background:#DCEFEC;color:var(--rail);font-size:12px;font-weight:700;padding:7px 16px;border-radius:20px;text-decoration:none;margin-bottom:16px;">💬 शिक्षकांना Feedback द्या →</a>
 
 <?php if (!empty($_SESSION['flash'])): ?>
   <div class="alert-success"><?= h($_SESSION['flash']) ?></div>

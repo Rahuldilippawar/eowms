@@ -29,7 +29,7 @@ $org = $pdo->query("SELECT * FROM organizations WHERE id = " . (int)$orgId)->fet
   body{font-family:'Noto Sans Devanagari','Segoe UI',sans-serif;background:#F0F1F4;margin:0;color:#1A1D29;}
   .toolbar{position:sticky;top:0;background:#10162B;padding:14px 24px;display:flex;justify-content:space-between;align-items:center;z-index:10;}
   .toolbar a{color:#fff;text-decoration:none;font-size:13px;}
-  .toolbar button{background:#1B8A83;color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:13.5px;font-weight:600;cursor:pointer;font-family:inherit;}
+  .toolbar button{background:#D9530F;color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:13.5px;font-weight:600;cursor:pointer;font-family:inherit;}
   .cert-wrap{max-width:850px;margin:30px auto;background:#fff;padding:50px;border:2px solid #C97F1D;border-radius:8px;position:relative;box-shadow:0 20px 50px rgba(0,0,0,.1);}
   .cert-wrap::before{content:'';position:absolute;inset:14px;border:1px solid #C97F1D;border-radius:4px;pointer-events:none;}
   .cert-inner{text-align:center;padding:20px;}
@@ -37,7 +37,7 @@ $org = $pdo->query("SELECT * FROM organizations WHERE id = " . (int)$orgId)->fet
   .cert-title{font-family:'Playfair Display';font-weight:700;font-size:34px;color:#C97F1D;margin:18px 0 6px;}
   .cert-sub{font-size:13px;color:#666B7D;letter-spacing:2px;text-transform:uppercase;margin-bottom:30px;}
   .cert-body{font-size:15px;line-height:2;}
-  .participant-name{font-family:'Playfair Display';font-weight:700;font-size:26px;color:#1B8A83;margin:14px 0;border-bottom:2px solid #DCEFEC;display:inline-block;padding-bottom:6px;}
+  .participant-name{font-family:'Playfair Display';font-weight:700;font-size:26px;color:#D9530F;margin:14px 0;border-bottom:2px solid #DCEFEC;display:inline-block;padding-bottom:6px;}
   .event-name{font-weight:700;color:#10162B;}
   .cert-footer{display:flex;justify-content:space-between;margin-top:60px;padding:0 30px;}
   .sign-block{text-align:center;font-size:12px;}

@@ -86,13 +86,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   *{box-sizing:border-box;}
   body{font-family:'Noto Sans Devanagari','Segoe UI',sans-serif;margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(160deg,#0A0E1A,#1B3A5C);padding:20px;}
   .card{background:#fff;border-radius:20px;padding:38px 32px;max-width:380px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3);}
-  .mark{width:60px;height:60px;border-radius:16px;background:linear-gradient(150deg,#1B8A83,#0F5E58);display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk';font-weight:700;font-size:24px;color:#fff;margin:0 auto 18px;}
+  .mark{width:60px;height:60px;border-radius:16px;background:linear-gradient(150deg,#D9530F,#B6420A);display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk';font-weight:700;font-size:24px;color:#fff;margin:0 auto 18px;}
   h1{font-family:'Space Grotesk';font-size:19px;text-align:center;margin:0 0 6px;color:#10162B;}
   p.sub{text-align:center;color:#666B7D;font-size:12.5px;margin:0 0 26px;}
   label{font-size:12px;font-weight:600;color:#10162B;display:block;margin-bottom:6px;}
   input{width:100%;padding:11px 14px;border:1.5px solid #D7DAE0;border-radius:10px;font-size:14px;margin-bottom:16px;font-family:inherit;}
-  input:focus{outline:none;border-color:#1B8A83;}
-  button{width:100%;padding:12px;background:#1B8A83;color:#fff;border:none;border-radius:10px;font-size:14.5px;font-weight:600;cursor:pointer;font-family:inherit;}
+  input:focus{outline:none;border-color:#D9530F;}
+  button{width:100%;padding:12px;background:#D9530F;color:#fff;border:none;border-radius:10px;font-size:14.5px;font-weight:600;cursor:pointer;font-family:inherit;}
   .error{background:#F7E2E3;color:#B23A48;padding:10px 14px;border-radius:9px;font-size:12.5px;margin-bottom:16px;}
 </style>
 </head>

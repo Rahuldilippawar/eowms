@@ -67,7 +67,7 @@ $actionLabels = ['created' => 'तयार केली', 'submitted' => 'स�
 <title><?= h($letter['file_number']) ?> — <?= h($letter['subject']) ?></title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&family=Tiro+Devanagari+Marathi&display=swap" rel="stylesheet">
 <style>
-  :root{ --ink:#10162B; --rail:#1B8A83; --line:#B9BEC9; --text:#1A1D29; --text-dim:#666B7D; }
+  :root{ --ink:#10162B; --rail:#D9530F; --line:#B9BEC9; --text:#1A1D29; --text-dim:#666B7D; }
   *{box-sizing:border-box;}
   body{font-family:'Noto Sans Devanagari','Segoe UI',sans-serif;color:var(--text);margin:0;background:#F0F1F4;font-size:13px;}
   .toolbar{position:sticky;top:0;background:var(--ink);padding:14px 24px;display:flex;justify-content:space-between;align-items:center;z-index:10;}
@@ -107,7 +107,7 @@ $actionLabels = ['created' => 'तयार केली', 'submitted' => 'स�
   .ref-section{margin-top:0.5in;border-top:1px dashed var(--line);padding-top:14px;}
   .ref-section h3{font-family:'Space Grotesk';font-size:12.5px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.4px;margin:14px 0 8px;}
   .timeline-item{display:flex;gap:8px;padding:6px 0;border-bottom:1px solid #EEF0F4;font-size:11px;}
-  .timeline-item .dot{width:20px;height:20px;border-radius:50%;background:#DCEFEC;color:#0F5E58;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0;}
+  .timeline-item .dot{width:20px;height:20px;border-radius:50%;background:#DCEFEC;color:#B6420A;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0;}
   .att-item{font-size:11px;padding:3px 0;color:var(--text-dim);}
 
   @media print{
@@ -176,10 +176,10 @@ $actionLabels = ['created' => 'तयार केली', 'submitted' => 'स�
     $verifyUrl = (isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'] . rtrim(dirname($_SERVER['SCRIPT_NAME']), '/') . '/verify-signature.php?code=' . urlencode($sig['verification_code']);
     $qrSrc = 'https://api.qrserver.com/v1/create-qr-code/?size=110x110&margin=1&data=' . urlencode($verifyUrl);
   ?>
-    <div style="margin-top:0.35in;border:1px solid #1B8A83;border-radius:8px;padding:12px 16px;display:flex;align-items:center;gap:14px;background:#F7FBFA;">
+    <div style="margin-top:0.35in;border:1px solid #D9530F;border-radius:8px;padding:12px 16px;display:flex;align-items:center;gap:14px;background:#F7FBFA;">
       <img src="<?= h($qrSrc) ?>" style="width:0.9in;height:0.9in;">
       <div style="font-size:11px;">
-        <div style="font-weight:700;color:#0F5E58;font-size:12px;">🔏 Digitally Signed by <?= h($sig['signer_name']) ?></div>
+        <div style="font-weight:700;color:#B6420A;font-size:12px;">🔏 Digitally Signed by <?= h($sig['signer_name']) ?></div>
         <div style="color:#666B7D;margin-top:2px;"><?= h($sig['signer_designation'] ?? '') ?></div>
         <div style="color:#666B7D;margin-top:4px;"><?= date('d M Y, h:i A', strtotime($sig['signed_at'])) ?> · <?= $sig['verification_method'] === 'fingerprint' ? '👆 Fingerprint/Face ID' : '🔑 Password' ?> ने पडताळलेलं</div>
         <div style="color:#666B7D;margin-top:2px;">Verification ID: #<?= h($sig['verification_code']) ?> — QR स्कॅन करून पडताळा</div>

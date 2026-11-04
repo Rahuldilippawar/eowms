@@ -44,7 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   h1{font-family:'Space Grotesk';font-size:18px;margin:0 0 20px;color:#10162B;}
   label{font-size:12px;font-weight:600;color:#10162B;display:block;margin-bottom:6px;}
   input{width:100%;padding:11px 14px;border:1.5px solid #D7DAE0;border-radius:10px;font-size:14px;margin-bottom:16px;font-family:inherit;}
-  button{width:100%;padding:12px;background:#1B8A83;color:#fff;border:none;border-radius:10px;font-size:14.5px;font-weight:600;cursor:pointer;font-family:inherit;}
+  button{width:100%;padding:12px;background:#D9530F;color:#fff;border:none;border-radius:10px;font-size:14.5px;font-weight:600;cursor:pointer;font-family:inherit;}
   .error{background:#F7E2E3;color:#B23A48;padding:10px 14px;border-radius:9px;font-size:12.5px;margin-bottom:16px;}
 </style>
 </head>

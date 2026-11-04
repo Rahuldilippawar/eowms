@@ -64,7 +64,7 @@ function csrfRejectRequest() {
         . '<div style="font-size:36px;">🔒</div>'
         . '<div style="font-size:16px;font-weight:700;margin:10px 0;color:#10162B;">पान जुनं झालं आहे</div>'
         . '<p style="font-size:13px;color:#666B7D;line-height:1.8;">सुरक्षिततेसाठी ही माहिती जतन केली नाही. कृपया मागे जाऊन पान Refresh करा आणि पुन्हा प्रयत्न करा.</p>'
-        . '<a href="javascript:history.back()" style="display:inline-block;margin-top:10px;background:#1B8A83;color:#fff;text-decoration:none;padding:10px 24px;border-radius:9px;font-size:13px;font-weight:600;">मागे जा</a>'
+        . '<a href="javascript:history.back()" style="display:inline-block;margin-top:10px;background:#D9530F;color:#fff;text-decoration:none;padding:10px 24px;border-radius:9px;font-size:13px;font-weight:600;">मागे जा</a>'
         . '</div></body></html>';
     exit;
 }

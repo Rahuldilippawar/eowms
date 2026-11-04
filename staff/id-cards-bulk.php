@@ -38,7 +38,7 @@ if (!empty($_GET['generate'])) {
       body{font-family:'Poppins','Segoe UI',sans-serif;background:#F0F1F4;margin:0;padding:20px;}
       .toolbar{position:sticky;top:0;background:#10162B;padding:14px 24px;display:flex;justify-content:space-between;align-items:center;z-index:10;margin:-20px -20px 20px;}
       .toolbar a{color:#fff;text-decoration:none;font-size:13px;}
-      .toolbar button{background:#1B8A83;color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:13.5px;font-weight:600;cursor:pointer;font-family:inherit;}
+      .toolbar button{background:var(--rail);color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:13.5px;font-weight:600;cursor:pointer;font-family:inherit;}
       .grid{display:grid;grid-template-columns:repeat(2,3.4in);gap:0.25in;justify-content:center;}
 
       .card{width:3.4in;height:5.5in;border-radius:0.16in;overflow:hidden;position:relative;background:#fff;box-shadow:0 6px 18px rgba(0,0,0,.15);border:1px solid #ddd;page-break-inside:avoid;}
@@ -67,9 +67,9 @@ if (!empty($_GET['generate'])) {
       .fields .flabel{width:1.35in;flex-shrink:0;color:#333;font-weight:500;}
       .fields .fcolon{width:0.15in;flex-shrink:0;color:#333;}
       .fields .fval{font-weight:700;color:#111;}
-      .qr-block{position:absolute;bottom:0.85in;right:0.28in;z-index:3;background:#fff;border:2px solid #1B8A83;border-radius:8px;padding:5px;box-shadow:0 3px 10px rgba(0,0,0,.15);}
+      .qr-block{position:absolute;bottom:0.85in;right:0.28in;z-index:3;background:#fff;border:2px solid var(--rail);border-radius:8px;padding:5px;box-shadow:0 3px 10px rgba(0,0,0,.15);}
       .qr-block img{width:0.72in;height:0.72in;display:block;}
-      .qr-caption{font-size:5.6pt;color:#1B8A83;font-weight:700;text-align:center;margin-top:2px;letter-spacing:.3px;}
+      .qr-caption{font-size:5.6pt;color:var(--rail);font-weight:700;text-align:center;margin-top:2px;letter-spacing:.3px;}
       .sig-area{margin-top:6px;text-align:center;}
       .sig-line{font-size:7.8pt;color:#C4293D;font-weight:700;letter-spacing:.3px;border-top:1px solid #999;padding-top:5px;display:inline-block;margin-top:8px;min-width:1.6in;}
       .empcode-tag{position:absolute;top:0.14in;right:0.32in;font-family:'JetBrains Mono',monospace;font-size:6.3pt;color:#8A90AC;z-index:3;}

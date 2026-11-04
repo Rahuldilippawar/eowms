@@ -203,8 +203,8 @@ smartAlerts($alerts);
   .rl-role-col a, .rl-role-col > span { display: block; writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; max-height: 140px; overflow: hidden; text-overflow: ellipsis; font-size: 11.5px; font-weight: 600; color: var(--text); text-decoration: none; margin: 0 auto; }
   .rl-role-col a:hover { color: var(--rail); }
   .rl-cell { text-align: center; color: var(--rail); font-weight: 700; }
-  .rl-cell.on { background: rgba(27, 138, 131, .1); }
-  .rl-matrix tbody tr:hover td { background: rgba(27, 138, 131, .05); }
+  .rl-cell.on { background: color-mix(in srgb,var(--rail) 10%,transparent); }
+  .rl-matrix tbody tr:hover td { background: color-mix(in srgb,var(--rail) 5%,transparent); }
   .rl-group td { background: var(--canvas) !important; font-weight: 700; font-size: 12px; position: sticky; left: 0; }
 </style>
 <script>

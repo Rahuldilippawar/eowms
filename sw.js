@@ -4,7 +4,7 @@
 // (Add to Home Screen) and (2) show a friendly message instead of the
 // browser's default error page if someone opens it with no signal.
 
-const CACHE_NAME = 'eowms-shell-v3';
+const CACHE_NAME = 'eowms-shell-v4';
 const APP_SHELL = [
   'assets/css/eowms.css',
   'offline.html',

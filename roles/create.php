@@ -77,7 +77,7 @@ require_once __DIR__ . '/../includes/header.php';
   <form method="POST" style="padding:22px 24px;">
     <?php if ($copyFrom): $cpCount = $pdo->prepare("SELECT COUNT(*) FROM role_permissions WHERE role_key = ?"); $cpCount->execute([$copyFrom['role_key']]); ?>
       <input type="hidden" name="copy_from" value="<?= h($copyFrom['role_key']) ?>">
-      <div style="background:rgba(27,138,131,.08);border:1px dashed var(--rail);border-radius:10px;padding:10px 14px;font-size:12.5px;margin-bottom:16px;">
+      <div style="background:color-mix(in srgb,var(--rail) 8%,transparent);border:1px dashed var(--rail);border-radius:10px;padding:10px 14px;font-size:12.5px;margin-bottom:16px;">
         📋 <b><?= h($copyFrom['label_local'] ?: $copyFrom['label']) ?></b> या पदाची नक्कल — त्याचे <b><?= (int)$cpCount->fetchColumn() ?></b> Permissions<?= $copyFrom['restricted_mode'] ? ' व 🎯 Restricted Mode' : '' ?> नवीन पदाला मिळतील. जतन केल्यावर लगेच बदलता येतील.
       </div>
     <?php endif; ?>

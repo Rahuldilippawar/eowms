@@ -12,7 +12,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
 <script src="<?= $rootPath ?? '' ?>assets/js/eowms-advance.js?v=2"></script>
-<script src="<?= $rootPath ?? '' ?>assets/js/eowms-theme.js?v=2"></script>
+<script src="<?= $rootPath ?? '' ?>assets/js/eowms-theme.js?v=3"></script>
 <script src="<?= $rootPath ?? '' ?>assets/js/eowms-ui.js?v=2"></script>
 <script>
 // Mobile hamburger menu — opens/closes the sidebar on small screens
@@ -58,7 +58,7 @@
     '<div style="font-size:32px;margin-bottom:8px;">⏰</div>' +
     '<div style="font-weight:700;font-size:16px;color:#10162B;margin-bottom:8px;">तुम्ही निष्क्रिय आहात</div>' +
     '<div style="font-size:13px;color:#666B7D;margin-bottom:6px;">सुरक्षिततेसाठी <span id="idleCountdown">02:00</span> मिनिटांत आपोआप Logout होईल.</div>' +
-    '<button id="idleStayBtn" style="background:#1B8A83;color:#fff;border:none;border-radius:9px;padding:10px 22px;font-size:14px;font-weight:600;margin-top:10px;cursor:pointer;">मी इथे आहे — सुरू ठेवा</button>' +
+    '<button id="idleStayBtn" style="background:var(--rail);color:#fff;border:none;border-radius:9px;padding:10px 22px;font-size:14px;font-weight:600;margin-top:10px;cursor:pointer;">मी इथे आहे — सुरू ठेवा</button>' +
     '</div>';
   document.body.appendChild(modal);
 

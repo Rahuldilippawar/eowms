@@ -47,14 +47,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   *{box-sizing:border-box;}
   body{font-family:'Noto Sans Devanagari','Segoe UI',sans-serif;background:#10162B;margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;}
   .card{background:#fff;max-width:420px;width:92%;padding:36px 34px;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.3);}
-  .icon{width:56px;height:56px;border-radius:14px;background:#1B8A83;display:flex;align-items:center;justify-content:center;font-size:26px;margin-bottom:18px;}
+  .icon{width:56px;height:56px;border-radius:14px;background:#D9530F;display:flex;align-items:center;justify-content:center;font-size:26px;margin-bottom:18px;}
   h1{font-family:'Space Grotesk';font-size:21px;margin:0 0 8px;color:#10162B;}
   p{font-size:13.5px;color:#666B7D;line-height:1.6;margin:0 0 22px;}
   label{font-size:12.5px;font-weight:600;color:#1A1D29;display:block;margin-bottom:5px;}
   input{width:100%;padding:11px 14px;border:1px solid #D7DAE0;border-radius:9px;font-size:14px;margin-bottom:16px;font-family:inherit;}
-  button{width:100%;background:#1B8A83;color:#fff;border:none;border-radius:9px;padding:12px;font-size:14.5px;font-weight:700;cursor:pointer;font-family:inherit;}
-  .success{background:#DCEFEC;color:#0F5E58;border-radius:8px;padding:14px;font-size:13px;margin-bottom:16px;line-height:1.6;}
-  a.back{display:block;text-align:center;margin-top:16px;font-size:12.5px;color:#1B8A83;text-decoration:none;}
+  button{width:100%;background:#D9530F;color:#fff;border:none;border-radius:9px;padding:12px;font-size:14.5px;font-weight:700;cursor:pointer;font-family:inherit;}
+  .success{background:#DCEFEC;color:#B6420A;border-radius:8px;padding:14px;font-size:13px;margin-bottom:16px;line-height:1.6;}
+  a.back{display:block;text-align:center;margin-top:16px;font-size:12.5px;color:#D9530F;text-decoration:none;}
 </style>
 </head>
 <body>
@@ -67,7 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
   <?php if ($sent): ?>
     <div class="success">जर हा ईमेल आमच्या system मध्ये नोंदणीकृत असेल, तर त्यावर एक 6-अंकी verification code पाठवला गेला आहे. तो पुढील पानावर टाका.</div>
-    <a href="verify-reset.php" style="display:inline-block;width:100%;background:#1B8A83;color:#fff;text-decoration:none;padding:12px;border-radius:9px;font-size:14.5px;font-weight:700;text-align:center;">पुढे जा — Code टाका</a>
+    <a href="verify-reset.php" style="display:inline-block;width:100%;background:#D9530F;color:#fff;text-decoration:none;padding:12px;border-radius:9px;font-size:14.5px;font-weight:700;text-align:center;">पुढे जा — Code टाका</a>
   <?php else: ?>
     <p>तुमचा नोंदणीकृत ईमेल टाका — आम्ही तिथे एक verification code पाठवू.</p>
     <form method="POST">

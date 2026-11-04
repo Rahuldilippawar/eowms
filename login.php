@@ -138,14 +138,14 @@ $loginOrgName = $loginOrg['name'] ?? 'VJMAT';
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --lg-teal:#138A80;--lg-teal-d:#0E6F67;--lg-teal-l:#5ED3C8;--lg-amber:#E0A043;--lg-ink:#0F172A;--lg-muted:#64708A;
-    --lg-side:#F4F6FA;--lg-card:#ffffff;--lg-line:#E3E7EF;--lg-field:#F8FAFC;--lg-text:#0F172A;--lg-sub:#475069;
+    --lg-teal:#D9530F;--lg-teal-d:#B6420A;--lg-teal-l:#F7A574;--lg-amber:#E0A043;--lg-ink:#0F172A;--lg-muted:#64708A;
+    --lg-side:#F7F5F2;--lg-card:#ffffff;--lg-line:#EAE5DF;--lg-field:#F8FAFC;--lg-text:#0F172A;--lg-sub:#475069;
     --lg-err-bg:#FDECEC;--lg-err:#B42318;--lg-ok-bg:#E7F6EF;--lg-ok:#137A4B;--lg-warn-bg:#FFF4E0;--lg-warn:#9A5B07;
-    --lg-brand:linear-gradient(160deg,#0F1A36 0%,#0B1224 55%,#080E1C 100%);
+    --lg-brand:linear-gradient(160deg,#1C1F40 0%,#13152D 55%,#0C0D20 100%);
   }
   /* Theme Studio मधला मुख्य रंग — Login पानावरही तोच */
   html[data-accent="blue"]{--lg-teal:#2563EB;--lg-teal-d:#1D4ED8;--lg-teal-l:#8CB0F5;}
-  html[data-accent="saffron"]{--lg-teal:#D9530F;--lg-teal-d:#B6420A;--lg-teal-l:#F7A574;}
+  html[data-accent="teal"]{--lg-teal:#138A80;--lg-teal-d:#0E6F67;--lg-teal-l:#5ED3C8;}
   html[data-accent="purple"]{--lg-teal:#7C3AED;--lg-teal-d:#6025D0;--lg-teal-l:#C4A6F9;}
   html[data-accent="green"]{--lg-teal:#15803D;--lg-teal-d:#116A32;--lg-teal-l:#78D7A0;}
   html[data-accent="maroon"]{--lg-teal:#A3123A;--lg-teal-d:#850E2F;--lg-teal-l:#F08BA6;}
@@ -163,7 +163,7 @@ $loginOrgName = $loginOrg['name'] ?? 'VJMAT';
   .lg-brand::after{content:'';position:absolute;left:0;right:0;top:0;height:3px;background:linear-gradient(90deg,var(--lg-teal),var(--lg-amber),var(--lg-teal));opacity:.9;}
   .lg-blob{position:absolute;border-radius:50%;filter:blur(70px);opacity:.55;z-index:-1;animation:lgFloat 18s ease-in-out infinite alternate;}
   .lg-blob.b1{width:460px;height:460px;background:var(--lg-teal);left:-120px;top:-140px;opacity:.45;}
-  .lg-blob.b2{width:380px;height:380px;background:#C47A12;right:-120px;bottom:-120px;opacity:.26;animation-delay:-6s;}
+  .lg-blob.b2{width:380px;height:380px;background:#E0A043;right:-120px;bottom:-120px;opacity:.26;animation-delay:-6s;}
   .lg-blob.b3{width:300px;height:300px;background:#3B5BDB;right:12%;top:30%;opacity:.18;animation-delay:-12s;}
   @keyframes lgFloat{0%{transform:translate(0,0) scale(1);}100%{transform:translate(40px,30px) scale(1.12);}}
   .lg-grid{position:absolute;inset:0;z-index:-1;opacity:.5;background-image:radial-gradient(rgba(255,255,255,.12) 1px,transparent 1px);background-size:22px 22px;

@@ -117,7 +117,7 @@ smartAlerts(array_slice($alerts, 0, 8));
 </div>
 <style>
   .wf-chain { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
-  .wf-step { font-size: 11.5px; padding: 3px 9px; border-radius: 999px; background: rgba(27,138,131,.1); color: var(--rail); font-weight: 600; white-space: nowrap; }
+  .wf-step { font-size: 11.5px; padding: 3px 9px; border-radius: 999px; background: color-mix(in srgb,var(--rail) 10%,transparent); color: var(--rail); font-weight: 600; white-space: nowrap; }
   .wf-step.bad { background: rgba(194,51,63,.1); color: var(--rose); }
   .wf-arr { font-size: 9px; color: var(--text-dim); }
 </style>

@@ -51,7 +51,7 @@ $C = 2 * M_PI * 42; // ring परिघ (r = 42)
   .sr-hero{position:relative;overflow:hidden;border-radius:20px;padding:26px;margin-bottom:18px;color:#EAF3F1;
     background:radial-gradient(ellipse 90% 120% at 0% 0%,#1B3A4A 0%,#121A30 55%,#0C1120 100%);box-shadow:0 18px 40px rgba(10,14,26,.25);}
   .sr-hero::before,.sr-hero::after{content:'';position:absolute;border-radius:50%;filter:blur(60px);opacity:.35;pointer-events:none;animation:srDrift 14s ease-in-out infinite alternate;}
-  .sr-hero::before{width:340px;height:340px;background:#1B8A83;top:-140px;right:10%;}
+  .sr-hero::before{width:340px;height:340px;background:var(--rail);top:-140px;right:10%;}
   .sr-hero::after{width:300px;height:300px;background:#C97F1D;bottom:-160px;left:20%;animation-delay:-7s;}
   @keyframes srDrift{to{transform:translate(40px,20px) scale(1.1);}}
   .sr-hero-in{position:relative;z-index:1;display:grid;grid-template-columns:auto 1fr auto;gap:26px;align-items:center;}
@@ -72,11 +72,11 @@ $C = 2 * M_PI * 42; // ring परिघ (r = 42)
   .sr-side{display:flex;flex-direction:column;gap:10px;min-width:190px;}
   .sr-dist{display:flex;height:10px;border-radius:10px;overflow:hidden;gap:2px;background:rgba(255,255,255,.1);}
   .sr-dist i{display:block;transform-origin:left;animation:srGrow 1.2s ease-out both;}
-  .sr-dist .good{background:#2FB3A8;} .sr-dist .warn{background:#E0994A;animation-delay:.15s;} .sr-dist .bad{background:#E06070;animation-delay:.3s;}
+  .sr-dist .good{background:var(--green);} .sr-dist .warn{background:#E0994A;animation-delay:.15s;} .sr-dist .bad{background:#E06070;animation-delay:.3s;}
   @keyframes srGrow{from{transform:scaleX(0);}}
   .sr-dist-l{display:flex;justify-content:space-between;font-size:11.5px;color:#A9B1CB;} .sr-dist-l b{color:#fff;font-family:'JetBrains Mono',monospace;}
   .sr-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:12px;padding:10px 14px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;text-decoration:none;}
-  .sr-btn.play{background:linear-gradient(135deg,#2FB3A8,#1B8A83);color:#fff;box-shadow:0 8px 20px rgba(27,138,131,.4);}
+  .sr-btn.play{background:linear-gradient(135deg,var(--rail),var(--rail-2));color:#fff;box-shadow:0 8px 20px color-mix(in srgb,var(--rail) 40%,transparent);}
   .sr-btn.play:hover{filter:brightness(1.08);transform:translateY(-1px);}
   .sr-btn.ghost{background:rgba(255,255,255,.08);color:#DCEFEC;border:1px solid rgba(255,255,255,.14);}
 
@@ -97,7 +97,7 @@ $C = 2 * M_PI * 42; // ring परिघ (r = 42)
   .sr-view button.on{background:var(--rail-soft);color:var(--rail);}
 
   .sr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:16px;perspective:1200px;}
-  .sr-card{--lc:var(--rail);position:relative;display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:16px;text-decoration:none;color:inherit;
+  .sr-card{--lc:var(--green);position:relative;display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:16px;text-decoration:none;color:inherit;
     transform-style:preserve-3d;transition:transform .25s ease,box-shadow .25s ease,opacity .5s ease;opacity:0;transform:translateY(26px) scale(.97);}
   .sr-card.in{opacity:1;transform:none;}
   .sr-card.warn{--lc:var(--amber);} .sr-card.bad{--lc:var(--rose);}
@@ -134,7 +134,7 @@ $C = 2 * M_PI * 42; // ring परिघ (r = 42)
   .sr-rrow .nm{font-weight:600;font-size:13.5px;} .sr-rrow .nm small{display:block;font-weight:400;color:var(--text-dim);font-size:11px;}
   .sr-rbar{height:12px;border-radius:12px;background:var(--line);overflow:hidden;}
   .sr-rbar i{display:block;height:100%;width:0;border-radius:12px;background:var(--lc);transition:width 1.2s cubic-bezier(.2,.8,.2,1);}
-  .sr-rrow.warn{--lc:var(--amber);} .sr-rrow.bad{--lc:var(--rose);} .sr-rrow{--lc:var(--rail);}
+  .sr-rrow.warn{--lc:var(--amber);} .sr-rrow.bad{--lc:var(--rose);} .sr-rrow{--lc:var(--green);}
   .sr-rrow .sc{font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--lc);text-align:right;}
   .sr-none{text-align:center;color:var(--text-dim);padding:30px;}
 

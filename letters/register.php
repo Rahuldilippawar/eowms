@@ -78,7 +78,7 @@ $statusLabels = ['draft' => 'Draft', 'in_progress' => 'प्रगतीत', '
 <title><?= $type === 'outward' ? 'जावक' : 'आवक' ?> नोंदवही — <?= h($dept['name_local'] ?: $dept['name']) ?></title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  :root{ --ink:#10162B; --rail:#1B8A83; --line:#D7DAE0; --text:#1A1D29; --text-dim:#666B7D; }
+  :root{ --ink:#10162B; --rail:#D9530F; --line:#D7DAE0; --text:#1A1D29; --text-dim:#666B7D; }
   *{box-sizing:border-box;}
   body{font-family:'Noto Sans Devanagari','Segoe UI',sans-serif;color:var(--text);margin:0;background:#F0F1F4;font-size:12.5px;}
   .toolbar{position:sticky;top:0;background:var(--ink);padding:14px 24px;display:flex;justify-content:space-between;align-items:center;z-index:10;flex-wrap:wrap;gap:10px;}
