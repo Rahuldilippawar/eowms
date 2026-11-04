@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/includes/auth.php';
+require_once __DIR__ . '/includes/two-factor.php';
 
 if (currentUser()) {
     header('Location: index.php');
@@ -9,6 +10,8 @@ if (currentUser()) {
 $error = null;
 if (($_GET['msg'] ?? '') === 'session_expired') {
     $error = t('s456');
+} elseif (($_GET['msg'] ?? '') === 'tfa_locked') {
+    $error = 'खूप वेळा चुकीचा 2-Step Code टाकला — सुरक्षिततेसाठी खाते १५ मिनिटांसाठी तात्पुरते बंद केले आहे.';
 }
 
 /** अयशस्वी Login ची नोंद — त्या Email ची संस्था सापडली तर तिच्याच Activity Log मध्ये */
@@ -50,43 +53,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         logFailedLogin($pdo, $email, 'संस्था निष्क्रिय');
         $error = 'तुमची संस्था सध्या निष्क्रिय (Inactive) आहे — Login करता येणार नाही. कृपया Super Admin शी संपर्क साधा.';
     } elseif ($user && password_verify($password, $user['password'])) {
-        // Correct password — reset any prior failed-attempt counter
-        $pdo->prepare("UPDATE users SET failed_login_attempts = 0, locked_until = NULL, last_login_at = NOW() WHERE id = ?")->execute([$user['id']]);
-
-        session_regenerate_id(true); // prevents session-fixation attacks
-        $mustChange = !empty($user['must_change_password']);
-        unset($user['password']);
-        $_SESSION['user'] = $user;
-        $_SESSION['last_activity'] = time();
-        $_SESSION['user_recheck_at'] = time();
-        $_SESSION['play_welcome_chime'] = true;
-        $loginIp = clientIp();
-        logActivity('Login केलं (Password)', 'user', $user['id'], 'IP: ' . $loginIp);
-
-        // 🛠️ Site Maintenance Mode — Super Admin सोडून बाकी कोणालाही
-        // Maintenance सुरू असताना नव्याने Login करता येणार नाही.
-        if (($user['role'] ?? '') !== 'super_admin') {
-            $mCheckStmt = $pdo->prepare("SELECT maintenance_mode FROM organizations WHERE id = ?");
-            $mCheckStmt->execute([$user['organization_id']]);
-            if ((int)($mCheckStmt->fetch()['maintenance_mode'] ?? 0) === 1) {
-                header('Location: maintenance.php');
-                exit;
-            }
+        // बरोबर पासवर्ड — 2-Step चालू असेल (आणि हा Browser विश्वासू नसेल) तर आधी Code
+        if (tfaReady($pdo) && tfaEnabled($user) && !tfaDeviceTrusted($pdo, $user['id'])) {
+            session_regenerate_id(true);
+            unset($_SESSION['tfa_email']);
+            $_SESSION['tfa_pending'] = ['uid' => (int)$user['id'], 'at' => time(), 'tries' => 0];
+            header('Location: login-2fa.php');
+            exit;
         }
-
-        $loginRedirect = 'index.php';
-        if ($mustChange) {
-            $loginRedirect = 'force-password-change.php';
-        } else {
-            $restrictedModulesAtLogin = getRestrictedModules();
-            if ($restrictedModulesAtLogin !== null && !empty($restrictedModulesAtLogin)) {
-                $registryAtLogin = getModuleRegistry();
-                $firstModuleAtLogin = $registryAtLogin[$restrictedModulesAtLogin[0]] ?? null;
-                if ($firstModuleAtLogin) { $loginRedirect = $firstModuleAtLogin['dashboard']; }
-            }
-        }
-        header('Location: ' . $loginRedirect);
-        exit;
+        eowmsCompleteLogin($pdo, $user, tfaEnabled($user) ? 'Password + विश्वासू Device' : 'Password');
     } else {
         publicFormRecordSubmission('login_fail');
         logFailedLogin($pdo, $email, $user ? 'चुकीचा पासवर्ड' : 'अज्ञात / निष्क्रिय खाते');

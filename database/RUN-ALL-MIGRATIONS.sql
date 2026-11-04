@@ -4318,3 +4318,39 @@ CREATE TABLE translation_misses (
   last_seen DATETIME NULL,
   UNIQUE KEY uniq_lang_src (lang, source_hash)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- FROM: migration-2fa-weekly-report-offsite-backup.sql
+-- ---------------- 🔐 2-Step Login ----------------
+-- tfa_secret = Authenticator Key (config/app-secret.php ने Encrypt केलेली)
+-- tfa_recovery = Recovery Codes चे Hash (JSON) · tfa_last_step = एकच Code दोनदा वापरू नये म्हणून
+ALTER TABLE users
+  ADD COLUMN tfa_method VARCHAR(10) NULL,
+  ADD COLUMN tfa_secret VARCHAR(255) NULL,
+  ADD COLUMN tfa_recovery TEXT NULL,
+  ADD COLUMN tfa_last_step BIGINT NULL,
+  ADD COLUMN tfa_enabled_at DATETIME NULL;
+
+-- "हा Device 30 दिवस लक्षात ठेवा" — Browser Cookie चा फक्त Hash
+CREATE TABLE user_trusted_devices (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  token_hash CHAR(64) NOT NULL,
+  label VARCHAR(120) NULL,
+  ip VARCHAR(45) NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  last_used_at DATETIME NULL,
+  expires_at DATETIME NOT NULL,
+  UNIQUE KEY uniq_token (token_hash),
+  INDEX idx_user (user_id),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ---------------- ⚙️ संस्था-स्तरीय सेटिंग्ज (साप्ताहिक अहवाल, दुसऱ्या ठिकाणी Backup, 2-Step धोरण) ----------------
+CREATE TABLE org_settings (
+  organization_id INT NOT NULL,
+  setting_key VARCHAR(60) NOT NULL,
+  setting_value TEXT NULL,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (organization_id, setting_key),
+  FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

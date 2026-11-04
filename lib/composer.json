@@ -1,0 +1,14 @@
+{
+    "name": "eowms/lib",
+    "description": "Third-party PHP libraries for the E-Admin app (PDF reports, QR codes). Vendored and trimmed: see README.md.",
+    "type": "project",
+    "require": {
+        "php": ">=8.1",
+        "mpdf/mpdf": "^8.2",
+        "chillerlan/php-qrcode": "^5.0"
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "platform": {"php": "8.1"}
+    }
+}

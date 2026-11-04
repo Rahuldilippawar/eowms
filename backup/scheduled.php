@@ -79,14 +79,14 @@ $cronHost = preg_replace('/[^a-zA-Z0-9_-]/', '', $_SERVER['HTTP_HOST'] ?? 'youru
       <tbody>
         <?php foreach (cronRunAllJobs() as $jobKey => $sched):
           $run = $cronRuns[$jobKey] ?? null;
-          $maxAge = isset($sched['every']) ? $sched['every'] * 60 * 4 : 26 * 3600;
+          $maxAge = isset($sched['every']) ? $sched['every'] * 60 * 4 : (isset($sched['weekly']) ? 8 * 86400 : 26 * 3600);
           $stale = !$run || (time() - strtotime($run['last_started_at'])) > $maxAge;
           $chip = !$run ? 'pending' : ($run['last_status'] === 'failed' || $stale ? 'overdue' : ($run['last_status'] === 'running' ? 'pending' : 'done'));
           $chipText = !$run ? 'कधीच नाही' : ($run['last_status'] === 'failed' ? 'अयशस्वी' : ($stale ? 'जुनं' : ($run['last_status'] === 'running' ? 'चालू' : 'यशस्वी')));
         ?>
           <tr>
             <td class="font-mono" style="font-size:11.5px;"><?= h($jobKey) ?></td>
-            <td style="font-size:11.5px;"><?= isset($sched['every']) ? 'दर ' . (int)$sched['every'] . ' मिनिटांनी' : 'रोज ' . (int)$sched['daily'] . ':00 नंतर' ?></td>
+            <td style="font-size:11.5px;"><?= isset($sched['every']) ? 'दर ' . (int)$sched['every'] . ' मिनिटांनी' : (isset($sched['weekly']) ? 'दर सोमवारी ' . (int)$sched['weekly'][1] . ':00 नंतर' : 'रोज ' . (int)$sched['daily'] . ':00 नंतर') ?></td>
             <td style="font-size:12px;"><?= $run && $run['last_started_at'] ? date('d M Y, h:i A', strtotime($run['last_started_at'])) : '—' ?></td>
             <td style="font-size:12px;"><?= $run && $run['last_duration_sec'] !== null ? (int)$run['last_duration_sec'] . ' s' : '—' ?></td>
             <td><span class="status-chip <?= $chip ?>"><?= h($chipText) ?></span></td>

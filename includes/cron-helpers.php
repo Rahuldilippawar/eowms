@@ -16,6 +16,8 @@ function cronRunAllJobs() {
         'process-biometric-attendance'     => ['every' => 15],
         'escalate-tickets'                 => ['every' => 60],
         'scheduled-backup'                 => ['daily' => 2],
+        'offsite-backup'                   => ['daily' => 3],
+        'weekly-management-report'         => ['weekly' => [1, 7]], // सोमवार, सकाळी 7 नंतर
         'send-birthday-anniversary-emails' => ['daily' => 7],
         'send-renewal-reminders'           => ['daily' => 8],
         'vehicle-service-due'              => ['daily' => 8],

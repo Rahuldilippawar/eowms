@@ -61,6 +61,10 @@ foreach (cronRunAllJobs() as $job => $sched) {
         $due = !$lastStart || ($now - strtotime($lastStart)) >= ($sched['every'] * 60 - 30);
     } elseif (!$due && isset($sched['daily'])) {
         $due = (int)date('G') >= $sched['daily'] && (!$lastStart || substr($lastStart, 0, 10) < $todayStr);
+    } elseif (!$due && isset($sched['weekly'])) {
+        // [आठवड्याचा दिवस (1 = सोमवार … 7 = रविवार), तास] — त्या दिवशी त्या तासानंतर एकदा
+        [$dow, $hour] = $sched['weekly'];
+        $due = (int)date('N') === $dow && (int)date('G') >= $hour && (!$lastStart || substr($lastStart, 0, 10) < $todayStr);
     }
     if (!$due) { continue; }
 

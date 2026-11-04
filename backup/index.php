@@ -65,7 +65,10 @@ if (!$lastAuto) $bkAlerts[] = ['info', 'Automated (आपोआप) Backup अ�
 <div class="page-eyebrow"><?= h($orgName) ?></div>
 <div class="d-flex justify-content-between align-items-start mb-1">
   <div class="page-title mb-0"><?= h(t('s365')) ?></div>
-  <a href="scheduled.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13.5px;padding:9px 18px;"><i class="fa-solid fa-clock-rotate-left me-1"></i>⏰ Automated Backup</a>
+  <div class="d-flex gap-2">
+    <a href="offsite.php" class="btn" style="border:1px solid var(--rail);color:var(--rail);border-radius:9px;font-size:13.5px;padding:9px 18px;font-weight:600;"><i class="fa-solid fa-cloud-arrow-up me-1"></i>Email Backup</a>
+    <a href="scheduled.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13.5px;padding:9px 18px;"><i class="fa-solid fa-clock-rotate-left me-1"></i>⏰ Automated Backup</a>
+  </div>
 </div>
 <p style="font-size:12.5px;color:var(--text-dim);margin-bottom:20px;"><?= h(t('s366')) ?><b><?= h($orgName) ?></b><?= h(t('s367')) ?></p>
 

@@ -82,3 +82,17 @@ eowms-php/
 
 Pudhle modules (Store, Purchase, Asset, Vehicle, इ.) याच pattern ने add karता yetील —
 konताही next module lagla tar sanga, mi याच style madhे banवून deto.
+
+## 🔐 2-Step Login · ☁️ Email Backup · 📊 साप्ताहिक अहवाल
+
+Live वर नवीन Code आल्यावर **System Update → Database Update** एकदा चालवा. त्यामुळे `users.tfa_*`, `user_trusted_devices` आणि `org_settings` तयार होतात. तोपर्यंत Login पूर्वीसारखंच चालतं.
+
+- **2-Step Login** (`account/two-factor.php`): यात Authenticator App (TOTP) किंवा Email Code, 10 Recovery Codes आणि "हा Device 30 दिवस लक्षात ठेवा" अशी सोय आहे.
+  - Super Admin साठी हे नेहमी अनिवार्य आहे. Management, HOD किंवा सर्वांसाठी Super Admin त्याच पानावरून अनिवार्य करू शकतो.
+  - फोन हरवला आणि Recovery Codes पण नसतील तर Server वर ही command चालवा: `php tools/reset-2fa.php email@example.com`
+- **Email Backup** (`backup/offsite.php`): संपूर्ण Data, Password ने AES-256 Encrypt करून (`.eadmin` File) रोज किंवा दर आठवड्याला Email वर पाठवला जातो.
+  - Restore करण्यासाठी Backup → Restore मध्ये File आणि Password द्या. Computer वर उघडायचा असेल तर: `php tools/decrypt-backup.php file.eadmin`
+- **साप्ताहिक अहवाल** (`reports/weekly.php`): दर सोमवारी सकाळी 7 नंतर Management ला PDF सह Email जातो. यात विभागांचं आरोग्य, कामं, मुदतबाह्य Tasks, नूतनीकरण आणि खर्च असतो.
+  - PDF `lib/` मधल्या mPDF ने बनतो. ती Library आधीच Repo मध्ये आहे, त्यामुळे Server वर Composer लागत नाही.
+
+हे सगळं आपोआप चालण्यासाठी Hostinger मध्ये `cron/run-all.php` ची Cron ओळ (दर 5 मिनिटांनी) असायला हवी.

@@ -368,7 +368,7 @@ $statusChip = ['pending' => 'pending', 'in_progress' => 'pending', 'completed' =
   // 🔐 खाते — पूर्वीचं account/profile.php इथेच (Form अजूनही ../account/profile.php ला Submit होतात)
 ?>
 <div id="account" class="row g-3 mt-1" style="scroll-margin-top:80px;">
-  <div class="col-12"><div style="font-family:'Space Grotesk';font-weight:700;font-size:16px;color:var(--ink);margin-top:8px;">🔐 माझं खाते — पासवर्ड व फोटो</div></div>
+  <div class="col-12"><div style="font-family:'Space Grotesk';font-weight:700;font-size:16px;color:var(--ink);margin-top:8px;">🔐 माझं खाते — पासवर्ड, फोटो व 2-Step Login</div></div>
   <div class="col-lg-4">
     <div class="panel h-100">
       <div class="panel-head"><div class="title">📷 Profile फोटो</div></div>
@@ -398,6 +398,27 @@ $statusChip = ['pending' => 'pending', 'in_progress' => 'pending', 'completed' =
         <input type="password" name="confirm_password" class="form-control-custom mb-3" minlength="6" required autocomplete="new-password">
         <button type="submit" class="btn" style="background:var(--rail);color:#fff;border-radius:9px;font-weight:600;padding:8px 20px;font-size:13px;"><?= h(t('s250')) ?></button>
       </form>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <?php
+      $tfaRow = null;
+      try { $tfaQ = $pdo->prepare("SELECT tfa_method, tfa_enabled_at FROM users WHERE id = ?"); $tfaQ->execute([(int)currentUser()['id']]); $tfaRow = $tfaQ->fetch(); } catch (PDOException $e) {}
+      $tfaOn = !empty($tfaRow['tfa_method']);
+    ?>
+    <div class="panel h-100">
+      <div class="panel-head"><div class="title">🛡️ 2-Step Login</div><div class="sub">पासवर्डबरोबर फोनवरचा Code</div></div>
+      <div style="padding:20px 24px;">
+        <?php if ($tfaRow === null): ?>
+          <div style="font-size:13px;color:var(--text-dim);">Database Update झाल्यावर उपलब्ध होईल.</div>
+        <?php else: ?>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+            <i class="fa-solid <?= $tfaOn ? 'fa-shield-halved' : 'fa-shield' ?> fa-2x" style="color:<?= $tfaOn ? 'var(--green,#16a34a)' : 'var(--amber,#d97706)' ?>;"></i>
+            <div><b style="font-size:14px;"><?= $tfaOn ? 'चालू आहे' : 'बंद आहे' ?></b><div style="font-size:12px;color:var(--text-dim);"><?= $tfaOn ? ($tfaRow['tfa_method'] === 'totp' ? 'Authenticator App' : 'Email Code') : 'पासवर्ड चोरीला गेला तरी खातं सुरक्षित ठेवा' ?></div></div>
+          </div>
+          <a href="../account/two-factor.php" class="btn" style="background:<?= $tfaOn ? 'transparent' : 'var(--rail)' ?>;color:<?= $tfaOn ? 'var(--rail)' : '#fff' ?>;border:1px solid var(--rail);border-radius:9px;font-weight:600;padding:8px 20px;font-size:13px;"><?= $tfaOn ? 'व्यवस्थापित करा' : 'आत्ता चालू करा' ?></a>
+        <?php endif; ?>
+      </div>
     </div>
   </div>
 </div>

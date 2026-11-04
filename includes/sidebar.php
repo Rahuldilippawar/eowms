@@ -213,6 +213,11 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
     <a href="<?= $rp ?>daily-work/report.php" class="tree-node <?= $currentDir === 'daily-work' && in_array($currentPage, ['report.php', 'report-print.php'], true) ? 'active' : '' ?>">
       <i class="fa-solid fa-file-pdf fa-fw"></i><span><?= h(t('nav_reports')) ?></span>
     </a>
+    <?php if (isManagementOrAbove()): ?>
+    <a href="<?= $rp ?>reports/weekly.php" class="tree-node <?= $currentDir === 'reports' && $currentPage === 'weekly.php' ? 'active' : '' ?>">
+      <i class="fa-solid fa-chart-column fa-fw"></i><span>साप्ताहिक अहवाल</span>
+    </a>
+    <?php endif; ?>
 
     <!-- ==================== पत्र व विनंत्या ==================== -->
     <?php
