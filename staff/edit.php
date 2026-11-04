@@ -55,6 +55,11 @@ try {
         <input type="date" name="date_of_birth" class="form-control-custom" value="<?= h($staffMember['date_of_birth'] ?? '') ?>">
       </div>
       <div class="col-md-6">
+        <label class="form-label-custom">Email (Login ID)</label>
+        <input type="email" name="email" class="form-control-custom" value="<?= h($staffMember['email']) ?>" required autocomplete="off" data-orig="<?= h($staffMember['email']) ?>" id="staffEmailField">
+        <div id="staffEmailNote" style="display:none;font-size:11.5px;color:var(--amber,#B45309);margin-top:4px;">⚠️ Email बदलल्यावर <?= h($staffMember['name']) ?> यांना नवीन Email ने Login करावं लागेल. जुन्या आणि नवीन दोन्ही पत्त्यांवर सूचना पाठवली जाईल.</div>
+      </div>
+      <div class="col-md-6">
         <label class="form-label-custom">फोटो</label>
         <?php if (!empty($staffMember['photo_path'])): ?>
           <div style="margin-bottom:6px;"><img src="../<?= h($staffMember['photo_path']) ?>" style="width:48px;height:48px;border-radius:50%;object-fit:cover;"></div>
@@ -212,4 +217,10 @@ try {
   </form>
 </div>
 
+<script>
+  (function () {
+    var f = document.getElementById('staffEmailField'), n = document.getElementById('staffEmailNote'); if (!f) return;
+    f.addEventListener('input', function () { n.style.display = f.value.trim().toLowerCase() !== f.dataset.orig.toLowerCase() ? 'block' : 'none'; });
+  })();
+</script>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

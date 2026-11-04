@@ -11,6 +11,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $id = (int)($_POST['id'] ?? 0);
 $name = trim($_POST['name'] ?? '');
+$email = strtolower(trim($_POST['email'] ?? ''));
 $designation = trim($_POST['designation'] ?? '');
 $teachingMode = in_array($_POST['teaching_mode'] ?? '', ['Teaching', 'Non Teaching', 'Other'], true) ? $_POST['teaching_mode'] : 'Non Teaching';
 $departmentId = (int)($_POST['department_id'] ?? 0);
@@ -64,13 +65,32 @@ if ($departmentId) {
 
 // Safety: never allow the LAST remaining super_admin to be demoted or deactivated —
 // this prevents the whole system from becoming permanently inaccessible.
-$targetStmt = $pdo->prepare("SELECT role, is_active, left_date, department_id, campus_id, salary FROM users WHERE id = ? AND organization_id = ?");
+$targetStmt = $pdo->prepare("SELECT role, is_active, left_date, department_id, campus_id, salary, email FROM users WHERE id = ? AND organization_id = ?");
 $targetStmt->execute([$id, activeOrgId()]);
 $targetRow = $targetStmt->fetch();
 if (!$targetRow) {
     header('Location: index.php');
     exit;
 }
+// 📧 Email (Login ID) बदल — वैध, आणि दुसऱ्या कोणाचा (कुठल्याही संस्थेतला) नसलेला
+$oldEmail = (string)($targetRow['email'] ?? '');
+if ($email === '') { $email = $oldEmail; } // जुना Form (Email field नसलेला) — Email तसाच
+$emailChanged = strcasecmp($email, $oldEmail) !== 0;
+if ($emailChanged) {
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL) || mb_strlen($email) > 255) {
+        $_SESSION['form_error'] = 'Email पत्ता वैध नाही — उदा. naav@example.com';
+        header('Location: edit.php?id=' . $id);
+        exit;
+    }
+    $dupStmt = $pdo->prepare("SELECT name FROM users WHERE LOWER(email) = ? AND id <> ? LIMIT 1");
+    $dupStmt->execute([$email, $id]);
+    if ($dupName = $dupStmt->fetchColumn()) {
+        $_SESSION['form_error'] = "'$email' हा Email आधीच दुसऱ्या कर्मचाऱ्याचा ($dupName) आहे — एक Email एकाच खात्याला वापरता येतो.";
+        header('Location: edit.php?id=' . $id);
+        exit;
+    }
+}
+
 // विभाग नसेल किंवा Trust-HQ (Campus नसलेला) विभाग असेल — तर आधीचाच Campus ठेवतो
 if (empty($dept['campus_id'])) {
     $dept['campus_id'] = $targetRow['campus_id'];
@@ -111,6 +131,32 @@ if ($newPassword !== '') {
 
 logActivity('कर्मचारी संपादित केला', 'user', $id, "$name — role: $role, active: $isActive");
 
+if ($emailChanged) {
+    try {
+        $pdo->prepare("UPDATE users SET email = ? WHERE id = ?")->execute([$email, $id]);
+    } catch (PDOException $e) { // एकाच वेळी दुसऱ्याने तोच Email घेतला (UNIQUE)
+        $_SESSION['form_error'] = "'$email' हा Email आधीच वापरात आहे — Email बदलला नाही (बाकी बदल जतन झाले).";
+        header('Location: edit.php?id=' . $id);
+        exit;
+    }
+    logActivity('कर्मचाऱ्याचा Email (Login ID) बदलला', 'user', $id, "$name — $oldEmail → $email");
+    if ((int)$id === (int)$user['id']) { $_SESSION['user']['email'] = $email; }
+
+    // सुरक्षा-सूचना — जुन्या पत्त्यावर (खातं कोणी बळकावलं तर कळावं) आणि नवीन पत्त्यावर (नवीन Login ID)
+    require_once __DIR__ . '/../includes/mailer.php';
+    $orgN = activeOrgName();
+    $hN = htmlspecialchars($name); $hOld = htmlspecialchars($oldEmail); $hNew = htmlspecialchars($email); $hBy = htmlspecialchars($user['name'] ?? 'Super Admin');
+    $mailBody = fn($line) => "<div style='font-family:Arial,sans-serif;max-width:540px;margin:0 auto;padding:22px;background:#F3F4F7;'>
+      <div style='background:#191C3A;padding:16px 22px;border-radius:10px 10px 0 0;'><div style='color:#fff;font-size:17px;font-weight:bold;'>" . htmlspecialchars($orgN) . "</div><div style='color:#C9CCE0;font-size:12.5px;'>E-Admin — खात्याची सुरक्षा-सूचना</div></div>
+      <div style='background:#fff;padding:22px;border-radius:0 0 10px 10px;font-size:14px;color:#1A1D29;line-height:1.7;'>
+        <p>नमस्कार <b>$hN</b>,</p><p>$line</p>
+        <table style='font-size:13px;margin:10px 0;'><tr><td style='color:#666B7D;padding-right:12px;'>जुना Email</td><td>$hOld</td></tr><tr><td style='color:#666B7D;padding-right:12px;'>नवीन Email</td><td><b>$hNew</b></td></tr><tr><td style='color:#666B7D;padding-right:12px;'>बदल करणारे</td><td>$hBy</td></tr><tr><td style='color:#666B7D;padding-right:12px;'>वेळ</td><td>" . date('d M Y, h:i A') . "</td></tr></table>
+        <p style='font-size:12.5px;color:#666B7D;'>हा बदल तुम्ही मागितला नसेल तर लगेच कार्यालयाशी संपर्क साधा.</p>
+        <p style='font-size:11.5px;color:#8A90AC;margin-top:16px;'>!! आत्मा मालिक !! — हा ईमेल आपोआप पाठवला गेला आहे.</p></div></div>";
+    eowmsSendMail($oldEmail, 'E-Admin — तुमचा Login Email बदलला', $mailBody('तुमच्या E-Admin खात्याचा Login Email बदलण्यात आला आहे. यापुढे Login साठी नवीन Email वापरावा लागेल.'), [], $orgN);
+    eowmsSendMail($email, 'E-Admin — हा तुमचा नवीन Login Email', $mailBody('यापुढे E-Admin मध्ये Login करण्यासाठी हा Email वापरा. पासवर्ड पूर्वीचाच आहे.'), [], $orgN);
+}
+
 // दैनंदिन कामाची नोंद Edit करण्याचा Access — फक्त Super Admin बदलू शकतो
 if (hasRole('super_admin')) {
     $canEditDailyWork = isset($_POST['can_edit_daily_work']) ? 1 : 0;
@@ -119,6 +165,6 @@ if (hasRole('super_admin')) {
     } catch (PDOException $e) { /* migration not run yet */ }
 }
 
-$_SESSION['flash'] = "$name चा तपशील अद्ययावत केला गेला.";
+$_SESSION['flash'] = "$name चा तपशील अद्ययावत केला गेला." . ($emailChanged ? " नवीन Login Email: $email" : '');
 header('Location: index.php');
 exit;
