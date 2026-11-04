@@ -185,11 +185,12 @@
 <div class="row g-3">
   <!-- ============ विभाग-आरोग्य ============ -->
   <div class="col-lg-8">
+    <?php $smShowAll = count($smart['health']) > 1 && hasPermission('view_org_wide_dashboards'); ?>
     <div class="panel" id="smDepts">
       <div class="panel-head d-flex justify-content-between align-items-center flex-wrap gap-2">
         <div><div class="title"><i class="fa-solid fa-heart-pulse me-1" style="color:var(--rose);"></i> <?= $isMgmtView ? 'विभाग — आरोग्य व कामगिरी' : 'माझा विभाग' ?></div>
           <div class="sub">मागील ३० दिवसांची पूर्णता, मुदतबाह्य Tasks, SLA व नूतनीकरण यांवरून गुण</div></div>
-        <?php if (count($smart['health']) > 1): $groups = array_unique(array_column($smart['health'], 'group')); ?>
+        <?php if (count($smart['health']) > 1 && !$smShowAll): $groups = array_unique(array_column($smart['health'], 'group')); ?>
           <div class="sm-dept-tools">
             <input type="search" id="smDeptSearch" placeholder="विभाग शोधा…" aria-label="विभाग शोधा">
             <?php if (count($groups) > 1): ?>
@@ -206,7 +207,7 @@
           </div>
         <?php endif; ?>
       </div>
-      <?php if (count($smart['health']) > 1):
+      <?php if (count($smart['health']) > 1 && !$smShowAll):
         $lv = array_count_values(array_column($smart['health'], 'level')); ?>
         <div class="sm-health-sum">
           <button type="button" class="active" data-level="">सर्व <b><?= count($smart['health']) ?></b></button>
@@ -217,7 +218,7 @@
       <?php endif; ?>
       <div class="sm-dept-grid" id="smDeptGrid">
         <?php if (!$smart['health']): ?><div class="sm-empty">विभाग सापडले नाहीत</div><?php endif; ?>
-        <?php if (count($smart['health']) > 1 && hasPermission('view_org_wide_dashboards')): $hs = $smart['healthSum']; ?>
+        <?php if ($smShowAll): $hs = $smart['healthSum']; ?>
           <a class="sm-dept sm-dept-all <?= $hs['level'] ?>" href="departments/all.php" title="सर्व विभागांचा Showroom उघडा">
             <div class="sm-all-ring" style="--p:<?= $hs['score'] ?>;"><span><b data-count="<?= $hs['score'] ?>"><?= $hs['score'] ?></b><small>आरोग्य</small></span></div>
             <div class="sm-all-body">
@@ -244,7 +245,8 @@
             </div>
           </a>
         <?php endif; ?>
-        <?php foreach ($smart['health'] as $hd): ?>
+        <?php // सर्व विभागांचा box असताना वेगवेगळे विभाग इथे नाहीत — ते Showroom मध्ये
+        foreach ($smShowAll ? [] : $smart['health'] as $hd): ?>
           <a class="sm-dept <?= $hd['level'] ?>" href="departments/dashboard.php?id=<?= $hd['id'] ?>"
              data-name="<?= h(mb_strtolower($hd['name'] . ' ' . $hd['hod'])) ?>" data-group="<?= h($hd['group']) ?>"
              data-score="<?= $hd['score'] ?>" data-level="<?= $hd['level'] ?>">
