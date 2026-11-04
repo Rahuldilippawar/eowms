@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/error-handler.php'; // ⚠️ कुठलीही त्रुटी — स्पष्ट पान + नोंद
 // 🔒 सुरक्षा Headers — प्रत्येक पानावर (auth.php / student-auth.php मधून) लागतात.
 // • X-Frame-Options / frame-ancestors — दुसरी Site हे पान iframe मध्ये उघडून
 //   Clickjacking करू शकत नाही.

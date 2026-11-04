@@ -10,3 +10,6 @@ config/app-secret.php
 backups/auto/
 backups/update-safety/
 update-staging/
+
+# Error logs (server वरच तयार होतात)
+storage/logs/*.log

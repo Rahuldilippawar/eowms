@@ -39,6 +39,34 @@ $titleOrgName = activeOrgName();
     ['accent', 'fs', 'density', 'sidebar', 'motion'].forEach(function (k) { var v = g(k); if (v) h.setAttribute('data-' + k, v); });
   })();
 </script>
+<script>
+// ⚠️ पानावरच्या JavaScript त्रुटी — Error Log मध्ये नोंद; Super Admin ला लगेच छोटी सूचना
+(function () {
+  var sent = {}, isSuper = <?= (function_exists('hasRole') && hasRole('super_admin')) ? 'true' : 'false' ?>, root = <?= json_encode($rootPath ?? '') ?>;
+  function toast(msg, ref) {
+    if (!isSuper) return;
+    var t = document.createElement('div');
+    t.setAttribute('role', 'alert');
+    t.style.cssText = 'position:fixed;left:16px;bottom:16px;z-index:4000;max-width:min(420px,calc(100vw - 32px));background:#2A1418;color:#FFD9DE;border:1px solid #7A2A36;border-radius:12px;padding:10px 14px;font:13px/1.5 "Noto Sans Devanagari",sans-serif;box-shadow:0 12px 30px rgba(0,0,0,.35)';
+    t.innerHTML = '<b>⚠️ पानावर JS त्रुटी</b><div style="word-break:break-word;opacity:.9"></div><a style="color:#FFB4BF;font-weight:700" href="' + root + 'system-update/error-log.php">' + (ref || '') + ' — Error Log →</a>';
+    t.querySelector('div').textContent = msg;
+    (document.body || document.documentElement).appendChild(t);
+    setTimeout(function () { t.style.transition = 'opacity .4s'; t.style.opacity = '0'; setTimeout(function () { t.remove(); }, 450); }, 9000);
+  }
+  function report(message, source, line, stack) {
+    message = String(message || '').slice(0, 500);
+    if (!message || /^Script error\.?$/i.test(message) || /ResizeObserver loop/i.test(message)) return;
+    var key = message + '|' + source + '|' + line; if (sent[key] || Object.keys(sent).length > 8) return; sent[key] = 1;
+    try {
+      fetch(root + 'js-error.php', { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: message, source: source || '', line: line || 0, stack: String(stack || '').slice(0, 2000), page: location.pathname + location.search }) })
+        .then(function (r) { return r.json(); }).then(function (j) { toast(message, j && j.ref); }).catch(function () { toast(message, ''); });
+    } catch (x) {}
+  }
+  window.addEventListener('error', function (e) { if (e.target && e.target !== window) return; report(e.message, e.filename, e.lineno, e.error && e.error.stack); });
+  window.addEventListener('unhandledrejection', function (e) { var r = e.reason || {}; report('Promise: ' + (r.message || r), '', 0, r.stack); });
+})();
+</script>
 </head>
 <?php
   $__currentDirForModule = basename(dirname($_SERVER['SCRIPT_NAME']));

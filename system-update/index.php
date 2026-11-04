@@ -48,6 +48,9 @@ if (is_dir($backupHistoryDir)) {
   <div class="col-md-4">
     <a href="push-setup.php" class="panel su-card"><i class="fa-solid fa-bell"></i><b>📲 Push Notification Setup</b><span>Browser / Mobile वर सूचना पाठवण्याची व्यवस्था</span></a>
   </div>
+  <div class="col-md-4">
+    <a href="error-log.php" class="panel su-card"><i class="fa-solid fa-triangle-exclamation"></i><b>⚠️ Error Log</b><span>प्रणालीत आलेल्या सगळ्या त्रुटी — Error क्रमांकाने शोधा, वारंवार येणाऱ्या आधी पहा</span></a>
+  </div>
 </div>
 <style>
   .su-card { display: flex; flex-direction: column; gap: 6px; padding: 18px 20px; text-decoration: none; color: inherit; height: 100%; transition: border-color .15s, transform .15s; }
