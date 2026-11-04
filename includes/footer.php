@@ -7,12 +7,51 @@
   </div>
 </div>
 
+<?php
+  // 📱 Mobile — तळाचा App-Menu व "अधिक" Sheet (फक्त लहान पडद्यावर दिसतात)
+  $__rp = $rootPath ?? '';
+  $__script = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '');
+  $__isActive = function ($needle) use ($__script) { return substr($__script, -strlen($needle)) === $needle; };
+  $__u = function_exists('currentUser') ? currentUser() : null;
+?>
+<nav class="mb-nav" id="mbNav" aria-label="मुख्य मेनू">
+  <a href="<?= $__rp ?>index.php" class="<?= basename($__script) === 'index.php' && $__rp === '' ? 'on' : '' ?>"><i class="fa-solid fa-house"></i><span>मुख्य</span></a>
+  <a href="<?= $__rp ?>tasks/my-tasks.php" class="<?= $__isActive('tasks/my-tasks.php') ? 'on' : '' ?>"><i class="fa-solid fa-list-check"></i><span>माझे Tasks</span></a>
+  <a href="<?= $__rp ?>daily-work/entry.php" class="mb-fab <?= $__isActive('daily-work/entry.php') ? 'on' : '' ?>" aria-label="नवीन काम नोंदवा"><span class="mb-fab-in"><i class="fa-solid fa-plus"></i></span><span>काम नोंदवा</span></a>
+  <button type="button" data-mb-search><i class="fa-solid fa-magnifying-glass"></i><span>शोध</span></button>
+  <button type="button" data-mb-menu><i class="fa-solid fa-grip"></i><span>Menu</span></button>
+</nav>
+<div class="mb-sheet-back" id="mbSheetBack"></div>
+<div class="mb-sheet" id="mbSheet" role="dialog" aria-modal="true" aria-label="अधिक पर्याय">
+  <div class="mb-sheet-grab"></div>
+  <?php if ($__u): ?>
+    <a class="mb-user" href="<?= $__rp ?>account/profile.php">
+      <span class="mb-av"><?= h(mb_strtoupper(mb_substr(trim($__u['name'] ?? '?'), 0, 1))) ?></span>
+      <span><b><?= h($__u['name'] ?? '') ?></b><small><?= h(activeOrgName()) ?></small></span>
+      <i class="fa-solid fa-chevron-right"></i>
+    </a>
+  <?php endif; ?>
+  <div class="mb-grid">
+    <button type="button" data-theme-studio><i class="fa-solid fa-palette"></i><span>Theme Studio</span></button>
+    <button type="button" onclick="eowmsToggleTheme()"><i class="fa-solid fa-circle-half-stroke"></i><span>Dark / Light</span></button>
+    <a href="<?= $__rp ?>notifications/index.php"><i class="fa-regular fa-bell"></i><span>सूचना</span></a>
+    <a href="<?= $__rp ?>help/index.php"><i class="fa-solid fa-circle-question"></i><span>मदत</span></a>
+  </div>
+  <div class="mb-label">भाषा</div>
+  <!--i18n:off--><div class="mb-langs">
+    <?php foreach (EOWMS_LANGS as $__k => $__l): ?>
+      <button type="button" class="<?= i18nLang() === $__k ? 'on' : '' ?>" onclick="eowmsSetLang('<?= $__k ?>')"><?= h($__l['label']) ?></button>
+    <?php endforeach; ?>
+  </div><!--i18n:on-->
+  <a class="mb-logout" href="<?= $__rp ?>logout.php"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
+</div>
 <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
 <script src="<?= $rootPath ?? '' ?>assets/js/eowms-advance.js?v=2"></script>
 <script src="<?= $rootPath ?? '' ?>assets/js/eowms-theme.js?v=3"></script>
+<script src="<?= $rootPath ?? '' ?>assets/js/eowms-mobile.js?v=1"></script>
 <script src="<?= $rootPath ?? '' ?>assets/js/eowms-ui.js?v=2"></script>
 <script>
 // Mobile hamburger menu — opens/closes the sidebar on small screens
