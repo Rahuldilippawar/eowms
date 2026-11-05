@@ -240,3 +240,36 @@ function ecampusAlerts(PDO $pdo, $orgId, $period) {
     if (count($S['stale'])) { $out[] = ['warn', 'E-Campus: ' . count($S['stale']) . ' कामांची नोंद 7+ दिवस अद्ययावत नाही']; }
     return $out;
 }
+
+/** 📄 मासिक E-Campus अहवाल — पूर्ण PDF (Landscape). Dashboard, Download आणि दैनिक/साप्ताहिक Email — सगळे हेच वापरतात */
+function ecampusReportPdf(PDO $pdo, $orgId, $period, $orgName) {
+    require_once __DIR__ . '/weekly-report.php';
+    require_once __DIR__ . '/daily-report.php';
+    $css = '<style>body{font-family:freesans;color:#1A1D29;font-size:8.6pt;}
+      .hdr{background:#191C3A;color:#fff;padding:10px 16px;border-bottom:4px solid #D9530F;} .hdr .o{font-size:14pt;font-weight:bold;} .hdr .t{font-size:10.5pt;color:#FDBA8C;}
+      table.kp{width:100%;border-collapse:separate;border-spacing:5px;margin:0 -5px;} td.kpi{background:#F7F5F2;border:1px solid #EAE5DF;padding:6px 8px;vertical-align:top;}
+      .kl{font-size:7.6pt;color:#64708A;} .kv{font-size:14pt;font-weight:bold;} .ks{font-size:7.2pt;color:#64708A;}
+      table.g{width:100%;border-collapse:collapse;font-size:8pt;} table.g th{background:#F3F1EE;color:#475069;text-align:left;padding:4px 5px;border-bottom:1px solid #DDD6CE;font-size:7.6pt;}
+      table.g td{padding:4px 5px;border-bottom:1px solid #EEE9E3;vertical-align:top;} .num-r{text-align:right;} .muted{color:#8A90AC;font-size:7.6pt;}
+      table.split{width:100%;border-collapse:collapse;} table.split td{vertical-align:top;padding:0;}</style>';
+    $html = $css . '<div class="hdr"><div class="o">' . htmlspecialchars($orgName) . '</div><div class="t">MONTHLY E-CAMPUS REPORT — ' . htmlspecialchars(ecampusPeriodLabel($period)) . ' (' . date('m/Y', strtotime($period . '-01')) . ')</div></div>'
+        . ecampusPdfSection($pdo, $orgId, $period, 'full')
+        . '<div class="muted" style="margin-top:10px;text-align:center;">!! आत्मा मालिक !! — E-Admin · तयार: ' . date('d-m-Y, h:i A') . '</div>';
+    return mgmtReportPdf($html, 'E-Campus Report — ' . $period, $orgName, 'A4-L');
+}
+
+function ecampusReportFileName($period) { return 'e-campus-report-' . $period . '-' . date('Ymd-His') . '.pdf'; }
+
+/** दैनिक/साप्ताहिक Email सोबत जोडण्यासाठी E-Campus PDF (कामं नसतील किंवा त्रुटी आली तर null — मुख्य अहवाल थांबत नाही) */
+function ecampusReportAttachment(PDO $pdo, $orgId, $orgName) {
+    try {
+        if (!ecampusReady($pdo)) { return null; }
+        $period = date('Y-m');
+        if (!ecampusRows($pdo, $orgId, $period)) { return null; }
+        return ['name' => ecampusReportFileName($period), 'data' => ecampusReportPdf($pdo, $orgId, $period, $orgName), 'type' => 'application/pdf'];
+    } catch (Throwable $e) {
+        error_log('E-Campus PDF attachment: ' . $e->getMessage());
+        return null;
+    }
+}
+
