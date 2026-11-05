@@ -101,6 +101,13 @@ $departmentId = $departmentId ?: null;
 $targetCurrentRole = $targetRow['role'] ?? null;
 $wasActive = (int)($targetRow['is_active'] ?? 1);
 
+// 👑 एकच Super Admin — दुसऱ्या कोणाला Super Admin बनवता येत नाही
+if ($role === 'super_admin' && $targetCurrentRole !== 'super_admin' && superAdminExistsOtherThan($pdo, $id)) {
+    $_SESSION['form_error'] = 'Super Admin एकच असतो — दुसरा Super Admin बनवता येणार नाही. Management साठी President / GM वगैरे पद निवडा.';
+    header('Location: edit.php?id=' . $id);
+    exit;
+}
+
 if ($targetCurrentRole === 'super_admin' && ($role !== 'super_admin' || $isActive === 0)) {
     $countStmt = $pdo->prepare("SELECT COUNT(*) c FROM users WHERE role = 'super_admin' AND is_active = 1 AND id != ?");
     $countStmt->execute([$id]);

@@ -32,6 +32,8 @@ try {
     $roles = ['super_admin' => 'Super Admin', 'president' => 'President', 'executive_president' => 'Executive President',
               'general_manager' => 'General Manager', 'hod' => 'HOD', 'staff' => 'Staff'];
 }
+// 👑 एकच Super Admin — जो आधीच Super Admin आहे त्याच्याशिवाय कोणालाही हे पद देता येत नाही
+if ($staffMember['role'] !== 'super_admin' && superAdminExistsOtherThan($pdo, (int)$staffMember['id'])) { unset($roles['super_admin']); }
 ?>
 
 <div class="page-eyebrow">Super Admin</div>

@@ -173,6 +173,11 @@ try {
 }
 ?>
 
+<?php if (hasRole('super_admin')):
+  $__sa = $pdo->query("SELECT name, email FROM users WHERE role = 'super_admin' ORDER BY id")->fetchAll();
+  if (count($__sa) > 1): ?>
+  <div class="alert alert-warning" style="border-radius:10px;font-size:13px;">👑 <b>Super Admin एकच असावा</b> — सध्या <?= count($__sa) ?> आहेत: <?= h(implode(', ', array_map(fn($x) => $x['name'] . ' (' . $x['email'] . ')', $__sa))) ?>. जास्तीच्या लोकांचं पद "कर्मचारी बदला" मधून बदला; नवीन Super Admin यापुढे बनवता येत नाही.</div>
+<?php endif; endif; ?>
 <div class="page-eyebrow"><?= h(activeOrgName()) ?></div>
 <div class="d-flex justify-content-between align-items-start mb-1">
   <div class="page-title mb-0"><?= h(t('s252')) ?></div>

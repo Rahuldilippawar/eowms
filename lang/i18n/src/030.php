@@ -43,4 +43,14 @@ return [
     'असं टाइप करा' => ['टाइप करें', 'here'],
     'सर्व वाहनांच्या नोंदी हटवा' => ['सभी वाहनों की प्रविष्टियाँ हटाएँ', 'Delete all vehicle entries'],
     'वाहन नोंदी हटवा' => ['वाहन प्रविष्टियाँ हटाएँ', 'Delete vehicle entries'],
+    // 🔒 Edit/Delete फक्त Super Admin · 👑 एकच Super Admin
+    'आधीची नोंद बदलण्याचा (Edit) किंवा हटवण्याचा (Delete) अधिकार फक्त Super Admin ला आहे. बदल हवा असल्यास Super Admin ला कळवा.' => ['पहले की प्रविष्टि बदलने (Edit) या हटाने (Delete) का अधिकार केवल Super Admin को है। बदलाव चाहिए तो Super Admin को बताएँ।', 'Only the Super Admin can edit or delete existing records. Please ask the Super Admin if a change is needed.'],
+    'अडवलं (फक्त Super Admin)' => ['रोका गया (केवल Super Admin)', 'blocked (Super Admin only)'],
+    'नोंदी Edit / Delete फक्त' => ['प्रविष्टियाँ Edit / Delete केवल', 'Record edit / delete only by'],
+    'इतर सगळे नवीन नोंद भरू शकतात, Status/मंजुरी करू शकतात; पण आधीची नोंद बदलणं, हटवणं किंवा निष्क्रिय करणं फक्त Super Admin ला.' => ['बाकी सभी नई प्रविष्टि भर सकते हैं, Status/मंज़ूरी कर सकते हैं; पर पहले की प्रविष्टि बदलना, हटाना या निष्क्रिय करना केवल Super Admin को।', 'Everyone else can add new records and update status/approvals, but only the Super Admin can edit, delete or deactivate existing records.'],
+    'एकच असतो — दुसरा Super Admin बनवता येणार नाही. Management साठी President / GM वगैरे पद निवडा.' => ['एक ही होता है — दूसरा Super Admin नहीं बनाया जा सकता। Management के लिए President / GM आदि पद चुनें।', 'can only be one person — another Super Admin cannot be created. Choose President / GM etc. for management.'],
+    'मधून बदला; नवीन Super Admin यापुढे बनवता येत नाही.' => ['से बदलें; अब नया Super Admin नहीं बनाया जा सकता।', 'to change the extra ones; no new Super Admin can be created any more.'],
+    'एकच असावा' => ['एक ही होना चाहिए', 'should be only one'],
+    'जास्तीच्या लोकांचं पद' => ['अतिरिक्त लोगों का पद', 'Change the role of the extra people via'],
+    'फक्त Super Admin' => ['केवल Super Admin', 'Super Admin only'],
 ];

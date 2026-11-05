@@ -24,7 +24,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $orgId = activeOrgId();
 
-    if (!$name || !$email) {
+    if ($role === 'super_admin' && superAdminExistsOtherThan($pdo, 0)) {
+        $error = 'Super Admin एकच असतो — दुसरा Super Admin बनवता येणार नाही. Management साठी President / GM वगैरे पद निवडा.';
+    } elseif (!$name || !$email) {
         $error = t('s573');
     } else {
         $check = $pdo->prepare("SELECT id FROM users WHERE email = ?");
@@ -115,6 +117,9 @@ try {
         ['role_key' => 'president', 'label' => 'President'], ['role_key' => 'super_admin', 'label' => 'Super Admin'],
     ];
 }
+
+// 👑 एकच Super Admin — आधीच असल्यास पर्यायच दाखवत नाही
+if (superAdminExistsOtherThan($pdo, 0)) { $allRoles = array_values(array_filter($allRoles, fn($r) => $r['role_key'] !== 'super_admin')); }
 
 $pageTitle = t('s574');
 $rootPath = '../';

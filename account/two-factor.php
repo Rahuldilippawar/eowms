@@ -80,6 +80,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             orgSettingSet($pdo, $orgId, 'session_idle_minutes', (string)$idleMin);
             $_SESSION['idle_limit_min'] = $idleMin; // स्वतःसाठी लगेच; इतरांना पुढच्या Login पासून
         }
+        orgSettingSet($pdo, $orgId, 'records_lock', !empty($_POST['records_lock']) ? '1' : '0');
         logActivity('2-Step Login धोरण बदललं', 'organization', $orgId, $cats ? implode(', ', $cats) : 'फक्त Super Admin');
         $back('✅ धोरण जतन झालं — संबंधित लोकांना पुढच्या Login ला 2-Step चालू करावं लागेल.');
     } elseif ($isSA && $a === 'reset_user') {
@@ -317,6 +318,10 @@ require_once __DIR__ . '/../includes/header.php';
       </select>
       <span style="font-size:12px;color:var(--text-dim);">शेवटच्या 2 मिनिटांत उलटी गिनती दिसते; सगळ्या Tabs साठी एकच वेळ</span>
     </div>
+    <label class="d-flex align-items-start gap-2 mb-3" style="font-size:13.5px;cursor:pointer;">
+      <input type="checkbox" name="records_lock" value="1" <?= (string)orgSetting($pdo, $orgId, 'records_lock', '1') !== '0' ? 'checked' : '' ?> style="width:17px;height:17px;margin-top:2px;accent-color:var(--rail);">
+      <span><b>🔒 नोंदी Edit / Delete फक्त Super Admin</b><br><span style="font-size:12px;color:var(--text-dim);">इतर सगळे नवीन नोंद भरू शकतात, Status/मंजुरी करू शकतात; पण आधीची नोंद बदलणं, हटवणं किंवा निष्क्रिय करणं फक्त Super Admin ला.</span></span>
+    </label>
     <button class="tf-btn pri"><i class="fa-solid fa-floppy-disk me-1"></i>धोरण जतन करा</button>
     <div style="font-size:12px;color:var(--text-dim);margin-top:8px;">अनिवार्य केलेल्यांना पुढच्या Login ला 2-Step चालू केल्याशिवाय पुढे जाता येणार नाही.</div>
   </form>
