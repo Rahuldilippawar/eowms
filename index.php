@@ -128,13 +128,27 @@ require __DIR__ . '/includes/dashboard-smart.php';
 // Campus-निहाय संपूर्ण विभाजन — पूर्वी "केंद्रीकृत Dashboard" या वेगळ्या
 // पानावर होतं, आता Command Center चाच एक Section (फक्त manage_campuses
 // Access असलेल्यांनाच खाली दिसेल).
-$showCampusBreakdown = hasPermission('manage_campuses');
+// Access नुसार: Management / केंद्रीय प्रमुख / Super Admin → सर्व Campus; 🏛️ Campus प्रमुख → फक्त त्याचं College
+$showCampusBreakdown = $isMgmtView || hasPermission('manage_campuses') || $isCampusHeadView;
+$campusOnlyMine = $isCampusHeadView && !hasPermission('manage_campuses');
 if ($showCampusBreakdown) {
     require_once __DIR__ . '/includes/dashboard-helpers.php';
 
-    $campusStmt = $pdo->prepare("SELECT * FROM campuses WHERE organization_id = ? AND is_active = 1 AND (college_type IS NULL OR college_type != 'Trust HQ') ORDER BY name");
-    $campusStmt->execute([$orgId]);
+    if ($campusOnlyMine) {
+        $__ids = array_keys($headInfo['campuses']);
+        $campusStmt = $pdo->prepare("SELECT * FROM campuses WHERE organization_id = ? AND is_active = 1 AND id IN (" . implode(',', array_fill(0, count($__ids), '?')) . ") ORDER BY name");
+        $campusStmt->execute(array_merge([$orgId], $__ids));
+    } else {
+        $campusStmt = $pdo->prepare("SELECT * FROM campuses WHERE organization_id = ? AND is_active = 1 AND (college_type IS NULL OR college_type != 'Trust HQ') ORDER BY name");
+        $campusStmt->execute([$orgId]);
+    }
     $allCampuses = $campusStmt->fetchAll();
+    $campusHeadNames = [];
+    if (campusHeadsReady($pdo)) {
+        $__hs = $pdo->prepare("SELECT h.campus_id, u.name, h.title FROM campus_heads h JOIN users u ON u.id = h.user_id WHERE h.organization_id = ? AND h.campus_id IS NOT NULL ORDER BY u.name");
+        $__hs->execute([$orgId]);
+        foreach ($__hs->fetchAll() as $__r) { $campusHeadNames[(int)$__r['campus_id']][] = $__r['name'] . ($__r['title'] ? ' (' . $__r['title'] . ')' : ''); }
+    }
 
     $collegeTypeLabels = ['Primary School' => 'प्राथमिक शाळा', 'Secondary School' => 'माध्यमिक शाळा', 'Junior College' => 'कनिष्ठ महाविद्यालय', 'Arts' => 'कला महाविद्यालय', 'Science' => 'विज्ञान महाविद्यालय', 'Commerce' => 'वाणिज्य महाविद्यालय', 'Engineering' => 'अभियांत्रिकी महाविद्यालय', 'Pharmacy' => 'औषधनिर्माणशास्त्र महाविद्यालय', 'Education' => 'शिक्षणशास्त्र महाविद्यालय', 'Law' => 'विधी महाविद्यालय', 'Medical' => 'वैद्यकीय महाविद्यालय', 'Polytechnic' => 'Polytechnic', 'Other' => ''];
 
@@ -180,24 +194,20 @@ if ($showCampusBreakdown) {
   <div style="flex:1;min-width:220px;">
     <?php if ($headInfo['central']): ?>
       <div style="font-weight:800;font-size:15px;">सर्व Campus चे केंद्रीय प्रमुख<?= $headInfo['central_title'] ? ' — ' . h($headInfo['central_title']) : '' ?></div>
-      <div style="font-size:12.5px;color:var(--text-dim);">या Dashboard वर संपूर्ण संस्थेचे आकडे; प्रत्येक Campus चा वेगळा Dashboard खाली उघडा.</div>
+      <div style="font-size:12.5px;color:var(--text-dim);">या Dashboard वर संपूर्ण संस्थेचे आकडे; प्रत्येक Campus चं वेगळं चित्र "सर्व Campus Dashboard" मध्ये.</div>
     <?php else: ?>
       <div style="font-weight:800;font-size:15px;"><?= h(implode(' · ', array_map(fn($c) => ($c['title'] ? $c['title'] . ' — ' : 'Campus प्रमुख — ') . $c['name'], $headInfo['campuses']))) ?></div>
       <div style="font-size:12.5px;color:var(--text-dim);">या Dashboard वर तुमच्या Campus चे सगळे विभाग, कर्मचारी, कामं आणि नूतनीकरण.</div>
     <?php endif; ?>
   </div>
-  <div class="d-flex gap-2 flex-wrap">
-    <?php foreach (($headInfo['central'] ? campusDashboardList($pdo, $orgId) : array_map(fn($id, $c) => ['id' => $id, 'name' => $c['name']], array_keys($headInfo['campuses']), $headInfo['campuses'])) as $__c): ?>
-      <a href="campuses/dashboard.php?id=<?= (int)$__c['id'] ?>" class="btn" style="border:1px solid var(--rail);color:var(--rail);border-radius:9px;font-size:12.5px;padding:7px 13px;font-weight:600;"><i class="fa-solid fa-gauge-high me-1"></i><?= h($__c['name']) ?></a>
-    <?php endforeach; ?>
-  </div>
+  <button type="button" class="btn" onclick="var b=document.getElementById('dashTabCampusBtn'); if(b){ b.click(); }" style="border:1px solid var(--rail);color:var(--rail);border-radius:9px;font-size:12.5px;padding:7px 14px;font-weight:600;"><i class="fa-solid fa-gauge-high me-1"></i><?= $headInfo['central'] ? 'सर्व Campus Dashboard' : 'माझा College Dashboard' ?></button>
 </div>
 <?php endif; ?>
 
 <?php if ($showCampusBreakdown): ?>
 <div class="dash-tabs" role="tablist">
-  <button type="button" class="dash-tab active" onclick="eowmsSwitchDashTab('overview', this)">📋 माझं/संस्थेचं दृश्य</button>
-  <button type="button" class="dash-tab" onclick="eowmsSwitchDashTab('campus', this)">🏛️ Campus-निहाय विभाजन</button>
+  <button type="button" class="dash-tab active" onclick="eowmsSwitchDashTab('overview', this)"><?= $campusOnlyMine ? '📋 माझ्या Campus चं दृश्य' : '📋 माझं/संस्थेचं दृश्य' ?></button>
+  <button type="button" class="dash-tab" id="dashTabCampusBtn" onclick="eowmsSwitchDashTab('campus', this)"><?= $campusOnlyMine ? '🏛️ माझा College Dashboard' : '🏛️ सर्व Campus Dashboard' ?></button>
 </div>
 <style>
   .dash-tabs{display:flex;gap:6px;margin:18px 0 22px;border-bottom:1px solid var(--line);}
@@ -381,13 +391,18 @@ function eowmsSwitchDashTab(which, btn) {
 
 <?php if ($showCampusBreakdown): ?>
 <div id="dashTabCampus" style="display:none;">
-  <div class="page-title mb-1">🏛️ Campus-निहाय संपूर्ण विभाजन</div>
-  <p style="font-size:12.5px;color:var(--text-dim);margin-bottom:20px;">वरच्या Tab मधलं चित्र संपूर्ण संस्थेचं होतं — इथे तेच, प्रत्येक Trust-कार्यालय आणि College/School साठी स्वतंत्रपणे.</p>
+  <?php if ($campusOnlyMine): ?>
+  <div class="page-title mb-1">🏛️ माझा College Dashboard</div>
+  <p style="font-size:12.5px;color:var(--text-dim);margin-bottom:20px;">तुम्ही प्रमुख असलेल्या Campus/College चे सगळे विभाग, कर्मचारी, Tasks, नूतनीकरण आणि पत्रव्यवहार.</p>
+  <?php else: ?>
+  <div class="page-title mb-1">🏛️ सर्व Campus Dashboard</div>
+  <p style="font-size:12.5px;color:var(--text-dim);margin-bottom:20px;">संपूर्ण संस्थेचं एकत्रित चित्र, आणि प्रत्येक Trust-कार्यालय व College/School साठी स्वतंत्रपणे.</p>
 
   <?php renderDashboardEntityCard('📊 संपूर्ण Trust — Overall', h(activeOrgName()) . ' अंतर्गत सर्व School/College + Trust-स्तरीय एकत्रित', $overallMetrics, 'overallChart', 'var(--ink)'); ?>
   <?php renderDashboardEntityCard('🏛️ Trust-स्तरीय (मुख्य कार्यालय)', 'Trust Office व केंद्रीय विभाग', $trustMetrics, 'trustChart', 'linear-gradient(135deg, #10162B, #1B3A5C)'); ?>
+  <?php endif; ?>
   <?php foreach ($collegeRows as $i => $row): $c = $row['campus']; ?>
-    <?php renderDashboardEntityCard('🏫 ' . h($c['name']), h($collegeTypeLabels[$c['college_type']] ?? '') . ($c['principal_name'] ? ' · प्राचार्य: ' . h($c['principal_name']) : ''), $row, 'college' . $i . 'Chart', 'linear-gradient(135deg, #10162B, #0F5E58)'); ?>
+    <?php $__hn = $campusHeadNames[(int)$c['id']] ?? []; renderDashboardEntityCard('🏫 ' . h($c['name']), h($collegeTypeLabels[$c['college_type']] ?? '') . ($__hn ? ' · 🏛️ प्रमुख: ' . h(implode(', ', $__hn)) : ($c['principal_name'] ? ' · प्राचार्य: ' . h($c['principal_name']) : '')), $row, 'college' . $i . 'Chart', 'linear-gradient(135deg, #10162B, #0F5E58)'); ?>
   <?php endforeach; ?>
   <?php if (empty($collegeRows)): ?>
     <div class="panel" style="padding:30px;text-align:center;color:var(--text-dim);">अजून कोणतंही College/School जोडलेलं नाही</div>

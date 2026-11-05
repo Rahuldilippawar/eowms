@@ -219,16 +219,6 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
       <i class="fa-solid fa-file-pdf fa-fw"></i><span><?= h(t('nav_reports')) ?></span>
     </a>
     <?php
-      // 🏛️ Campus प्रमुख / केंद्रीय प्रमुख — त्यांचा Campus Dashboard
-      require_once __DIR__ . '/campus-heads.php';
-      $__hd = campusHeadInfo($pdo, $user['id']);
-    ?>
-    <?php if ($__hd['central'] || $__hd['campuses']): ?>
-    <a href="<?= $rp ?>campuses/dashboard.php<?= !$__hd['central'] && count($__hd['campuses']) === 1 ? '?id=' . (int)array_key_first($__hd['campuses']) : '' ?>" class="tree-node <?= $currentDir === 'campuses' && $currentPage === 'dashboard.php' ? 'active' : '' ?>">
-      <i class="fa-solid fa-building-columns fa-fw"></i><span><?= $__hd['central'] ? 'सर्व Campus Dashboard' : 'माझा Campus Dashboard' ?></span>
-    </a>
-    <?php endif; ?>
-    <?php
       // 🎓 E-Campus — Management ला Dashboard; ज्याला काम नेमलंय त्याला "माझी E-Campus कामं"
       require_once __DIR__ . '/ecampus-helpers.php';
       $__ecMine = ecampusReady($pdo) ? ecampusMyTaskCount($pdo, $user['id']) : 0;

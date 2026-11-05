@@ -6,6 +6,12 @@ $user = currentUser();
 
 $id = (int)($_GET['id'] ?? $_POST['id'] ?? 0);
 
+// 🏛️ या Campus चा प्रमुख (Principal / Manager) — फक्त Super Admin
+require_once __DIR__ . '/../includes/campus-heads.php';
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($msg = campusHeadsHandlePost($pdo, activeOrgId())) !== null) {
+    $_SESSION['flash'] = $msg; header('Location: edit.php?id=' . $id . '#campusHeads'); exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $name = trim($_POST['name'] ?? '');
     $city = trim($_POST['city'] ?? '') ?: null;
@@ -155,4 +161,9 @@ require_once __DIR__ . '/../includes/header.php';
   </form>
 </div>
 
+<?php if (hasRole('super_admin') && $id): ?>
+<div id="campusHeads">
+  <?= campusHeadsPanel($pdo, activeOrgId(), $id, '🏛️ या Campus चे प्रमुख — Principal / Manager', 'यांना Login केल्यावर Command Center मध्ये फक्त या Campus/College चा Dashboard दिसतो — त्याचे सगळे विभाग, कर्मचारी, कामं, Tasks, नूतनीकरण आणि विनंत्या.', 'पद (उदा. Principal / Manager)') ?>
+</div>
+<?php endif; ?>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>
