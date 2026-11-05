@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/staff-dept-picker.php';
 require_once __DIR__ . '/../includes/mailer.php';
 requireLogin('../');
 requireRole(['super_admin'], '../');
@@ -35,12 +36,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ($employeeCode !== null && $codeCheck->fetch()) {
             $error = "कर्मचारी कोड '$employeeCode' आधीच दुसऱ्या कर्मचाऱ्याला दिलेला आहे — कृपया वेगळा कोड द्या.";
         } else {
-            $campusId = null;
-            if ($departmentId) {
-                $d = $pdo->prepare("SELECT campus_id FROM departments WHERE id = ? AND organization_id = ?");
-                $d->execute([$departmentId, $orgId]);
-                $campusId = $d->fetch()['campus_id'] ?? null;
-            }
+            // Campus / College → विभाग (विभाग असेल तर त्याचाच Campus; Management पदांसाठी निवडलेला Campus)
+            [$campusId, $departmentId] = staffDeptResolve($pdo, $orgId, $_POST['campus_id'] ?? '', $_POST['department_id'] ?? '');
             if (!$campusId) {
                 // Management roles (president/exec president/GM/super_admin) may have no department —
                 // fall back to the organization's first campus.
@@ -192,15 +189,7 @@ require_once __DIR__ . '/../includes/header.php';
           <option value="Other">❔ इतर</option>
         </select>
       </div>
-      <div class="col-md-4">
-        <label class="form-label-custom"><?= h(t('s1')) ?></label>
-        <select name="department_id" class="form-select-custom">
-          <option value=""><?= h(t('s277')) ?></option>
-          <?php foreach ($departments as $dept): ?>
-            <option value="<?= $dept['id'] ?>"><?= h($dept['name_local'] ?: $dept['name']) ?></option>
-          <?php endforeach; ?>
-        </select>
-      </div>
+      <?= staffDeptPicker($pdo, activeOrgId(), isset($_POST['campus_id']) && $_POST['campus_id'] !== '' ? (int)$_POST['campus_id'] : null, (int)($_POST['department_id'] ?? 0), 'col-md-4') ?>
 
       <div class="col-md-4">
         <label class="form-label-custom"><?= h(t('s64')) ?></label>

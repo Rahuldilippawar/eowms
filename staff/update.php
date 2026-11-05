@@ -91,9 +91,11 @@ if ($emailChanged) {
     }
 }
 
-// विभाग नसेल किंवा Trust-HQ (Campus नसलेला) विभाग असेल — तर आधीचाच Campus ठेवतो
+// विभाग नसेल किंवा Trust-HQ (Campus नसलेला) विभाग असेल — Form मध्ये निवडलेला Campus/College, नाहीतर आधीचाच
 if (empty($dept['campus_id'])) {
-    $dept['campus_id'] = $targetRow['campus_id'];
+    require_once __DIR__ . '/../includes/staff-dept-picker.php';
+    [$pickedCampus] = staffDeptResolve($pdo, activeOrgId(), $_POST['campus_id'] ?? '', '');
+    $dept['campus_id'] = $pickedCampus ?: $targetRow['campus_id'];
 }
 $departmentId = $departmentId ?: null;
 $targetCurrentRole = $targetRow['role'] ?? null;
