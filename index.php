@@ -167,25 +167,63 @@ if ($showCampusBreakdown) {
 }
 ?>
 
-<div class="dash-hero">
+<div class="dash-hero ah">
   <div class="dash-hero-bg"></div>
-  <div style="position:relative;z-index:1;">
-    <div class="page-eyebrow" style="color:#9FA6C0;"><?= h(activeOrgName()) ?></div>
-    <div style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:16px;margin-top:4px;">
-      <div>
-        <div style="font-family:'Space Grotesk';font-weight:700;font-size:26px;color:#fff;"><?= $greeting ?>, <?= h(explode(' ', $user['name'])[0]) ?>!</div>
-        <div style="font-size:13px;color:#B7BBD6;margin-top:4px;"><?= date('l, d F Y') ?> · <?= h(t('s122')) ?></div>
+  <span class="ah-orb ah-orb1"></span><span class="ah-orb ah-orb2"></span><span class="ah-grid"></span>
+  <div class="ah-in">
+    <div class="page-eyebrow ah-eyebrow"><?= h(activeOrgName()) ?></div>
+    <div class="ah-row">
+      <div class="ah-hello">
+        <div class="ah-emoji"><?= h(trim(mb_substr($greeting, 0, 2))) ?></div>
+        <div>
+          <div class="ah-greet"><?= h(trim(mb_substr($greeting, 2))) ?>, <span><?= h(explode(' ', $user['name'])[0]) ?>!</span></div>
+          <div class="ah-date"><i class="fa-regular fa-calendar"></i> <?= date('l, d F Y') ?> · <?= h(t('s122')) ?></div>
+        </div>
       </div>
-      <div class="d-flex gap-2 flex-wrap">
-        <a href="daily-work/entry.php" class="dash-quick-btn"><i class="fa-solid fa-pen-to-square"></i> काम नोंदवा</a>
+      <div class="ah-btns">
+        <a href="daily-work/entry.php" class="dash-quick-btn ah-btn ah-pri"><i class="fa-solid fa-pen-to-square"></i><span>काम नोंदवा</span></a>
         <?php if (hasPermission('assign_tasks')): ?>
-          <a href="tasks/assign.php" class="dash-quick-btn"><i class="fa-solid fa-list-check"></i> Task Assign करा</a>
+          <a href="tasks/assign.php" class="dash-quick-btn ah-btn"><i class="fa-solid fa-list-check"></i><span>Task Assign करा</span></a>
         <?php endif; ?>
-        <a href="renewals/index.php" class="dash-quick-btn"><i class="fa-solid fa-shield-halved"></i> नूतनीकरण</a>
+        <a href="renewals/index.php" class="dash-quick-btn ah-btn"><i class="fa-solid fa-shield-halved"></i><span>नूतनीकरण</span></a>
       </div>
     </div>
   </div>
 </div>
+<style>
+  .ah{background:linear-gradient(125deg,#1A1D45 0%,#141633 45%,#2A1630 80%,#3A1A24 100%);border:1px solid rgba(255,255,255,.08);box-shadow:0 18px 40px -22px rgba(20,16,50,.75),inset 0 1px 0 rgba(255,255,255,.06);}
+  .ah-orb{position:absolute;border-radius:50%;filter:blur(40px);pointer-events:none;opacity:.55;animation:ahFloat 12s ease-in-out infinite alternate;}
+  .ah-orb1{width:260px;height:260px;right:-60px;top:-110px;background:radial-gradient(circle,#F26B2A,transparent 70%);}
+  .ah-orb2{width:220px;height:220px;left:-70px;bottom:-120px;background:radial-gradient(circle,#6D5BF2,transparent 70%);animation-delay:-6s;}
+  .ah-grid{position:absolute;inset:0;pointer-events:none;opacity:.07;background-image:radial-gradient(rgba(255,255,255,.9) 1px,transparent 1px);background-size:18px 18px;-webkit-mask-image:linear-gradient(90deg,transparent,#000 60%);mask-image:linear-gradient(90deg,transparent,#000 60%);}
+  @keyframes ahFloat{from{transform:translate(0,0) scale(1);}to{transform:translate(-30px,20px) scale(1.12);}}
+  .ah-in{position:relative;z-index:1;}
+  .ah-eyebrow{color:#A9AFD0 !important;letter-spacing:.14em;}
+  .ah-row{display:flex;justify-content:space-between;align-items:center;gap:18px;flex-wrap:wrap;margin-top:8px;}
+  .ah-hello{display:flex;align-items:center;gap:14px;min-width:0;}
+  .ah-emoji{width:54px;height:54px;flex-shrink:0;border-radius:16px;display:grid;place-items:center;font-size:28px;background:linear-gradient(145deg,rgba(255,255,255,.16),rgba(255,255,255,.04));border:1px solid rgba(255,255,255,.16);box-shadow:0 8px 22px -10px rgba(242,107,42,.8);animation:ahPop .6s cubic-bezier(.2,.9,.3,1.4) both;}
+  @keyframes ahPop{from{transform:scale(.6) rotate(-12deg);opacity:0;}to{transform:none;opacity:1;}}
+  .ah-greet{font-family:'Space Grotesk',inherit;font-weight:700;font-size:27px;line-height:1.2;color:#fff;}
+  .ah-greet span{background:linear-gradient(90deg,#FFD7B5,#F59E6B 55%,#F26B2A);-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .ah-date{font-size:13px;color:#B7BBD6;margin-top:5px;display:flex;align-items:center;gap:6px;}
+  .ah-date i{color:#F59E6B;}
+  .ah-btns{display:flex;gap:10px;flex-wrap:wrap;}
+  .ah-btn{gap:9px !important;padding:10px 16px !important;border-radius:12px !important;background:rgba(255,255,255,.07) !important;border:1px solid rgba(255,255,255,.14) !important;backdrop-filter:blur(6px);transition:transform .18s ease,background .18s ease,box-shadow .18s ease !important;}
+  .ah-btn i{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;background:rgba(255,255,255,.12);font-size:12.5px;}
+  .ah-btn:hover{transform:translateY(-2px);background:rgba(255,255,255,.14) !important;box-shadow:0 10px 22px -12px rgba(0,0,0,.6);}
+  .ah-pri{background:linear-gradient(135deg,#F26B2A,#D9530F) !important;border-color:transparent !important;box-shadow:0 10px 24px -12px rgba(242,107,42,.9);}
+  .ah-pri i{background:rgba(255,255,255,.22);}
+  .ah-pri:hover{background:linear-gradient(135deg,#F57A3D,#E05A14) !important;}
+  @media (prefers-reduced-motion: reduce){ .ah-orb,.ah-emoji{animation:none;} }
+  @media (max-width: 640px){
+    .dash-hero.ah .ah-in > .ah-row{flex-direction:column !important;align-items:stretch !important;}
+    .dash-hero.ah .ah-btns{width:100%;}
+    .ah-emoji{width:46px;height:46px;font-size:24px;border-radius:14px;}
+    .ah-greet{font-size:21px;}
+    .ah-btns{display:grid !important;grid-template-columns:repeat(<?= hasPermission('assign_tasks') ? 3 : 2 ?>,minmax(0,1fr));gap:8px;flex-wrap:nowrap !important;overflow:visible !important;}
+    .ah-btn{flex-direction:column;justify-content:center;text-align:center;padding:10px 6px !important;font-size:11.5px !important;white-space:normal !important;line-height:1.2;}
+  }
+</style>
 
 <?php if ($headInfo['central'] || $headInfo['campuses']): ?>
 <!-- 🏛️ Campus प्रमुख / केंद्रीय प्रमुख -->
