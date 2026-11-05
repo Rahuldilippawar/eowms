@@ -3,6 +3,29 @@
 ?>
 <?php if (($smartPart ?? 'main') === 'alerts'): ?>
 <!-- ============ आज लक्ष द्या ============ -->
+<?php
+// 🎓 E-Campus — Management ला संपूर्ण Campus चा %, नेमलेल्या कर्मचाऱ्याला स्वतःचा % (कामं नेमली असतील तरच)
+require_once __DIR__ . '/ecampus-helpers.php';
+if (ecampusReady($pdo)):
+  $__ecU = currentUser();
+  $__ecAll = isManagementOrAbove() ? ecampusRows($pdo, activeOrgId(), date('Y-m')) : [];
+  $__ecMine = !$__ecAll ? ecampusRows($pdo, activeOrgId(), date('Y-m'), $__ecU['id']) : [];
+  $__ecRows = $__ecAll ?: $__ecMine;
+  if ($__ecRows):
+    $__ecS = ecampusSummary($__ecRows, date('Y-m'));
+    $__ecP = (int)($__ecS['overall'] ?? 0);
+    $__ecC = $__ecP >= 85 ? '#16A34A' : ($__ecP >= 60 ? '#F59E0B' : '#DC2626');
+?>
+<a href="ecampus/<?= $__ecAll ? 'index.php' : 'my.php' ?>" class="mb-3" style="display:flex;gap:16px;align-items:center;padding:14px 18px;border-radius:14px;text-decoration:none;color:inherit;background:var(--surface,#fff);border:1px solid var(--line);box-shadow:0 6px 18px -14px rgba(20,16,50,.35);">
+  <div style="--p:<?= $__ecP ?>;width:64px;height:64px;border-radius:50%;flex-shrink:0;display:grid;place-items:center;background:conic-gradient(<?= $__ecC ?> calc(var(--p)*1%), var(--canvas) 0);"><span style="width:50px;height:50px;border-radius:50%;background:var(--surface,#fff);display:grid;place-items:center;font-weight:800;font-size:15px;"><?= $__ecP ?>%</span></div>
+  <div style="flex:1;min-width:0;">
+    <div style="font-weight:700;font-size:15px;">🎓 E-Campus — <?= h(ecampusPeriodLabel(date('Y-m'))) ?><?= $__ecAll ? ' · संपूर्ण Campus' : ' · माझी कामं' ?></div>
+    <div style="font-size:12.5px;color:var(--text-dim);margin-top:2px;"><b style="color:#16A34A;"><?= (int)$__ecS['done'] ?> पूर्ण</b> · <b style="color:#B45309;"><?= (int)$__ecS['progress'] ?> सुरू</b> · <b style="color:#DC2626;"><?= (int)$__ecS['pending'] ?> सुरू नाही</b><?= $__ecAll && count($__ecS['stale']) ? ' · ' . count($__ecS['stale']) . ' नोंदी 7+ दिवस जुन्या' : '' ?></div>
+    <div style="height:8px;border-radius:99px;background:var(--canvas);overflow:hidden;margin-top:8px;"><i style="display:block;height:100%;width:<?= $__ecP ?>%;background:<?= $__ecC ?>;"></i></div>
+  </div>
+  <i class="fa-solid fa-chevron-right" style="color:var(--text-dim);"></i>
+</a>
+<?php endif; endif; ?>
 <div class="sm-attn mb-3">
   <div class="sm-attn-title"><i class="fa-solid fa-bell"></i> आज लक्ष द्या</div>
   <?php if (empty($smart['alerts'])): ?>

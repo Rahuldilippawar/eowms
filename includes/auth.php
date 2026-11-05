@@ -148,7 +148,7 @@ function requireLogin($rootPath = '') {
         if ($currentDirForRestriction === '.' || $currentDirForRestriction === '/' || $currentDirForRestriction === '') {
             $currentDirForRestriction = '__root__';
         }
-        $exemptDirs = ['account', '__root__']; // Profile/Password — नेहमीच सगळ्यांना उपलब्ध
+        $exemptDirs = ['account', '__root__', 'ecampus']; // Profile/Password — नेहमीच सगळ्यांना उपलब्ध; E-Campus — पानं स्वतः नेमणूक तपासतात
         $exemptRootPages = ['logout.php', 'force-password-change.php', 'maintenance.php'];
         $currentPageForRestriction = basename($_SERVER['SCRIPT_NAME']);
 

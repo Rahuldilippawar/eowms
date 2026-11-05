@@ -4354,3 +4354,55 @@ CREATE TABLE org_settings (
   PRIMARY KEY (organization_id, setting_key),
   FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- FROM: migration-ecampus.sql
+-- ---------------- 🎓 E-Campus नोंदी व अहवाल ----------------
+-- Super Admin प्रत्येक कर्मचाऱ्याला E-Campus चं काम नेमतो; तोच कर्मचारी दर महिन्याची प्रगती (% + नोंद) भरतो
+CREATE TABLE ecampus_tasks (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  organization_id INT NOT NULL,
+  wing VARCHAR(120) NOT NULL,
+  section VARCHAR(160) NOT NULL,
+  user_id INT NOT NULL,
+  designation VARCHAR(160) NULL,
+  task_description TEXT NOT NULL,
+  task_type ENUM('monthly','one_time') NOT NULL DEFAULT 'monthly',
+  access_type ENUM('work','view_only') NOT NULL DEFAULT 'work',
+  sort_order INT NOT NULL DEFAULT 0,
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  created_by INT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_org (organization_id, is_active),
+  INDEX idx_user (user_id),
+  FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- महिन्यानुसार प्रगती (period = YYYY-MM)
+CREATE TABLE ecampus_progress (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  task_id INT NOT NULL,
+  period CHAR(7) NOT NULL,
+  percent TINYINT UNSIGNED NOT NULL DEFAULT 0,
+  notes TEXT NULL,
+  updated_by INT NULL,
+  updated_at DATETIME NULL,
+  UNIQUE KEY uniq_task_period (task_id, period),
+  INDEX idx_period (period),
+  FOREIGN KEY (task_id) REFERENCES ecampus_tasks(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- प्रत्येक बदलाचा इतिहास — दिवसागणिक प्रगतीचा Chart आणि "कोणी, कधी" यासाठी
+CREATE TABLE ecampus_updates (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  task_id INT NOT NULL,
+  period CHAR(7) NOT NULL,
+  percent TINYINT UNSIGNED NOT NULL,
+  notes TEXT NULL,
+  user_id INT NULL,
+  created_at DATETIME NOT NULL,
+  INDEX idx_task (task_id, created_at),
+  INDEX idx_period (period, created_at),
+  FOREIGN KEY (task_id) REFERENCES ecampus_tasks(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

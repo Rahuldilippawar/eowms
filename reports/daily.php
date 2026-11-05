@@ -146,7 +146,7 @@ echo smartTiles(array_slice($tiles, 0, 5));
 <div class="panel mb-3">
   <div class="panel-head"><div class="title">📑 PDF मध्ये असलेले भाग</div><div class="sub">ज्या Module मध्ये Data आहे तेवढेच</div></div>
   <div class="dr-mods">
-    <?php $names = ['work' => '📋 कामकाज', 'attendance' => '🕘 हजेरी', 'tasks' => '✅ Tasks', 'requests' => '🛠️ कामाच्या विनंत्या', 'letters' => '✉️ पत्रव्यवहार', 'spend' => '💰 खर्च', 'vehicles' => '🚗 वाहने', 'hostel' => '🏠 वसतिगृह', 'guests' => '🎫 पाहुणे', 'facility' => '🛡️ सुरक्षा व सुविधा', 'renewals' => '📜 नूतनीकरण', 'tomorrow' => '📅 उद्याचं नियोजन'];
+    <?php $names = ['work' => '📋 कामकाज', 'attendance' => '🕘 हजेरी', 'tasks' => '✅ Tasks', 'requests' => '🛠️ कामाच्या विनंत्या', 'letters' => '✉️ पत्रव्यवहार', 'spend' => '💰 खर्च', 'vehicles' => '🚗 वाहने', 'hostel' => '🏠 वसतिगृह', 'guests' => '🎫 पाहुणे', 'facility' => '🛡️ सुरक्षा व सुविधा', 'renewals' => '📜 नूतनीकरण', 'ecampus' => '🎓 E-Campus', 'tomorrow' => '📅 उद्याचं नियोजन'];
     foreach ($names as $k => $n): if (!empty($S[$k])): ?><span><?= h($n) ?></span><?php endif; endforeach; ?>
     <?php if (!$S): ?><span>आज कोणतीही नोंद नाही</span><?php endif; ?>
   </div>

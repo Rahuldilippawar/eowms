@@ -45,6 +45,11 @@ if ($restrictedModulesForSidebar !== null) {
 
         <div style="margin:14px 0;border-top:1px solid rgba(255,255,255,.08);"></div>
 
+        <?php require_once __DIR__ . '/ecampus-helpers.php'; if (ecampusReady($pdo) && ecampusMyTaskCount($pdo, currentUser()['id'] ?? 0)): ?>
+        <a href="<?= $rp ?>ecampus/my.php" class="tree-node">
+          <i class="fa-solid fa-laptop-file fa-fw"></i><span>माझी E-Campus कामं</span>
+        </a>
+        <?php endif; ?>
         <a href="<?= $rp ?>staff/profile.php" class="tree-node">
           <i class="fa-solid fa-user fa-fw"></i><span>प्रोफाइल / पासवर्ड</span>
         </a>
@@ -213,6 +218,22 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
     <a href="<?= $rp ?>daily-work/report.php" class="tree-node <?= $currentDir === 'daily-work' && in_array($currentPage, ['report.php', 'report-print.php'], true) ? 'active' : '' ?>">
       <i class="fa-solid fa-file-pdf fa-fw"></i><span><?= h(t('nav_reports')) ?></span>
     </a>
+    <?php
+      // 🎓 E-Campus — Management ला Dashboard; ज्याला काम नेमलंय त्याला "माझी E-Campus कामं"
+      require_once __DIR__ . '/ecampus-helpers.php';
+      $__ecMine = ecampusReady($pdo) ? ecampusMyTaskCount($pdo, $user['id']) : 0;
+    ?>
+    <?php if (ecampusReady($pdo) && isManagementOrAbove()): ?>
+    <a href="<?= $rp ?>ecampus/index.php" class="tree-node <?= $currentDir === 'ecampus' && $currentPage !== 'my.php' ? 'active' : '' ?>">
+      <i class="fa-solid fa-graduation-cap fa-fw"></i><span>E-Campus Dashboard</span>
+    </a>
+    <?php endif; ?>
+    <?php if ($__ecMine): ?>
+    <a href="<?= $rp ?>ecampus/my.php" class="tree-node <?= $currentDir === 'ecampus' && $currentPage === 'my.php' ? 'active' : '' ?>">
+      <i class="fa-solid fa-laptop-file fa-fw"></i><span>माझी E-Campus कामं</span>
+      <?= navCount($__ecMine, 'amber') ?>
+    </a>
+    <?php endif; ?>
     <?php if (isManagementOrAbove()): ?>
     <a href="<?= $rp ?>reports/daily.php" class="tree-node <?= $currentDir === 'reports' && $currentPage === 'daily.php' ? 'active' : '' ?>">
       <i class="fa-solid fa-moon fa-fw"></i><span>दैनिक अहवाल</span>
