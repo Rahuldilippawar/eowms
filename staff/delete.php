@@ -32,7 +32,7 @@ if ($target['role'] === 'super_admin') {
 // खात्री — नाव टाइप करा (मोठी/लहान अक्षरं, जादा Space चालतात) किंवा "हटवा"
 $norm = fn($x) => mb_strtolower(preg_replace('/\s+/u', ' ', trim((string)$x)));
 $confirmText = $_POST['confirm_name'] ?? '';
-if ($norm($confirmText) !== $norm($target['name']) && $norm($confirmText) !== 'हटवा') {
+if ($norm($confirmText) !== $norm($target['name']) && !in_array($norm($confirmText), ['हटवा', 'delete', 'हटाएँ'], true)) { // English/हिंदी पानावर "हटवा" चं भाषांतर दिसतं
     $_SESSION['form_error'] = t('s570');
     header('Location: index.php');
     exit;
