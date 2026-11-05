@@ -311,7 +311,11 @@ function getVisibleDepartmentIds($orgWidePermission = null) {
         return null; // null = कुठलाही Filter न लावता सगळे विभाग बघता येतील
     }
 
-    $deptIds = [];
+    // 🏛️ Campus प्रमुख — केंद्रीय प्रमुखाला सगळं; Campus प्रमुखाला त्याच्या Campus चे सगळे विभाग
+    require_once __DIR__ . '/campus-heads.php';
+    if (campusHeadInfo($pdo, $user['id'])['central']) { return null; }
+
+    $deptIds = campusHeadDepartmentIds($pdo, $user['id']);
     if (!empty($user['department_id'])) { $deptIds[] = (int)$user['department_id']; }
 
     try {
@@ -340,7 +344,9 @@ function getVisibleDepartmentIdsForStaffTracking() {
         return null;
     }
 
-    $deptIds = [];
+    require_once __DIR__ . '/campus-heads.php';
+    if (campusHeadInfo($pdo, $user['id'])['central']) { return null; } // 🏛️ केंद्रीय प्रमुख — संपूर्ण संस्था
+    $deptIds = campusHeadDepartmentIds($pdo, $user['id']); // 🏛️ Campus प्रमुख — त्याच्या Campus चे विभाग
     if (!empty($user['department_id'])) { $deptIds[] = (int)$user['department_id']; } // Tier 1: स्वतःचा विभाग
 
     // Tier 2: Super Admin ने Grant केलेले Extra विभाग (आधीच अस्तित्वात असलेली Table)

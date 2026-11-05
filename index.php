@@ -14,21 +14,22 @@ $rootPath = '';
 require_once __DIR__ . '/includes/header.php';
 
 $orgId = activeOrgId();
-$isMgmtView = isManagementOrAbove();
-
-// विभाग-प्रमुख/कर्मचारी यांना फक्त त्यांच्याच विभागाचे आकडे दिसावेत —
-// Management ला मात्र संपूर्ण संस्थेचे. myDeptId वापरून सगळ्या Queries
-// खाली त्यानुसार Scope केल्या आहेत.
+// व्याप: Management / केंद्रीय प्रमुख → संपूर्ण संस्था; 🏛️ Campus प्रमुख (Principal/Manager) → त्याचा Campus;
+// विभाग-प्रमुख/कर्मचारी → स्वतःचा विभाग. सगळ्या Queries खाली $scopeDepts वरून Scope केल्या आहेत.
+require_once __DIR__ . '/includes/campus-heads.php';
+$scopeDepts = dashboardScopeDeptIds($pdo);
+$isMgmtView = $scopeDepts === null;
+$headInfo = campusHeadInfo($pdo, $user['id']);
+$isCampusHeadView = !$isMgmtView && !empty($headInfo['campuses']);
 $myDeptId = $user['department_id'] ?? 0;
-$deptScopeSql = $isMgmtView ? "" : " AND department_id = ?";
-$deptScopeParams = $isMgmtView ? [] : [$myDeptId];
+[$deptScopeSql, $deptScopeParams] = scopeInSql('department_id', $scopeDepts);
 
 $stmt = $pdo->prepare("SELECT COUNT(*) c FROM work_records WHERE organization_id=? AND work_date=CURDATE()$deptScopeSql");
 $stmt->execute(array_merge([$orgId], $deptScopeParams));
 $todayReports = $stmt->fetch()['c'];
 
-$stmt = $pdo->prepare("SELECT COUNT(*) c FROM users WHERE organization_id=? AND is_active=1" . ($isMgmtView ? "" : " AND department_id = ?"));
-$stmt->execute($isMgmtView ? [$orgId] : [$orgId, $myDeptId]);
+$stmt = $pdo->prepare("SELECT COUNT(*) c FROM users WHERE organization_id=? AND is_active=1$deptScopeSql");
+$stmt->execute(array_merge([$orgId], $deptScopeParams));
 $staffCount = $stmt->fetch()['c'];
 
 $stmt = $pdo->prepare("SELECT COUNT(*) c FROM work_records WHERE organization_id=? AND work_date=CURDATE() AND status='completed'$deptScopeSql");
@@ -72,9 +73,9 @@ if ($isMgmtView) {
     $stmt = $pdo->prepare("
         SELECT d.*, u.name AS hod_name, c.name AS campus_name, c.college_type
         FROM departments d LEFT JOIN users u ON u.id = d.hod_id LEFT JOIN campuses c ON c.id = d.campus_id
-        WHERE d.organization_id=? AND d.is_active=1 AND d.id = ?
+        WHERE d.organization_id=? AND d.is_active=1" . scopeInSql('d.id', $scopeDepts)[0] . " ORDER BY c.name, d.name_local
     ");
-    $stmt->execute([$orgId, $user['department_id'] ?? 0]);
+    $stmt->execute(array_merge([$orgId], scopeInSql('d.id', $scopeDepts)[1]));
 }
 $departments = $stmt->fetchAll();
 
@@ -111,7 +112,7 @@ try {
         WHERE sa.organization_id = ? AND sa.attendance_date = CURDATE() AND (sa.status = 'absent' OR sa.is_late = 1)
     ";
     $taParams = [$orgId];
-    if (!$isMgmtView) { $todayAttSql .= " AND u.department_id = ?"; $taParams[] = $myDeptId; }
+    if (!$isMgmtView) { [$__s, $__p] = scopeInSql('u.department_id', $scopeDepts); $todayAttSql .= $__s; $taParams = array_merge($taParams, $__p); }
     $todayAttSql .= " ORDER BY sa.status = 'absent' DESC, u.name LIMIT 10";
     $todayAttendanceStmt = $pdo->prepare($todayAttSql);
     $todayAttendanceStmt->execute($taParams);
@@ -171,6 +172,27 @@ if ($showCampusBreakdown) {
     </div>
   </div>
 </div>
+
+<?php if ($headInfo['central'] || $headInfo['campuses']): ?>
+<!-- 🏛️ Campus प्रमुख / केंद्रीय प्रमुख -->
+<div class="panel mt-3" style="padding:14px 18px;display:flex;gap:14px;align-items:center;flex-wrap:wrap;border-left:4px solid var(--rail);">
+  <div style="font-size:30px;line-height:1;">🏛️</div>
+  <div style="flex:1;min-width:220px;">
+    <?php if ($headInfo['central']): ?>
+      <div style="font-weight:800;font-size:15px;">सर्व Campus चे केंद्रीय प्रमुख<?= $headInfo['central_title'] ? ' — ' . h($headInfo['central_title']) : '' ?></div>
+      <div style="font-size:12.5px;color:var(--text-dim);">या Dashboard वर संपूर्ण संस्थेचे आकडे; प्रत्येक Campus चा वेगळा Dashboard खाली उघडा.</div>
+    <?php else: ?>
+      <div style="font-weight:800;font-size:15px;"><?= h(implode(' · ', array_map(fn($c) => ($c['title'] ? $c['title'] . ' — ' : 'Campus प्रमुख — ') . $c['name'], $headInfo['campuses']))) ?></div>
+      <div style="font-size:12.5px;color:var(--text-dim);">या Dashboard वर तुमच्या Campus चे सगळे विभाग, कर्मचारी, कामं आणि नूतनीकरण.</div>
+    <?php endif; ?>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <?php foreach (($headInfo['central'] ? campusDashboardList($pdo, $orgId) : array_map(fn($id, $c) => ['id' => $id, 'name' => $c['name']], array_keys($headInfo['campuses']), $headInfo['campuses'])) as $__c): ?>
+      <a href="campuses/dashboard.php?id=<?= (int)$__c['id'] ?>" class="btn" style="border:1px solid var(--rail);color:var(--rail);border-radius:9px;font-size:12.5px;padding:7px 13px;font-weight:600;"><i class="fa-solid fa-gauge-high me-1"></i><?= h($__c['name']) ?></a>
+    <?php endforeach; ?>
+  </div>
+</div>
+<?php endif; ?>
 
 <?php if ($showCampusBreakdown): ?>
 <div class="dash-tabs" role="tablist">
@@ -232,7 +254,7 @@ function eowmsSwitchDashTab(which, btn) {
   <div class="col-6 col-lg-3">
     <div class="kpi-card">
       <div class="d-flex justify-content-between align-items-start">
-        <span class="kpi-label"><?= $isMgmtView ? h(t('s54')) : 'माझा विभाग' ?></span>
+        <span class="kpi-label"><?= $isMgmtView ? h(t('s54')) : ($isCampusHeadView ? 'Campus चे विभाग' : 'माझा विभाग') ?></span>
         <div class="kpi-icon" style="background:var(--rail-soft);color:var(--rail);"><i class="fa-solid fa-building"></i></div>
       </div>
       <div class="kpi-value"><?= count($departments) ?></div>
@@ -282,7 +304,7 @@ function eowmsSwitchDashTab(which, btn) {
   <div class="panel-head dash-an-head">
     <div>
       <div class="title">📊 कामाचं विश्लेषण</div>
-      <div class="sub" id="dashRangeLabel"><?= $isMgmtView ? 'संपूर्ण संस्था' : 'माझा विभाग' ?> — कालावधी निवडा</div>
+      <div class="sub" id="dashRangeLabel"><?= $isMgmtView ? 'संपूर्ण संस्था' : ($isCampusHeadView ? '🏛️ ' . h(implode(', ', array_column($headInfo['campuses'], 'name'))) : 'माझा विभाग') ?> — कालावधी निवडा</div>
     </div>
     <div class="dash-range" role="group" aria-label="कालावधी">
       <button type="button" data-range="today">आज</button>

@@ -4406,3 +4406,21 @@ CREATE TABLE ecampus_updates (
   INDEX idx_period (period, created_at),
   FOREIGN KEY (task_id) REFERENCES ecampus_tasks(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- FROM: migration-campus-heads.sql
+-- ---------------- 🏛️ Campus प्रमुख (Principal / Manager) ----------------
+-- campus_id = NULL → सर्व Campus चे केंद्रीय प्रमुख (Centralized Head)
+-- Campus प्रमुखाला त्याच्या Campus चा Dashboard आणि त्या Campus चे सगळे विभाग दिसतात
+CREATE TABLE campus_heads (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  organization_id INT NOT NULL,
+  campus_id INT NULL,
+  user_id INT NOT NULL,
+  title VARCHAR(100) NULL,
+  assigned_by INT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_head (organization_id, campus_id, user_id),
+  INDEX idx_user (user_id),
+  FOREIGN KEY (campus_id) REFERENCES campuses(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
