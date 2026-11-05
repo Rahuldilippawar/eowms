@@ -210,6 +210,9 @@ function eowmsCompleteLogin(PDO $pdo, array $user, $how, $rootPath = '') {
     $_SESSION['last_activity'] = time();
     $_SESSION['user_recheck_at'] = time();
     $_SESSION['play_welcome_chime'] = true;
+    // संस्थेने ठरवलेली "निष्क्रियतेनंतर Logout" वेळ (मिनिटं)
+    $idle = (int)orgSetting($pdo, $user['organization_id'] ?? 0, 'session_idle_minutes', '30');
+    $_SESSION['idle_limit_min'] = in_array($idle, SESSION_IDLE_CHOICES, true) ? $idle : 30;
     if ($needTfaSetup) { $_SESSION['tfa_setup_required'] = true; } else { unset($_SESSION['tfa_setup_required']); }
     logActivity('Login केलं (' . $how . ')', 'user', $user['id'], 'IP: ' . clientIp());
 
@@ -229,6 +232,8 @@ function eowmsCompleteLogin(PDO $pdo, array $user, $how, $rootPath = '') {
         $loginRedirect = 'force-password-change.php';
     } elseif ($needTfaSetup) {
         $loginRedirect = 'account/two-factor.php';
+    } elseif (!empty($_SESSION['login_next']) && ($nx = safeNextPath($_SESSION['login_next']))) {
+        $loginRedirect = $nx; // Auto-Logout आधी ज्या पानावर होता तिथेच परत
     } else {
         $restrictedModulesAtLogin = getRestrictedModules();
         if ($restrictedModulesAtLogin !== null && !empty($restrictedModulesAtLogin)) {
@@ -237,6 +242,7 @@ function eowmsCompleteLogin(PDO $pdo, array $user, $how, $rootPath = '') {
             if ($firstModuleAtLogin) { $loginRedirect = $firstModuleAtLogin['dashboard']; }
         }
     }
+    unset($_SESSION['login_next']);
     header('Location: ' . $rootPath . $loginRedirect);
     exit;
 }

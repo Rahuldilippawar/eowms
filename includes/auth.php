@@ -34,7 +34,33 @@ function currentUser() {
 }
 
 // $rootPath = relative path back to the app root, e.g. '../' from inside /daily-work/
-define('SESSION_IDLE_LIMIT_SECONDS', 30 * 60); // 30 minutes
+define('SESSION_IDLE_LIMIT_SECONDS', 30 * 60); // default 30 minutes — संस्था बदलू शकते (sessionIdleLimitSeconds)
+const SESSION_IDLE_CHOICES = [10, 15, 20, 30, 45, 60, 120]; // मिनिटं
+
+/** निष्क्रियतेनंतर आपोआप Logout — किती सेकंदांनी (Login वेळी संस्थेच्या सेटिंगवरून Session मध्ये ठेवलेलं) */
+function sessionIdleLimitSeconds() {
+    $m = (int)($_SESSION['idle_limit_min'] ?? 0);
+    return in_array($m, SESSION_IDLE_CHOICES, true) ? $m * 60 : SESSION_IDLE_LIMIT_SECONDS;
+}
+
+/** App च्या मुळापासूनचा चालू पत्ता (उदा. "ecampus/index.php?month=2026-11") — Login नंतर परत येण्यासाठी */
+function currentAppRelativeUrl() {
+    $root = realpath(__DIR__ . '/..');
+    $doc = realpath($_SERVER['DOCUMENT_ROOT'] ?? '') ?: '';
+    $base = ($doc !== '' && str_starts_with($root, $doc)) ? str_replace('\\', '/', substr($root, strlen($doc))) : '';
+    $uri = (string)($_SERVER['REQUEST_URI'] ?? '');
+    if ($base !== '' && str_starts_with($uri, $base . '/')) { $uri = substr($uri, strlen($base) + 1); }
+    return safeNextPath(ltrim($uri, '/'));
+}
+
+/** Login नंतर परत जायचं पान — फक्त याच Site मधला सापेक्ष (relative) मार्ग; बाहेरचा पत्ता/Login/Logout नाही */
+function safeNextPath($next) {
+    $next = (string)$next;
+    if ($next === '' || strlen($next) > 500 || preg_match('#^[a-z][a-z0-9+.-]*:|^//|\\\\|[\r\n]#i', $next)) { return null; }
+    $path = ltrim(parse_url($next, PHP_URL_PATH) ?? '', '/');
+    if ($path === '' || preg_match('#(^|/)(login|login-2fa|logout|welcome|forgot-password|verify-reset)\.php$|\.\.#', $path)) { return null; }
+    return ltrim($next, '/');
+}
 
 /**
  * नवीन, अलीकडेच जोडलेल्या Modules साठी — जर संबंधित Table अजून
@@ -85,12 +111,14 @@ function requireLogin($rootPath = '') {
 
     // 30-minute idle timeout — if too long has passed since the last
     // activity on this session, force logout for security.
-    if (!empty($_SESSION['last_activity']) && (time() - $_SESSION['last_activity']) > SESSION_IDLE_LIMIT_SECONDS) {
+    if (!empty($_SESSION['last_activity']) && (time() - $_SESSION['last_activity']) > sessionIdleLimitSeconds()) {
+        // परत Login केल्यावर याच पानावर परत आणण्यासाठी (फक्त GET — Form-Submit पुन्हा होऊ नये)
+        $back = ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET' ? currentAppRelativeUrl() : null;
         session_unset();
         session_destroy();
         session_start();
         $_SESSION['session_expired'] = true;
-        header('Location: ' . $rootPath . 'login.php');
+        header('Location: ' . $rootPath . 'login.php' . ($back ? '?next=' . rawurlencode($back) : ''));
         exit;
     }
     $_SESSION['last_activity'] = time();
