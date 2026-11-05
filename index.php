@@ -167,144 +167,63 @@ if ($showCampusBreakdown) {
 }
 ?>
 
-<?php
-// ✨ Smart Hero — Live घड्याळ, आजचं चित्र, माझी हजेरी/Tasks, सर्वात महत्त्वाची सूचना
-$heroMyTasks = ['pending' => 0, 'overdue' => 0];
-try {
-    $__t = $pdo->prepare("SELECT COUNT(*) p, COALESCE(SUM(target_date < CURDATE()), 0) o FROM tasks WHERE assigned_to = ? AND status <> 'completed'");
-    $__t->execute([$user['id']]);
-    $__r = $__t->fetch();
-    $heroMyTasks = ['pending' => (int)$__r['p'], 'overdue' => (int)$__r['o']];
-} catch (PDOException $e) {}
-$heroAtt = null;
-try {
-    $__a = $pdo->prepare("SELECT first_punch_time, last_punch_time, status, is_late FROM staff_attendance WHERE user_id = ? AND attendance_date = CURDATE() LIMIT 1");
-    $__a->execute([$user['id']]);
-    $heroAtt = $__a->fetch() ?: null;
-} catch (PDOException $e) {}
-$heroBad = array_values(array_filter($smart['alerts'] ?? [], fn($a) => $a['sev'] === 'bad'));
-$heroTop = $smart['alerts'][0] ?? null;
-$mrDays = ['रविवार', 'सोमवार', 'मंगळवार', 'बुधवार', 'गुरुवार', 'शुक्रवार', 'शनिवार'];
-$mrMonths = [1 => 'जानेवारी', 'फेब्रुवारी', 'मार्च', 'एप्रिल', 'मे', 'जून', 'जुलै', 'ऑगस्ट', 'सप्टेंबर', 'ऑक्टोबर', 'नोव्हेंबर', 'डिसेंबर'];
-$heroDate = $mrDays[(int)date('w')] . ', ' . date('j') . ' ' . $mrMonths[(int)date('n')] . ' ' . date('Y');
-$heroDayPct = (int)round((time() - strtotime('today')) * 100 / 86400);
-$heroRole = $headInfo['central'] ? ('🌐 ' . ($headInfo['central_title'] ?: 'केंद्रीय प्रमुख')) : ($headInfo['campuses'] ? ('🏛️ ' . (reset($headInfo['campuses'])['title'] ?: 'Campus प्रमुख')) : ($user['designation'] ?? ''));
-$heroFirst = explode(' ', trim($user['name']))[0];
-$heroDonePct = $todayReports ? (int)round($todayCompleted * 100 / max(1, $todayReports)) : 0;
-?>
-<div class="dash-hero sh">
+<div class="dash-hero ah">
   <div class="dash-hero-bg"></div>
-  <div class="sh-in">
-    <div class="sh-top">
-      <div class="sh-left">
-        <div class="page-eyebrow" style="color:#9FA6C0;"><?= h(activeOrgName()) ?></div>
-        <div class="sh-greet"><span id="shGreetIcon"><?= mb_substr($greeting, 0, 2) ?></span> <span id="shGreetText"><?= h(trim(mb_substr($greeting, 2))) ?></span>, <?= h($heroFirst) ?>!</div>
-        <div class="sh-sub">
-          <?php if ($heroRole): ?><span class="sh-role"><?= h($heroRole) ?></span><?php endif; ?>
-          <span><i class="fa-regular fa-calendar"></i> <?= h($heroDate) ?></span>
+  <span class="ah-orb ah-orb1"></span><span class="ah-orb ah-orb2"></span><span class="ah-grid"></span>
+  <div class="ah-in">
+    <div class="page-eyebrow ah-eyebrow"><?= h(activeOrgName()) ?></div>
+    <div class="ah-row">
+      <div class="ah-hello">
+        <div class="ah-emoji"><?= h(trim(mb_substr($greeting, 0, 2))) ?></div>
+        <div>
+          <div class="ah-greet"><?= h(trim(mb_substr($greeting, 2))) ?>, <span><?= h(explode(' ', $user['name'])[0]) ?>!</span></div>
+          <div class="ah-date"><i class="fa-regular fa-calendar"></i> <?= date('l, d F Y') ?> · <?= h(t('s122')) ?></div>
         </div>
       </div>
-      <div class="sh-clock" title="भारतीय वेळ (IST)">
-        <div class="sh-time" id="shTime" data-server="<?= time() ?>"><?= date('h:i') ?><small><?= date(':s') ?></small></div>
-        <div class="sh-ampm"><span id="shAmpm"><?php $__h = (int)date('G'); echo $__h < 12 ? 'सकाळ' : ($__h < 17 ? 'दुपार' : ($__h < 20 ? 'संध्याकाळ' : 'रात्र')); ?></span> · IST</div>
-        <div class="sh-daybar" title="आजचा दिवस"><i id="shDayBar" style="width:<?= $heroDayPct ?>%;"></i></div>
-      </div>
-    </div>
-
-    <div class="sh-chips">
-      <a class="sh-chip" href="daily-work/report.php"><i class="fa-regular fa-clipboard"></i><b><?= (int)$todayReports ?></b><span>आजच्या नोंदी</span></a>
-      <a class="sh-chip" href="daily-work/report.php"><span class="sh-ring" style="--p:<?= $heroDonePct ?>;"><?= $heroDonePct ?>%</span><span>पूर्ण झालेली कामं</span></a>
-      <a class="sh-chip <?= $heroMyTasks['overdue'] ? 'bad' : '' ?>" href="tasks/my-tasks.php"><i class="fa-solid fa-list-check"></i><b><?= $heroMyTasks['pending'] ?></b><span>माझे Tasks बाकी<?= $heroMyTasks['overdue'] ? ' · ' . $heroMyTasks['overdue'] . ' मुदतबाह्य' : '' ?></span></a>
-      <a class="sh-chip <?= $heroAtt ? ((int)$heroAtt['is_late'] ? 'warn' : 'ok') : '' ?>" href="staff/attendance.php"><i class="fa-solid fa-fingerprint"></i>
-        <?php if ($heroAtt && $heroAtt['first_punch_time']): ?><b><?= h(date('h:i', strtotime($heroAtt['first_punch_time']))) ?></b><span>माझी हजेरी<?= (int)$heroAtt['is_late'] ? ' · उशीर' : ' ✓' ?></span>
-        <?php elseif ($heroAtt): ?><b><?= $heroAtt['status'] === 'absent' ? '✗' : '✓' ?></b><span>माझी हजेरी</span>
-        <?php else: ?><b>—</b><span>आज Punch नाही</span><?php endif; ?></a>
-      <a class="sh-chip <?= $heroBad ? 'bad' : 'ok' ?>" href="#" onclick="var x=document.querySelector('.sm-attn'); if(x){x.scrollIntoView({behavior:'smooth',block:'start'});} return false;"><i class="fa-solid fa-bell"></i><b><?= count($smart['alerts'] ?? []) ?></b><span>लक्ष द्यावं असं</span></a>
-    </div>
-
-    <div class="sh-bottom">
-      <div class="sh-insight <?= $heroTop ? h($heroTop['sev']) : 'ok' ?>">
-        <?php if ($heroTop): ?>
-          <i class="<?= h($heroTop['icon']) ?>"></i> <span><b><?= (int)$heroTop['cnt'] ?></b> <?= h($heroTop['text']) ?></span> <a href="<?= h($heroTop['href']) ?>">पाहा →</a>
-        <?php else: ?>
-          <i class="fa-solid fa-circle-check"></i> <span>सर्व काही नियंत्रणात — आज कोणतीही तातडीची बाब नाही</span>
+      <div class="ah-btns">
+        <a href="daily-work/entry.php" class="dash-quick-btn ah-btn ah-pri"><i class="fa-solid fa-pen-to-square"></i><span>काम नोंदवा</span></a>
+        <?php if (hasPermission('assign_tasks')): ?>
+          <a href="tasks/assign.php" class="dash-quick-btn ah-btn"><i class="fa-solid fa-list-check"></i><span>Task Assign करा</span></a>
         <?php endif; ?>
-      </div>
-      <div class="sh-actions">
-        <a href="daily-work/entry.php" class="dash-quick-btn pri"><i class="fa-solid fa-pen-to-square"></i> काम नोंदवा</a>
-        <?php if (hasPermission('assign_tasks')): ?><a href="tasks/assign.php" class="dash-quick-btn"><i class="fa-solid fa-list-check"></i> Task Assign करा</a><?php endif; ?>
-        <a href="tasks/my-tasks.php" class="dash-quick-btn"><i class="fa-solid fa-thumbtack"></i> माझे Tasks</a>
-        <a href="renewals/index.php" class="dash-quick-btn"><i class="fa-solid fa-shield-halved"></i> नूतनीकरण</a>
-        <?php if ($isMgmtView): ?><a href="reports/daily.php" class="dash-quick-btn"><i class="fa-solid fa-moon"></i> दैनिक अहवाल</a><?php endif; ?>
+        <a href="renewals/index.php" class="dash-quick-btn ah-btn"><i class="fa-solid fa-shield-halved"></i><span>नूतनीकरण</span></a>
       </div>
     </div>
   </div>
 </div>
 <style>
-  .sh .sh-in{position:relative;z-index:1;}
-  .sh-top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;}
-  .sh-greet{font-family:'Space Grotesk',inherit;font-weight:700;font-size:26px;color:#fff;margin-top:4px;line-height:1.25;}
-  .sh-sub{display:flex;gap:10px;flex-wrap:wrap;align-items:center;font-size:13px;color:#B7BBD6;margin-top:6px;}
-  .sh-role{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);color:#FDBA8C;font-weight:700;font-size:11.5px;padding:3px 10px;border-radius:99px;}
-  .sh-clock{text-align:right;color:#fff;min-width:150px;}
-  .sh-time{font-family:'Space Grotesk',monospace;font-weight:700;font-size:34px;letter-spacing:.02em;line-height:1;font-variant-numeric:tabular-nums;}
-  .sh-time small{font-size:16px;color:#9FA6C0;font-weight:600;}
-  .sh-ampm{font-size:11.5px;color:#9FA6C0;margin-top:4px;}
-  .sh-daybar{height:4px;border-radius:99px;background:rgba(255,255,255,.12);margin-top:8px;overflow:hidden;}
-  .sh-daybar i{display:block;height:100%;background:linear-gradient(90deg,#F59E0B,var(--rail,#D9530F));border-radius:99px;transition:width 1s linear;}
-  .sh-chips{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-top:18px;}
-  .sh-chip{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:10px 12px;color:#fff;text-decoration:none;transition:transform .15s ease,background .15s ease;min-width:0;}
-  .sh-chip:hover{background:rgba(255,255,255,.13);color:#fff;transform:translateY(-1px);}
-  .sh-chip > i{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;background:rgba(255,255,255,.1);font-size:14px;flex-shrink:0;}
-  .sh-chip b{font-size:19px;font-family:'Space Grotesk',inherit;font-variant-numeric:tabular-nums;}
-  .sh-chip span{font-size:11.5px;color:#B7BBD6;line-height:1.25;}
-  .sh-chip.ok > i{background:rgba(22,163,74,.25);color:#86EFAC;} .sh-chip.warn > i{background:rgba(245,158,11,.25);color:#FCD34D;} .sh-chip.bad > i{background:rgba(220,38,38,.28);color:#FCA5A5;}
-  .sh-chip.bad{border-color:rgba(248,113,113,.4);}
-  .sh-ring{--p:0;width:36px;height:36px;border-radius:50%;flex-shrink:0;display:grid;place-items:center;font-size:10px;font-weight:800;color:#fff !important;background:radial-gradient(closest-side,#1B1E3D 74%,transparent 76% 100%),conic-gradient(#22C55E calc(var(--p)*1%),rgba(255,255,255,.15) 0);}
-  .sh-bottom{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:16px;}
-  .sh-insight{display:flex;align-items:center;gap:8px;font-size:13px;color:#E6E8F5;background:rgba(255,255,255,.06);border-radius:10px;padding:8px 12px;border-left:3px solid #22C55E;min-width:0;flex:1 1 280px;}
-  .sh-insight.bad{border-left-color:#F87171;} .sh-insight.warn{border-left-color:#FBBF24;} .sh-insight.info{border-left-color:#60A5FA;}
-  .sh-insight i{color:#FDBA8C;} .sh-insight.ok i{color:#86EFAC;}
-  .sh-insight a{color:#FDBA8C;font-weight:700;text-decoration:none;white-space:nowrap;margin-left:auto;}
-  .sh-actions{display:flex;gap:8px;flex-wrap:wrap;}
-  .dash-quick-btn.pri{background:var(--rail,#D9530F);border-color:var(--rail,#D9530F);}
-  @media (max-width: 991px){ .sh-chips{grid-template-columns:repeat(3,minmax(0,1fr));} }
+  .ah{background:linear-gradient(125deg,#1A1D45 0%,#141633 45%,#2A1630 80%,#3A1A24 100%);border:1px solid rgba(255,255,255,.08);box-shadow:0 18px 40px -22px rgba(20,16,50,.75),inset 0 1px 0 rgba(255,255,255,.06);}
+  .ah-orb{position:absolute;border-radius:50%;filter:blur(40px);pointer-events:none;opacity:.55;animation:ahFloat 12s ease-in-out infinite alternate;}
+  .ah-orb1{width:260px;height:260px;right:-60px;top:-110px;background:radial-gradient(circle,#F26B2A,transparent 70%);}
+  .ah-orb2{width:220px;height:220px;left:-70px;bottom:-120px;background:radial-gradient(circle,#6D5BF2,transparent 70%);animation-delay:-6s;}
+  .ah-grid{position:absolute;inset:0;pointer-events:none;opacity:.07;background-image:radial-gradient(rgba(255,255,255,.9) 1px,transparent 1px);background-size:18px 18px;-webkit-mask-image:linear-gradient(90deg,transparent,#000 60%);mask-image:linear-gradient(90deg,transparent,#000 60%);}
+  @keyframes ahFloat{from{transform:translate(0,0) scale(1);}to{transform:translate(-30px,20px) scale(1.12);}}
+  .ah-in{position:relative;z-index:1;}
+  .ah-eyebrow{color:#A9AFD0 !important;letter-spacing:.14em;}
+  .ah-row{display:flex;justify-content:space-between;align-items:center;gap:18px;flex-wrap:wrap;margin-top:8px;}
+  .ah-hello{display:flex;align-items:center;gap:14px;min-width:0;}
+  .ah-emoji{width:54px;height:54px;flex-shrink:0;border-radius:16px;display:grid;place-items:center;font-size:28px;background:linear-gradient(145deg,rgba(255,255,255,.16),rgba(255,255,255,.04));border:1px solid rgba(255,255,255,.16);box-shadow:0 8px 22px -10px rgba(242,107,42,.8);animation:ahPop .6s cubic-bezier(.2,.9,.3,1.4) both;}
+  @keyframes ahPop{from{transform:scale(.6) rotate(-12deg);opacity:0;}to{transform:none;opacity:1;}}
+  .ah-greet{font-family:'Space Grotesk',inherit;font-weight:700;font-size:27px;line-height:1.2;color:#fff;}
+  .ah-greet span{background:linear-gradient(90deg,#FFD7B5,#F59E6B 55%,#F26B2A);-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .ah-date{font-size:13px;color:#B7BBD6;margin-top:5px;display:flex;align-items:center;gap:6px;}
+  .ah-date i{color:#F59E6B;}
+  .ah-btns{display:flex;gap:10px;flex-wrap:wrap;}
+  .ah-btn{gap:9px !important;padding:10px 16px !important;border-radius:12px !important;background:rgba(255,255,255,.07) !important;border:1px solid rgba(255,255,255,.14) !important;backdrop-filter:blur(6px);transition:transform .18s ease,background .18s ease,box-shadow .18s ease !important;}
+  .ah-btn i{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;background:rgba(255,255,255,.12);font-size:12.5px;}
+  .ah-btn:hover{transform:translateY(-2px);background:rgba(255,255,255,.14) !important;box-shadow:0 10px 22px -12px rgba(0,0,0,.6);}
+  .ah-pri{background:linear-gradient(135deg,#F26B2A,#D9530F) !important;border-color:transparent !important;box-shadow:0 10px 24px -12px rgba(242,107,42,.9);}
+  .ah-pri i{background:rgba(255,255,255,.22);}
+  .ah-pri:hover{background:linear-gradient(135deg,#F57A3D,#E05A14) !important;}
+  @media (prefers-reduced-motion: reduce){ .ah-orb,.ah-emoji{animation:none;} }
   @media (max-width: 640px){
-    .sh-clock{text-align:left;min-width:0;width:100%;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;}
-    .sh-time{font-size:26px;} .sh-daybar{flex-basis:100%;}
-    .sh-greet{font-size:21px;}
-    .sh-chips{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
-    .sh-chip{padding:9px 10px;} .sh-chip b{font-size:17px;}
-    .sh-chips .sh-chip:last-child{grid-column:1 / -1;}
-    .sh-bottom{flex-direction:column !important;align-items:stretch !important;}
-    .sh-insight{flex:0 0 auto;width:100%;}
-    .sh-actions{flex-wrap:nowrap;overflow-x:auto;width:100%;scrollbar-width:none;-webkit-mask-image:linear-gradient(90deg,#000 88%,transparent);mask-image:linear-gradient(90deg,#000 88%,transparent);}
-    .sh-actions .dash-quick-btn{flex-shrink:0;white-space:nowrap;}
+    .dash-hero.ah .ah-in > .ah-row{flex-direction:column !important;align-items:stretch !important;}
+    .dash-hero.ah .ah-btns{width:100%;}
+    .ah-emoji{width:46px;height:46px;font-size:24px;border-radius:14px;}
+    .ah-greet{font-size:21px;}
+    .ah-btns{display:grid !important;grid-template-columns:repeat(<?= hasPermission('assign_tasks') ? 3 : 2 ?>,minmax(0,1fr));gap:8px;flex-wrap:nowrap !important;overflow:visible !important;}
+    .ah-btn{flex-direction:column;justify-content:center;text-align:center;padding:10px 6px !important;font-size:11.5px !important;white-space:normal !important;line-height:1.2;}
   }
 </style>
-<script>
-(function () {
-  // ⏰ Live घड्याळ — Server च्या IST वेळेशी जुळवलेलं (Phone ची वेळ चुकीची असली तरी)
-  var el = document.getElementById('shTime'); if (!el) return;
-  var skew = parseInt(el.dataset.server, 10) * 1000 - Date.now();
-  var ampm = document.getElementById('shAmpm'), bar = document.getElementById('shDayBar');
-  var gi = document.getElementById('shGreetIcon'), gt = document.getElementById('shGreetText');
-  function pad(n) { return (n < 10 ? '0' : '') + n; }
-  function tick() {
-    var d = new Date(Date.now() + skew + (330 + new Date().getTimezoneOffset()) * 60000); // IST
-    var h = d.getHours(), h12 = h % 12 || 12;
-    el.innerHTML = pad(h12) + ':' + pad(d.getMinutes()) + '<small>:' + pad(d.getSeconds()) + '</small>';
-    var part = h < 12 ? 'सकाळ' : (h < 17 ? 'दुपार' : (h < 20 ? 'संध्याकाळ' : 'रात्र'));
-    if (ampm) ampm.textContent = (window.eowmsT ? eowmsT(part) : part);
-    if (bar) bar.style.width = Math.round((h * 3600 + d.getMinutes() * 60 + d.getSeconds()) / 864) + '%';
-    if (gi && gt) {
-      var g = h < 12 ? ['☀️', 'शुभ सकाळ'] : (h < 17 ? ['🌤️', 'नमस्कार'] : ['🌙', 'शुभ संध्याकाळ']);
-      if (gi.textContent !== g[0]) { gi.textContent = g[0]; gt.textContent = window.eowmsT ? eowmsT(g[1]) : g[1]; }
-    }
-  }
-  tick(); setInterval(tick, 1000);
-})();
-</script>
 
 <?php if ($headInfo['central'] || $headInfo['campuses']): ?>
 <!-- 🏛️ Campus प्रमुख / केंद्रीय प्रमुख -->
