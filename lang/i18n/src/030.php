@@ -82,4 +82,14 @@ return [
     "यांना Login केल्यावर Command Center मध्ये फक्त या Campus/College चा Dashboard दिसतो — त्याचे सगळे विभाग, कर्मचारी, कामं, Tasks, नूतनीकरण आणि विनंत्या." => ["इन्हें Login करने पर Command Center में केवल इस Campus/College का Dashboard दिखता है — इसके सभी विभाग, कर्मचारी, काम, Tasks, नवीनीकरण और अनुरोध।", "After login they see only this campus/college dashboard in the Command Center — all its departments, staff, work, tasks, renewals and requests."],
     "म्हणून नेमले. Login केल्यावर त्यांना Command Center मध्ये त्यांचा Campus Dashboard दिसेल." => ["के रूप में नियुक्त किया। Login करने पर उन्हें Command Center में उनका Campus Dashboard दिखेगा।", "assigned. After login they will see their campus dashboard in the Command Center."],
     "प्रमुख नेमण्यासाठी आधी" => ["प्रमुख नियुक्त करने के लिए पहले", "To assign heads, first run"],
+    // ✨ Smart Hero
+    "भारतीय वेळ (IST)" => ["भारतीय समय (IST)", "Indian time (IST)"],
+    "रात्र" => ["रात", "Night"],
+    "आजचा दिवस" => ["आज का दिन", "Today's progress"],
+    "पूर्ण झालेली कामं" => ["पूरे हुए काम", "Work completed"],
+    "माझे Tasks बाकी" => ["मेरे बाकी Tasks", "My pending tasks"],
+    "माझी हजेरी" => ["मेरी हाज़िरी", "My attendance"],
+    "आज Punch नाही" => ["आज Punch नहीं", "No punch today"],
+    "लक्ष द्यावं असं" => ["ध्यान देने योग्य", "Needs attention"],
+    "सर्व काही नियंत्रणात — आज कोणतीही तातडीची बाब नाही" => ["सब कुछ नियंत्रण में — आज कोई ज़रूरी बात नहीं", "All under control — nothing urgent today"],
 ];
