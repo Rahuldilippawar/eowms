@@ -406,5 +406,32 @@ window.addEventListener('load', function () {
   });
 })();
 </script>
+<?php if (function_exists('recordLockActive') && recordLockActive()): ?>
+<script>
+/* 🔒 Edit / Delete फक्त Super Admin — त्यांची बटणं/Links इतरांना दिसत नाहीत (Server वरही अडवलं जातं) */
+(function () {
+  var SCRIPT = /^((edit|delete|update)\.php|[a-z0-9_-]+[-_](edit|delete|update)\.php|(edit|delete)[-_][a-z0-9_-]+\.php|toggle-active\.php)$/i;
+  var ACT = /^(delete|remove|edit|update|deactivate|rename|rollback|clear|disable|unassign|end_allocation|trash|destroy)(_|$)/i;
+  var ALLOW = { update_status: 1, update_task_status: 1, update_photo: 1 };
+  function base(u) { try { var x = new URL(u, location.href); if (x.origin !== location.origin || /\/account\//.test(x.pathname)) return ''; return x.pathname.split('/').pop(); } catch (e) { return ''; } }
+  function badAct(v) { v = String(v || ''); return !ALLOW[v.toLowerCase()] && ACT.test(v); }
+  function hide(el) { if (el && !el.dataset.rl) { el.dataset.rl = 1; el.style.setProperty('display', 'none', 'important'); } }
+  function scan(root) {
+    root.querySelectorAll('a[href]').forEach(function (a) { if (SCRIPT.test(base(a.getAttribute('href')))) hide(a); });
+    root.querySelectorAll('form').forEach(function (f) {
+      var post = (f.getAttribute('method') || '').toLowerCase() === 'post';
+      if (post && SCRIPT.test(base(f.getAttribute('action') || location.href))) { if (!/\/account\//.test(location.pathname)) hide(f); return; }
+      if (!post) return;
+      var h = f.querySelector('input[type=hidden][name=action],input[type=hidden][name=op],input[type=hidden][name=do]');
+      if (h && badAct(h.value)) { hide(f); return; }
+      if (f.querySelector('input[type=hidden][name^=delete]')) { hide(f); return; }
+      f.querySelectorAll('button[name=action],input[type=submit][name=action]').forEach(function (b) { if (badAct(b.value)) hide(b); });
+    });
+  }
+  function go() { scan(document); new MutationObserver(function (m) { m.forEach(function (r) { r.addedNodes.forEach(function (n) { if (n.nodeType === 1) scan(n.parentNode || n); }); }); }).observe(document.body, { childList: true, subtree: true }); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go); else go();
+})();
+</script>
+<?php endif; ?>
 </body>
 </html>

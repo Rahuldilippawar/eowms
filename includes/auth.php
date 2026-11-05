@@ -164,6 +164,9 @@ function requireLogin($rootPath = '') {
         }
     }
 
+    // 🔒 नोंदी बदलणं / हटवणं फक्त Super Admin (org setting records_lock — default चालू)
+    recordLockEnforce($rootPath);
+
     // 🎯 Single-Purpose Access Mode — एखादा Role फक्त काही ठराविक
     // Modules शीच मर्यादित असेल (Restricted), तर तो व्यक्ती URL मध्ये
     // थेट दुसऱ्या कुठल्याही Module चा Address टाकून गेला, तरी त्याला
@@ -555,4 +558,69 @@ function logActivity($action, $entityType = null, $entityId = null, $details = n
     } catch (PDOException $e) {
         // activity_logs table not migrated yet — skip silently
     }
+}
+
+/* ============================================================
+ * 🔒 नोंदी Edit / Delete फक्त Super Admin
+ *  - इतर सगळे नवीन नोंद भरू शकतात, Status/मंजुरीसारखी कामं करू शकतात,
+ *    पण आधीची नोंद बदलणं/हटवणं/निष्क्रिय करणं फक्त Super Admin.
+ *  - Edit/Delete पानं (edit.php, delete.php, *-edit.php, *-delete.php, *-update.php, update.php, toggle-active.php …)
+ *    आणि POST action = delete/remove/edit/update/deactivate/rename/rollback/clear/disable… अडवले जातात.
+ *  - account/ (स्वतःचं प्रोफाइल, पासवर्ड, 2-Step) नेहमी मोकळं.
+ *  - Super Admin ला "2-Step / सुरक्षा धोरण" पानावर हे बंद करता येतं.
+ * ============================================================ */
+const RECORD_LOCK_ACTION_RE = '/^(delete|remove|edit|update|deactivate|rename|rollback|clear|disable|unassign|end_allocation|trash|destroy)(_|$)/i';
+const RECORD_LOCK_ACTION_ALLOW = ['update_status', 'update_task_status', 'update_photo'];
+const RECORD_LOCK_SCRIPT_RE = '/^((edit|delete|update)\.php|[a-z0-9_-]+[-_](edit|delete|update)\.php|(edit|delete)[-_][a-z0-9_-]+\.php|toggle-active\.php)$/i';
+
+function recordLockActive() {
+    global $pdo;
+    $u = currentUser();
+    if (!$u || ($u['role'] ?? '') === 'super_admin') { return false; }
+    require_once __DIR__ . '/app-settings.php';
+    if (!($pdo instanceof PDO) || !orgSettingsReady($pdo)) { return true; }
+    return (string)orgSetting($pdo, activeOrgId(), 'records_lock', '1') !== '0';
+}
+
+/** हे पान / ही POST कृती "आधीची नोंद बदलणं-हटवणं" आहे का? */
+function recordLockIsBlocked($scriptPath, $method, array $post) {
+    $dir = basename(dirname($scriptPath));
+    if ($dir === 'account') { return false; }
+    if (preg_match(RECORD_LOCK_SCRIPT_RE, basename($scriptPath))) { return true; }
+    if (strtoupper((string)$method) !== 'POST') { return false; }
+    foreach (['action', 'op', 'do', 'act', 'mode'] as $k) {
+        $v = $post[$k] ?? null;
+        if (is_string($v) && !in_array(strtolower($v), RECORD_LOCK_ACTION_ALLOW, true) && preg_match(RECORD_LOCK_ACTION_RE, $v)) { return true; }
+    }
+    foreach (array_keys($post) as $k) {
+        if (preg_match('/^delete(_[a-z_]*id)?$/i', (string)$k) && ($post[$k] ?? '') !== '') { return true; }
+    }
+    return false;
+}
+
+function recordLockEnforce($rootPath = '') {
+    if (PHP_SAPI === 'cli' || !recordLockActive()) { return; }
+    if (!recordLockIsBlocked($_SERVER['SCRIPT_NAME'] ?? '', $_SERVER['REQUEST_METHOD'] ?? 'GET', $_POST)) { return; }
+    $msg = 'आधीची नोंद बदलण्याचा (Edit) किंवा हटवण्याचा (Delete) अधिकार फक्त Super Admin ला आहे. बदल हवा असल्यास Super Admin ला कळवा.';
+    if (function_exists('logActivity')) { @logActivity('Edit/Delete अडवलं (फक्त Super Admin)', 'security', null, basename($_SERVER['SCRIPT_NAME'] ?? '') . ' ' . (is_string($_POST['action'] ?? null) ? $_POST['action'] : '')); }
+    http_response_code(403);
+    $wantsJson = stripos($_SERVER['HTTP_ACCEPT'] ?? '', 'json') !== false || strtolower($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === 'xmlhttprequest'
+        || stripos($_SERVER['CONTENT_TYPE'] ?? '', 'json') !== false;
+    if ($wantsJson) { header('Content-Type: application/json; charset=utf-8'); echo json_encode(['ok' => false, 'error' => $msg, 'msg' => $msg], JSON_UNESCAPED_UNICODE); exit; }
+    $back = $rootPath . 'index.php';
+    $ref = $_SERVER['HTTP_REFERER'] ?? '';
+    if ($ref && parse_url($ref, PHP_URL_HOST) === ($_SERVER['HTTP_HOST'] ?? '')) { $back = $ref; }
+    echo '<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>फक्त Super Admin</title>'
+        . '<div style="font-family:system-ui,sans-serif;max-width:520px;margin:60px auto;padding:28px;border:1px solid #EAE5DF;border-radius:16px;text-align:center;background:#fff;">'
+        . '<div style="font-size:42px;">🔒</div><h2 style="margin:8px 0 6px;font-size:20px;">फक्त Super Admin</h2>'
+        . '<p style="color:#475069;font-size:14.5px;line-height:1.6;">' . h($msg) . '</p>'
+        . '<a href="' . h($back) . '" style="display:inline-block;margin-top:10px;background:#D9530F;color:#fff;text-decoration:none;padding:9px 20px;border-radius:9px;font-weight:600;">← परत जा</a></div>';
+    exit;
+}
+
+/** आणखी एक Super Admin होऊ शकतो का? — एकच Super Admin नियम ($exceptUserId = आत्ताचा जो आहे तो) */
+function superAdminExistsOtherThan(PDO $pdo, $exceptUserId = 0) {
+    $st = $pdo->prepare("SELECT COUNT(*) FROM users WHERE role = 'super_admin' AND id != ?");
+    $st->execute([(int)$exceptUserId]);
+    return (int)$st->fetchColumn() > 0;
 }
