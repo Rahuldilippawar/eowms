@@ -366,7 +366,7 @@ function weeklyReportEmailHtml(array $d) {
         . $cell((int)($d['tasks']['overdue'] ?? 0), 'मुदतबाह्य Tasks', ($d['tasks']['overdue'] ?? 0) ? '#B42318' : '#137A4B')
         . $cell(weeklyReportMoney($d['spendWeek']), 'खर्च')
         . "</tr></table>"
-        . (!empty($d['ecampus']) ? "<div style='margin-top:12px;font-size:13px;background:#F7F5F2;border-radius:8px;padding:8px 12px;'>🎓 <b>E-Campus:</b> " . (int)$d['ecampus']['overall'] . "% पूर्ण — " . (int)$d['ecampus']['done'] . '/' . (int)$d['ecampus']['work'] . " कामं पूर्ण</div>" : '')
+        . (!empty($d['ecampus']) ? "<div style='margin-top:12px;font-size:13px;background:#F7F5F2;border-radius:8px;padding:8px 12px;'>🎓 <b>E-Campus:</b> " . (int)$d['ecampus']['overall'] . "% पूर्ण — " . (int)$d['ecampus']['done'] . '/' . (int)$d['ecampus']['work'] . " कामं पूर्ण — सविस्तर E-Campus अहवाल सोबतच्या दुसऱ्या PDF मध्ये</div>" : '')
         . ($alerts ? "<div style='font-weight:bold;font-size:14px;margin:16px 0 4px;color:#191C3A;'>लक्ष द्या</div><ul style='padding-left:18px;margin:0;font-size:13px;line-height:1.6;'>$alerts</ul>" : '')
         . ($url ? "<a href='{$url}departments/all.php' style='display:inline-block;margin-top:18px;background:#D9530F;color:#fff;text-decoration:none;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:bold;'>सर्व विभाग Dashboard उघडा</a>" : '')
         . "<p style='font-size:11.5px;color:#8A90AC;margin-top:20px;'>!! आत्मा मालिक !! — हा अहवाल दर सोमवारी आपोआप पाठवला जातो. पत्ते बदलण्यासाठी: E-Admin → अहवाल → साप्ताहिक अहवाल.</p>
@@ -401,8 +401,10 @@ function weeklyReportSend(PDO $pdo, $orgId, ?array $to = null) {
         return ['ok' => false, 'msg' => 'अहवाल/PDF तयार करताना त्रुटी: ' . mb_substr($e->getMessage(), 0, 200), 'sent' => 0];
     }
     $period = weeklyReportMarathiDate($d['period']['start'], false) . ' – ' . weeklyReportMarathiDate($d['period']['end']);
-    $sent = eowmsSendMail($recips, '📊 साप्ताहिक अहवाल — ' . $d['org'] . ' (' . $period . ')', weeklyReportEmailHtml($d),
-        [['name' => weeklyReportFileName($d), 'data' => $pdf, 'type' => 'application/pdf']], $d['org'] . ' — E-Admin');
+    $files = [['name' => weeklyReportFileName($d), 'data' => $pdf, 'type' => 'application/pdf']];
+    require_once __DIR__ . '/ecampus-helpers.php';
+    if ($ec = ecampusReportAttachment($pdo, $orgId, $d['org'])) { $files[] = $ec; } // 🎓 पूर्ण E-Campus अहवाल — वेगळी PDF
+    $sent = eowmsSendMail($recips, '📊 साप्ताहिक अहवाल — ' . $d['org'] . ' (' . $period . ')', weeklyReportEmailHtml($d), $files, $d['org'] . ' — E-Admin');
     $res = ['ok' => $sent > 0, 'msg' => $sent > 0 ? "अहवाल $sent पत्त्यांवर पाठवला" : 'Server वरून Email जाऊ शकला नाही (mail() अयशस्वी)', 'sent' => $sent];
     if ($to === null) {
         try {

@@ -53,4 +53,5 @@ return [
     'एकच असावा' => ['एक ही होना चाहिए', 'should be only one'],
     'जास्तीच्या लोकांचं पद' => ['अतिरिक्त लोगों का पद', 'Change the role of the extra people via'],
     'फक्त Super Admin' => ['केवल Super Admin', 'Super Admin only'],
+    'कामं पूर्ण — सविस्तर E-Campus अहवाल सोबतच्या दुसऱ्या PDF मध्ये' => ['काम पूर्ण — विस्तृत E-Campus रिपोर्ट साथ की दूसरी PDF में', 'tasks done — detailed E-Campus report in the second attached PDF'],
 ];
