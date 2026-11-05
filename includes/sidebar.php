@@ -45,9 +45,9 @@ if ($restrictedModulesForSidebar !== null) {
 
         <div style="margin:14px 0;border-top:1px solid rgba(255,255,255,.08);"></div>
 
-        <?php require_once __DIR__ . '/ecampus-helpers.php'; if (ecampusReady($pdo) && ecampusMyTaskCount($pdo, currentUser()['id'] ?? 0)): ?>
+        <?php require_once __DIR__ . '/ecampus-helpers.php'; if (ecampusReady($pdo) && (ecampusMyTaskCount($pdo, currentUser()['id'] ?? 0) || ecampusCanViewAll())): ?>
         <a href="<?= $rp ?>ecampus/index.php" class="tree-node">
-          <i class="fa-solid fa-laptop-file fa-fw"></i><span>माझी E-Campus कामं</span>
+          <i class="fa-solid fa-laptop-file fa-fw"></i><span><?= ecampusCanViewAll() ? 'E-Campus Dashboard' : 'माझी E-Campus कामं' ?></span>
         </a>
         <?php endif; ?>
         <a href="<?= $rp ?>staff/profile.php" class="tree-node">
@@ -223,12 +223,14 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
       require_once __DIR__ . '/ecampus-helpers.php';
       $__ecMine = ecampusReady($pdo) ? ecampusMyTaskCount($pdo, $user['id']) : 0;
     ?>
-    <?php if (ecampusReady($pdo) && isManagementOrAbove()): ?>
+    <?php $__ecAll = ecampusReady($pdo) && ecampusCanViewAll(); ?>
+    <?php if ($__ecAll): ?>
     <a href="<?= $rp ?>ecampus/index.php" class="tree-node <?= $currentDir === 'ecampus' && $currentPage !== 'my.php' ? 'active' : '' ?>">
       <i class="fa-solid fa-graduation-cap fa-fw"></i><span>E-Campus Dashboard</span>
+      <?= !isManagementOrAbove() && $__ecMine ? navCount($__ecMine, 'amber') : '' ?>
     </a>
     <?php endif; ?>
-    <?php if ($__ecMine && !isManagementOrAbove()): ?>
+    <?php if ($__ecMine && !$__ecAll): ?>
     <a href="<?= $rp ?>ecampus/index.php" class="tree-node <?= $currentDir === 'ecampus' ? 'active' : '' ?>">
       <i class="fa-solid fa-laptop-file fa-fw"></i><span>माझी E-Campus कामं</span>
       <?= navCount($__ecMine, 'amber') ?>

@@ -26,7 +26,26 @@ function ecampusPeriodLabel($ym) {
 }
 
 function ecampusCanManage() { return hasRole('super_admin'); }
-function ecampusCanViewAll() { return isManagementOrAbove() || hasRole('super_admin'); }
+/**
+ * Centralized E-Campus Dashboard कोणाला दिसतो — Super Admin "कामांचं वाटप" पानावर ठरवतो (org setting ecampus_visibility):
+ *  all = संस्थेतले सगळे कर्मचारी (फक्त पाहणं; प्रत्येकजण फक्त स्वतःचीच ओळ भरतो) · assigned = ज्यांना E-Campus काम नेमलंय ते · management = फक्त Management
+ */
+const ECAMPUS_VISIBILITY = ['all', 'assigned', 'management'];
+function ecampusVisibility() {
+    global $pdo;
+    require_once __DIR__ . '/app-settings.php';
+    if (!($pdo instanceof PDO) || !orgSettingsReady($pdo)) { return 'all'; }
+    $v = (string)orgSetting($pdo, activeOrgId(), 'ecampus_visibility', 'all');
+    return in_array($v, ECAMPUS_VISIBILITY, true) ? $v : 'all';
+}
+function ecampusCanViewAll() {
+    global $pdo;
+    if (isManagementOrAbove() || hasRole('super_admin')) { return true; }
+    $v = ecampusVisibility();
+    if ($v === 'all') { return true; }
+    if ($v === 'assigned') { return ($pdo instanceof PDO) && ecampusMyTaskCount($pdo, currentUser()['id'] ?? 0) > 0; }
+    return false;
+}
 
 function ecampusMyTaskCount(PDO $pdo, $userId) {
     try {

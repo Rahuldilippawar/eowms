@@ -78,6 +78,16 @@ $parseImport = function (array $rows) use ($matchStaff) {
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $a = $_POST['action'] ?? '';
+    if ($a === 'visibility') {
+        require_once __DIR__ . '/../includes/app-settings.php';
+        $v = $_POST['visibility'] ?? '';
+        if (in_array($v, ECAMPUS_VISIBILITY, true) && orgSettingsReady($pdo)) {
+            orgSettingSet($pdo, $orgId, 'ecampus_visibility', $v);
+            logActivity('ecampus_visibility', 'ecampus', null, 'E-Campus Dashboard कोणाला दिसतो: ' . $v);
+            $back('E-Campus Dashboard ची दृश्यता जतन झाली.');
+        }
+        $back('दृश्यता जतन झाली नाही — Database Update चालवा.');
+    }
     if ($a === 'save') {
         $id = (int)($_POST['id'] ?? 0);
         $uid = (int)($_POST['user_id'] ?? 0);
@@ -167,8 +177,18 @@ require_once __DIR__ . '/../includes/header.php';
   <div class="page-title mb-0">🎓 E-Campus — कामांचं वाटप</div>
   <a href="index.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13px;padding:8px 14px;"><i class="fa-solid fa-chart-pie me-1"></i>Dashboard</a>
 </div>
-<p style="font-size:13px;color:var(--text-dim);margin:4px 0 14px;">ज्या कर्मचाऱ्याला काम नेमाल, फक्त त्यालाच ते "माझी E-Campus कामं" मध्ये दिसेल. तो दर महिन्याला % आणि नोंद भरेल.</p>
+<p style="font-size:13px;color:var(--text-dim);margin:4px 0 14px;">ज्या कर्मचाऱ्याला काम नेमाल, तोच त्या कामाचे % आणि नोंद दर महिन्याला भरेल. पूर्ण centralized अहवाल कोणाला दिसावा ते खाली ठरवा.</p>
 <?php if ($flash): ?><div class="alert alert-success"><?= h($flash) ?></div><?php endif; ?>
+<?php $__vis = ecampusVisibility(); ?>
+<form method="POST" class="panel mb-3" style="padding:12px 18px;display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;">
+  <input type="hidden" name="action" value="visibility">
+  <div style="font-weight:700;font-size:13.5px;">👁️ Centralized E-Campus Dashboard कोणाला दिसावा?</div>
+  <?php foreach (['all' => '🌐 सर्व कर्मचारी', 'assigned' => '🎓 E-Campus काम नेमलेले कर्मचारी', 'management' => '🔒 फक्त Management'] as $k => $lbl): ?>
+    <label style="font-size:13px;display:inline-flex;gap:6px;align-items:center;cursor:pointer;"><input type="radio" name="visibility" value="<?= $k ?>" <?= $__vis === $k ? 'checked' : '' ?> style="accent-color:var(--rail);"> <?= $lbl ?></label>
+  <?php endforeach; ?>
+  <button class="btn btn-sm" style="background:var(--rail);color:#fff;border-radius:8px;font-size:12.5px;">जतन करा</button>
+  <div style="flex-basis:100%;font-size:11.5px;color:var(--text-dim);">सगळ्यांना पूर्ण अहवाल, charts आणि PDF दिसतात; पण % आणि नोंद प्रत्येकजण फक्त स्वतःच्याच कामाची भरू शकतो.</div>
+</form>
 <?php if ($error): ?><div class="alert alert-danger"><?= h($error) ?></div><?php endif; ?>
 
 <?php if ($importItems !== null): ?>
