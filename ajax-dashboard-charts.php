@@ -8,7 +8,9 @@ header('Content-Type: application/json; charset=utf-8');
 
 $user = currentUser();
 $orgId = activeOrgId();
-$isMgmtView = isManagementOrAbove();
+require_once __DIR__ . '/includes/campus-heads.php';
+$scopeDepts = dashboardScopeDeptIds($pdo); // Dashboard प्रमाणेच — संस्था / Campus प्रमुख / विभाग
+$isMgmtView = $scopeDepts === null;
 $myDeptId = (int)($user['department_id'] ?? 0);
 // Session लगेच सोडतो — Charts लोड होत असताना त्याच User ची इतर पानं अडकू नयेत
 session_write_close();
@@ -32,8 +34,7 @@ $days = (int)$from->diff($to)->days + 1;
 // ३१ दिवसांपर्यंत रोजचं, ६ महिन्यांपर्यंत आठवड्याचं, त्यापुढे महिन्याचं विभाजन
 $granularity = $days <= 31 ? 'day' : ($days <= 186 ? 'week' : 'month');
 
-$deptSql = $isMgmtView ? '' : ' AND department_id = ?';
-$deptParams = $isMgmtView ? [] : [$myDeptId];
+[$deptSql, $deptParams] = scopeInSql('department_id', $scopeDepts);
 
 $out = [
     'from' => $fromStr, 'to' => $toStr, 'days' => $days, 'granularity' => $granularity,

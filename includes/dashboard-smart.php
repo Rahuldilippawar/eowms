@@ -115,8 +115,9 @@ try {
 } catch (PDOException $e) {}
 
 // ===================== 3. नूतनीकरण =====================
-$renScopeSql = 'r.organization_id = ? AND r.status <> \'inactive\'' . ($isMgmtView ? '' : ' AND r.department_id = ?');
-$renScopeParams = $isMgmtView ? [$orgId] : [$orgId, $myDeptId];
+[$__rs, $__rp] = scopeInSql('r.department_id', $scopeDepts ?? null);
+$renScopeSql = 'r.organization_id = ? AND r.status <> \'inactive\'' . $__rs;
+$renScopeParams = array_merge([$orgId], $__rp);
 try {
     $st = $pdo->prepare("SELECT
             SUM(r.expiry_date < CURDATE()) expired,

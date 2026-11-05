@@ -14,21 +14,22 @@ $rootPath = '';
 require_once __DIR__ . '/includes/header.php';
 
 $orgId = activeOrgId();
-$isMgmtView = isManagementOrAbove();
-
-// विभाग-प्रमुख/कर्मचारी यांना फक्त त्यांच्याच विभागाचे आकडे दिसावेत —
-// Management ला मात्र संपूर्ण संस्थेचे. myDeptId वापरून सगळ्या Queries
-// खाली त्यानुसार Scope केल्या आहेत.
+// व्याप: Management / केंद्रीय प्रमुख → संपूर्ण संस्था; 🏛️ Campus प्रमुख (Principal/Manager) → त्याचा Campus;
+// विभाग-प्रमुख/कर्मचारी → स्वतःचा विभाग. सगळ्या Queries खाली $scopeDepts वरून Scope केल्या आहेत.
+require_once __DIR__ . '/includes/campus-heads.php';
+$scopeDepts = dashboardScopeDeptIds($pdo);
+$isMgmtView = $scopeDepts === null;
+$headInfo = campusHeadInfo($pdo, $user['id']);
+$isCampusHeadView = !$isMgmtView && !empty($headInfo['campuses']);
 $myDeptId = $user['department_id'] ?? 0;
-$deptScopeSql = $isMgmtView ? "" : " AND department_id = ?";
-$deptScopeParams = $isMgmtView ? [] : [$myDeptId];
+[$deptScopeSql, $deptScopeParams] = scopeInSql('department_id', $scopeDepts);
 
 $stmt = $pdo->prepare("SELECT COUNT(*) c FROM work_records WHERE organization_id=? AND work_date=CURDATE()$deptScopeSql");
 $stmt->execute(array_merge([$orgId], $deptScopeParams));
 $todayReports = $stmt->fetch()['c'];
 
-$stmt = $pdo->prepare("SELECT COUNT(*) c FROM users WHERE organization_id=? AND is_active=1" . ($isMgmtView ? "" : " AND department_id = ?"));
-$stmt->execute($isMgmtView ? [$orgId] : [$orgId, $myDeptId]);
+$stmt = $pdo->prepare("SELECT COUNT(*) c FROM users WHERE organization_id=? AND is_active=1$deptScopeSql");
+$stmt->execute(array_merge([$orgId], $deptScopeParams));
 $staffCount = $stmt->fetch()['c'];
 
 $stmt = $pdo->prepare("SELECT COUNT(*) c FROM work_records WHERE organization_id=? AND work_date=CURDATE() AND status='completed'$deptScopeSql");
@@ -72,9 +73,9 @@ if ($isMgmtView) {
     $stmt = $pdo->prepare("
         SELECT d.*, u.name AS hod_name, c.name AS campus_name, c.college_type
         FROM departments d LEFT JOIN users u ON u.id = d.hod_id LEFT JOIN campuses c ON c.id = d.campus_id
-        WHERE d.organization_id=? AND d.is_active=1 AND d.id = ?
+        WHERE d.organization_id=? AND d.is_active=1" . scopeInSql('d.id', $scopeDepts)[0] . " ORDER BY c.name, d.name_local
     ");
-    $stmt->execute([$orgId, $user['department_id'] ?? 0]);
+    $stmt->execute(array_merge([$orgId], scopeInSql('d.id', $scopeDepts)[1]));
 }
 $departments = $stmt->fetchAll();
 
@@ -111,7 +112,7 @@ try {
         WHERE sa.organization_id = ? AND sa.attendance_date = CURDATE() AND (sa.status = 'absent' OR sa.is_late = 1)
     ";
     $taParams = [$orgId];
-    if (!$isMgmtView) { $todayAttSql .= " AND u.department_id = ?"; $taParams[] = $myDeptId; }
+    if (!$isMgmtView) { [$__s, $__p] = scopeInSql('u.department_id', $scopeDepts); $todayAttSql .= $__s; $taParams = array_merge($taParams, $__p); }
     $todayAttSql .= " ORDER BY sa.status = 'absent' DESC, u.name LIMIT 10";
     $todayAttendanceStmt = $pdo->prepare($todayAttSql);
     $todayAttendanceStmt->execute($taParams);
@@ -127,13 +128,27 @@ require __DIR__ . '/includes/dashboard-smart.php';
 // Campus-निहाय संपूर्ण विभाजन — पूर्वी "केंद्रीकृत Dashboard" या वेगळ्या
 // पानावर होतं, आता Command Center चाच एक Section (फक्त manage_campuses
 // Access असलेल्यांनाच खाली दिसेल).
-$showCampusBreakdown = hasPermission('manage_campuses');
+// Access नुसार: Management / केंद्रीय प्रमुख / Super Admin → सर्व Campus; 🏛️ Campus प्रमुख → फक्त त्याचं College
+$showCampusBreakdown = $isMgmtView || hasPermission('manage_campuses') || $isCampusHeadView;
+$campusOnlyMine = $isCampusHeadView && !hasPermission('manage_campuses');
 if ($showCampusBreakdown) {
     require_once __DIR__ . '/includes/dashboard-helpers.php';
 
-    $campusStmt = $pdo->prepare("SELECT * FROM campuses WHERE organization_id = ? AND is_active = 1 AND (college_type IS NULL OR college_type != 'Trust HQ') ORDER BY name");
-    $campusStmt->execute([$orgId]);
+    if ($campusOnlyMine) {
+        $__ids = array_keys($headInfo['campuses']);
+        $campusStmt = $pdo->prepare("SELECT * FROM campuses WHERE organization_id = ? AND is_active = 1 AND id IN (" . implode(',', array_fill(0, count($__ids), '?')) . ") ORDER BY name");
+        $campusStmt->execute(array_merge([$orgId], $__ids));
+    } else {
+        $campusStmt = $pdo->prepare("SELECT * FROM campuses WHERE organization_id = ? AND is_active = 1 AND (college_type IS NULL OR college_type != 'Trust HQ') ORDER BY name");
+        $campusStmt->execute([$orgId]);
+    }
     $allCampuses = $campusStmt->fetchAll();
+    $campusHeadNames = [];
+    if (campusHeadsReady($pdo)) {
+        $__hs = $pdo->prepare("SELECT h.campus_id, u.name, h.title FROM campus_heads h JOIN users u ON u.id = h.user_id WHERE h.organization_id = ? AND h.campus_id IS NOT NULL ORDER BY u.name");
+        $__hs->execute([$orgId]);
+        foreach ($__hs->fetchAll() as $__r) { $campusHeadNames[(int)$__r['campus_id']][] = $__r['name'] . ($__r['title'] ? ' (' . $__r['title'] . ')' : ''); }
+    }
 
     $collegeTypeLabels = ['Primary School' => 'प्राथमिक शाळा', 'Secondary School' => 'माध्यमिक शाळा', 'Junior College' => 'कनिष्ठ महाविद्यालय', 'Arts' => 'कला महाविद्यालय', 'Science' => 'विज्ञान महाविद्यालय', 'Commerce' => 'वाणिज्य महाविद्यालय', 'Engineering' => 'अभियांत्रिकी महाविद्यालय', 'Pharmacy' => 'औषधनिर्माणशास्त्र महाविद्यालय', 'Education' => 'शिक्षणशास्त्र महाविद्यालय', 'Law' => 'विधी महाविद्यालय', 'Medical' => 'वैद्यकीय महाविद्यालय', 'Polytechnic' => 'Polytechnic', 'Other' => ''];
 
@@ -172,10 +187,27 @@ if ($showCampusBreakdown) {
   </div>
 </div>
 
+<?php if ($headInfo['central'] || $headInfo['campuses']): ?>
+<!-- 🏛️ Campus प्रमुख / केंद्रीय प्रमुख -->
+<div class="panel mt-3" style="padding:14px 18px;display:flex;gap:14px;align-items:center;flex-wrap:wrap;border-left:4px solid var(--rail);">
+  <div style="font-size:30px;line-height:1;">🏛️</div>
+  <div style="flex:1;min-width:220px;">
+    <?php if ($headInfo['central']): ?>
+      <div style="font-weight:800;font-size:15px;">सर्व Campus चे केंद्रीय प्रमुख<?= $headInfo['central_title'] ? ' — ' . h($headInfo['central_title']) : '' ?></div>
+      <div style="font-size:12.5px;color:var(--text-dim);">या Dashboard वर संपूर्ण संस्थेचे आकडे; प्रत्येक Campus चं वेगळं चित्र "सर्व Campus Dashboard" मध्ये.</div>
+    <?php else: ?>
+      <div style="font-weight:800;font-size:15px;"><?= h(implode(' · ', array_map(fn($c) => ($c['title'] ? $c['title'] . ' — ' : 'Campus प्रमुख — ') . $c['name'], $headInfo['campuses']))) ?></div>
+      <div style="font-size:12.5px;color:var(--text-dim);">या Dashboard वर तुमच्या Campus चे सगळे विभाग, कर्मचारी, कामं आणि नूतनीकरण.</div>
+    <?php endif; ?>
+  </div>
+  <button type="button" class="btn" onclick="var b=document.getElementById('dashTabCampusBtn'); if(b){ b.click(); }" style="border:1px solid var(--rail);color:var(--rail);border-radius:9px;font-size:12.5px;padding:7px 14px;font-weight:600;"><i class="fa-solid fa-gauge-high me-1"></i><?= $headInfo['central'] ? 'सर्व Campus Dashboard' : 'माझा College Dashboard' ?></button>
+</div>
+<?php endif; ?>
+
 <?php if ($showCampusBreakdown): ?>
 <div class="dash-tabs" role="tablist">
-  <button type="button" class="dash-tab active" onclick="eowmsSwitchDashTab('overview', this)">📋 माझं/संस्थेचं दृश्य</button>
-  <button type="button" class="dash-tab" onclick="eowmsSwitchDashTab('campus', this)">🏛️ Campus-निहाय विभाजन</button>
+  <button type="button" class="dash-tab active" onclick="eowmsSwitchDashTab('overview', this)"><?= $campusOnlyMine ? '📋 माझ्या Campus चं दृश्य' : '📋 माझं/संस्थेचं दृश्य' ?></button>
+  <button type="button" class="dash-tab" id="dashTabCampusBtn" onclick="eowmsSwitchDashTab('campus', this)"><?= $campusOnlyMine ? '🏛️ माझा College Dashboard' : '🏛️ सर्व Campus Dashboard' ?></button>
 </div>
 <style>
   .dash-tabs{display:flex;gap:6px;margin:18px 0 22px;border-bottom:1px solid var(--line);}
@@ -232,7 +264,7 @@ function eowmsSwitchDashTab(which, btn) {
   <div class="col-6 col-lg-3">
     <div class="kpi-card">
       <div class="d-flex justify-content-between align-items-start">
-        <span class="kpi-label"><?= $isMgmtView ? h(t('s54')) : 'माझा विभाग' ?></span>
+        <span class="kpi-label"><?= $isMgmtView ? h(t('s54')) : ($isCampusHeadView ? 'Campus चे विभाग' : 'माझा विभाग') ?></span>
         <div class="kpi-icon" style="background:var(--rail-soft);color:var(--rail);"><i class="fa-solid fa-building"></i></div>
       </div>
       <div class="kpi-value"><?= count($departments) ?></div>
@@ -282,7 +314,7 @@ function eowmsSwitchDashTab(which, btn) {
   <div class="panel-head dash-an-head">
     <div>
       <div class="title">📊 कामाचं विश्लेषण</div>
-      <div class="sub" id="dashRangeLabel"><?= $isMgmtView ? 'संपूर्ण संस्था' : 'माझा विभाग' ?> — कालावधी निवडा</div>
+      <div class="sub" id="dashRangeLabel"><?= $isMgmtView ? 'संपूर्ण संस्था' : ($isCampusHeadView ? '🏛️ ' . h(implode(', ', array_column($headInfo['campuses'], 'name'))) : 'माझा विभाग') ?> — कालावधी निवडा</div>
     </div>
     <div class="dash-range" role="group" aria-label="कालावधी">
       <button type="button" data-range="today">आज</button>
@@ -359,13 +391,18 @@ function eowmsSwitchDashTab(which, btn) {
 
 <?php if ($showCampusBreakdown): ?>
 <div id="dashTabCampus" style="display:none;">
-  <div class="page-title mb-1">🏛️ Campus-निहाय संपूर्ण विभाजन</div>
-  <p style="font-size:12.5px;color:var(--text-dim);margin-bottom:20px;">वरच्या Tab मधलं चित्र संपूर्ण संस्थेचं होतं — इथे तेच, प्रत्येक Trust-कार्यालय आणि College/School साठी स्वतंत्रपणे.</p>
+  <?php if ($campusOnlyMine): ?>
+  <div class="page-title mb-1">🏛️ माझा College Dashboard</div>
+  <p style="font-size:12.5px;color:var(--text-dim);margin-bottom:20px;">तुम्ही प्रमुख असलेल्या Campus/College चे सगळे विभाग, कर्मचारी, Tasks, नूतनीकरण आणि पत्रव्यवहार.</p>
+  <?php else: ?>
+  <div class="page-title mb-1">🏛️ सर्व Campus Dashboard</div>
+  <p style="font-size:12.5px;color:var(--text-dim);margin-bottom:20px;">संपूर्ण संस्थेचं एकत्रित चित्र, आणि प्रत्येक Trust-कार्यालय व College/School साठी स्वतंत्रपणे.</p>
 
   <?php renderDashboardEntityCard('📊 संपूर्ण Trust — Overall', h(activeOrgName()) . ' अंतर्गत सर्व School/College + Trust-स्तरीय एकत्रित', $overallMetrics, 'overallChart', 'var(--ink)'); ?>
   <?php renderDashboardEntityCard('🏛️ Trust-स्तरीय (मुख्य कार्यालय)', 'Trust Office व केंद्रीय विभाग', $trustMetrics, 'trustChart', 'linear-gradient(135deg, #10162B, #1B3A5C)'); ?>
+  <?php endif; ?>
   <?php foreach ($collegeRows as $i => $row): $c = $row['campus']; ?>
-    <?php renderDashboardEntityCard('🏫 ' . h($c['name']), h($collegeTypeLabels[$c['college_type']] ?? '') . ($c['principal_name'] ? ' · प्राचार्य: ' . h($c['principal_name']) : ''), $row, 'college' . $i . 'Chart', 'linear-gradient(135deg, #10162B, #0F5E58)'); ?>
+    <?php $__hn = $campusHeadNames[(int)$c['id']] ?? []; renderDashboardEntityCard('🏫 ' . h($c['name']), h($collegeTypeLabels[$c['college_type']] ?? '') . ($__hn ? ' · 🏛️ प्रमुख: ' . h(implode(', ', $__hn)) : ($c['principal_name'] ? ' · प्राचार्य: ' . h($c['principal_name']) : '')), $row, 'college' . $i . 'Chart', 'linear-gradient(135deg, #10162B, #0F5E58)'); ?>
   <?php endforeach; ?>
   <?php if (empty($collegeRows)): ?>
     <div class="panel" style="padding:30px;text-align:center;color:var(--text-dim);">अजून कोणतंही College/School जोडलेलं नाही</div>

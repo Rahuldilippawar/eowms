@@ -1,4 +1,11 @@
 <?php
+// 🏛️ Campus प्रमुख नेमणूक (केंद्रीय प्रमुख इथे; प्रत्येक Campus चा प्रमुख त्याच्या Edit पानावर) — फक्त Super Admin
+require_once __DIR__ . '/../includes/auth.php';
+requireLogin('../');
+require_once __DIR__ . '/../includes/campus-heads.php';
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($msg = campusHeadsHandlePost($pdo, activeOrgId())) !== null) {
+    $_SESSION['flash'] = $msg; header('Location: index.php'); exit;
+}
 $pageTitle = 'कॅम्पस व्यवस्थापन';
 $rootPath = '../';
 require_once __DIR__ . '/../includes/header.php';
@@ -15,6 +22,13 @@ $stmt = $pdo->prepare("
 ");
 $stmt->execute([activeOrgId()]);
 $campuses = $stmt->fetchAll();
+// 🏛️ नेमलेले Campus प्रमुख (Principal / Manager)
+$headNames = [];
+if (campusHeadsReady($pdo)) {
+    $hs = $pdo->prepare("SELECT h.campus_id, u.name, h.title FROM campus_heads h JOIN users u ON u.id = h.user_id WHERE h.organization_id = ? ORDER BY u.name");
+    $hs->execute([activeOrgId()]);
+    foreach ($hs->fetchAll() as $hr) { $headNames[$hr['campus_id'] === null ? 'all' : (int)$hr['campus_id']][] = $hr['name'] . ($hr['title'] ? ' (' . $hr['title'] . ')' : ''); }
+}
 
 // 🎓 NAAC / UGC मान्यता — मुदत संपली / ९० दिवसांत संपते
 $today = date('Y-m-d'); $soon = date('Y-m-d', strtotime('+90 days'));
@@ -60,6 +74,7 @@ usort($alerts, fn($a, $b) => array_search($a[0], ['bad', 'warn', 'info']) <=> ar
     <a href="compare.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13.5px;padding:9px 18px;">
       <i class="fa-solid fa-chart-column me-1"></i>College तुलना
     </a>
+
     <a href="create.php" class="btn" style="background:var(--rail);color:#fff;border-radius:9px;font-size:13.5px;padding:9px 20px;font-weight:600;">
       <i class="fa-solid fa-plus me-1"></i>नवीन कॅम्पस
     </a>
@@ -75,6 +90,10 @@ smartTiles([
     ['label' => 'प्रमुख नोंद नाही', 'value' => count($noPrincipal), 'sub' => 'प्राचार्य / प्रमुखाचे नाव', 'tone' => $noPrincipal ? 'warn' : 'ok'],
 ]);
 smartAlerts(array_slice($alerts, 0, 8));
+if (hasRole('super_admin')) {
+    echo campusHeadsPanel($pdo, activeOrgId(), null, '🌐 सर्व Campus — केंद्रीय प्रमुख (Centralized Head)',
+        'यांना Command Center मध्ये सर्व Campus चा Dashboard दिसतो. प्रत्येक College/School चा प्रमुख (Principal / Manager) त्या Campus च्या <b>Edit</b> मधून नेमा.', 'पद (उदा. Director / CEO)');
+}
 ?>
 
 <div class="panel mt-3" id="campusTable">
@@ -93,6 +112,7 @@ smartAlerts(array_slice($alerts, 0, 8));
           <td style="font-weight:500;">
             <?= h($campus['name']) ?>
             <?php if ($campus['principal_name']): ?><div style="font-size:10.5px;color:var(--text-dim);font-weight:400;">प्राचार्य: <?= h($campus['principal_name']) ?></div><?php endif; ?>
+            <?php if (!empty($headNames[(int)$campus['id']])): ?><div style="font-size:11px;color:var(--rail);font-weight:600;">🏛️ प्रमुख: <?= h(implode(', ', $headNames[(int)$campus['id']])) ?></div><?php endif; ?>
             <?php if ($campus['naac_grade']): ?><span style="font-size:10px;background:var(--rail-soft);color:var(--rail);padding:1px 7px;border-radius:6px;font-weight:600;">NAAC <?= h($campus['naac_grade']) ?></span><?php endif; ?>
           </td>
           <td class="font-mono"><?= h($campus['code']) ?></td>
