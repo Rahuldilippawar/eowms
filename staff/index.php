@@ -257,7 +257,7 @@ try {
         <tr><td colspan="7" style="text-align:center;color:var(--text-dim);padding:24px;"><?= h(t('s254')) ?></td></tr>
       <?php endif; ?>
       <?php foreach ($staffList as $person): ?>
-        <tr style="cursor:pointer;" onclick="window.location='profile.php?id=<?= $person['id'] ?>'">
+        <tr style="cursor:pointer;" onclick="if (!event.target.closest('button, a, input, form, .modal')) window.location='profile.php?id=<?= $person['id'] ?>'">
           <td style="font-weight:500;">
             <div class="d-flex align-items-center gap-2">
               <span class="font-mono" style="width:28px;height:28px;border-radius:7px;background:var(--ink-soft);color:#fff;font-size:11px;display:flex;align-items:center;justify-content:center;font-weight:600;"><?= h(mb_substr($person['name'], 0, 2)) ?></span>
@@ -303,8 +303,9 @@ try {
                     <i class="fa-solid fa-triangle-exclamation me-1"></i>'<?= h($person['name']) ?>' कायमचे डिलीट करायचे?
                   </div>
                   <p style="font-size:13px;color:var(--text-dim);"><?= h(t('s256')) ?></p>
-                  <label class="form-label-custom"><?= h(t('s257')) ?> <span class="font-mono" style="color:var(--rose);"><?= h($person['name']) ?></span></label>
-                  <input type="text" name="confirm_name" class="form-control-custom" required>
+                  <div style="font-size:12.5px;background:var(--canvas);border-radius:8px;padding:8px 10px;margin-bottom:10px;">त्यांचा Login, हजेरी, रजा, कामाच्या नोंदी, Tasks, E-Campus कामं, Campus प्रमुख पद आणि फोटो — सगळं कायमचं हटेल. फक्त पूर्वीच्या कामाचा इतिहास ठेवायचा असेल तर Delete ऐवजी <b>Edit → निष्क्रिय</b> करा.</div>
+                  <label class="form-label-custom"><?= h(t('s257')) ?> <span class="font-mono" style="color:var(--rose);"><?= h($person['name']) ?></span> <span style="font-weight:400;">(किंवा <b>हटवा</b>)</span></label>
+                  <input type="text" name="confirm_name" class="form-control-custom" autocomplete="off" required>
                 </div>
                 <div class="modal-footer" style="border-top:1px solid var(--line);">
                   <button type="button" class="btn btn-sm" data-bs-dismiss="modal" style="border:1px solid var(--line);border-radius:7px;"><?= h(t('s3')) ?></button>
