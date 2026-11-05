@@ -2,6 +2,7 @@
 $pageTitle = 'कर्मचारी संपादित करा';
 $rootPath = '../';
 require_once __DIR__ . '/../includes/header.php';
+require_once __DIR__ . '/../includes/staff-dept-picker.php';
 requireRole(['super_admin'], '../');
 
 $staffId = (int)($_GET['id'] ?? 0);
@@ -124,38 +125,7 @@ try {
       </div>
 
 
-      <?php if (count($campusesForCascade) > 1): ?>
-        <div class="col-md-6">
-          <label class="form-label-custom">College/School</label>
-          <select id="campusSelect" class="form-select-custom" onchange="loadDeptsCascade_stfEdit(this.value)">
-            <?php foreach ($campusesForCascade as $c): ?><option value="<?= $c['id'] ?>" <?= (int)$c['id'] === (int)($staffMember['campus_id'] ?? 0) ? 'selected' : '' ?>><?= h($c['name']) ?></option><?php endforeach; ?>
-          </select>
-        </div>
-      <?php endif; ?>
-      <div class="col-md-6">
-        <label class="form-label-custom"><?= h(t('s1')) ?></label>
-        <select name="department_id" id="departmentSelect" class="form-select-custom">
-          <option value="">— विभाग नाही (फक्त Management पदांसाठी) —</option>
-          <?php foreach ($departments as $dept): ?>
-            <option value="<?= $dept['id'] ?>" <?= (int)$staffMember['department_id'] === (int)$dept['id'] ? 'selected' : '' ?>><?= h($dept['name_local'] ?: $dept['name']) ?></option>
-          <?php endforeach; ?>
-        </select>
-      </div>
-      <?php if (count($campusesForCascade) > 1): ?>
-      <script>
-      function loadDeptsCascade_stfEdit(campusId) {
-        const sel = document.getElementById('departmentSelect');
-        if (!campusId) return;
-        sel.disabled = true;
-        fetch('../ajax-cascade.php?action=departments_for_campus&campus_id=' + campusId)
-          .then(r => r.json()).then(data => {
-            sel.innerHTML = '<option value="">— विभाग नाही (फक्त Management पदांसाठी) —</option>';
-            (data.departments || []).forEach(d => { const o = document.createElement('option'); o.value = d.id; o.textContent = d.name; sel.appendChild(o); });
-            sel.disabled = false;
-          });
-      }
-      </script>
-      <?php endif; ?>
+      <?= staffDeptPicker($pdo, activeOrgId(), $staffMember['campus_id'] !== null ? (int)$staffMember['campus_id'] : null, (int)$staffMember['department_id'], 'col-md-6') ?>
       <div class="col-md-6">
         <label class="form-label-custom"><?= h(t('s32')) ?></label>
         <select name="role" class="form-select-custom" required>
