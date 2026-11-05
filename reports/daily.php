@@ -19,7 +19,9 @@ if (isset($_GET['pdf'])) {
     csrfStopOutputRewrite();
     while (ob_get_level()) { ob_end_clean(); }
     header('Content-Type: application/pdf');
-    header('Content-Disposition: ' . (($_GET['pdf'] ?? '') === 'dl' ? 'attachment' : 'inline') . '; filename="' . dailyReportFileName($D) . '"');
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    header('X-LiteSpeed-Cache-Control: no-cache');
+    header('Content-Disposition: ' . (($_GET['pdf'] ?? '') === 'dl' ? 'attachment' : 'inline') . '; filename="' . preg_replace('/\.pdf$/i', '', dailyReportFileName($D)) . '-' . date('His') . '.pdf"');
     header('Content-Length: ' . strlen($pdf));
     echo $pdf;
     exit;
@@ -94,8 +96,8 @@ require_once __DIR__ . '/../includes/smart-insights.php';
     <p>सगळ्या Modules चा दिवसभराचा हिशोब — Charts सह PDF<?= $enabled ? ', रोज ' . h(date('g A', mktime($hour, 0))) . ' नंतर Management ला Email वर' : ' (आपोआप पाठवणं सध्या बंद)' ?>.</p>
   </div>
   <div class="d-flex gap-2 flex-wrap">
-    <a class="dr-btn pri" href="?date=<?= h($date) ?>&pdf=1" target="_blank" rel="noopener"><i class="fa-solid fa-file-pdf"></i> PDF पाहा</a>
-    <a class="dr-btn ghost" href="?date=<?= h($date) ?>&pdf=dl"><i class="fa-solid fa-download"></i> Download</a>
+    <a class="dr-btn pri" href="?date=<?= h($date) ?>&pdf=1&v=<?= time() ?>" target="_blank" rel="noopener"><i class="fa-solid fa-file-pdf"></i> PDF पाहा</a>
+    <a class="dr-btn ghost" href="?date=<?= h($date) ?>&pdf=dl&v=<?= time() ?>"><i class="fa-solid fa-download"></i> Download</a>
   </div>
 </div>
 

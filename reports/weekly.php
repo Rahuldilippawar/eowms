@@ -21,7 +21,9 @@ if (isset($_GET['pdf'])) {
     csrfStopOutputRewrite();
     while (ob_get_level()) { ob_end_clean(); }
     header('Content-Type: application/pdf');
-    header('Content-Disposition: ' . (($_GET['pdf'] ?? '') === 'dl' ? 'attachment' : 'inline') . '; filename="' . weeklyReportFileName($d) . '"');
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    header('X-LiteSpeed-Cache-Control: no-cache');
+    header('Content-Disposition: ' . (($_GET['pdf'] ?? '') === 'dl' ? 'attachment' : 'inline') . '; filename="' . preg_replace('/\.pdf$/i', '', weeklyReportFileName($d)) . '-' . date('His') . '.pdf"');
     header('Content-Length: ' . strlen($pdf));
     echo $pdf;
     exit;
@@ -104,8 +106,8 @@ require_once __DIR__ . '/../includes/smart-insights.php';
     <p>दर सोमवारी सकाळी हाच अहवाल PDF सह Management ला Email वर जातो<?= $enabled ? '' : ' (सध्या बंद)' ?>.</p>
   </div>
   <div class="btns">
-    <a class="wr-btn pri" href="?end=<?= h($period['end']) ?>&pdf=1" target="_blank" rel="noopener"><i class="fa-solid fa-file-pdf"></i> PDF पाहा</a>
-    <a class="wr-btn ghost" href="?end=<?= h($period['end']) ?>&pdf=dl"><i class="fa-solid fa-download"></i> Download</a>
+    <a class="wr-btn pri" href="?end=<?= h($period['end']) ?>&pdf=1&v=<?= time() ?>" target="_blank" rel="noopener"><i class="fa-solid fa-file-pdf"></i> PDF पाहा</a>
+    <a class="wr-btn ghost" href="?end=<?= h($period['end']) ?>&pdf=dl&v=<?= time() ?>"><i class="fa-solid fa-download"></i> Download</a>
   </div>
 </div>
 

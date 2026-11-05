@@ -26,7 +26,10 @@ if (isset($_GET['pdf'])) {
     csrfStopOutputRewrite();
     while (ob_get_level()) { ob_end_clean(); }
     header('Content-Type: application/pdf');
-    header('Content-Disposition: ' . (($_GET['pdf'] ?? '') === 'dl' ? 'attachment' : 'inline') . '; filename="e-campus-report-' . $period . '.pdf"');
+    // नेहमी ताजा अहवाल — Mobile वर आधी Download केलेली जुनी File उघडू नये म्हणून नाव वेळेसह, आणि Cache बंद
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    header('X-LiteSpeed-Cache-Control: no-cache');
+    header('Content-Disposition: ' . (($_GET['pdf'] ?? '') === 'dl' ? 'attachment' : 'inline') . '; filename="e-campus-report-' . $period . '-' . date('Ymd-His') . '.pdf"');
     echo $pdf;
     exit;
 }
@@ -50,8 +53,8 @@ require_once __DIR__ . '/../includes/header.php';
   <div class="page-title mb-0">📋 MONTHLY E-CAMPUS REPORT — <?= h(ecampusPeriodLabel($period)) ?></div>
   <div class="d-flex gap-2 flex-wrap no-print">
     <form method="GET"><select name="month" class="form-select-custom" onchange="this.form.submit()"><?php foreach ($months as $m): ?><option value="<?= $m ?>" <?= $m === $period ? 'selected' : '' ?>><?= h(ecampusPeriodLabel($m)) ?></option><?php endforeach; ?></select></form>
-    <a href="?month=<?= h($period) ?>&pdf=1" target="_blank" class="btn" style="background:var(--rail);color:#fff;border-radius:9px;font-size:13px;padding:8px 14px;"><i class="fa-solid fa-file-pdf me-1"></i>PDF</a>
-    <a href="?month=<?= h($period) ?>&pdf=dl" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13px;padding:8px 14px;"><i class="fa-solid fa-download me-1"></i>Download</a>
+    <a href="?month=<?= h($period) ?>&pdf=1&v=<?= time() ?>" target="_blank" class="btn" style="background:var(--rail);color:#fff;border-radius:9px;font-size:13px;padding:8px 14px;"><i class="fa-solid fa-file-pdf me-1"></i>PDF</a>
+    <a href="?month=<?= h($period) ?>&pdf=dl&v=<?= time() ?>" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13px;padding:8px 14px;"><i class="fa-solid fa-download me-1"></i>Download</a>
     <a href="index.php?month=<?= h($period) ?>" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13px;padding:8px 14px;"><i class="fa-solid fa-chart-pie me-1"></i>Dashboard</a>
   </div>
 </div>
