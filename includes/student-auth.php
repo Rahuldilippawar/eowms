@@ -14,6 +14,7 @@ if (session_status() === PHP_SESSION_NONE) {
 session_start();
 require_once __DIR__ . '/csrf.php';
 require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../includes/timezone.php'; // 🕘 IST — PHP व Database दोन्हीची वेळ
 require_once __DIR__ . '/i18n.php';
 if (PHP_SAPI !== 'cli') { i18nLang(); if (!in_array('i18nFilterOutput', ob_list_handlers(), true)) { ob_start('i18nFilterOutput'); } }
 require_once __DIR__ . '/classroom-helpers.php';

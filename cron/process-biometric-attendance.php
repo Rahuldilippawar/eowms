@@ -11,6 +11,7 @@
 
 if (PHP_SAPI !== 'cli') { http_response_code(403); exit('CLI only'); }
 require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../includes/timezone.php'; // 🕘 IST — PHP व Database दोन्हीची वेळ
 
 try {
     $pdo->query("SELECT 1 FROM biometric_punch_logs LIMIT 1");

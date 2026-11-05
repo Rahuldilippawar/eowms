@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/config/db.php';
+require_once __DIR__ . '/includes/timezone.php'; // 🕘 IST — PHP व Database दोन्हीची वेळ
 session_start();
 require_once __DIR__ . '/includes/i18n.php';
 i18nLang();
