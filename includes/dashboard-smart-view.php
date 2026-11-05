@@ -16,7 +16,7 @@ if (ecampusReady($pdo)):
     $__ecP = (int)($__ecS['overall'] ?? 0);
     $__ecC = $__ecP >= 85 ? '#16A34A' : ($__ecP >= 60 ? '#F59E0B' : '#DC2626');
 ?>
-<a href="ecampus/<?= $__ecAll ? 'index.php' : 'my.php' ?>" class="mb-3" style="display:flex;gap:16px;align-items:center;padding:14px 18px;border-radius:14px;text-decoration:none;color:inherit;background:var(--surface,#fff);border:1px solid var(--line);box-shadow:0 6px 18px -14px rgba(20,16,50,.35);">
+<a href="ecampus/index.php" class="mb-3" style="display:flex;gap:16px;align-items:center;padding:14px 18px;border-radius:14px;text-decoration:none;color:inherit;background:var(--surface,#fff);border:1px solid var(--line);box-shadow:0 6px 18px -14px rgba(20,16,50,.35);">
   <div style="--p:<?= $__ecP ?>;width:64px;height:64px;border-radius:50%;flex-shrink:0;display:grid;place-items:center;background:conic-gradient(<?= $__ecC ?> calc(var(--p)*1%), var(--canvas) 0);"><span style="width:50px;height:50px;border-radius:50%;background:var(--surface,#fff);display:grid;place-items:center;font-weight:800;font-size:15px;"><?= $__ecP ?>%</span></div>
   <div style="flex:1;min-width:0;">
     <div style="font-weight:700;font-size:15px;">🎓 E-Campus — <?= h(ecampusPeriodLabel(date('Y-m'))) ?><?= $__ecAll ? ' · संपूर्ण Campus' : ' · माझी कामं' ?></div>
