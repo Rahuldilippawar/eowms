@@ -1,103 +1,79 @@
 <?php
+// 🚌 वाहन Import — 1) File वाचून Preview ला पाठवतो  2) Preview मध्ये "Import करा" दाबल्यावर प्रत्यक्ष जोडतो
 require_once __DIR__ . '/../includes/auth.php';
 requireLogin('../');
 require_once __DIR__ . '/../includes/vehicle-helpers.php';
+require_once __DIR__ . '/../includes/vehicle-import.php';
+require_once __DIR__ . '/../includes/sheet-reader.php';
 if (!canManageVehicles()) { requireRole(['super_admin'], '../'); } // वाहन यादी/नवीन वाहन प्रमाणेच
-$user = currentUser();
 $orgId = activeOrgId();
 
-if ($_SERVER['REQUEST_METHOD'] !== 'POST' || empty($_FILES['csv_file']['tmp_name'])) {
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') { header('Location: import.php'); exit; }
+$tmpDir = __DIR__ . '/../storage/tmp';
+if (!is_dir($tmpDir)) { @mkdir($tmpDir, 0755, true); }
+
+// ---------- 2) Preview नंतर प्रत्यक्ष Import ----------
+if (($_POST['action'] ?? '') === 'apply') {
+    $tok = $_SESSION['vimport']['token'] ?? '';
+    $file = $tmpDir . '/vimport-' . preg_replace('/[^a-f0-9]/', '', $tok) . '.json';
+    if (!$tok || !is_file($file) || (int)($_SESSION['vimport']['org'] ?? 0) !== (int)$orgId) {
+        $_SESSION['form_error'] = 'Preview जुना झाला — File पुन्हा Upload करा.';
+        header('Location: import.php');
+        exit;
+    }
+    $rows = json_decode(file_get_contents($file), true) ?: [];
+    $opts = ['swap' => !empty($_POST['swap']), 'fallback_dept' => (int)($_POST['fallback_dept'] ?? 0), 'update' => !empty($_POST['update'])];
+    $res = vehImportAnalyse($pdo, $orgId, $rows, $opts);
+    try {
+        [$created, $updated, $renewals] = vehImportApply($pdo, $orgId, $res['items']);
+    } catch (Throwable $e) {
+        $_SESSION['form_error'] = 'Import करताना त्रुटी — काहीही जोडलं नाही: ' . $e->getMessage();
+        header('Location: import.php?preview=1');
+        exit;
+    }
+    @unlink($file);
+    unset($_SESSION['vimport']);
+    $skipped = count(array_filter($res['items'], fn($i) => !in_array($i['action'], ['create', 'update'], true)));
+    logActivity('वाहन Import केले', 'vehicle', null, "$created नवीन, $updated अद्ययावत, $renewals नूतनीकरण-तारखा" . ($skipped ? ", $skipped वगळली" : ''));
+    $_SESSION['flash'] = "✅ $created नवीन वाहनं जोडली" . ($updated ? ", $updated अद्ययावत केली" : '') . " — $renewals नूतनीकरण-तारखा \"नूतनीकरण व अनुपालन\" मध्ये आपोआप जोडल्या." . ($skipped ? " ($skipped ओळी वगळल्या)" : '');
     header('Location: import.php');
     exit;
 }
 
-$handle = fopen($_FILES['csv_file']['tmp_name'], 'r');
-$bom = fread($handle, 3);
-if ($bom !== "\xEF\xBB\xBF") { rewind($handle); }
-
-$header = array_map(fn($h) => strtolower(trim($h)), fgetcsv($handle));
-$required = ['department_name', 'vehicle_number'];
-foreach ($required as $col) {
-    if (!in_array($col, $header, true)) {
-        fclose($handle);
-        $_SESSION['form_error'] = "CSV मध्ये \"$col\" हा column असणे आवश्यक आहे.";
-        header('Location: import.php');
-        exit;
-    }
+// ---------- 1) File Upload → Preview ----------
+$up = $_FILES['csv_file'] ?? null;
+if (!$up || $up['error'] !== UPLOAD_ERR_OK || !is_uploaded_file($up['tmp_name'])) {
+    $_SESSION['form_error'] = 'File मिळाली नाही — पुन्हा निवडा.';
+    header('Location: import.php');
+    exit;
 }
-$colIndex = array_flip($header);
-
-$deptStmt = $pdo->prepare("SELECT id, name_local, name, campus_id FROM departments WHERE organization_id = ? AND is_active = 1");
-$deptStmt->execute([$orgId]);
-$deptByName = [];
-foreach ($deptStmt->fetchAll() as $d) {
-    $deptByName[mb_strtolower(trim($d['name_local'] ?: ''))] = $d;
-    $deptByName[mb_strtolower(trim($d['name']))] = $d;
+if ($up['size'] > 5 * 1024 * 1024) {
+    $_SESSION['form_error'] = 'File 5 MB पेक्षा मोठी आहे.';
+    header('Location: import.php');
+    exit;
 }
-
-$existingStmt = $pdo->prepare("SELECT vehicle_number FROM vehicles WHERE organization_id = ?");
-$existingStmt->execute([$orgId]);
-$existingNumbers = array_map(fn($v) => mb_strtolower(trim($v['vehicle_number'])), $existingStmt->fetchAll());
-
-$allowedFuel = ['petrol', 'diesel', 'cng', 'electric', 'other'];
-
-$insert = $pdo->prepare("
-    INSERT INTO vehicles (organization_id, campus_id, department_id, vehicle_number, vehicle_type, model, date_of_registration, chassis_no, engine_no, vehicle_class, passenger_capacity, fuel_type, permit_validity, puc_validity, insurance_validity, fitness_validity, road_tax_validity, green_tax_validity, mv_tax_validity)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-");
-
-$created = 0;
-$errors = [];
-$rowNum = 1;
-$dateField = fn($v) => ($v && strtotime($v)) ? date('Y-m-d', strtotime($v)) : null;
-
-while (($row = fgetcsv($handle)) !== false) {
-    $rowNum++;
-    if (count($row) === 1 && trim($row[0]) === '') continue;
-    $get = fn($col) => isset($colIndex[$col]) && isset($row[$colIndex[$col]]) ? trim($row[$colIndex[$col]]) : null;
-
-    $deptName = $get('department_name');
-    $vehicleNumber = $get('vehicle_number');
-    if (!$deptName || !$vehicleNumber) { $errors[] = "ओळ {$rowNum}: आवश्यक माहिती रिकामी आहे — वगळले"; continue; }
-
-    $dept = $deptByName[mb_strtolower($deptName)] ?? null;
-    if (!$dept) { $errors[] = "ओळ {$rowNum}: \"$deptName\" हा विभाग सापडला नाही — वगळले"; continue; }
-
-    if (in_array(mb_strtolower($vehicleNumber), $existingNumbers, true)) {
-        $errors[] = "ओळ {$rowNum}: वाहन क्र. \"$vehicleNumber\" आधीच अस्तित्वात आहे — वगळले";
-        continue;
-    }
-
-    $fuelType = strtolower($get('fuel_type') ?: 'diesel');
-    if (!in_array($fuelType, $allowedFuel, true)) { $fuelType = 'diesel'; }
-
-    $renewalDates = [
-        'permit' => $dateField($get('permit_validity')),
-        'puc' => $dateField($get('puc_validity')),
-        'insurance' => $dateField($get('insurance_validity')),
-        'fitness' => $dateField($get('fitness_validity')),
-        'road_tax' => $dateField($get('road_tax_validity')),
-        'green_tax' => $dateField($get('green_tax_validity')),
-        'mv_tax' => $dateField($get('mv_tax_validity')),
-    ];
-
-    $insert->execute([
-        $orgId, $dept['campus_id'], $dept['id'], $vehicleNumber, $get('vehicle_type'), $get('model'),
-        $dateField($get('date_of_registration')), $get('chassis_no'), $get('engine_no'), $get('vehicle_class'),
-        is_numeric($get('passenger_capacity')) ? (int)$get('passenger_capacity') : null, $fuelType,
-        $renewalDates['permit'], $renewalDates['puc'], $renewalDates['insurance'], $renewalDates['fitness'],
-        $renewalDates['road_tax'], $renewalDates['green_tax'], $renewalDates['mv_tax'],
-    ]);
-    $newVehicleId = $pdo->lastInsertId();
-    $existingNumbers[] = mb_strtolower($vehicleNumber);
-
-    syncVehicleRenewals($pdo, $newVehicleId, $orgId, $dept['campus_id'], $dept['id'], $vehicleNumber, $renewalDates);
-    $created++;
+try {
+    $rows = eowmsReadSheet($up['tmp_name'], $up['name']);
+} catch (Throwable $e) {
+    $_SESSION['form_error'] = $e->getMessage();
+    header('Location: import.php');
+    exit;
 }
-fclose($handle);
-
-logActivity('वाहन Import केले', 'vehicle', null, "$created वाहनं जोडली");
-$_SESSION['flash'] = "$created नवीन वाहनं यशस्वीरित्या जोडली गेली.";
-if (!empty($errors)) { $_SESSION['import_errors'] = $errors; }
-header('Location: import.php');
+$rows = array_values(array_filter($rows, fn($r) => implode('', array_map(fn($c) => trim((string)$c), $r)) !== ''));
+if (count($rows) < 2) {
+    $_SESSION['form_error'] = 'File मध्ये Header शिवाय एकही ओळ नाही.';
+    header('Location: import.php');
+    exit;
+}
+if (count($rows) > 2001) {
+    $_SESSION['form_error'] = 'एका वेळी जास्तीत जास्त 2000 वाहनं.';
+    header('Location: import.php');
+    exit;
+}
+// जुने Preview काढून टाका
+foreach (glob($tmpDir . '/vimport-*.json') ?: [] as $old) { if (filemtime($old) < time() - 86400) { @unlink($old); } }
+$tok = bin2hex(random_bytes(16));
+file_put_contents($tmpDir . '/vimport-' . $tok . '.json', json_encode($rows, JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION));
+$_SESSION['vimport'] = ['token' => $tok, 'org' => $orgId, 'name' => mb_substr($up['name'], 0, 120), 'at' => time()];
+header('Location: import.php?preview=1');
 exit;
