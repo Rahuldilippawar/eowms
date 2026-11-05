@@ -128,8 +128,19 @@ function weeklyReportData(PDO $pdo, $orgId, array $period) {
     if ($workPrev > 0 && $work['total'] > $workPrev) { $good[] = 'कामांच्या नोंदी मागच्या आठवड्यापेक्षा ' . round(($work['total'] - $workPrev) * 100 / $workPrev) . '% जास्त'; }
     if ((int)($tasks['done_week'] ?? 0) > 0) { $good[] = $tasks['done_week'] . ' Tasks या आठवड्यात पूर्ण'; }
 
+    // E-Campus — आठवड्याचा शेवटचा दिवस ज्या महिन्यात तो महिना
+    require_once __DIR__ . '/ecampus-helpers.php';
+    $ecPeriod = substr($e, 0, 7);
+    $ecHtml = ecampusPdfSection($pdo, $orgId, $ecPeriod, 'brief', $s . ' 00:00:00');
+    $ecampus = null;
+    if ($ecHtml !== '') {
+        $ecS = ecampusSummary(ecampusRows($pdo, $orgId, $ecPeriod), $ecPeriod);
+        $ecampus = ['html' => $ecHtml, 'overall' => $ecS['overall'], 'done' => $ecS['done'], 'work' => $ecS['work'], 'period' => $ecPeriod];
+        foreach (ecampusAlerts($pdo, $orgId, $ecPeriod) as $a) { $alerts[] = $a; }
+    }
+
     return [
-        'org' => $org['name'] ?? 'E-Admin', 'orgId' => (int)$orgId, 'period' => $period, 'fy' => $fy,
+        'org' => $org['name'] ?? 'E-Admin', 'orgId' => (int)$orgId, 'period' => $period, 'fy' => $fy, 'ecampus' => $ecampus,
         'summary' => $sum, 'health' => $health, 'work' => $work, 'workPrev' => $workPrev, 'days' => $days,
         'tasks' => $tasks, 'overdueTasks' => $overdueTasks, 'req' => $req, 'renewals' => $renewals,
         'spendWeek' => $spendWeek, 'spendPrev' => $spendPrev, 'spendCat' => $spendCat, 'budget' => $budget, 'fyAlloc' => $fyAlloc, 'fySpent' => $fySpent,
@@ -176,6 +187,7 @@ function weeklyReportPdfHtml(array $d) {
       .al{padding:6px 10px;margin:4px 0;font-size:9.5pt;}
       .muted{color:#8A90AC;font-size:8.5pt;}
       .bar{height:7px;background:#EEE9E3;} .bar div{height:7px;}
+      .num-r{text-align:right;} table.split{width:100%;border-collapse:collapse;} table.split td{vertical-align:top;padding:0;}
     </style>';
 
     $html .= '<div class="hdr"><div class="o">' . $h($d['org']) . '</div><div class="t">साप्ताहिक व्यवस्थापन अहवाल</div><div class="p">कालावधी: ' . $h($period) . ' &nbsp;·&nbsp; तयार: ' . $h(date('d-m-Y, h:i A', strtotime($d['generated']))) . '</div></div>';
@@ -252,6 +264,11 @@ function weeklyReportPdfHtml(array $d) {
         $html .= '</tbody></table>';
     }
 
+    // E-Campus
+    if (!empty($d['ecampus'])) {
+        $html .= '<h2>E-Campus प्रगती <span style="font-size:8.5pt;color:#8A90AC;font-weight:normal;">' . $h(ecampusPeriodLabel($d['ecampus']['period'])) . '</span></h2>' . $d['ecampus']['html'];
+    }
+
     // खर्च
     $html .= '<h2>खर्च (Budget)</h2>';
     if (!$d['budget'] && !$d['spendCat']) { $html .= '<div class="muted">या आर्थिक वर्षात Budget / खर्चाची नोंद नाही.</div>'; }
@@ -293,13 +310,13 @@ function weeklyReportBar($pct, $color, $fullMm = 110) {
 }
 
 /** HTML → PDF (bytes) — साप्ताहिक व दैनिक दोन्ही अहवालांसाठी एकच mPDF सेटअप */
-function mgmtReportPdf($html, $title, $orgName) {
+function mgmtReportPdf($html, $title, $orgName, $format = 'A4') {
     require_once __DIR__ . '/../lib/vendor/autoload.php';
     $tmp = __DIR__ . '/../storage/tmp/mpdf';
     if (!is_dir($tmp)) { @mkdir($tmp, 0755, true); }
     $fontDir = (new \Mpdf\Config\ConfigVariables())->getDefaults()['fontDir'];
     $mpdf = new \Mpdf\Mpdf([
-        'mode' => 'utf-8', 'format' => 'A4', 'tempDir' => $tmp,
+        'mode' => 'utf-8', 'format' => $format, 'tempDir' => $tmp,
         'margin_left' => 12, 'margin_right' => 12, 'margin_top' => 10, 'margin_bottom' => 14,
         'fontDir' => $fontDir,
         'fontdata' => [
@@ -349,6 +366,7 @@ function weeklyReportEmailHtml(array $d) {
         . $cell((int)($d['tasks']['overdue'] ?? 0), 'मुदतबाह्य Tasks', ($d['tasks']['overdue'] ?? 0) ? '#B42318' : '#137A4B')
         . $cell(weeklyReportMoney($d['spendWeek']), 'खर्च')
         . "</tr></table>"
+        . (!empty($d['ecampus']) ? "<div style='margin-top:12px;font-size:13px;background:#F7F5F2;border-radius:8px;padding:8px 12px;'>🎓 <b>E-Campus:</b> " . (int)$d['ecampus']['overall'] . "% पूर्ण — " . (int)$d['ecampus']['done'] . '/' . (int)$d['ecampus']['work'] . " कामं पूर्ण</div>" : '')
         . ($alerts ? "<div style='font-weight:bold;font-size:14px;margin:16px 0 4px;color:#191C3A;'>लक्ष द्या</div><ul style='padding-left:18px;margin:0;font-size:13px;line-height:1.6;'>$alerts</ul>" : '')
         . ($url ? "<a href='{$url}departments/all.php' style='display:inline-block;margin-top:18px;background:#D9530F;color:#fff;text-decoration:none;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:bold;'>सर्व विभाग Dashboard उघडा</a>" : '')
         . "<p style='font-size:11.5px;color:#8A90AC;margin-top:20px;'>!! आत्मा मालिक !! — हा अहवाल दर सोमवारी आपोआप पाठवला जातो. पत्ते बदलण्यासाठी: E-Admin → अहवाल → साप्ताहिक अहवाल.</p>

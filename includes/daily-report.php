@@ -6,6 +6,7 @@
  * Cron: cron/daily-management-report.php · Preview/Settings: reports/daily.php
  */
 require_once __DIR__ . '/weekly-report.php';
+require_once __DIR__ . '/ecampus-helpers.php';
 
 // ---------- Charts (SVG — mPDF आणि Browser दोघांतही; मजकूर फक्त अंक, मराठी Labels HTML मध्ये) ----------
 /** Donut — $parts = [[value, color], ...], मध्ये $center (उदा. "72%") */
@@ -221,6 +222,15 @@ function dailyReportData(PDO $pdo, $orgId, $date) {
     $renTomorrow = (int)$q("SELECT COUNT(*) FROM renewal_items WHERE organization_id = ? AND status <> 'inactive' AND expiry_date = ?", [$o, $tomorrow], 'col');
     if ($ev || $rb || (int)($t['due_tomorrow'] ?? 0) || $renTomorrow) { $S['tomorrow'] = ['events' => $ev, 'rooms' => $rb, 'tasks' => (int)($t['due_tomorrow'] ?? 0), 'ren' => $renTomorrow]; }
 
+    // 13) E-Campus — त्या महिन्याची प्रगती (Super Admin ने कामं नेमली असतील तर)
+    $ecPeriod = substr($d, 0, 7);
+    $ecHtml = ecampusPdfSection($pdo, $o, $ecPeriod, 'brief', $d . ' 00:00:00');
+    if ($ecHtml !== '') {
+        $ecS = ecampusSummary(ecampusRows($pdo, $o, $ecPeriod), $ecPeriod);
+        $S['ecampus'] = ['html' => $ecHtml, 'overall' => $ecS['overall'], 'done' => $ecS['done'], 'work' => $ecS['work']];
+        foreach (ecampusAlerts($pdo, $o, $ecPeriod) as $a) { $alerts[] = $a; }
+    }
+
     // दिवसाचा गुण (0–100) — कामाची पूर्णता, हजेरी, मुदतबाह्य, SLA, SOS
     $score = 100;
     if (!empty($S['work']) && $w['total'] > 0) { $score -= (int)round((100 - $w['done'] * 100 / $w['total']) * 0.25); }
@@ -403,6 +413,12 @@ function dailyReportPdfHtml(array $D) {
         $html .= $kpis($cells);
     }
 
+    // --- E-Campus ---
+    if (!empty($S['ecampus'])) {
+        $html .= $sec(++$n, 'E-Campus प्रगती', ecampusPeriodLabel(substr($D['date'], 0, 7)));
+        $html .= $S['ecampus']['html'];
+    }
+
     // --- नूतनीकरण ---
     if (!empty($S['renewals'])) {
         $html .= $sec(++$n, 'नूतनीकरण', 'मुदत संपलेली / 7 दिवसांत संपणारी');
@@ -458,6 +474,7 @@ function dailyReportEmailHtml(array $D) {
         . $cell($a && $a['total'] ? round($a['present'] * 100 / $a['total']) . '%' : '—', 'हजेरी')
         . $cell((int)($S['tasks']['t']['overdue'] ?? 0), 'मुदतबाह्य Tasks', ($S['tasks']['t']['overdue'] ?? 0) ? '#B42318' : '#137A4B')
         . "</tr></table>"
+        . (!empty($S['ecampus']) ? "<div style='margin-top:12px;font-size:13px;background:#F7F5F2;border-radius:8px;padding:8px 12px;'>🎓 <b>E-Campus:</b> " . (int)$S['ecampus']['overall'] . "% पूर्ण — " . (int)$S['ecampus']['done'] . '/' . (int)$S['ecampus']['work'] . " कामं पूर्ण</div>" : '')
         . ($alerts ? "<div style='font-weight:bold;font-size:14px;margin:14px 0 4px;color:#191C3A;'>आजचे ठळक मुद्दे</div><ul style='padding-left:18px;margin:0;font-size:13px;line-height:1.6;'>$alerts</ul>" : '')
         . ($url ? "<a href='{$url}reports/daily.php' style='display:inline-block;margin-top:16px;background:#D9530F;color:#fff;text-decoration:none;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:bold;'>E-Admin मध्ये पाहा</a>" : '')
         . "<p style='font-size:11.5px;color:#8A90AC;margin-top:18px;'>!! आत्मा मालिक !! — हा अहवाल रोज संध्याकाळी आपोआप पाठवला जातो.</p>
