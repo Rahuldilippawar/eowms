@@ -19,6 +19,7 @@ if (session_status() === PHP_SESSION_NONE) {
 session_start();
 require_once __DIR__ . '/csrf.php';
 require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../includes/timezone.php'; // 🕘 IST — PHP व Database दोन्हीची वेळ
 require_once __DIR__ . '/module-registry.php';
 require_once __DIR__ . '/lang.php';
 require_once __DIR__ . '/i18n.php';

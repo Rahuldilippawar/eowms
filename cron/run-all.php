@@ -19,6 +19,7 @@
 
 if (PHP_SAPI !== 'cli') { http_response_code(403); exit('CLI only'); }
 require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../includes/timezone.php'; // 🕘 IST — PHP व Database दोन्हीची वेळ
 require_once __DIR__ . '/../includes/cron-helpers.php'; // Job-यादी: cronRunAllJobs()
 
 $args = array_slice($argv, 1);

@@ -3,6 +3,7 @@
 // विनंती — Public Form) साठी. इथून फक्त College/Department ची नावं
 // परत मिळतात — कुठलाही Sensitive Data नाही, त्यामुळे Public ठेवणं सुरक्षित.
 require_once __DIR__ . '/config/db.php';
+require_once __DIR__ . '/includes/timezone.php'; // 🕘 IST — PHP व Database दोन्हीची वेळ
 header('Content-Type: application/json; charset=utf-8');
 
 $org = $pdo->query("SELECT id FROM organizations WHERE is_active = 1 ORDER BY id LIMIT 1")->fetch();

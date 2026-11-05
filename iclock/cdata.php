@@ -13,6 +13,7 @@
 // ============================================================
 
 require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../includes/timezone.php'; // 🕘 IST — PHP व Database दोन्हीची वेळ
 
 $serialNumber = trim($_GET['SN'] ?? '');
 if (!$serialNumber) {
