@@ -82,4 +82,14 @@ return [
     "यांना Login केल्यावर Command Center मध्ये फक्त या Campus/College चा Dashboard दिसतो — त्याचे सगळे विभाग, कर्मचारी, कामं, Tasks, नूतनीकरण आणि विनंत्या." => ["इन्हें Login करने पर Command Center में केवल इस Campus/College का Dashboard दिखता है — इसके सभी विभाग, कर्मचारी, काम, Tasks, नवीनीकरण और अनुरोध।", "After login they see only this campus/college dashboard in the Command Center — all its departments, staff, work, tasks, renewals and requests."],
     "म्हणून नेमले. Login केल्यावर त्यांना Command Center मध्ये त्यांचा Campus Dashboard दिसेल." => ["के रूप में नियुक्त किया। Login करने पर उन्हें Command Center में उनका Campus Dashboard दिखेगा।", "assigned. After login they will see their campus dashboard in the Command Center."],
     "प्रमुख नेमण्यासाठी आधी" => ["प्रमुख नियुक्त करने के लिए पहले", "To assign heads, first run"],
+    // 🗑️ कर्मचारी पूर्णपणे हटवा
+    "त्यांचा Login, हजेरी, रजा, कामाच्या नोंदी, Tasks, E-Campus कामं, Campus प्रमुख पद आणि फोटो — सगळं कायमचं हटेल. फक्त पूर्वीच्या कामाचा इतिहास ठेवायचा असेल तर Delete ऐवजी" => ["उनका Login, हाज़िरी, छुट्टी, काम की प्रविष्टियाँ, Tasks, E-Campus काम, Campus प्रमुख पद और फ़ोटो — सब स्थायी रूप से हटेगा। केवल पुराने काम का इतिहास रखना हो तो Delete के बजाय", "Their login, attendance, leave, work entries, tasks, E-Campus tasks, campus-head role and photo will all be deleted permanently. To keep the work history, instead of Delete use"],
+    "हटवा" => ["हटाएँ", "Delete"],
+    "कर्मचारी पूर्णपणे हटवा" => ["कर्मचारी को पूरी तरह हटाएँ", "Delete staff member completely"],
+    "त्यांचा Login, हजेरी, रजा, कामाच्या नोंदी, Tasks, E-Campus कामं, Campus प्रमुख पद आणि फोटो — सगळं कायमचं हटेल. इतिहास ठेवायचा असेल तर वरती" => ["उनका Login, हाज़िरी, छुट्टी, काम की प्रविष्टियाँ, Tasks, E-Campus काम, Campus प्रमुख पद और फ़ोटो — सब स्थायी रूप से हटेगा। इतिहास रखना हो तो ऊपर", "Their login, attendance, leave, work entries, tasks, E-Campus tasks, campus-head role and photo will all be deleted permanently. To keep the history, mark them above as"],
+    "कायमचे हटवायचे? हे परत आणता येणार नाही." => ["स्थायी रूप से हटाना है? यह वापस नहीं लाया जा सकता।", "— delete permanently? This cannot be undone."],
+    "खात्रीसाठी नाव किंवा हटवा टाइप करा" => ["पुष्टि के लिए नाम या हटवा टाइप करें", "Type the name or हटवा to confirm"],
+    "कायमचे हटवा" => ["स्थायी रूप से हटाएँ", "Delete permanently"],
+    "हटवता आले नाही — त्यांच्या काही नोंदी अजून दुसरीकडे जोडलेल्या आहेत. त्याऐवजी त्यांना निष्क्रिय करा, किंवा ही त्रुटी कळवा" => ["हटाया नहीं जा सका — उनकी कुछ प्रविष्टियाँ अभी कहीं और जुड़ी हैं। इसके बजाय निष्क्रिय करें, या यह त्रुटि बताएँ", "could not be deleted — some of their records are still linked elsewhere. Deactivate them instead, or report this error"],
+    "व त्यांच्या सगळ्या नोंदी कायमच्या हटवल्या." => ["और उनकी सभी प्रविष्टियाँ स्थायी रूप से हटाईं।", "and all their records were deleted permanently."],
 ];

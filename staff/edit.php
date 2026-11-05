@@ -189,6 +189,19 @@ if ($staffMember['role'] !== 'super_admin' && superAdminExistsOtherThan($pdo, (i
   </form>
 </div>
 
+<?php if ($staffMember['role'] !== 'super_admin'): ?>
+<!-- 🗑️ कर्मचारी पूर्णपणे हटवा (फक्त Super Admin — हे पानच Super Admin साठी आहे) -->
+<div class="panel mt-3" style="border:1px solid var(--rose);padding:16px 20px;">
+  <div style="font-weight:700;color:var(--rose);font-size:14.5px;"><i class="fa-solid fa-trash me-1"></i>कर्मचारी पूर्णपणे हटवा</div>
+  <div style="font-size:12.5px;color:var(--text-dim);margin:4px 0 10px;">त्यांचा Login, हजेरी, रजा, कामाच्या नोंदी, Tasks, E-Campus कामं, Campus प्रमुख पद आणि फोटो — सगळं कायमचं हटेल. इतिहास ठेवायचा असेल तर वरती "निष्क्रिय" करा.</div>
+  <form method="POST" action="delete.php" class="d-flex gap-2 flex-wrap align-items-center" onsubmit="return window.confirm('<?= h($staffMember['name']) ?> — कायमचे हटवायचे? हे परत आणता येणार नाही.');">
+    <input type="hidden" name="id" value="<?= (int)$staffMember['id'] ?>">
+    <input type="text" name="confirm_name" class="form-control-custom" style="max-width:280px;" autocomplete="off" required placeholder="खात्रीसाठी नाव किंवा हटवा टाइप करा">
+    <button type="submit" class="btn" style="background:var(--rose);color:#fff;border-radius:9px;font-size:13px;padding:8px 18px;font-weight:600;"><i class="fa-solid fa-trash me-1"></i>कायमचे हटवा</button>
+  </form>
+</div>
+<?php endif; ?>
+
 <script>
   (function () {
     var f = document.getElementById('staffEmailField'), n = document.getElementById('staffEmailNote'); if (!f) return;
