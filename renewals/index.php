@@ -159,6 +159,11 @@ if ($showGrouped) {
     <a href="import.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13.5px;padding:9px 18px;">
       <i class="fa-solid fa-file-import me-1"></i>Import
     </a>
+    <?php if (hasRole('super_admin')): ?>
+    <a href="clear-vehicles.php" class="btn" title="नूतनीकरणातून सर्व वाहनांच्या नोंदी हटवा" style="border:1px solid var(--rose);color:var(--rose);border-radius:9px;font-size:13.5px;padding:9px 14px;">
+      <i class="fa-solid fa-car-burst me-1"></i>वाहन नोंदी हटवा
+    </a>
+    <?php endif; ?>
     <a href="report.php<?= $filterDeptId ? '?department_id=' . h($filterDeptId) : '' ?>" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13.5px;padding:9px 18px;">
       <i class="fa-solid fa-chart-column me-1"></i>अहवाल
     </a>
