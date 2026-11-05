@@ -46,7 +46,7 @@ if ($restrictedModulesForSidebar !== null) {
         <div style="margin:14px 0;border-top:1px solid rgba(255,255,255,.08);"></div>
 
         <?php require_once __DIR__ . '/ecampus-helpers.php'; if (ecampusReady($pdo) && ecampusMyTaskCount($pdo, currentUser()['id'] ?? 0)): ?>
-        <a href="<?= $rp ?>ecampus/my.php" class="tree-node">
+        <a href="<?= $rp ?>ecampus/index.php" class="tree-node">
           <i class="fa-solid fa-laptop-file fa-fw"></i><span>माझी E-Campus कामं</span>
         </a>
         <?php endif; ?>
@@ -228,8 +228,8 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
       <i class="fa-solid fa-graduation-cap fa-fw"></i><span>E-Campus Dashboard</span>
     </a>
     <?php endif; ?>
-    <?php if ($__ecMine): ?>
-    <a href="<?= $rp ?>ecampus/my.php" class="tree-node <?= $currentDir === 'ecampus' && $currentPage === 'my.php' ? 'active' : '' ?>">
+    <?php if ($__ecMine && !isManagementOrAbove()): ?>
+    <a href="<?= $rp ?>ecampus/index.php" class="tree-node <?= $currentDir === 'ecampus' ? 'active' : '' ?>">
       <i class="fa-solid fa-laptop-file fa-fw"></i><span>माझी E-Campus कामं</span>
       <?= navCount($__ecMine, 'amber') ?>
     </a>
