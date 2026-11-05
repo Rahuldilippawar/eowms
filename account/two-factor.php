@@ -75,6 +75,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($isSA && $a === 'policy') {
         $cats = array_values(array_intersect((array)($_POST['cats'] ?? []), ['management', 'hod', 'staff']));
         orgSettingSet($pdo, $orgId, 'tfa_required_categories', implode(',', $cats));
+        $idleMin = (int)($_POST['idle_minutes'] ?? 30);
+        if (in_array($idleMin, SESSION_IDLE_CHOICES, true)) {
+            orgSettingSet($pdo, $orgId, 'session_idle_minutes', (string)$idleMin);
+            $_SESSION['idle_limit_min'] = $idleMin; // स्वतःसाठी लगेच; इतरांना पुढच्या Login पासून
+        }
         logActivity('2-Step Login धोरण बदललं', 'organization', $orgId, $cats ? implode(', ', $cats) : 'फक्त Super Admin');
         $back('✅ धोरण जतन झालं — संबंधित लोकांना पुढच्या Login ला 2-Step चालू करावं लागेल.');
     } elseif ($isSA && $a === 'reset_user') {
@@ -296,7 +301,7 @@ require_once __DIR__ . '/../includes/header.php';
 
 <?php if ($isSA): ?>
 <div class="panel mb-3">
-  <div class="panel-head"><div class="title">🛡️ संस्थेचं धोरण (Super Admin)</div><div class="sub">Super Admin साठी नेहमी अनिवार्य. आणखी कोणासाठी?</div></div>
+  <div class="panel-head"><div class="title">🛡️ संस्थेचं सुरक्षा-धोरण (Super Admin)</div><div class="sub">Super Admin साठी नेहमी अनिवार्य. आणखी कोणासाठी?</div></div>
   <form method="POST" style="padding:12px 20px 18px;">
     <input type="hidden" name="action" value="policy">
     <div class="d-flex gap-3 flex-wrap mb-3" style="font-size:13.5px;">
@@ -304,6 +309,13 @@ require_once __DIR__ . '/../includes/header.php';
       <?php foreach (['management' => 'Management (अध्यक्ष, सचिव, GM…)', 'hod' => 'विभाग प्रमुख (HOD)', 'staff' => 'सर्व कर्मचारी'] as $k => $lbl): ?>
         <label class="d-flex align-items-center gap-2"><input type="checkbox" name="cats[]" value="<?= $k ?>" <?= in_array($k, $policy, true) ? 'checked' : '' ?>> <?= h($lbl) ?></label>
       <?php endforeach; ?>
+    </div>
+    <div class="d-flex align-items-center gap-2 flex-wrap mb-3" style="font-size:13.5px;">
+      <label for="idleMin" style="font-weight:600;">⏰ काहीही न केल्यास आपोआप Logout:</label>
+      <select name="idle_minutes" id="idleMin" class="form-select-custom" style="width:auto;">
+        <?php $curIdle = (int)orgSetting($pdo, $orgId, 'session_idle_minutes', '30'); foreach (SESSION_IDLE_CHOICES as $m): ?><option value="<?= $m ?>" <?= $curIdle === $m ? 'selected' : '' ?>><?= $m >= 60 ? ($m / 60) . ' तास' : $m . ' मिनिटं' ?></option><?php endforeach; ?>
+      </select>
+      <span style="font-size:12px;color:var(--text-dim);">शेवटच्या 2 मिनिटांत उलटी गिनती दिसते; सगळ्या Tabs साठी एकच वेळ</span>
     </div>
     <button class="tf-btn pri"><i class="fa-solid fa-floppy-disk me-1"></i>धोरण जतन करा</button>
     <div style="font-size:12px;color:var(--text-dim);margin-top:8px;">अनिवार्य केलेल्यांना पुढच्या Login ला 2-Step चालू केल्याशिवाय पुढे जाता येणार नाही.</div>

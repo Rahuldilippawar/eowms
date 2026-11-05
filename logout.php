@@ -1,8 +1,12 @@
 <?php
 require_once __DIR__ . '/includes/auth.php';
 
+// आपोआप Logout (निष्क्रियता) — Browser मधून ?reason=idle&next=… येतं
+$idle = ($_GET['reason'] ?? '') === 'idle';
+$next = $idle ? safeNextPath($_GET['next'] ?? '') : null;
+
 // Session रिकामी करण्याआधीच Log करा — नाहीतर "कोण Logout झालं" हे कळणारच नाही
-logActivity('Logout केलं');
+if (currentUser()) { logActivity($idle ? 'आपोआप Logout (निष्क्रियता)' : 'Logout केलं'); }
 
 $_SESSION = [];
 
@@ -14,5 +18,13 @@ if (ini_get('session.use_cookies')) {
 }
 
 session_destroy();
+if ($idle) {
+    // नवीन (रिकामं) Session — Login पानावर "आपोआप Logout झालात" संदेश दाखवण्यासाठी
+    session_start();
+    session_regenerate_id(true);
+    $_SESSION['session_expired'] = true;
+    header('Location: login.php' . ($next ? '?next=' . rawurlencode($next) : ''));
+    exit;
+}
 header('Location: welcome.php');
 exit;

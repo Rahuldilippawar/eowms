@@ -47,6 +47,28 @@
 </div>
 <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 
+<!-- ⏰ Auto-Logout उलटी गिनती + "मजकूर परत भरला" सूचना (मजकूर HTML मध्ये — भाषांतर होतं) -->
+<style>
+  #idleModal{display:none;position:fixed;inset:0;z-index:10050;align-items:center;justify-content:center;background:rgba(14,16,36,.62);backdrop-filter:blur(3px);padding:16px;}
+  #idleModal .im-card{background:var(--surface,#fff);color:var(--text,#1A1D29);border-radius:20px;padding:26px 24px 22px;max-width:360px;width:100%;text-align:center;box-shadow:0 30px 70px -20px rgba(0,0,0,.5);animation:imUp .35s cubic-bezier(.2,.8,.2,1);}
+  @keyframes imUp{from{opacity:0;transform:translateY(14px) scale(.98);}to{opacity:1;transform:none;}}
+  #idleRing{--p:100;width:118px;height:118px;border-radius:50%;margin:0 auto 12px;display:grid;place-items:center;background:conic-gradient(var(--rail,#D9530F) calc(var(--p)*1%), var(--canvas,#EEE9E3) 0);transition:background .9s linear;}
+  #idleRing span{width:94px;height:94px;border-radius:50%;background:var(--surface,#fff);display:grid;place-items:center;font-size:26px;font-weight:800;font-family:'Space Grotesk',monospace;}
+  #idleModal h3{font-size:17px;font-weight:800;margin:0 0 6px;} #idleModal p{font-size:13px;color:var(--text-dim,#666B7D);margin:0 0 16px;line-height:1.6;}
+  #idleModal .im-btns{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;}
+  #idleModal button{border-radius:11px;font-size:14px;font-weight:700;padding:11px 18px;cursor:pointer;font-family:inherit;}
+  #idleStayBtn{background:var(--rail,#D9530F);color:#fff;border:0;min-width:170px;} #idleOutBtn{background:transparent;border:1px solid var(--line,#ddd);color:inherit;}
+  #idleRestored{display:none;position:fixed;left:50%;transform:translateX(-50%);bottom:90px;z-index:10040;background:#191C3A;color:#fff;border-radius:12px;padding:11px 16px;font-size:13.5px;gap:10px;align-items:center;box-shadow:0 14px 30px -12px rgba(0,0,0,.5);max-width:calc(100% - 32px);}
+</style>
+<div id="idleModal" role="alertdialog" aria-modal="true" aria-labelledby="idleTitle">
+  <div class="im-card">
+    <div id="idleRing"><span id="idleCountdown">2:00</span></div>
+    <h3 id="idleTitle">⏰ तुम्ही काही वेळ निष्क्रिय आहात</h3>
+    <p>सुरक्षिततेसाठी वेळ संपताच आपोआप Logout होईल. भरलेला न-जतन मजकूर जपून ठेवला जाईल — परत Login केल्यावर त्याच पानावर परत मिळेल.</p>
+    <div class="im-btns"><button type="button" id="idleStayBtn">मी इथे आहे — सुरू ठेवा</button><button type="button" id="idleOutBtn">आत्ता Logout</button></div>
+  </div>
+</div>
+<div id="idleRestored"><i class="fa-solid fa-rotate-left"></i><span>Logout आधी भरलेला मजकूर परत भरला — तपासून जतन करा.</span></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
 <script src="<?= $rootPath ?? '' ?>assets/js/eowms-advance.js?v=2"></script>
@@ -81,60 +103,90 @@
   });
 })();
 
-// ---------------- Idle-timeout warning (security) ----------------
-// Server auto-logs-out after 30 min of no requests. This client-side
-// timer warns the user 2 minutes beforehand so they aren't surprised,
-// and lets them stay logged in with one click instead of losing work.
+// ---------------- ⏰ Smart Auto-Logout (निष्क्रियता) ----------------
+// • सगळ्या Tabs चा एकच Timer (localStorage) — एका Tab मध्ये काम चालू असेल तर दुसरा Tab Logout करत नाही
+// • काम चालू असताना (टाइप/Click) Server ला अधूनमधून कळवतो — एकाच पानावर बराच वेळ काम केलं तरी Session जात नाही
+// • शेवटच्या काही मिनिटांत उलटी गिनती; वेळ संपली की Logout — आणि भरलेला न-जतन मजकूर जपून ठेवतो
+// • परत Login केल्यावर त्याच पानावर, आणि मजकूर पुन्हा भरलेला
 (function () {
-  var IDLE_LIMIT_MS = 28 * 60 * 1000;   // show warning at 28 minutes
-  var COUNTDOWN_MS = 2 * 60 * 1000;     // 2-minute countdown after that
-  var idleTimer, countdownTimer, countdownEnd;
-  var rootPath = <?= json_encode($rootPath ?? '') ?>;
+  var LIMIT = <?= (int)sessionIdleLimitSeconds() ?> * 1000;
+  var WARN = Math.min(120000, Math.round(LIMIT * 0.2));
+  var PING_EVERY = Math.min(5 * 60000, Math.round(LIMIT / 3));
+  var root = <?= json_encode($rootPath ?? '') ?>;
+  var KEY = 'eowms_last_act', OUT = 'eowms_logout_at';
+  var modal = document.getElementById('idleModal'); if (!modal) return;
+  var ls = { get: function (k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: function (k, v) { try { localStorage.setItem(k, v); } catch (e) {} }, del: function (k) { try { localStorage.removeItem(k); } catch (e) {} } };
+  var now = function () { return Date.now(); };
+  var localLast = now(), lastPing = now(), shown = false, gone = false, baseTitle = document.title;
+  ls.set(KEY, String(localLast)); // पान उघडलं = Server वर Request झाली
 
-  var modal = document.createElement('div');
-  modal.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(16,22,43,.55);z-index:9999;align-items:center;justify-content:center;';
-  modal.innerHTML = '<div style="background:#fff;border-radius:14px;padding:26px 28px;max-width:340px;width:90%;text-align:center;font-family:\'Noto Sans Devanagari\',sans-serif;">' +
-    '<div style="font-size:32px;margin-bottom:8px;">⏰</div>' +
-    '<div style="font-weight:700;font-size:16px;color:#10162B;margin-bottom:8px;">तुम्ही निष्क्रिय आहात</div>' +
-    '<div style="font-size:13px;color:#666B7D;margin-bottom:6px;">सुरक्षिततेसाठी <span id="idleCountdown">02:00</span> मिनिटांत आपोआप Logout होईल.</div>' +
-    '<button id="idleStayBtn" style="background:var(--rail);color:#fff;border:none;border-radius:9px;padding:10px 22px;font-size:14px;font-weight:600;margin-top:10px;cursor:pointer;">मी इथे आहे — सुरू ठेवा</button>' +
-    '</div>';
-  document.body.appendChild(modal);
+  var basePath = new URL(root || './', location.href).pathname;
+  function relUrl() { var p = location.pathname; return (p.indexOf(basePath) === 0 ? p.slice(basePath.length) : p.replace(/^\//, '')) + location.search; }
+  function last() { return Math.max(localLast, +(ls.get(KEY) || 0)); }
+  function mark() { localLast = now(); if (localLast - (+(ls.get(KEY) || 0)) > 5000) ls.set(KEY, String(localLast)); }
 
-  function showWarning() {
-    modal.style.display = 'flex';
-    countdownEnd = Date.now() + COUNTDOWN_MS;
-    countdownTimer = setInterval(updateCountdown, 500);
+  // ---- न-जतन मजकूर (Logout आधी) जपणं / परत भरणं ----
+  function fields() { return [].slice.call(document.querySelectorAll('form input[name], form textarea[name], form select[name]')).filter(function (f) { return !/^(password|hidden|file|submit|button|reset|image)$/i.test(f.type || '') && f.name !== '_csrf'; }); }
+  function dirty(f) { if (f.type === 'checkbox' || f.type === 'radio') return f.checked !== f.defaultChecked; if (f.tagName === 'SELECT') return [].some.call(f.options, function (o) { return o.selected !== o.defaultSelected; }); return f.value !== f.defaultValue; }
+  function saveDrafts() {
+    var seen = {}, out = [];
+    fields().forEach(function (f) { var k = f.name; seen[k] = (seen[k] || 0) + 1; if (dirty(f)) out.push({ n: k, i: seen[k] - 1, v: f.value, c: f.checked }); });
+    if (out.length) ls.set('eowms_draft:' + location.pathname + location.search, JSON.stringify({ at: now(), f: out }));
   }
-  function updateCountdown() {
-    var remaining = Math.max(0, countdownEnd - Date.now());
-    var mins = Math.floor(remaining / 60000);
-    var secs = Math.floor((remaining % 60000) / 1000);
-    document.getElementById('idleCountdown').textContent =
-      String(mins).padStart(2, '0') + ':' + String(secs).padStart(2, '0');
-    if (remaining <= 0) {
-      clearInterval(countdownTimer);
-      window.location.href = rootPath + 'logout.php';
-    }
-  }
-  function resetIdleTimer() {
-    clearTimeout(idleTimer);
-    idleTimer = setTimeout(showWarning, IDLE_LIMIT_MS);
-  }
-  function stayLoggedIn() {
-    modal.style.display = 'none';
-    clearInterval(countdownTimer);
-    fetch(rootPath + 'includes/keep-alive.php').catch(function () {});
-    resetIdleTimer();
-  }
+  (function restoreDrafts() {
+    var key = 'eowms_draft:' + location.pathname + location.search, raw = ls.get(key); if (!raw) return;
+    ls.del(key);
+    var d; try { d = JSON.parse(raw); } catch (e) { return; }
+    if (!d || now() - d.at > 3 * 3600 * 1000) return;
+    var byName = {}, n = 0;
+    fields().forEach(function (f) { (byName[f.name] = byName[f.name] || []).push(f); });
+    d.f.forEach(function (x) { var f = (byName[x.n] || [])[x.i]; if (!f || dirty(f)) return; if (f.type === 'checkbox' || f.type === 'radio') f.checked = x.c; else f.value = x.v; f.dispatchEvent(new Event('input', { bubbles: true })); n++; });
+    if (n) { var t = document.getElementById('idleRestored'); if (t) { t.style.display = 'flex'; setTimeout(function () { t.style.display = 'none'; }, 9000); } }
+  })();
 
-  document.getElementById('idleStayBtn').addEventListener('click', stayLoggedIn);
-  ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'].forEach(function (evt) {
-    document.addEventListener(evt, function () {
-      if (modal.style.display !== 'flex') { resetIdleTimer(); }
-    }, { passive: true });
+  // ---- Server ला "काम चालू आहे" कळवणं ----
+  function ping(force) {
+    if (!force && now() - lastPing < PING_EVERY) return Promise.resolve(true);
+    lastPing = now();
+    return fetch(root + 'includes/keep-alive.php', { credentials: 'same-origin', cache: 'no-store' })
+      .then(function (r) { if (r.status === 401) { expired(); return false; } return true; })
+      .catch(function () { return true; }); // Network नसेल तर Logout करत नाही
+  }
+  ['mousemove', 'keydown', 'click', 'scroll', 'touchstart', 'input'].forEach(function (ev) {
+    document.addEventListener(ev, function () { if (!shown && !gone) { mark(); ping(false); } }, { passive: true, capture: true });
   });
-  resetIdleTimer();
+
+  // ---- Logout ----
+  function go(url) { if (gone) return; gone = true; saveDrafts(); ls.set(OUT, String(now())); location.href = url; }
+  function doLogout() { go(root + 'logout.php?reason=idle&next=' + encodeURIComponent(relUrl())); }
+  function expired() { go(root + 'login.php?next=' + encodeURIComponent(relUrl())); }
+  window.addEventListener('storage', function (e) {
+    if (e.key === OUT && e.newValue && !gone) { gone = true; saveDrafts(); location.href = root + 'login.php?next=' + encodeURIComponent(relUrl()); }
+    if (e.key === KEY && shown && LIMIT - (now() - last()) > WARN) hide(); // दुसऱ्या Tab मध्ये काम सुरू झालं
+  });
+
+  // ---- उलटी गिनती ----
+  var ring = document.getElementById('idleRing'), cd = document.getElementById('idleCountdown');
+  function show(left) {
+    if (!shown) { shown = true; modal.style.display = 'flex'; document.getElementById('idleStayBtn').focus(); }
+    var s = Math.ceil(left / 1000), m = Math.floor(s / 60);
+    cd.textContent = m + ':' + String(s % 60).padStart(2, '0');
+    ring.style.setProperty('--p', Math.max(0, Math.min(100, left / WARN * 100)));
+    document.title = (s % 2 ? '⏰ ' : '') + cd.textContent + ' — Logout · ' + baseTitle;
+  }
+  function hide() { shown = false; modal.style.display = 'none'; document.title = baseTitle; }
+  function tick() {
+    if (gone) return;
+    var left = LIMIT - (now() - last());
+    if (left <= 0) return doLogout();
+    if (left <= WARN) show(left); else if (shown) hide();
+  }
+  setInterval(tick, 1000);
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) tick(); });
+  document.getElementById('idleStayBtn').addEventListener('click', function () {
+    ping(true).then(function (ok) { if (ok) { mark(); ls.set(KEY, String(now())); hide(); } });
+  });
+  document.getElementById('idleOutBtn').addEventListener('click', function () { go(root + 'logout.php'); });
 })();
 
 // ---------------- PWA: register service worker (Add to Home Screen) ----------------

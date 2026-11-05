@@ -8,6 +8,8 @@ if (currentUser()) {
 }
 
 $error = null;
+// Logout आधी ज्या पानावर होता — Login नंतर तिथेच परत (फक्त याच Site मधलं पान)
+if (isset($_GET['next'])) { $_SESSION['login_next'] = safeNextPath($_GET['next']); }
 if (($_GET['msg'] ?? '') === 'session_expired') {
     $error = t('s456');
 } elseif (($_GET['msg'] ?? '') === 'tfa_locked') {
@@ -283,7 +285,7 @@ $loginOrgName = $loginOrg['name'] ?? 'VJMAT';
       <div class="sub">पुढे जाण्यासाठी तुमच्या खात्यात Login करा</div>
 
       <?php if (!empty($_SESSION['session_expired'])): ?>
-        <div class="lg-msg warn"><i class="fa-solid fa-clock"></i><span>३० मिनिटे निष्क्रियतेमुळे तुम्ही आपोआप Logout झालात — सुरक्षिततेसाठी. कृपया परत Login करा.</span></div>
+        <div class="lg-msg warn"><i class="fa-solid fa-clock"></i><span>बराच वेळ काहीही न केल्यामुळे तुम्ही सुरक्षिततेसाठी आपोआप Logout झालात. कृपया परत Login करा<?= !empty($_SESSION['login_next']) ? ' — तुम्ही जिथे होता त्याच पानावर परत जाल' : '' ?>.</span></div>
         <?php unset($_SESSION['session_expired']); ?>
       <?php endif; ?>
       <?php if (!empty($_SESSION['account_deactivated'])): ?>
