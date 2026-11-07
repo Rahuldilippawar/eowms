@@ -148,7 +148,7 @@
   function ping(force) {
     if (!force && now() - lastPing < PING_EVERY) return Promise.resolve(true);
     lastPing = now();
-    return fetch(root + 'includes/keep-alive.php', { credentials: 'same-origin', cache: 'no-store' })
+    return fetch(root + 'ajax-keep-alive.php', { credentials: 'same-origin', cache: 'no-store' })
       .then(function (r) { if (r.status === 401) { expired(); return false; } return true; })
       .catch(function () { return true; }); // Network नसेल तर Logout करत नाही
   }
@@ -433,5 +433,17 @@ window.addEventListener('load', function () {
 })();
 </script>
 <?php endif; ?>
+<?php
+// 🌙 दैनिक अहवाल — Cron नसला तरी: वेळ झाली असेल आणि अहवाल गेला नसेल तर पार्श्वभूमीत पाठवा (includes/report-autosend.php)
+if (function_exists('currentUser') && currentUser() && isset($pdo)) {
+    require_once __DIR__ . '/report-autosend.php';
+    if (reportAutoSendDueDate($pdo, activeOrgId())): ?>
+<script>
+setTimeout(function () {
+  try { fetch('<?= h($rootPath ?? '') ?>ajax-report-autosend.php', { method: 'POST', credentials: 'same-origin', keepalive: true, headers: { 'Accept': 'application/json' } }).catch(function () {}); } catch (e) {}
+}, 1500);
+</script>
+<?php endif;
+} ?>
 </body>
 </html>

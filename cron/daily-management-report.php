@@ -9,6 +9,7 @@ require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/timezone.php'; // 🕘 IST — PHP व Database दोन्हीची वेळ
 require_once __DIR__ . '/../includes/cron-helpers.php';
 require_once __DIR__ . '/../includes/daily-report.php';
+require_once __DIR__ . '/../includes/report-autosend.php';
 
 cronJobStart($pdo, 'daily-management-report');
 $force = in_array('--force', $argv ?? [], true);
@@ -17,15 +18,13 @@ $out = '';
 $allOk = true;
 foreach ($pdo->query("SELECT id, name FROM organizations WHERE is_active = 1")->fetchAll() as $org) {
     if (!dailyReportEnabled($pdo, $org['id'])) { continue; }
-    if (!$force) {
-        if ((int)date('G') < dailyReportHour($pdo, $org['id'])) { continue; }                       // अजून वेळ झाली नाही
-        if (orgSetting($pdo, $org['id'], 'daily_report_last_date') === $today
-            && str_starts_with((string)orgSetting($pdo, $org['id'], 'daily_report_last_msg', ''), '✓')) { continue; } // आज आधीच गेला
-        // अयशस्वी झाला असेल तर एका तासाने पुन्हा प्रयत्न (दर 15 मिनिटांनी नाही)
-        $lastAt = orgSetting($pdo, $org['id'], 'daily_report_last_at');
-        if (orgSetting($pdo, $org['id'], 'daily_report_last_date') === $today && $lastAt && strtotime($lastAt) > time() - 3600) { continue; }
+    if ($force) {
+        $r = dailyReportSend($pdo, $org['id'], $today);
+    } else {
+        // वेळ झाली असेल तर आजचा; काल संध्याकाळी गेला नसेल तर आज सकाळी कालचा — एकदाच, Lock सह (Web Backup मार्गाशी दुप्पट नाही)
+        $r = reportAutoSendRun($pdo, $org['id'], 'cron');
+        if (empty($r['sent'])) { continue; }
     }
-    $r = dailyReportSend($pdo, $org['id'], $today);
     $allOk = $allOk && ($r['ok'] || str_contains($r['msg'], 'पत्ता नाही'));
     $out .= ($r['ok'] ? '[OK] ' : '[SKIP/FAILED] ') . $org['name'] . ' — ' . $r['msg'] . "\n";
 }
