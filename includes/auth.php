@@ -168,6 +168,10 @@ function requireLogin($rootPath = '') {
     // 🔒 नोंदी बदलणं / हटवणं फक्त Super Admin (org setting records_lock — default चालू)
     recordLockEnforce($rootPath);
 
+    // 🔐 Access न दिलेले Modules थेट URL ने पण उघडू नयेत (includes/module-access.php)
+    require_once __DIR__ . '/module-access.php';
+    moduleAccessEnforce($rootPath);
+
     // 🎯 Single-Purpose Access Mode — एखादा Role फक्त काही ठराविक
     // Modules शीच मर्यादित असेल (Restricted), तर तो व्यक्ती URL मध्ये
     // थेट दुसऱ्या कुठल्याही Module चा Address टाकून गेला, तरी त्याला
