@@ -371,7 +371,6 @@ $todayLabel = $marathiDays[(int)date('w')] . ', ' . (int)date('j') . ' ' . $mara
     <?php else: ?>
       <a href="login.php" class="btn-hero btn-login"><i class="fa-solid fa-right-to-bracket"></i> Login</a>
     <?php endif; ?>
-    <a href="student/login.php" class="btn-hero btn-student"><i class="fa-solid fa-graduation-cap"></i> 🎓 विद्यार्थी Login (Virtual Classroom)</a>
     <a href="request.php" class="btn-hero btn-request"><i class="fa-solid fa-clipboard-question"></i> <?= h(t('s146')) ?></a>
     <a href="track-request.php" class="btn-hero btn-request"><i class="fa-solid fa-magnifying-glass"></i> स्थिती तपासा</a>
     <a href="guests/pre-register.php" class="btn-hero btn-request"><i class="fa-solid fa-id-card-clip"></i> 🎫 पाहुणे Pre-Registration</a>
@@ -508,12 +507,6 @@ $todayLabel = $marathiDays[(int)date('w')] . ', ' . (int)date('j') . ' ' . $mara
       <h3><?= h(t('s702')) ?></h3>
       <p><?= h(t('s703')) ?></p>
     </div>
-    <a href="student/login.php" class="info-card" style="text-decoration:none;color:inherit;cursor:pointer;">
-      <i class="fa-solid fa-chalkboard-user"></i>
-      <h3><?= h(t('s704')) ?></h3>
-      <p><?= h(t('s705')) ?></p>
-      <div style="margin-top:10px;font-size:11.5px;font-weight:700;color:#C97F1D;">🎓 विद्यार्थी येथून Login करा →</div>
-    </a>
     <div class="info-card">
       <i class="fa-solid fa-shield-halved"></i>
       <h3><?= h(t('s67')) ?></h3>

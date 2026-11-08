@@ -276,11 +276,6 @@ $loginOrgName = $loginOrg['name'] ?? 'VJMAT';
         </div>
       </div>
 
-      <nav class="lg-tabs" aria-label="Login प्रकार">
-        <span aria-current="page"><i class="fa-solid fa-user-tie"></i> कर्मचारी</span>
-        <a href="student/login.php"><i class="fa-solid fa-graduation-cap"></i> विद्यार्थी</a>
-      </nav>
-
       <h2>पुन्हा स्वागत आहे 🙏</h2>
       <div class="sub">पुढे जाण्यासाठी तुमच्या खात्यात Login करा</div>
 

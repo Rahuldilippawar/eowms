@@ -94,7 +94,7 @@ $dirToGroup = [
     'letters' => 'letters', 'requests' => 'letters', 'emergency' => 'letters',
     'staff' => 'staff',
     'hostels' => 'hostel', 'residency' => 'hostel',
-    'meditation' => 'activities', 'music' => 'activities', 'academics' => 'activities', 'sop' => 'activities',
+    'meditation' => 'activities', 'music' => 'activities', 'sop' => 'activities',
     'events' => 'activities', 'guests' => 'activities',
     'allocations' => 'facilities', 'room-booking' => 'facilities',
     'messages' => 'communication', 'grievances' => 'communication',
@@ -392,19 +392,6 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
           <i class="fa-solid fa-id-card-clip fa-fw"></i><span>🎫 पाहुणे नोंदणी</span>
         </a>
       <?php endif; ?>
-      <?php if (hasCategory('hod') || isManagementOrAbove() || hasRole('super_admin') || hasPermission('manage_academics')): ?>
-        <a href="<?= $rp ?>academics/students.php" class="tree-node <?= $currentDir === 'academics' ? 'active' : '' ?>">
-          <i class="fa-solid fa-chalkboard-user fa-fw"></i><span>🎓 Virtual Classroom</span>
-        </a>
-      <?php else:
-        // नेमलेले शिक्षक (HOD नसलेले) — फक्त स्वतःचे वर्ग
-        $myClassNavStmt = $pdo->prepare("SELECT COUNT(*) FROM classroom_staff cs JOIN virtual_classrooms vc ON vc.id = cs.classroom_id WHERE cs.user_id = ? AND vc.organization_id = ? AND vc.is_active = 1");
-        $myClassNavStmt->execute([$user['id'], $activeOrgId]);
-        if ((int)$myClassNavStmt->fetchColumn() > 0): ?>
-        <a href="<?= $rp ?>academics/classrooms.php" class="tree-node <?= $currentDir === 'academics' ? 'active' : '' ?>">
-          <i class="fa-solid fa-chalkboard-user fa-fw"></i><span>🎓 माझे वर्ग / My Classrooms</span>
-        </a>
-      <?php endif; endif; ?>
       <?php if (!empty($user['department_id']) || isManagementOrAbove() || hasRole('super_admin')): ?>
         <a href="<?= $rp ?>sop/checklist.php" class="tree-node <?= $currentDir === 'sop' && $currentPage === 'checklist.php' ? 'active' : '' ?>">
           <i class="fa-solid fa-list-check fa-fw"></i><span>SOP Checklist</span>

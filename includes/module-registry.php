@@ -94,10 +94,6 @@ function getModuleRegistry() {
             'label' => 'ध्यान व सत्संग', 'icon' => 'fa-solid fa-spa',
             'dirs' => ['meditation'], 'dashboard' => 'meditation/index.php', 'color' => '#1B8A83',
         ],
-        'academics' => [
-            'label' => 'Virtual Classroom', 'icon' => 'fa-solid fa-chalkboard-user',
-            'dirs' => ['academics'], 'dashboard' => 'academics/students.php', 'color' => '#C97F1D',
-        ],
         'sop' => [
             'label' => 'SOP', 'icon' => 'fa-solid fa-list-check',
             'dirs' => ['sop'], 'dashboard' => 'sop/checklist.php', 'color' => '#666B7D',
