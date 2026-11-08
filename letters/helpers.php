@@ -196,3 +196,63 @@ function letterSendTo($pdo, $letter, $toUserId, $fromUserId, $actionType, $remar
     assignInwardForHolder($pdo, $letter['id'], $toUserId, $letter['department_id'], $orgId);
     notifyUser($toUserId, $orgId, 'नवीन फाईल तुमच्याकडे आली', $letter['subject'] . ' — ' . $letter['file_number'], 'letters/view.php?id=' . $letter['id']);
 }
+
+/* ---------------- ✍️ हस्तलिखित टिप्पणी (Pen / बोटाने Screen वर लिहिलेली) ----------------
+ * DB बदल नाही — PNG File: assets/uploads/letters/{letterId}/ink_{actionId}_{random}.png
+ * (हालचालीच्या ID वरून ओळख; File GD ने पुन्हा बनवली जाते, म्हणून आत काहीही लपवलेलं राहत नाही)
+ */
+function letterInkSave($letterId, $actionId, $dataUrl) {
+    $prefix = 'data:image/png;base64,';
+    if (!is_string($dataUrl) || strncmp($dataUrl, $prefix, strlen($prefix)) !== 0 || !$actionId) { return false; }
+    $raw = base64_decode(substr($dataUrl, strlen($prefix)), true);
+    if ($raw === false || strlen($raw) < 80 || strlen($raw) > 2000000) { return false; }
+    $info = @getimagesizefromstring($raw);
+    if (!$info || $info[2] !== IMAGETYPE_PNG || $info[0] > 4000 || $info[1] > 4000) { return false; }
+    if (function_exists('imagecreatefromstring')) {
+        $im = @imagecreatefromstring($raw);
+        if (!$im) { return false; }
+        imagealphablending($im, false);
+        imagesavealpha($im, true);
+        ob_start();
+        imagepng($im, null, 6);
+        $raw = ob_get_clean();
+        imagedestroy($im);
+    }
+    $dir = __DIR__ . '/../assets/uploads/letters/' . (int)$letterId . '/';
+    if (!is_dir($dir) && !@mkdir($dir, 0755, true)) { return false; }
+    return file_put_contents($dir . 'ink_' . (int)$actionId . '_' . bin2hex(random_bytes(6)) . '.png', $raw) !== false;
+}
+
+/** [actionId => 'assets/uploads/letters/…/ink_….png'] */
+function letterInkMap($letterId) {
+    $out = [];
+    foreach (glob(__DIR__ . '/../assets/uploads/letters/' . (int)$letterId . '/ink_*_*.png') ?: [] as $f) {
+        if (preg_match('/ink_(\d+)_[0-9a-f]+\.png$/', $f, $m)) { $out[(int)$m[1]] = 'assets/uploads/letters/' . (int)$letterId . '/' . basename($f); }
+    }
+    return $out;
+}
+
+/** या Request मध्ये ह्या माणसाने जोडलेल्या शेवटच्या हालचालीला हस्तलिखित टिप्पणी जोडतो */
+function letterInkAttachLatest(PDO $pdo, $letterId, $userId, $afterActionId, $dataUrl) {
+    if (!is_string($dataUrl) || $dataUrl === '') { return false; }
+    $st = $pdo->prepare("SELECT MAX(id) FROM letter_actions WHERE letter_id = ? AND from_user_id = ? AND id > ?");
+    $st->execute([(int)$letterId, (int)$userId, (int)$afterActionId]);
+    $aid = (int)$st->fetchColumn();
+    return $aid ? letterInkSave($letterId, $aid, $dataUrl) : false;
+}
+
+/** Executive President (कार्यकारी अध्यक्ष) — फक्त यांचा हस्तलिखित शेरा थेट पत्रावर छापला जातो */
+function letterIsExecutive($role, $designation = '') {
+    $d = mb_strtolower((string)$designation);
+    return $role === 'executive_president' || str_contains($d, 'executive president') || str_contains($d, 'कार्यकारी अध्यक्ष');
+}
+
+/** पत्रावर येणारे शेरे: [['img'=>…, 'name'=>…, 'designation'=>…, 'at'=>…, 'text'=>…]] — $actions मध्ये from_role / from_designation हवेत */
+function letterExecutiveShera(array $actions, array $inkMap) {
+    $out = [];
+    foreach ($actions as $a) {
+        if (!isset($inkMap[(int)$a['id']]) || !letterIsExecutive($a['from_role'] ?? '', $a['from_designation'] ?? '')) { continue; }
+        $out[] = ['img' => $inkMap[(int)$a['id']], 'name' => $a['from_name'], 'designation' => $a['from_designation'] ?: 'Executive President', 'at' => $a['created_at']];
+    }
+    return $out;
+}

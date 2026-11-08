@@ -34,7 +34,7 @@ if (!$canView) { die('तुम्हाला ही फाईल पाहण�
 $org = $pdo->query("SELECT * FROM organizations WHERE id = " . (int)$orgId)->fetch();
 
 $stmt = $pdo->prepare("
-    SELECT la.*, fu.name AS from_name, tu.name AS to_name
+    SELECT la.*, fu.name AS from_name, fu.role AS from_role, fu.designation AS from_designation, tu.name AS to_name
     FROM letter_actions la
     LEFT JOIN users fu ON fu.id = la.from_user_id
     LEFT JOIN users tu ON tu.id = la.to_user_id
@@ -42,6 +42,9 @@ $stmt = $pdo->prepare("
 ");
 $stmt->execute([$letterId]);
 $actions = $stmt->fetchAll();
+require_once __DIR__ . '/helpers.php';
+$inkMap = letterInkMap($letterId);
+$sheras = letterExecutiveShera($actions, $inkMap);   // फक्त Executive President यांचा हस्तलिखित शेरा — पत्रावर
 
 $stmt = $pdo->prepare("SELECT la.*, u.name AS uploader_name FROM letter_attachments la LEFT JOIN users u ON u.id = la.uploaded_by WHERE la.letter_id = ? ORDER BY la.id");
 $stmt->execute([$letterId]);
@@ -99,6 +102,10 @@ $actionLabels = ['created' => 'तयार केली', 'submitted' => 'स�
 
   /* ---------------- Signature ---------------- */
   .sig-block{margin-top:0.55in;text-align:right;}
+  .shera{margin-top:0.3in;padding:10px 0 4px;border-top:1px dashed #C9C2B2;page-break-inside:avoid;}
+  .shera-lbl{font-size:11px;font-weight:700;color:var(--text-dim);letter-spacing:.5px;}
+  .shera img{display:block;max-width:100%;max-height:2.2in;margin:4px 0;}
+  .shera-by{font-size:11px;color:var(--text-dim);text-align:right;}
   .sig-block .sig-line{border-top:1px solid var(--text);width:2.4in;margin-left:auto;padding-top:6px;}
   .sig-block .sig-name{font-weight:700;font-size:13px;}
   .sig-block .sig-desig{font-size:11px;color:var(--text-dim);}
@@ -164,6 +171,15 @@ $actionLabels = ['created' => 'तयार केली', 'submitted' => 'स�
     <?php endif; ?>
   </div>
 
+  <!-- ============ Executive President यांचा हस्तलिखित शेरा ============ -->
+  <?php foreach ($sheras as $sh): ?>
+    <div class="shera">
+      <div class="shera-lbl">शेरा</div>
+      <img src="../<?= h($sh['img']) ?>" alt="हस्तलिखित शेरा">
+      <div class="shera-by">— <?= h($sh['name']) ?>, <?= h($sh['designation']) ?> · <?= date('d-m-Y', strtotime($sh['at'])) ?></div>
+    </div>
+  <?php endforeach; ?>
+
   <!-- ============ Signature ============ -->
   <div class="sig-block">
     <div class="sig-line">
@@ -196,6 +212,7 @@ $actionLabels = ['created' => 'तयार केली', 'submitted' => 'स�
         <div>
           <strong><?= h($a['from_name']) ?></strong> — <?= $actionLabels[$a['action_type']] ?? $a['action_type'] ?><?= $a['to_name'] ? ' → ' . h($a['to_name']) : '' ?>
           <?php if ($a['remark']): ?> — <?= h($a['remark']) ?><?php endif; ?>
+          <?php if (isset($inkMap[(int)$a['id']])): ?><div><img src="../<?= h($inkMap[(int)$a['id']]) ?>" alt="हस्तलिखित टिप्पणी" style="max-width:100%;max-height:150px;margin-top:4px;"></div><?php endif; ?>
           <span style="color:var(--text-dim);"> (<?= date('d-m-Y, h:i A', strtotime($a['created_at'])) ?>)</span>
         </div>
       </div>
