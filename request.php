@@ -1,5 +1,9 @@
 <?php
 require_once __DIR__ . '/includes/auth.php';
+require_once __DIR__ . '/includes/app-settings.php';
+require_once __DIR__ . '/includes/ticket-helpers.php'; // SLA (अपेक्षित वेळ), प्रकार
+$publicCats = ['maintenance' => '🔧 दुरुस्ती / देखभाल', 'housekeeping' => '🧹 स्वच्छता', 'it' => '🖥️ Computer / Internet', 'general' => '📋 सर्वसाधारण', 'other' => '📄 इतर'];
+$publicPri = ['normal' => ['🙂 सामान्य', '3 दिवसांत'], 'high' => ['⚠️ लवकर हवं', '1 दिवसात'], 'urgent' => ['🚨 तातडीचे', '8 तासांत']];
 
 // Primary organization for this deployment
 $org = $pdo->query("SELECT * FROM organizations WHERE is_active = 1 ORDER BY id LIMIT 1")->fetch();
@@ -25,6 +29,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $contact = trim($_POST['requester_contact'] ?? '') ?: null;
     $deptId = (int)($_POST['department_id'] ?? 0);
     $description = trim($_POST['work_description'] ?? '');
+    $location = trim(mb_substr((string)($_POST['location'] ?? ''), 0, 200)) ?: null;
+    $category = isset($publicCats[$_POST['category'] ?? '']) ? $_POST['category'] : 'general';
+    $priority = isset($publicPri[$_POST['priority'] ?? '']) ? $_POST['priority'] : 'normal';
+    $contactDigits = preg_replace('/\D/', '', (string)$contact);
+    // IT रांग फक्त IT विभागासाठी (requests/create.php सारखाच नियम)
+    $deptCode = ''; foreach ($departments as $__d) { if ((int)$__d['id'] === $deptId) { $deptCode = (string)($__d['code'] ?? ''); } }
+    if ($deptCode === 'IT') { $category = 'it'; } elseif ($category === 'it') { $category = 'general'; }
 
     // विभाग याच संस्थेचा, सक्रिय आहे ना — तपासतो
     $deptValid = in_array($deptId, array_map('intval', array_column($departments, 'id')), true);
@@ -36,6 +47,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'या ठिकाणावरून गेल्या तासाभरात खूप विनंत्या आल्या आहेत — कृपया थोड्या वेळाने पुन्हा प्रयत्न करा.';
     } elseif (!$name || !$deptId || !$description || !$deptValid) {
         $error = t('s453');
+    } elseif ($contact && !filter_var($contact, FILTER_VALIDATE_EMAIL) && strlen($contactDigits) < 10) {
+        $error = 'Mobile नंबर 10 अंकी असावा (किंवा योग्य Email टाका) — स्थिती तपासताना तोच लागेल.';
     } else {
         $countStmt = $pdo->prepare("SELECT COUNT(*) c FROM work_requests WHERE organization_id = ?");
         $countStmt->execute([$orgId]);
@@ -45,10 +58,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $requestCode = generateUniqueCode($pdo, 'work_requests', 'request_code', 'REQ-%s%04d', $seq, date('y'));
 
         $insert = $pdo->prepare("
-            INSERT INTO work_requests (request_code, organization_id, department_id, requester_name, requester_contact, work_description, status)
-            VALUES (?, ?, ?, ?, ?, ?, 'pending')
+            INSERT INTO work_requests (request_code, organization_id, department_id, category, title, location, priority, due_at, requester_name, requester_contact, work_description, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
         ");
-        $insert->execute([$requestCode, $orgId, $deptId, $name, $contact, $description]);
+        $insert->execute([$requestCode, $orgId, $deptId, $category, mb_substr($description, 0, 80), $location, $priority, ticketDueAt($priority), $name, $contact, $description]);
+        $successEta = $publicPri[$priority][1];
         $newRequestId = $pdo->lastInsertId();
         try {
             $pdo->prepare("INSERT INTO work_request_actions (request_id, action_type, new_status) VALUES (?, 'created', 'pending')")
@@ -58,7 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // was already saved successfully above, so don't block the user.
         }
         publicFormRecordSubmission('work_request');
-        notifyDepartment($deptId, $orgId, 'नवीन कामाची विनंती आली', "$name कडून: " . mb_substr($description, 0, 80), 'requests/index.php');
+        notifyDepartment($deptId, $orgId, ($priority === 'urgent' ? '🚨 तातडीची ' : '') . 'नवीन कामाची विनंती आली — ' . $requestCode, "$name कडून" . ($location ? " ($location)" : '') . ': ' . mb_substr($description, 0, 80), 'requests/index.php');
         $success = "तुमची विनंती यशस्वीरित्या नोंदवली गेली — Request ID: $requestCode. संबंधित विभाग लवकरच त्यावर काम करेल.";
     }
 }
@@ -132,6 +146,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   .track-btn{display:block;text-align:center;margin-top:16px;background:var(--rail);color:#fff;text-decoration:none;padding:13px 18px;border-radius:12px;font-size:13.5px;font-weight:600;box-shadow:0 8px 20px rgba(217,83,15,.28);}
   .hint{font-size:11.5px;color:var(--text-dim);margin-top:14px;text-align:center;line-height:1.6;}
 
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;}
+  .chip{position:relative;cursor:pointer;margin:0;}
+  .chip input{position:absolute;opacity:0;width:1px;height:1px;padding:0;}
+  .chip span{display:inline-flex;flex-direction:column;align-items:center;padding:9px 13px;border:1.5px solid var(--line);border-radius:12px;font-size:13px;font-weight:600;background:#fff;color:#1A1D29;transition:all .15s ease;}
+  .chip span small{font-size:10.5px;font-weight:500;color:var(--text-dim);margin-top:2px;}
+  .chip input:checked + span{border-color:var(--rail);background:rgba(217,83,15,.08);color:var(--rail);box-shadow:0 0 0 3px rgba(217,83,15,.10);}
+  .chip input:focus-visible + span{outline:2px solid var(--rail);}
+  .chips.pri .chip{flex:1 1 0;} .chips.pri .chip span{width:100%;}
+  .mini-btn{display:inline-block;border:1.5px solid var(--line);border-radius:10px;padding:7px 14px;font-size:13px;font-weight:600;color:var(--ink);text-decoration:none;}
   a.back{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:22px;font-size:13px;color:var(--rail);text-decoration:none;font-weight:600;}
 </style>
 </head>
@@ -156,7 +179,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="success-icon"><i class="fa-solid fa-check"></i></div>
     <div class="success-title">विनंती यशस्वीरित्या नोंदवली!</div>
     <div class="success-code-wrap"><span class="success-code"><?= htmlspecialchars($requestCode) ?></span></div>
-    <p class="success-sub">संबंधित विभागाला याची सूचना मिळाली आहे — ते लवकरच त्यावर काम करतील.</p>
+    <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:10px;">
+      <a href="#" class="mini-btn" onclick="navigator.clipboard && navigator.clipboard.writeText('<?= h($requestCode) ?>'); this.textContent='✓ Copy झाला'; return false;">📋 Copy</a>
+      <a class="mini-btn" target="_blank" rel="noopener" href="https://wa.me/?text=<?= rawurlencode('माझी कामाची विनंती: ' . $requestCode . ' — स्थिती: ' . siteBaseUrl() . 'track-request.php?code=' . $requestCode) ?>">💬 WhatsApp</a>
+    </div>
+    <p class="success-sub">संबंधित विभागाला याची सूचना मिळाली आहे<?= !empty($successEta) ? ' — अपेक्षित वेळ: <b>' . h($successEta) . '</b>' : '' ?>.</p>
+    <script>try { var k = 'eowms_my_requests', a = JSON.parse(localStorage.getItem(k) || '[]').filter(function (x) { return x !== '<?= h($requestCode) ?>'; }); a.unshift('<?= h($requestCode) ?>'); localStorage.setItem(k, JSON.stringify(a.slice(0, 8))); } catch (e) {}</script>
     <a href="track-request.php?code=<?= urlencode($requestCode) ?>" class="track-btn">📋 स्थिती तपासा (Track Status)</a>
     <div class="hint">💡 हा Request ID विसरलात तरी काळजी नाही — तुमच्या Mobile Number ने पुन्हा शोधता येईल.</div>
     <a href="welcome.php" class="back"><i class="fa-solid fa-arrow-left"></i> <?= h(t('s138')) ?></a>
@@ -211,12 +239,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       }
       </script>
 
-      <div class="step-label"><span class="step-num">3</span> <?= h(t('s142')) ?></div>
+      <div class="step-label"><span class="step-num">3</span> समस्येचा प्रकार व ठिकाण</div>
+      <div class="chips">
+        <?php foreach ($publicCats as $k => $v): ?>
+          <label class="chip"><input type="radio" name="category" value="<?= $k ?>" <?= ($_POST['category'] ?? 'maintenance') === $k ? 'checked' : '' ?>><span><?= h($v) ?></span></label>
+        <?php endforeach; ?>
+      </div>
+      <div class="field-wrap" style="margin-top:10px;"><i class="fa-solid fa-location-dot fi"></i><input type="text" name="location" maxlength="200" placeholder="ठिकाण — उदा. इमारत A, दुसरा मजला, वर्ग क्र. 5" value="<?= h($_POST['location'] ?? '') ?>"></div>
+
+      <div class="step-label"><span class="step-num">4</span> <?= h(t('s142')) ?></div>
       <div class="field-wrap"><i class="fa-regular fa-message fi"></i><textarea name="work_description" id="workDesc" rows="4" required maxlength="500" placeholder="उदा. वर्ग क्र. ५ मधील पंखा बंद पडला आहे, दुरुस्ती हवी आहे" oninput="document.getElementById('charCount').textContent = this.value.length"></textarea></div>
       <div class="char-count"><span id="charCount">0</span>/500</div>
 
+      <div class="step-label"><span class="step-num">5</span> किती तातडीचं?</div>
+      <div class="chips pri">
+        <?php foreach ($publicPri as $k => [$lbl, $eta]): ?>
+          <label class="chip"><input type="radio" name="priority" value="<?= $k ?>" <?= ($_POST['priority'] ?? 'normal') === $k ? 'checked' : '' ?>><span><?= h($lbl) ?><small>अपेक्षित: <?= h($eta) ?></small></span></label>
+        <?php endforeach; ?>
+      </div>
+
       <button type="submit"><i class="fa-solid fa-paper-plane" style="margin-right:8px;"></i><?= h(t('s143')) ?></button>
     </form>
+    <script>
+    // पुढच्या वेळी नाव/Mobile पुन्हा टाइप करायला नको — फक्त याच Phone/Browser मध्ये लक्षात ठेवतो
+    (function () {
+      try {
+        var f = document.querySelector('form'), n = f.requester_name, c = f.requester_contact, saved = JSON.parse(localStorage.getItem('eowms_requester') || '{}');
+        if (!n.value && saved.n) n.value = saved.n; if (!c.value && saved.c) c.value = saved.c;
+        f.addEventListener('submit', function () { localStorage.setItem('eowms_requester', JSON.stringify({ n: n.value.trim(), c: c.value.trim() })); });
+      } catch (e) {}
+    })();
+    </script>
     <a href="welcome.php" class="back"><i class="fa-solid fa-arrow-left"></i> <?= h(t('s144')) ?></a>
   <?php endif; ?>
 </div>
