@@ -1,5 +1,5 @@
 <?php
-// CSRF संरक्षण — includes/auth.php आणि includes/student-auth.php दोन्हीकडून
+// CSRF संरक्षण — includes/auth.php मधून
 // session_start() नंतर लगेच Include होते.
 //
 // 1) प्रत्येक Session साठी एक गुप्त Token.

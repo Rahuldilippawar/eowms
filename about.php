@@ -62,7 +62,6 @@ $moduleDefs = [
     ['fa-id-badge', 'अतिथी नोंद', 'आगमन-निर्गमन व पूर्व-नोंदणी', 'guests'],
     ['fa-door-open', 'खोली आरक्षण', 'सभागृह व खोल्यांचं Booking', 'bookable_rooms'],
     ['fa-cow', 'गोशाळा', 'जनावरं, दूध, चारा, आरोग्य', 'gaushala_cattle'],
-    ['fa-chalkboard-user', 'Virtual Classroom', 'Material, Assignment, परीक्षा', 'virtual_classrooms'],
     ['fa-music', 'संगीत विभाग', 'विद्यार्थी, वाद्यं व कार्यक्रम', 'music_students'],
     ['fa-hands-praying', 'सत्संग', 'कार्यक्रम, सेवा व उपस्थिती', 'satsang_events'],
     ['fa-book-open', 'SOP', 'कार्यपद्धती व पालन', 'sops'],
