@@ -86,8 +86,13 @@ foreach (cronRunAllJobs() as $job => $sched) {
             fclose($pipes[2]);
             $exitCode = proc_close($proc);
         }
+    } elseif (function_exists('exec')) {
+        // काही Hosting वर proc_open बंद असतं — तेव्हा exec ने
+        $lines = [];
+        exec('EADMIN_RUN_ALL=1 ' . $cmd . ' 2>&1', $lines, $exitCode);
+        $output = implode("\n", $lines);
     } else {
-        $output = 'proc_open उपलब्ध नाही — हा Job स्वतंत्र Cron Line ने चालवा.';
+        $output = 'proc_open / exec दोन्ही बंद — हा Job स्वतंत्र Cron Line ने चालवा.';
     }
 
     // die("...") ने संपलेले Jobs (उदा. "table not found") — Exit Code 0 असतो, त्यामुळे यशस्वी धरतो
