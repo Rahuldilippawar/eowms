@@ -332,7 +332,7 @@ function eowmsSwitchDashTab(which, btn) {
       </div>
     <?php endif; ?>
 
-    <?php if ($latestSatsang && isManagementOrAbove()): ?>
+    <?php if ($latestSatsang && isManagementOrAbove() && moduleAllowed('meditation')): ?>
       <div class="panel mt-3">
         <div class="panel-head d-flex justify-content-between align-items-center">
           <div><div class="title">🧘 शेवटच्या सत्संगाची हजेरी</div><div class="sub"><?= date('d M Y', strtotime($latestSatsang['event_date'])) ?><?= $latestSatsang['organizer_dept'] ? ' · ' . h($latestSatsang['organizer_dept']) : '' ?></div></div>

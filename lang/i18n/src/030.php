@@ -92,4 +92,7 @@ return [
     "कायमचे हटवा" => ["स्थायी रूप से हटाएँ", "Delete permanently"],
     "हटवता आले नाही — त्यांच्या काही नोंदी अजून दुसरीकडे जोडलेल्या आहेत. त्याऐवजी त्यांना निष्क्रिय करा, किंवा ही त्रुटी कळवा" => ["हटाया नहीं जा सका — उनकी कुछ प्रविष्टियाँ अभी कहीं और जुड़ी हैं। इसके बजाय निष्क्रिय करें, या यह त्रुटि बताएँ", "could not be deleted — some of their records are still linked elsewhere. Deactivate them instead, or report this error"],
     "व त्यांच्या सगळ्या नोंदी कायमच्या हटवल्या." => ["और उनकी सभी प्रविष्टियाँ स्थायी रूप से हटाईं।", "and all their records were deleted permanently."],
+    // 🔐 Module Access
+    "या Module चा Access नाही" => ["इस Module का Access नहीं है", "No access to this module"],
+    "हा Module वापरण्याची परवानगी तुमच्या पदाला दिलेली नाही. गरज असल्यास Super Admin ला \"पदे व्यवस्थापन\" मधून Access द्यायला सांगा." => ["इस Module के उपयोग की अनुमति आपके पद को नहीं दी गई है। ज़रूरत हो तो Super Admin से \"पदे व्यवस्थापन\" में Access देने को कहें।", "Your role has not been given permission for this module. If you need it, ask the Super Admin to grant access in Roles management."],
 ];

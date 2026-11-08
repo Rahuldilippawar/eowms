@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/module-access.php'; // 🔐 moduleAllowed()
 // Expects $pdo, $user, $rootPath to already be available.
 $rp = $rootPath ?? '';
 $activeOrgId = activeOrgId();
@@ -371,23 +372,22 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
       <i class="fa-solid fa-chevron-right chevron"></i>
     </div>
     <div class="collapse nav-group-body <?= navGroupOpen('activities', $activeGroup) ?>" id="navGroupActivities">
+      <?php if (moduleAllowed('meditation')): ?>
       <a href="<?= $rp ?>meditation/index.php" class="tree-node <?= $currentDir === 'meditation' ? 'active' : '' ?>">
         <i class="fa-solid fa-spa fa-fw"></i><span>ध्यान व सत्संग</span>
       </a>
-      <?php
-        // संगीत विभाग — music/index.php सारखाच नियम: संगीत विभागाचा Staff, manage_music, किंवा Management
-        $__musicOk = hasPermission('manage_music') || isManagementOrAbove();
-        if (!$__musicOk) { try { $__mq = $pdo->prepare("SELECT code FROM departments WHERE id = ?"); $__mq->execute([$user['department_id'] ?? 0]); $__musicOk = ($__mq->fetchColumn() ?: '') === 'MUS'; } catch (PDOException $e) {} }
-      ?>
-      <?php if ($__musicOk): ?>
+      <?php endif; ?>
+      <?php if (moduleAllowed('music')): // संगीत विभागाचा Staff किंवा manage_music ?>
       <a href="<?= $rp ?>music/index.php" class="tree-node <?= $currentDir === 'music' ? 'active' : '' ?>">
         <i class="fa-solid fa-music fa-fw"></i><span>🎵 संगीत विभाग</span>
       </a>
       <?php endif; ?>
+      <?php if (moduleAllowed('events')): ?>
       <a href="<?= $rp ?>events/index.php" class="tree-node <?= $currentDir === 'events' ? 'active' : '' ?>">
         <i class="fa-solid fa-calendar-days fa-fw"></i><span>🎉 कार्यक्रम व्यवस्थापन</span>
       </a>
-      <?php if (hasPermission('manage_guests') || isManagementOrAbove() || hasRole('super_admin')): ?>
+      <?php endif; ?>
+      <?php if (moduleAllowed('guests')): ?>
         <a href="<?= $rp ?>guests/index.php" class="tree-node <?= $currentDir === 'guests' ? 'active' : '' ?>">
           <i class="fa-solid fa-id-card-clip fa-fw"></i><span>🎫 पाहुणे नोंदणी</span>
         </a>
@@ -405,18 +405,24 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
     </div>
 
     <!-- ==================== सुविधा व्यवस्थापन ==================== -->
+    <?php if (moduleAllowed('room-booking') || moduleAllowed('allocations')): ?>
     <div class="nav-group-header" data-bs-toggle="collapse" data-bs-target="#navGroupFacilities" aria-expanded="<?= navGroupExpanded('facilities', $activeGroup) ?>">
       <span class="label"><i class="fa-solid fa-building fa-fw"></i> सुविधा व्यवस्थापन</span>
       <i class="fa-solid fa-chevron-right chevron"></i>
     </div>
     <div class="collapse nav-group-body <?= navGroupOpen('facilities', $activeGroup) ?>" id="navGroupFacilities">
+      <?php if (moduleAllowed('room-booking')): ?>
       <a href="<?= $rp ?>room-booking/index.php" class="tree-node <?= $currentDir === 'room-booking' ? 'active' : '' ?>">
         <i class="fa-solid fa-door-open fa-fw"></i><span>📐 Room/Hall Booking</span>
       </a>
+      <?php endif; ?>
+      <?php if (moduleAllowed('allocations')): ?>
       <a href="<?= $rp ?>allocations/index.php" class="tree-node <?= $currentDir === 'allocations' ? 'active' : '' ?>">
         <i class="fa-solid fa-boxes-packing fa-fw"></i><span>📦 Issue / Return Register</span>
       </a>
+      <?php endif; ?>
     </div>
+    <?php endif; ?>
 
     <!-- ==================== संवाद व सहभाग ==================== -->
     <?php
@@ -457,17 +463,18 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
               $myVeh = $myVehStmt->fetch();
           } catch (PDOException $e) { /* vehicles table not migrated yet */ }
       }
-      $showVehicles = hasRole('super_admin') || hasPermission('manage_vehicles') || isManagementOrAbove() || $vehUserDeptCode === 'TRP' || $myVeh;
+      $showVehicles = moduleAllowed('vehicles') || $myVeh; // 🔐 Permission / वाहतूक विभाग / स्वतःकडे दिलेलं वाहन
 
       $mtnDeptCheck = $pdo->prepare("SELECT has_issue_register FROM departments WHERE id = ?");
       $mtnDeptCheck->execute([$user['department_id'] ?? 0]);
       $userHasIssueRegister = !empty($mtnDeptCheck->fetch()['has_issue_register']);
       // देखभाल — maintenance/index.php व create.php चाच नियम (Issue Register असलेला विभाग किंवा manage_maintenance_settings)
       $showMaintenance = $userHasIssueRegister || hasPermission('manage_maintenance_settings');
-      $showDeadStock = !empty($user['department_id']) || isManagementOrAbove() || hasRole('super_admin');
-      $showStore = ($vehUserDeptCode === 'STR') || hasPermission('manage_store') || isManagementOrAbove();
-      $showCctv = ($vehUserDeptCode === 'CCTV') || hasPermission('manage_cctv') || isManagementOrAbove();
-      $showIt = ($vehUserDeptCode === 'IT') || hasPermission('manage_it') || isManagementOrAbove();
+      // 🔐 फक्त Access दिलेल्यांनाच (includes/module-access.php) — Management ला आपोआप नाही
+      $showDeadStock = moduleAllowed('deadstock');
+      $showStore = moduleAllowed('store');
+      $showCctv = moduleAllowed('cctv');
+      $showIt = moduleAllowed('it');
       // IT Requests व्यवस्थापन — पानावरचाच नियम (IT विभाग सदस्य किंवा manage_it)
       require_once __DIR__ . '/it-helpers.php';
       $showItRequestsManage = false;
@@ -544,16 +551,18 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
 
     <!-- ==================== आर्थिक ==================== -->
     <?php // पूर्वीचे "विभाग Budget" + "Material Purchase व Payment" — आता एकच; दोन्हीपैकी कुठलीही परवानगी पुरेशी ?>
-    <?php if (hasPermission('manage_budget') || hasPermission('manage_dept_finance') || hasCategory('hod') || isManagementOrAbove() || hasRole('super_admin')): ?>
+    <?php if (moduleAllowed('dept-finance')): ?>
       <a href="<?= $rp ?>dept-finance/dashboard.php" class="tree-node <?= $currentDir === 'dept-finance' ? 'active' : '' ?>">
         <i class="fa-solid fa-sack-dollar fa-fw"></i><span>💰 विभाग Finance</span>
       </a>
     <?php endif; ?>
 
     <!-- ==================== गौशाळा ==================== -->
+    <?php if (moduleAllowed('gaushala')): ?>
     <a href="<?= $rp ?>gaushala/index.php" class="tree-node <?= $currentDir === 'gaushala' ? 'active' : '' ?>">
       <i class="fa-solid fa-cow fa-fw"></i><span>🐄 गौशाळा</span>
     </a>
+    <?php endif; ?>
 
     <!-- ==================== विभाग (Department Dashboards) — College/School/Trust नुसार गटवार ==================== -->
     <div class="tier-label"><?= h(t('nav_departments')) ?></div>
