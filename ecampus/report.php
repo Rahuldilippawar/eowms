@@ -25,6 +25,28 @@ if (isset($_GET['pdf'])) {
 }
 
 $rows = ecampusRows($pdo, $orgId, $period);
+
+// 📊 Excel (CSV — UTF-8, मराठी Excel मध्ये बरोबर दिसावं म्हणून BOM सह)
+if (isset($_GET['csv'])) {
+    csrfStopOutputRewrite();
+    while (ob_get_level()) { ob_end_clean(); }
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename="e-campus-' . $period . '.csv"');
+    header('Cache-Control: no-store');
+    $f = fopen('php://output', 'w');
+    fwrite($f, "\xEF\xBB\xBF");
+    fputcsv($f, ['Sr. No', 'Wing / Category', 'Section / Department', 'Staff Name', 'Designation', 'Assigned Task', 'Progress Notes', '% Complete', 'Status', 'Last Updated']);
+    $cell = fn($v) => preg_match('/^[=+\-@]/', (string)$v) ? "'" . $v : (string)$v;   // Excel formula injection टाळा
+    foreach ($rows as $i => $r) {
+        fputcsv($f, [$i + 1, $cell($r['wing']), $cell($r['section']), $cell($r['staff_name']), $cell($r['designation_show']), $cell($r['task_description']), $cell((string)$r['notes']),
+            $r['percent'], $r['status_label'], $r['updated_at'] && !$r['carried'] ? date('d-m-Y h:i A', strtotime($r['updated_at'])) : '']);
+    }
+    $S = ecampusSummary($rows, $period);
+    fputcsv($f, []);
+    fputcsv($f, ['', '', '', '', '', '', 'एकूण प्रगती', (int)$S['overall'], $S['done'] . '/' . $S['work'] . ' पूर्ण']);
+    fclose($f);
+    exit;
+}
 $S = ecampusSummary($rows, $period);
 $months = [];
 for ($i = 0; $i < 12; $i++) { $months[] = date('Y-m', strtotime(date('Y-m-01') . " -$i month")); }

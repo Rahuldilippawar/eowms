@@ -11,6 +11,18 @@ $orgId = activeOrgId();
 $viewAll = ecampusCanViewAll();
 $isSA = ecampusCanManage();
 
+$canRemind = $viewAll && ($isSA || isManagementOrAbove());
+
+// 🔔 आठवण — नोंद जुनी / सुरू न केलेल्या कर्मचाऱ्यांना (सगळ्यांना किंवा एकाला)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'remind' && $canRemind) {
+    $one = (int)($_POST['user_id'] ?? 0);
+    $n = ecampusSendReminders($pdo, $orgId, $one ? [$one] : null);
+    logActivity('E-Campus आठवण पाठवली', 'ecampus', $one ?: null, $n . ' कर्मचारी');
+    $_SESSION['flash'] = $n ? "🔔 $n कर्मचाऱ्यांना E-Campus प्रगती भरण्याची आठवण पाठवली." : 'आठवण पाठवण्यासारखं कोणी नाही — सगळ्यांच्या नोंदी अद्ययावत आहेत.';
+    header('Location: index.php');
+    exit;
+}
+
 $period = ecampusPeriod($_GET['month'] ?? null);
 $isCurrent = $period === date('Y-m');
 $rows = ecampusRows($pdo, $orgId, $period, $viewAll ? null : $me['id']);
@@ -19,6 +31,12 @@ $S = ecampusSummary($rows, $period);
 $trend = $viewAll ? ecampusDailyTrend($pdo, $orgId, $period, $rows) : [];
 $prevPeriod = date('Y-m', strtotime($period . '-01 -1 month'));
 $prevS = $viewAll ? ecampusSummary(ecampusRows($pdo, $orgId, $prevPeriod), $prevPeriod) : ['overall' => null];
+// 🧠 स्मार्ट विश्लेषण — अंदाज, कर्मचारीनिहाय, आठवड्यातली प्रगती, मागचे 6 महिने
+$forecast = $viewAll ? ecampusForecast($trend, $period, $S['overall']) : null;
+$board = $viewAll ? ecampusStaffBoard($rows, $period) : [];
+$movers = $viewAll ? ecampusMovers($pdo, $period, $rows) : [];
+$history = $viewAll ? ecampusMonthlyHistory($pdo, $orgId, 6) : [];
+$attention = array_values(array_filter($board, fn($b) => $b['stale'] || $b['pending']));
 $months = [];
 for ($i = 0; $i < 12; $i++) { $months[] = date('Y-m', strtotime(date('Y-m-01') . " -$i month")); }
 $wings = array_keys($S['wings']);
@@ -78,6 +96,24 @@ require_once __DIR__ . '/../includes/header.php';
   html[data-theme="dark"] table.es tfoot td{background:#1B2236;}
   html[data-theme="dark"] table.es td.edit{background:color-mix(in srgb,#F59E0B 8%,var(--surface,#141B2D));}
   .es-hidden{display:none;}
+  /* ---------- 🧠 स्मार्ट निष्कर्ष ---------- */
+  .es-ai{margin-bottom:12px;}
+  .es-tip{display:flex;gap:10px;align-items:center;border:1px solid color-mix(in srgb,var(--tc) 35%,var(--line));background:color-mix(in srgb,var(--tc) 8%,var(--surface,#fff));border-radius:12px;padding:9px 14px;font-size:13px;margin-bottom:10px;}
+  .es-tip > span{font-size:20px;}
+  .es-ai-grid{display:grid;grid-template-columns:1fr 1.3fr 1.3fr;gap:10px;}
+  .es-card{background:var(--surface,#fff);border:1px solid var(--line);border-radius:14px;padding:12px 14px;min-width:0;}
+  .es-card-h{font-size:12.5px;font-weight:800;margin-bottom:6px;}
+  .es-big{font-size:30px;font-weight:800;line-height:1.1;}
+  .es-sub{font-size:11.5px;color:var(--text-dim);margin-top:2px;}
+  .es-spark{display:flex;gap:4px;align-items:flex-end;height:38px;margin-top:10px;} .es-spark i{flex:1;border-radius:4px 4px 0 0;min-height:3px;}
+  .es-li{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-bottom:1px dashed var(--line);font-size:12.5px;}
+  .es-li:last-child{border-bottom:0;} .es-li small{display:block;color:var(--text-dim);font-size:11px;font-weight:500;}
+  .es-up{color:#16A34A;font-weight:800;text-align:right;white-space:nowrap;} .es-up small{text-align:right;}
+  .es-rbtn{border:1px solid var(--line);background:var(--canvas);border-radius:99px;font-size:11.5px;font-weight:700;padding:3px 10px;cursor:pointer;}
+  .es-rbtn:hover{border-color:var(--rail);color:var(--rail);} .es-rbtn.sm{padding:2px 7px;}
+  .es-flag{display:inline-block;font-size:10.5px;font-weight:700;border-radius:99px;padding:1px 7px;margin-top:3px;white-space:nowrap;}
+  .es-flag.warn{background:#FEF3C7;color:#92400E;} .es-flag.bad{background:#FDECEC;color:#B42318;}
+  @media (max-width:900px){ .es-ai-grid{grid-template-columns:1fr;} }
   details.es-charts > summary{cursor:pointer;font-weight:700;font-size:15px;padding:10px 0;list-style:none;} details.es-charts > summary::before{content:'▸ ';color:var(--rail);} details.es-charts[open] > summary::before{content:'▾ ';}
   .ec-chart{display:flex;gap:18px;align-items:center;flex-wrap:wrap;padding:14px 18px;} .ec-chart svg{max-width:100%;height:auto;}
   .ec-hbar{display:grid;grid-template-columns:minmax(120px,32%) 1fr 48px;gap:10px;align-items:center;font-size:13px;padding:6px 0;border-bottom:1px dashed var(--line);}
@@ -97,6 +133,7 @@ require_once __DIR__ . '/../includes/header.php';
       <a href="report.php?month=<?= h($period) ?>&print=1" target="_blank" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13px;padding:8px 14px;"><i class="fa-solid fa-print me-1"></i>Print</a>
       <a href="report.php?month=<?= h($period) ?>&pdf=1&v=<?= time() ?>" target="_blank" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13px;padding:8px 14px;"><i class="fa-solid fa-file-pdf me-1"></i>PDF</a>
       <a href="report.php?month=<?= h($period) ?>&pdf=dl&v=<?= time() ?>" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13px;padding:8px 14px;"><i class="fa-solid fa-download me-1"></i>Download</a>
+      <a href="report.php?month=<?= h($period) ?>&csv=1" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13px;padding:8px 14px;"><i class="fa-solid fa-file-excel me-1" style="color:#16A34A;"></i>Excel</a>
     <?php endif; ?>
     <?php if ($isSA): ?><a href="manage.php" class="btn" style="background:var(--rail);color:#fff;border-radius:9px;font-size:13px;padding:8px 14px;"><i class="fa-solid fa-user-gear me-1"></i>कामांचं वाटप</a><?php endif; ?>
   </div>
@@ -123,6 +160,50 @@ require_once __DIR__ . '/../includes/header.php';
     </div>
   </div>
 
+  <?php if ($viewAll): /* ---------- 🧠 स्मार्ट निष्कर्ष ---------- */
+    $ovr = (int)($S['overall'] ?? 0);
+    if ($ovr >= 100) { $tip = ['🎉', 'सगळी कामं पूर्ण — उत्तम!', '#16A34A']; }
+    elseif ($forecast && !$forecast['onTrack']) { $tip = ['⚠️', 'या वेगाने महिनाअखेर फक्त ' . $forecast['projected'] . '% — 100% साठी रोज सरासरी ' . $forecast['need'] . '% प्रगती हवी' . ($attention ? '; आधी "लक्ष द्या" मधल्या ' . count($attention) . ' कर्मचाऱ्यांशी बोला' : ''), '#B45309']; }
+    elseif ($forecast) { $tip = ['🚀', 'वेळापत्रकाप्रमाणे — महिनाअखेर अंदाजे ' . $forecast['projected'] . '% पूर्ण होईल' . ($S['pending'] ? ' · पण ' . $S['pending'] . ' कामं अजून सुरू झाली नाहीत' : ''), $S['pending'] ? '#B45309' : '#16A34A']; }
+    elseif ($S['pending']) { $tip = ['⛔', $S['pending'] . ' कामं सुरूच झाली नाहीत', '#DC2626']; }
+    else { $tip = null; }
+  ?>
+  <div class="es-ai no-print">
+    <?php if ($tip): ?><div class="es-tip" style="--tc:<?= $tip[2] ?>;"><span><?= $tip[0] ?></span><div><b>स्मार्ट निष्कर्ष:</b> <?= h($tip[1]) ?></div></div><?php endif; ?>
+    <div class="es-ai-grid">
+      <div class="es-card">
+        <div class="es-card-h">🔮 महिनाअखेरचा अंदाज</div>
+        <?php if ($forecast): ?>
+          <div class="es-big" style="color:<?= $forecast['onTrack'] ? '#16A34A' : '#B45309' ?>;"><?= $forecast['projected'] ?>%</div>
+          <div class="es-sub">सध्या <?= $ovr ?>% · वेग <b><?= $forecast['perDay'] ?>%/दिवस</b> · <?= $forecast['daysLeft'] ?> दिवस बाकी</div>
+          <?php if ($forecast['daysLeft'] > 0 && $ovr < 100): ?><div class="es-sub">100% साठी रोज <b><?= $forecast['need'] ?>%</b> हवं</div><?php endif; ?>
+        <?php else: ?>
+          <div class="es-big"><?= $ovr ?>%</div><div class="es-sub"><?= h(ecampusPeriodLabel($period)) ?> — अंतिम</div>
+        <?php endif; ?>
+        <?php $hv = array_filter($history, fn($v) => $v !== null); if (count($hv) > 1): ?>
+          <div class="es-spark" title="मागचे 6 महिने"><?php foreach ($history as $m => $v): ?><i style="height:<?= max(4, (int)$v) ?>%;background:<?= $v === null ? 'var(--line)' : $barCol((int)$v) ?>;" title="<?= h(ecampusPeriodLabel($m)) ?>: <?= $v === null ? '—' : (int)$v . '%' ?>"></i><?php endforeach; ?></div>
+          <div class="es-sub">मागचे 6 महिने</div>
+        <?php endif; ?>
+      </div>
+      <div class="es-card">
+        <div class="es-card-h">📈 या आठवड्यातली प्रगती</div>
+        <?php if ($movers): foreach ($movers as $mv): ?>
+          <div class="es-li"><div><b><?= h($mv['row']['staff_name']) ?></b><small><?= h($mv['row']['section']) ?></small></div><span class="es-up">▲ <?= $mv['delta'] ?>%<small><?= $mv['from'] ?>→<?= $mv['to'] ?>%</small></span></div>
+        <?php endforeach; else: ?><div class="es-sub" style="padding:8px 0;"><?= $isCurrent ? 'गेल्या 7 दिवसांत एकाही कामाची % वाढलेली नाही.' : 'फक्त चालू महिन्यासाठी.' ?></div><?php endif; ?>
+      </div>
+      <div class="es-card">
+        <div class="es-card-h d-flex justify-content-between align-items-center">🎯 लक्ष द्या
+          <?php if ($canRemind && $isCurrent && $attention): ?><form method="POST" onsubmit="return confirm('<?= count($attention) ?> कर्मचाऱ्यांना E-Campus प्रगती भरण्याची आठवण पाठवायची?');"><input type="hidden" name="action" value="remind"><button class="es-rbtn">🔔 सगळ्यांना आठवण</button></form><?php endif; ?></div>
+        <?php if ($attention): foreach (array_slice($attention, 0, 6) as $b): ?>
+          <div class="es-li"><div><b><?= h($b['name']) ?></b><small><?= $b['pending'] ? $b['pending'] . ' सुरू नाही' : '' ?><?= $b['pending'] && $b['stale'] ? ' · ' : '' ?><?= $b['stale'] ? 'नोंद: ' . h(ecampusAgo($b['last'])) : '' ?></small></div>
+            <span style="display:flex;gap:6px;align-items:center;"><b style="color:<?= $barCol($b['avg']) ?>;"><?= $b['avg'] ?>%</b>
+            <?php if ($canRemind && $isCurrent): ?><form method="POST"><input type="hidden" name="action" value="remind"><input type="hidden" name="user_id" value="<?= (int)$b['user_id'] ?>"><button class="es-rbtn sm" title="<?= h($b['name']) ?> यांना आठवण पाठवा">🔔</button></form><?php endif; ?></span></div>
+        <?php endforeach; if (count($attention) > 6): ?><div class="es-sub">आणखी <?= count($attention) - 6 ?>…</div><?php endif; else: ?><div class="es-sub" style="padding:8px 0;color:#16A34A;font-weight:700;">✅ सगळ्यांच्या नोंदी अद्ययावत आहेत.</div><?php endif; ?>
+      </div>
+    </div>
+  </div>
+  <?php endif; ?>
+
   <div class="es-tools no-print">
     <input type="search" id="esSearch" class="form-control-custom" placeholder="🔍 नाव / Section / काम शोधा…">
     <button type="button" class="sbtn on" data-st="">सर्व</button>
@@ -130,6 +211,9 @@ require_once __DIR__ . '/../includes/header.php';
     <button type="button" class="sbtn" data-st="progress">🔄 सुरू</button>
     <button type="button" class="sbtn" data-st="done">✅ पूर्ण</button>
     <?php if ($viewAll && ecampusMyTaskCount($pdo, $me['id'])): ?><button type="button" class="sbtn" data-mine="1">👤 माझी कामं</button><?php endif; ?>
+    <select id="esSort" class="form-select-custom" style="max-width:190px;" title="क्रम">
+      <option value="">↕ मूळ क्रम</option><option value="low">कमी % आधी</option><option value="high">जास्त % आधी</option><option value="old">जुनी नोंद आधी</option>
+    </select>
     <span id="esCount" style="font-size:12.5px;color:var(--text-dim);margin-left:auto;"></span>
   </div>
 
@@ -143,7 +227,7 @@ require_once __DIR__ . '/../includes/header.php';
       <tbody>
       <?php $prevWing = null; $wingColors = ['#D9530F', '#7B3F9E', '#2563EB', '#16A34A', '#0891B2', '#B45309', '#BE185D', '#4F46E5']; $wc = [];
       foreach ($rows as $i => $r): $wc[$r['wing']] ??= $wingColors[count($wc) % count($wingColors)]; $ed = $canEdit($r); $rep = $prevWing === $r['wing']; $prevWing = $r['wing']; ?>
-        <tr data-id="<?= (int)$r['id'] ?>" data-wing="<?= h($r['wing']) ?>" data-status="<?= h($r['status']) ?>" data-access="<?= h($r['access_type']) ?>" data-pct="<?= $r['percent'] ?>" data-mine="<?= (int)$r['user_id'] === (int)$me['id'] ? 1 : 0 ?>" class="<?= (int)$r['user_id'] === (int)$me['id'] ? 'mine' : '' ?>">
+        <tr data-id="<?= (int)$r['id'] ?>" data-wing="<?= h($r['wing']) ?>" data-status="<?= h($r['status']) ?>" data-access="<?= h($r['access_type']) ?>" data-pct="<?= $r['percent'] ?>" data-mine="<?= (int)$r['user_id'] === (int)$me['id'] ? 1 : 0 ?>" data-sr="<?= $i ?>" data-upd="<?= $r['updated_at'] && !$r['carried'] ? strtotime($r['updated_at']) : 0 ?>" class="<?= (int)$r['user_id'] === (int)$me['id'] ? 'mine' : '' ?>">
           <td class="sr"><?= $i + 1 ?></td>
           <td class="wing <?= $rep ? 'rep' : '' ?>" style="--wc:<?= $wc[$r['wing']] ?>;"><?= h($r['wing']) ?></td>
           <td><?= h($r['section']) ?></td>
@@ -160,6 +244,10 @@ require_once __DIR__ . '/../includes/header.php';
             <?php else: ?><div class="es-ro"><?= $r['percent'] ?>%</div><?php endif; ?>
             <div class="es-bar"><i style="width:<?= $r['percent'] ?>%;background:<?= $r['status_color'] ?>;"></i></div>
             <div class="es-saved"><?= $r['updated_at'] && !$r['carried'] ? h(ecampusAgo($r['updated_at'])) : '' ?></div>
+            <?php if ($isCurrent && $r['access_type'] === 'work' && $r['percent'] < 100):
+              $__u = $r['updated_at'] && !$r['carried'] ? strtotime($r['updated_at']) : 0; ?>
+              <?php if (!$__u): ?><span class="es-flag bad">नोंद नाही</span><?php elseif ($__u < strtotime('-7 days')): ?><span class="es-flag warn">⚠️ 7+ दिवस जुनी</span><?php endif; ?>
+            <?php endif; ?>
           </td>
           <td><span class="es-st" style="background:<?= $r['status_color'] ?>;"><?= h($r['status_label']) ?></span></td>
         </tr>
@@ -185,6 +273,12 @@ require_once __DIR__ . '/../includes/header.php';
         <?php foreach ($S['wings'] as $w => $g): ?><div class="ec-hbar"><div><b><?= h($w) ?></b><br><small style="color:var(--text-dim);"><?= (int)$g['done'] ?>/<?= (int)$g['n'] ?> पूर्ण</small></div><div class="b"><i style="width:<?= (int)$g['avg'] ?>%;background:<?= $barCol($g['avg']) ?>;"></i></div><b style="text-align:right;"><?= (int)$g['avg'] ?>%</b></div><?php endforeach; ?></div></div></div>
       <div class="col-lg-6"><div class="panel h-100"><div class="panel-head"><div class="title">🗂️ Section नुसार</div><div class="sub">कमी % आधी</div></div><div style="padding:8px 18px 14px;max-height:420px;overflow:auto;">
         <?php foreach ($S['sections'] as $sec => $g): ?><div class="ec-hbar"><div><b><?= h($sec) ?></b><br><small style="color:var(--text-dim);"><?= h($g['wing']) ?></small></div><div class="b"><i style="width:<?= (int)$g['avg'] ?>%;background:<?= $barCol($g['avg']) ?>;"></i></div><b style="text-align:right;"><?= (int)$g['avg'] ?>%</b></div><?php endforeach; ?></div></div></div>
+    </div>
+    <div class="row g-3 mt-0">
+      <div class="col-lg-7"><div class="panel h-100"><div class="panel-head"><div class="title">👥 कर्मचारी नुसार</div><div class="sub">कमी % आधी · शेवटची नोंद</div></div><div style="padding:8px 18px 14px;max-height:420px;overflow:auto;">
+        <?php foreach ($board as $b): ?><div class="ec-hbar"><div><b><?= h($b['name']) ?></b><br><small style="color:var(--text-dim);"><?= (int)$b['done'] ?>/<?= (int)$b['n'] ?> पूर्ण · <?= h(ecampusAgo($b['last'])) ?></small></div><div class="b"><i style="width:<?= (int)$b['avg'] ?>%;background:<?= $barCol($b['avg']) ?>;"></i></div><b style="text-align:right;"><?= (int)$b['avg'] ?>%</b></div><?php endforeach; ?></div></div></div>
+      <div class="col-lg-5"><div class="panel h-100"><div class="panel-head"><div class="title">📅 मागचे 6 महिने</div><div class="sub">महिन्याची एकूण प्रगती</div></div>
+        <div class="ec-chart" style="display:block;"><?php $hData = array_filter($history, fn($v) => $v !== null); /* नोंदी नसलेले महिने वगळा — 0% दाखवणं दिशाभूल करणारं */ if ($hData): ?><?= drBars(array_map('intval', array_values($hData)), array_map(fn($m) => date('M Y', strtotime($m . '-01')), array_keys($hData)), '#7B3F9E', 420, 170) ?><?php if (count($hData) < count($history)): ?><div class="es-sub">E-Campus नोंदी असलेलेच महिने</div><?php endif; ?><?php else: ?><div style="color:var(--text-dim);font-size:13px;">अजून इतिहास नाही.</div><?php endif; ?></div></div></div>
     </div>
   </details>
   <?php endif; ?>
@@ -260,6 +354,19 @@ require_once __DIR__ . '/../includes/header.php';
     document.getElementById('esCount').textContent = shown + ' / ' + all + ' ' + T('ओळी');
   }
   q.addEventListener('input', filter);
+  // ---- क्रम (Sort) ----
+  var sortSel = document.getElementById('esSort');
+  if (sortSel) sortSel.addEventListener('change', function () {
+    var v = sortSel.value, tb = table.tBodies[0], rs = [].slice.call(tb.rows);
+    rs.sort(function (a, b) {
+      if (v === 'low') return (+a.dataset.pct - +b.dataset.pct) || (+a.dataset.sr - +b.dataset.sr);
+      if (v === 'high') return (+b.dataset.pct - +a.dataset.pct) || (+a.dataset.sr - +b.dataset.sr);
+      if (v === 'old') return (+a.dataset.upd - +b.dataset.upd) || (+a.dataset.sr - +b.dataset.sr);
+      return +a.dataset.sr - +b.dataset.sr;
+    });
+    rs.forEach(function (r) { tb.appendChild(r); });
+    tb.querySelectorAll('td.wing').forEach(function (td) { if (td.dataset.rep === undefined) { td.dataset.rep = td.classList.contains('rep') ? '1' : '0'; } td.classList.toggle('rep', !v && td.dataset.rep === '1'); });
+  });
   document.querySelectorAll('.es-tools .sbtn[data-st]').forEach(function (b) { b.addEventListener('click', function () { document.querySelectorAll('.es-tools .sbtn[data-st]').forEach(function (x) { x.classList.toggle('on', x === b); }); fSt = b.dataset.st; filter(); }); });
   var mb = document.querySelector('.es-tools .sbtn[data-mine]'); if (mb) mb.addEventListener('click', function () { fMine = !fMine; mb.classList.toggle('on', fMine); filter(); });
   document.querySelectorAll('.es-wchip').forEach(function (c) { c.addEventListener('click', function () { fWing = fWing === c.dataset.wing ? '' : c.dataset.wing; document.querySelectorAll('.es-wchip').forEach(function (x) { x.classList.toggle('on', x.dataset.wing === fWing); }); filter(); }); });

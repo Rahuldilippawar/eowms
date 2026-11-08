@@ -273,3 +273,101 @@ function ecampusReportAttachment(PDO $pdo, $orgId, $orgName) {
     }
 }
 
+
+/* ======================= 🧠 स्मार्ट विश्लेषण (Dashboard) ======================= */
+
+/**
+ * महिनाअखेरचा अंदाज — गेल्या 7 दिवसांच्या वेगावरून (नोंदी कमी असतील तर महिन्याच्या सुरुवातीपासूनच्या सरासरी वेगावरून).
+ * परत: ['projected'=>int, 'perDay'=>float, 'need'=>float (100% साठी रोज किती हवं), 'daysLeft'=>int, 'onTrack'=>bool] किंवा null (मागचा महिना / Data नाही)
+ */
+function ecampusForecast(array $trend, $period, $overall) {
+    if ($period !== date('Y-m') || !$trend || $overall === null) { return null; }
+    $vals = array_values($trend);
+    $n = count($vals);
+    $daysIn = (int)date('t');
+    $daysLeft = $daysIn - (int)date('j');
+    if ($n >= 8) { $perDay = ($vals[$n - 1] - $vals[$n - 8]) / 7; }
+    else { $perDay = $n > 1 ? ($vals[$n - 1] - $vals[0]) / max(1, $n - 1) : 0; }
+    if ($perDay <= 0 && $n > 1) { $perDay = max(0, $vals[$n - 1] / max(1, $n)); }   // 7 दिवसांत हालचाल नाही — महिन्याच्या सरासरी वेगाने
+    $projected = (int)min(100, round($overall + $perDay * $daysLeft));
+    $need = $daysLeft > 0 ? max(0, (100 - $overall) / $daysLeft) : 0;
+    return ['projected' => $projected, 'perDay' => round($perDay, 1), 'need' => round($need, 1), 'daysLeft' => $daysLeft, 'onTrack' => $projected >= 95 || $overall >= 100];
+}
+
+/** कर्मचारीनिहाय — सरासरी %, पूर्ण/एकूण, शेवटची नोंद, जुनी (7+ दिवस) कामं. कमी % आधी */
+function ecampusStaffBoard(array $rows, $period) {
+    $isCurrent = $period === date('Y-m');
+    $out = [];
+    foreach ($rows as $r) {
+        if ($r['access_type'] !== 'work') { continue; }
+        $u = (int)$r['user_id'];
+        $out[$u] ??= ['user_id' => $u, 'name' => $r['staff_name'], 'designation' => $r['designation_show'], 'sum' => 0, 'n' => 0, 'done' => 0, 'last' => null, 'stale' => 0, 'pending' => 0];
+        $o = &$out[$u];
+        $o['sum'] += $r['percent']; $o['n']++;
+        if ($r['percent'] >= 100) { $o['done']++; }
+        if ($r['percent'] <= 0) { $o['pending']++; }
+        $upd = $r['carried'] ? null : $r['updated_at'];
+        if ($upd && (!$o['last'] || $upd > $o['last'])) { $o['last'] = $upd; }
+        if ($isCurrent && $r['percent'] < 100 && (!$upd || strtotime($upd) < strtotime('-7 days'))) { $o['stale']++; }
+        unset($o);
+    }
+    foreach ($out as &$o) { $o['avg'] = (int)round($o['sum'] / max(1, $o['n'])); }
+    unset($o);
+    usort($out, fn($a, $b) => [$a['avg'], $a['name']] <=> [$b['avg'], $b['name']]);
+    return $out;
+}
+
+/** गेल्या $days दिवसांत सर्वात जास्त पुढे गेलेली कामं: [['row'=>…, 'from'=>int, 'to'=>int, 'delta'=>int]] */
+function ecampusMovers(PDO $pdo, $period, array $rows, $days = 7, $limit = 5) {
+    $work = array_values(array_filter($rows, fn($r) => $r['access_type'] === 'work'));
+    if (!$work || $period !== date('Y-m')) { return []; }
+    $cut = date('Y-m-d H:i:s', strtotime("-$days days"));
+    $ids = array_column($work, 'id');
+    $ph = implode(',', array_fill(0, count($ids), '?'));
+    // कटऑफ आधीची शेवटची नोंद (या महिन्यातली) — नसेल तर "एकदाच" कामासाठी मागच्या महिन्याची, नाहीतर 0
+    $st = $pdo->prepare("SELECT u.task_id, u.percent FROM ecampus_updates u JOIN (SELECT task_id, MAX(id) mid FROM ecampus_updates WHERE period = ? AND created_at < ? AND task_id IN ($ph) GROUP BY task_id) x ON x.mid = u.id");
+    $st->execute(array_merge([$period, $cut], $ids));
+    $before = array_map('intval', $st->fetchAll(PDO::FETCH_KEY_PAIR));
+    $chg = $pdo->prepare("SELECT DISTINCT task_id FROM ecampus_updates WHERE period = ? AND created_at >= ? AND task_id IN ($ph)");
+    $chg->execute(array_merge([$period, $cut], $ids));
+    $changed = array_flip(array_map('intval', $chg->fetchAll(PDO::FETCH_COLUMN)));
+    $prev = $pdo->prepare("SELECT percent FROM ecampus_progress WHERE task_id = ? AND period < ? ORDER BY period DESC LIMIT 1");
+    $out = [];
+    foreach ($work as $r) {
+        if (!isset($changed[(int)$r['id']])) { continue; }
+        $from = $before[(int)$r['id']] ?? null;
+        if ($from === null) { $from = 0; if ($r['task_type'] === 'one_time') { $prev->execute([$r['id'], $period]); $from = (int)($prev->fetchColumn() ?: 0); } }
+        $delta = $r['percent'] - $from;
+        if ($delta > 0) { $out[] = ['row' => $r, 'from' => $from, 'to' => $r['percent'], 'delta' => $delta]; }
+    }
+    usort($out, fn($a, $b) => $b['delta'] <=> $a['delta']);
+    return array_slice($out, 0, $limit);
+}
+
+/** मागचे $n महिने — एकूण % (जुना → नवा): ['YYYY-MM' => %|null] */
+function ecampusMonthlyHistory(PDO $pdo, $orgId, $n = 6) {
+    $out = [];
+    for ($i = $n - 1; $i >= 0; $i--) {
+        $p = date('Y-m', strtotime(date('Y-m-01') . " -$i month"));
+        $rows = ecampusRows($pdo, $orgId, $p);
+        $out[$p] = $rows ? ecampusSummary($rows, $p)['overall'] : null;
+    }
+    return $out;
+}
+
+/** नोंद अद्ययावत न केलेल्या / सुरू न केलेल्या कर्मचाऱ्यांना आठवण (Notification). परत: किती जणांना पाठवली */
+function ecampusSendReminders(PDO $pdo, $orgId, ?array $userIds = null) {
+    $period = date('Y-m');
+    $board = ecampusStaffBoard(ecampusRows($pdo, $orgId, $period), $period);
+    $sent = 0;
+    foreach ($board as $b) {
+        if ($userIds !== null && !in_array($b['user_id'], $userIds, true)) { continue; }
+        $todo = $b['n'] - $b['done'];
+        if ($todo <= 0 || ($userIds === null && !$b['stale'] && !$b['pending'])) { continue; }
+        notifyUser($b['user_id'], $orgId, '🎓 E-Campus — प्रगती अद्ययावत करा',
+            $todo . ' काम' . ($todo > 1 ? 'ं' : '') . ' बाकी (सरासरी ' . $b['avg'] . '%)' . ($b['stale'] ? ' · ' . $b['stale'] . ' कामांची नोंद 7 दिवसांत अद्ययावत नाही' : '') . ' — आजच % आणि नोंद भरा.',
+            'ecampus/index.php');
+        $sent++;
+    }
+    return $sent;
+}
