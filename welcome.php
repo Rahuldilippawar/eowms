@@ -343,7 +343,7 @@ $todayLabel = $marathiDays[(int)date('w')] . ', ' . (int)date('j') . ' ' . $mara
 </style>
 </head>
 <body>
-<?= i18nSwitcher('style="position:fixed;top:16px;right:16px;z-index:50;border:1px solid rgba(255,255,255,.3);border-radius:9px;padding:8px 12px;font-size:12.5px;color:#fff;background:rgba(255,255,255,.1);cursor:pointer;"') ?>
+<div style="display:flex;justify-content:flex-end;padding:14px 16px 0;position:relative;z-index:50;"><?= i18nSwitcher('style="border:1px solid rgba(255,255,255,.3);border-radius:9px;padding:8px 12px;font-size:12.5px;color:#fff;background:rgba(255,255,255,.1);cursor:pointer;"') ?></div>
 <?= i18nClientScript() ?>
 
 <div class="hero">

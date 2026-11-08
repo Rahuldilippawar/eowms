@@ -55,10 +55,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   button{width:100%;background:#D9530F;color:#fff;border:none;border-radius:9px;padding:12px;font-size:14.5px;font-weight:700;cursor:pointer;font-family:inherit;}
   .success{background:#DCEFEC;color:#B6420A;border-radius:8px;padding:14px;font-size:13px;margin-bottom:16px;line-height:1.6;}
   a.back{display:block;text-align:center;margin-top:16px;font-size:12.5px;color:#D9530F;text-decoration:none;}
+  @media (max-width:640px){ body{padding-top:68px !important;} } /* Language निवड कार्डवर येऊ नये */
 </style>
 </head>
 <body>
-<?= i18nSwitcher('style="position:fixed;top:16px;right:16px;z-index:50;border:1px solid var(--line);border-radius:9px;padding:8px 12px;font-size:12.5px;color:var(--text-dim);background:#fff;cursor:pointer;"') ?>
+<?= i18nSwitcher('style="position:absolute;top:16px;right:16px;z-index:50;width:auto;border:1px solid var(--line);border-radius:9px;padding:8px 12px;font-size:12.5px;color:var(--text-dim);background:#fff;cursor:pointer;"') ?>
 <?= i18nClientScript() ?>
 
 <div class="card">

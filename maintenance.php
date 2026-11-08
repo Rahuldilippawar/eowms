@@ -62,10 +62,11 @@ $customMessage = $org['maintenance_message'] ?? '';
   @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
   .status-line{font-size:12px;color:#8A90AC;margin-top:22px;}
   .sound-toggle{margin-top:20px;background:#F3F4F7;border:none;border-radius:10px;padding:9px 18px;font-size:12.5px;font-weight:600;color:#10162B;cursor:pointer;font-family:inherit;}
+  @media (max-width:640px){ body{padding-top:68px !important;} } /* Language निवड कार्डवर येऊ नये */
 </style>
 </head>
 <body>
-<?= i18nSwitcher('style="position:fixed;top:16px;right:16px;z-index:50;border:1px solid var(--line);border-radius:9px;padding:8px 12px;font-size:12.5px;color:var(--text-dim);background:#fff;cursor:pointer;"') ?>
+<?= i18nSwitcher('style="position:absolute;top:16px;right:16px;z-index:50;width:auto;border:1px solid var(--line);border-radius:9px;padding:8px 12px;font-size:12.5px;color:var(--text-dim);background:#fff;cursor:pointer;"') ?>
 <?= i18nClientScript() ?>
 
   <div class="ring"></div>

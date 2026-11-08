@@ -56,11 +56,11 @@ $org = $pdo->query("SELECT * FROM organizations WHERE id = " . (int)$orgId)->fet
   td{padding:7px 9px;border-bottom:1px solid #EEF0F4;font-size:11.5px;vertical-align:middle;}
   .cattle-photo{width:44px;height:44px;border-radius:6px;object-fit:cover;display:block;}
   .cattle-photo-placeholder{width:44px;height:44px;border-radius:6px;background:#F3F4F7;display:flex;align-items:center;justify-content:center;color:var(--text-dim);font-size:9px;text-align:center;}
-  @media print{ .toolbar{display:none;} #eowmsLangSelect{display:none !important;} body{background:#fff;} .doc{margin:0;box-shadow:none;} }
+  @media print{ .toolbar{display:none;} #eowmsLangSelect,.lang-bar{display:none !important;} body{background:#fff;} .doc{margin:0;box-shadow:none;} }
 </style>
 </head>
 <body>
-<?= i18nSwitcher('style="position:fixed;top:16px;right:16px;z-index:50;border:1px solid var(--line);border-radius:9px;padding:8px 12px;font-size:12.5px;color:var(--text-dim);background:#fff;cursor:pointer;"') ?>
+<div class="lang-bar" style="display:flex;justify-content:flex-end;padding:12px 16px 0;margin:0;max-width:none;margin-left:auto;margin-right:auto;"><?= i18nSwitcher('style="border:1px solid var(--line);border-radius:9px;padding:8px 12px;font-size:12.5px;color:var(--text-dim);background:#fff;cursor:pointer;"') ?></div>
 <?= i18nClientScript() ?>
 
 <div class="toolbar">

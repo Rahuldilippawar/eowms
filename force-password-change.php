@@ -41,10 +41,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   button{width:100%;background:#D9530F;color:#fff;border:none;border-radius:9px;padding:12px;font-size:14.5px;font-weight:700;cursor:pointer;font-family:inherit;}
   .err{background:#F7E2E3;color:#8A1F2B;border-radius:8px;padding:10px 14px;font-size:12.5px;margin-bottom:16px;}
   .welcome{font-size:12.5px;color:#B6420A;background:#DCEFEC;border-radius:8px;padding:10px 14px;margin-bottom:18px;}
+  @media (max-width:640px){ body{padding-top:68px !important;} } /* Language निवड कार्डवर येऊ नये */
 </style>
 </head>
 <body>
-<?= i18nSwitcher('style="position:fixed;top:16px;right:16px;z-index:50;border:1px solid var(--line);border-radius:9px;padding:8px 12px;font-size:12.5px;color:var(--text-dim);background:#fff;cursor:pointer;"') ?>
+<?= i18nSwitcher('style="position:absolute;top:16px;right:16px;z-index:50;width:auto;border:1px solid var(--line);border-radius:9px;padding:8px 12px;font-size:12.5px;color:var(--text-dim);background:#fff;cursor:pointer;"') ?>
 <?= i18nClientScript() ?>
 
 <div class="card">

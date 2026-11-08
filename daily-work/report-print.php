@@ -115,7 +115,7 @@ if ($scope === 'organization') {
 
   .doc-footer{margin-top:30px;padding-top:14px;border-top:1px solid var(--line);font-size:10.5px;color:var(--text-dim);display:flex;justify-content:space-between;}
 
-  @media print {
+  @media print { .lang-bar{display:none !important;}
     .toolbar{display:none;
     #eowmsLangSelect { display: none !important; }
   }
@@ -125,7 +125,7 @@ if ($scope === 'organization') {
 </style>
 </head>
 <body>
-<?= i18nSwitcher('style="position:fixed;top:16px;right:16px;z-index:50;border:1px solid var(--line);border-radius:9px;padding:8px 12px;font-size:12.5px;color:var(--text-dim);background:#fff;cursor:pointer;"') ?>
+<div class="lang-bar" style="display:flex;justify-content:flex-end;padding:12px 16px 0;margin:0;max-width:none;margin-left:auto;margin-right:auto;"><?= i18nSwitcher('style="border:1px solid var(--line);border-radius:9px;padding:8px 12px;font-size:12.5px;color:var(--text-dim);background:#fff;cursor:pointer;"') ?></div>
 <?= i18nClientScript() ?>
 
 
