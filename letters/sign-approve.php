@@ -60,6 +60,7 @@ try {
     $remark = trim($_POST['remark'] ?? '');
     $pdo->prepare("INSERT INTO letter_actions (letter_id, action_type, from_user_id, remark) VALUES (?, 'completed', ?, ?)")
         ->execute([$letterId, $user['id'], $approvedAmount !== null ? 'मंजूर रक्कम: ₹' . number_format($approvedAmount, 0) . ($remark ? ' — ' . $remark : '') : ($remark ?: null)]);
+    if (!empty($_POST['remark_ink'])) { letterInkSave($letterId, (int)$pdo->lastInsertId(), (string)$_POST['remark_ink']); } // ✍️ हस्तलिखित टिप्पणी
 
     // ---- Digital Signature नोंदवा ----
     $verificationCode = strtoupper(substr(bin2hex(random_bytes(5)), 0, 8));

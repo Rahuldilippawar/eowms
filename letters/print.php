@@ -42,6 +42,8 @@ $stmt = $pdo->prepare("
 ");
 $stmt->execute([$letterId]);
 $actions = $stmt->fetchAll();
+require_once __DIR__ . '/helpers.php';
+$inkMap = letterInkMap($letterId);
 
 $stmt = $pdo->prepare("SELECT la.*, u.name AS uploader_name FROM letter_attachments la LEFT JOIN users u ON u.id = la.uploaded_by WHERE la.letter_id = ? ORDER BY la.id");
 $stmt->execute([$letterId]);
@@ -196,6 +198,7 @@ $actionLabels = ['created' => 'तयार केली', 'submitted' => 'स�
         <div>
           <strong><?= h($a['from_name']) ?></strong> — <?= $actionLabels[$a['action_type']] ?? $a['action_type'] ?><?= $a['to_name'] ? ' → ' . h($a['to_name']) : '' ?>
           <?php if ($a['remark']): ?> — <?= h($a['remark']) ?><?php endif; ?>
+          <?php if (isset($inkMap[(int)$a['id']])): ?><div><img src="../<?= h($inkMap[(int)$a['id']]) ?>" alt="हस्तलिखित टिप्पणी" style="max-width:100%;max-height:150px;margin-top:4px;"></div><?php endif; ?>
           <span style="color:var(--text-dim);"> (<?= date('d-m-Y, h:i A', strtotime($a['created_at'])) ?>)</span>
         </div>
       </div>

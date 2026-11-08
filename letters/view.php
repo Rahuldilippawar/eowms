@@ -65,6 +65,10 @@ $isValidRecipient = function ($userId) use ($pdo, $user) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     $remark = trim($_POST['remark'] ?? '');
+    $remarkInk = (string)($_POST['remark_ink'] ?? '');            // ✍️ हस्तलिखित टिप्पणी (PNG data URL)
+    $__inkSt = $pdo->prepare("SELECT COALESCE(MAX(id), 0) FROM letter_actions WHERE letter_id = ?");
+    $__inkSt->execute([$letterId]);
+    $inkAfterId = (int)$__inkSt->fetchColumn();
 
     if (($action === 'submit' && $isCreator && $letter['status'] === 'draft') || ($action === 'forward' && $canForward)) {
         $actionType = $action === 'submit' ? 'submitted' : 'forwarded';
@@ -111,9 +115,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     elseif ($action === 'remark' && ($isHolder || $isCreator)) {
-        if ($remark !== '') {
+        if ($remark !== '' || $remarkInk !== '') {
             $pdo->prepare("INSERT INTO letter_actions (letter_id, action_type, from_user_id, remark) VALUES (?, 'remark_added', ?, ?)")
-                ->execute([$letterId, $user['id'], $remark]);
+                ->execute([$letterId, $user['id'], $remark !== '' ? $remark : null]);
             $_SESSION['flash'] = 'टिप्पणी जोडली गेली.';
         }
     }
@@ -160,6 +164,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
+    if ($remarkInk !== '' && empty($_SESSION['form_error']) && !letterInkAttachLatest($pdo, $letterId, $user['id'], $inkAfterId, $remarkInk)) {
+        $_SESSION['form_error'] = 'हस्तलिखित टिप्पणी जतन झाली नाही — पुन्हा लिहून पहा.';
+    }
     header('Location: view.php?id=' . $letterId);
     exit;
 }
@@ -174,6 +181,7 @@ $stmt = $pdo->prepare("
 ");
 $stmt->execute([$letterId]);
 $actions = $stmt->fetchAll();
+$inkMap = letterInkMap($letterId);
 
 $stmt = $pdo->prepare("SELECT la.*, u.name AS uploader_name FROM letter_attachments la LEFT JOIN users u ON u.id = la.uploaded_by WHERE la.letter_id = ? ORDER BY la.id DESC");
 $stmt->execute([$letterId]);
@@ -353,6 +361,7 @@ require_once __DIR__ . '/../includes/header.php';
             <div>
               <div style="font-size:13px;"><strong><?= h($a['from_name']) ?></strong> — <?= $actionLabels[$a['action_type']] ?? h($a['action_type']) ?><?= $a['to_name'] ? ' → ' . h($a['to_name']) : '' ?></div>
               <?php if ($a['remark']): ?><div style="font-size:12.5px;color:var(--text-dim);margin-top:2px;"><?= h($a['remark']) ?></div><?php endif; ?>
+              <?php if (isset($inkMap[(int)$a['id']])): ?><a href="../<?= h($inkMap[(int)$a['id']]) ?>" target="_blank" title="हस्तलिखित टिप्पणी — मोठी पहा" class="ink-note"><img src="../<?= h($inkMap[(int)$a['id']]) ?>" alt="✍️ हस्तलिखित टिप्पणी" loading="lazy"></a><?php endif; ?>
               <div style="font-size:11px;color:var(--text-dim);margin-top:2px;"><?= date('d M Y, h:i A', strtotime($a['created_at'])) ?><?php if ($__stay !== null && ($a['to_name'] || !$__next)): ?> · <span style="color:<?= $__stayTone ?>;font-weight:700;">⏱️ <?= $__next ? 'पुढे जाण्यापूर्वी' : 'आत्तापर्यंत' ?> <?= h($__durLbl($__stay)) ?></span><?php endif; ?></div>
             </div>
           </div>
@@ -498,7 +507,7 @@ require_once __DIR__ . '/../includes/header.php';
           <form method="POST">
             <input type="hidden" name="action" value="remark">
             <label class="form-label-custom">फक्त टिप्पणी जोडा (फाईल न हलवता)</label>
-            <textarea name="remark" class="form-control-custom mb-2" rows="2" required></textarea>
+            <textarea name="remark" class="form-control-custom mb-2" rows="2" data-ink-required></textarea>
             <button type="submit" class="btn w-100" style="border:1px solid var(--line);border-radius:9px;font-size:12.5px;padding:8px;">टिप्पणी जोडा</button>
           </form>
         <?php endif; ?>
@@ -566,6 +575,8 @@ async function eowmsSignApprove(letterId, method) {
   payload.set('letter_id', letterId);
   payload.set('method', method);
   payload.set('remark', remark);
+  const ink = document.getElementById('signRemarkInk');
+  if (ink && ink.value) { payload.set('remark_ink', ink.value); }
   if (amountField) { payload.set('approved_amount', amountField.value); }
 
   try {
@@ -589,4 +600,5 @@ async function eowmsSignApprove(letterId, method) {
 </script>
 <?php endif; ?>
 
+<?php require __DIR__ . '/ink-pad.php'; ?>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>
