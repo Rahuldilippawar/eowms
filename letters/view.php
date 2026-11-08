@@ -332,13 +332,28 @@ require_once __DIR__ . '/../includes/header.php';
     <div class="panel mb-3">
       <div class="panel-head"><div class="title">हालचालीचा क्रम (Movement Timeline)</div></div>
       <div style="padding:16px 20px;">
-        <?php foreach ($actions as $a): ?>
+        <?php
+          // ⏱️ प्रत्येक टप्प्यावर फाईल किती वेळ थांबली — पुढच्या नोंदीपर्यंत (शेवटची असेल आणि फाईल चालू असेल तर आत्तापर्यंत)
+          $__durLbl = function ($sec) { $sec = max(0, (int)$sec); if ($sec < 3600) { return max(1, (int)round($sec / 60)) . ' मिनिटं'; } if ($sec < 86400) { return (int)round($sec / 3600) . ' तास'; } return round($sec / 86400, 1) . ' दिवस'; };
+          $__open = in_array($letter['status'], ['draft', 'in_progress', 'returned'], true);
+          $__total = $actions ? (($__open ? time() : strtotime(end($actions)['created_at'])) - strtotime($actions[0]['created_at'])) : 0;
+          if ($actions): ?>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;font-size:12.5px;margin-bottom:6px;">
+            <span style="background:var(--canvas);border-radius:99px;padding:4px 11px;">🧭 <?= count($actions) ?> हालचाली</span>
+            <span style="background:var(--canvas);border-radius:99px;padding:4px 11px;">⏱️ एकूण <?= h($__durLbl($__total)) ?><?= $__open ? ' (चालू)' : '' ?></span>
+          </div>
+        <?php endif; ?>
+        <?php foreach ($actions as $__i => $a):
+          $__next = $actions[$__i + 1]['created_at'] ?? null;
+          $__stay = $__next ? strtotime($__next) - strtotime($a['created_at']) : ($__open ? time() - strtotime($a['created_at']) : null);
+          $__stayTone = $__stay === null ? '' : ($__stay >= 7 * 86400 ? '#991B1B' : ($__stay >= 3 * 86400 ? '#92400E' : 'var(--text-dim)'));
+        ?>
           <div style="display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);">
             <div style="width:32px;height:32px;border-radius:50%;background:var(--rail-soft);color:var(--rail);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;"><?= h(mb_substr($a['from_name'] ?? '?', 0, 1)) ?></div>
             <div>
               <div style="font-size:13px;"><strong><?= h($a['from_name']) ?></strong> — <?= $actionLabels[$a['action_type']] ?? h($a['action_type']) ?><?= $a['to_name'] ? ' → ' . h($a['to_name']) : '' ?></div>
               <?php if ($a['remark']): ?><div style="font-size:12.5px;color:var(--text-dim);margin-top:2px;"><?= h($a['remark']) ?></div><?php endif; ?>
-              <div style="font-size:11px;color:var(--text-dim);margin-top:2px;"><?= date('d M Y, h:i A', strtotime($a['created_at'])) ?></div>
+              <div style="font-size:11px;color:var(--text-dim);margin-top:2px;"><?= date('d M Y, h:i A', strtotime($a['created_at'])) ?><?php if ($__stay !== null && ($a['to_name'] || !$__next)): ?> · <span style="color:<?= $__stayTone ?>;font-weight:700;">⏱️ <?= $__next ? 'पुढे जाण्यापूर्वी' : 'आत्तापर्यंत' ?> <?= h($__durLbl($__stay)) ?></span><?php endif; ?></div>
             </div>
           </div>
         <?php endforeach; ?>
