@@ -240,3 +240,19 @@ function letterInkAttachLatest(PDO $pdo, $letterId, $userId, $afterActionId, $da
     $aid = (int)$st->fetchColumn();
     return $aid ? letterInkSave($letterId, $aid, $dataUrl) : false;
 }
+
+/** Executive President (कार्यकारी अध्यक्ष) — फक्त यांचा हस्तलिखित शेरा थेट पत्रावर छापला जातो */
+function letterIsExecutive($role, $designation = '') {
+    $d = mb_strtolower((string)$designation);
+    return $role === 'executive_president' || str_contains($d, 'executive president') || str_contains($d, 'कार्यकारी अध्यक्ष');
+}
+
+/** पत्रावर येणारे शेरे: [['img'=>…, 'name'=>…, 'designation'=>…, 'at'=>…, 'text'=>…]] — $actions मध्ये from_role / from_designation हवेत */
+function letterExecutiveShera(array $actions, array $inkMap) {
+    $out = [];
+    foreach ($actions as $a) {
+        if (!isset($inkMap[(int)$a['id']]) || !letterIsExecutive($a['from_role'] ?? '', $a['from_designation'] ?? '')) { continue; }
+        $out[] = ['img' => $inkMap[(int)$a['id']], 'name' => $a['from_name'], 'designation' => $a['from_designation'] ?: 'Executive President', 'at' => $a['created_at']];
+    }
+    return $out;
+}

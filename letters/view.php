@@ -173,7 +173,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // ---------------- Data for display ----------------
 $stmt = $pdo->prepare("
-    SELECT la.*, fu.name AS from_name, tu.name AS to_name
+    SELECT la.*, fu.name AS from_name, fu.role AS from_role, fu.designation AS from_designation, tu.name AS to_name
     FROM letter_actions la
     LEFT JOIN users fu ON fu.id = la.from_user_id
     LEFT JOIN users tu ON tu.id = la.to_user_id
@@ -182,6 +182,8 @@ $stmt = $pdo->prepare("
 $stmt->execute([$letterId]);
 $actions = $stmt->fetchAll();
 $inkMap = letterInkMap($letterId);
+$sheras = letterExecutiveShera($actions, $inkMap);   // पत्रावर छापले जाणारे शेरे (फक्त Executive President)
+$inkOnLetter = letterIsExecutive($user['role'] ?? '', $user['designation'] ?? '');
 
 $stmt = $pdo->prepare("SELECT la.*, u.name AS uploader_name FROM letter_attachments la LEFT JOIN users u ON u.id = la.uploaded_by WHERE la.letter_id = ? ORDER BY la.id DESC");
 $stmt->execute([$letterId]);
@@ -335,6 +337,14 @@ require_once __DIR__ . '/../includes/header.php';
   <div class="col-lg-7">
     <?php if ($letter['description']): ?>
       <div class="panel mb-3" style="padding:16px 20px;font-size:13px;color:var(--text-dim);"><?= nl2br(h($letter['description'])) ?></div>
+    <?php endif; ?>
+    <?php if ($sheras): ?>
+      <div class="panel mb-3" style="padding:14px 20px;border-left:4px solid #1D3C8F;">
+        <div style="font-size:12px;font-weight:700;color:#1D3C8F;margin-bottom:6px;">📝 पत्रावरील शेरा <span style="font-weight:500;color:var(--text-dim);">— PDF / Print मध्ये पत्रावर छापला जातो</span></div>
+        <?php foreach ($sheras as $sh): ?>
+          <div style="padding:6px 0;"><img src="../<?= h($sh['img']) ?>" alt="हस्तलिखित शेरा" style="max-width:100%;max-height:180px;"><div style="font-size:11.5px;color:var(--text-dim);text-align:right;">— <?= h($sh['name']) ?>, <?= h($sh['designation']) ?> · <?= date('d M Y', strtotime($sh['at'])) ?></div></div>
+        <?php endforeach; ?>
+      </div>
     <?php endif; ?>
 
     <div class="panel mb-3">

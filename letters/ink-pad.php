@@ -49,7 +49,7 @@
   <div class="modal-dialog modal-lg modal-dialog-centered modal-fullscreen-sm-down">
     <div class="modal-content">
       <div class="d-flex justify-content-between align-items-center" style="padding:12px 16px;border-bottom:1px solid var(--line);">
-        <div><div style="font-weight:800;font-size:15px;">✍️ हाताने टिप्पणी लिहा</div><div style="font-size:11.5px;color:var(--text-dim);">Pen, Stylus किंवा बोटाने लिहा — फाईलच्या हालचालीत तुमच्या नावासह जतन होईल</div></div>
+        <div><div style="font-weight:800;font-size:15px;">✍️ हाताने टिप्पणी लिहा</div><div style="font-size:11.5px;color:var(--text-dim);">Pen, Stylus किंवा बोटाने लिहा — फाईलच्या हालचालीत तुमच्या नावासह जतन होईल</div><?php if (!empty($inkOnLetter)): ?><div style="font-size:11.5px;color:#1D3C8F;font-weight:700;margin-top:2px;">📝 तुमचा हा शेरा थेट पत्रावर (PDF / Print) छापला जाईल</div><?php endif; ?></div>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="बंद करा"></button>
       </div>
       <div class="ink-bar">

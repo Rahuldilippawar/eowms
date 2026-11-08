@@ -34,7 +34,7 @@ if (!$canView) { die('तुम्हाला ही फाईल पाहण�
 $org = $pdo->query("SELECT * FROM organizations WHERE id = " . (int)$orgId)->fetch();
 
 $stmt = $pdo->prepare("
-    SELECT la.*, fu.name AS from_name, tu.name AS to_name
+    SELECT la.*, fu.name AS from_name, fu.role AS from_role, fu.designation AS from_designation, tu.name AS to_name
     FROM letter_actions la
     LEFT JOIN users fu ON fu.id = la.from_user_id
     LEFT JOIN users tu ON tu.id = la.to_user_id
@@ -44,6 +44,7 @@ $stmt->execute([$letterId]);
 $actions = $stmt->fetchAll();
 require_once __DIR__ . '/helpers.php';
 $inkMap = letterInkMap($letterId);
+$sheras = letterExecutiveShera($actions, $inkMap);   // फक्त Executive President यांचा हस्तलिखित शेरा — पत्रावर
 
 $stmt = $pdo->prepare("SELECT la.*, u.name AS uploader_name FROM letter_attachments la LEFT JOIN users u ON u.id = la.uploaded_by WHERE la.letter_id = ? ORDER BY la.id");
 $stmt->execute([$letterId]);
@@ -101,6 +102,10 @@ $actionLabels = ['created' => 'तयार केली', 'submitted' => 'स�
 
   /* ---------------- Signature ---------------- */
   .sig-block{margin-top:0.55in;text-align:right;}
+  .shera{margin-top:0.3in;padding:10px 0 4px;border-top:1px dashed #C9C2B2;page-break-inside:avoid;}
+  .shera-lbl{font-size:11px;font-weight:700;color:var(--text-dim);letter-spacing:.5px;}
+  .shera img{display:block;max-width:100%;max-height:2.2in;margin:4px 0;}
+  .shera-by{font-size:11px;color:var(--text-dim);text-align:right;}
   .sig-block .sig-line{border-top:1px solid var(--text);width:2.4in;margin-left:auto;padding-top:6px;}
   .sig-block .sig-name{font-weight:700;font-size:13px;}
   .sig-block .sig-desig{font-size:11px;color:var(--text-dim);}
@@ -165,6 +170,15 @@ $actionLabels = ['created' => 'तयार केली', 'submitted' => 'स�
       <span class="no-content">(या फाईलसाठी कुठलाही तपशीलवार मजकूर नोंदवलेला नाही.)</span>
     <?php endif; ?>
   </div>
+
+  <!-- ============ Executive President यांचा हस्तलिखित शेरा ============ -->
+  <?php foreach ($sheras as $sh): ?>
+    <div class="shera">
+      <div class="shera-lbl">शेरा</div>
+      <img src="../<?= h($sh['img']) ?>" alt="हस्तलिखित शेरा">
+      <div class="shera-by">— <?= h($sh['name']) ?>, <?= h($sh['designation']) ?> · <?= date('d-m-Y', strtotime($sh['at'])) ?></div>
+    </div>
+  <?php endforeach; ?>
 
   <!-- ============ Signature ============ -->
   <div class="sig-block">
