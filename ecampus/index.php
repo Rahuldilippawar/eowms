@@ -50,19 +50,9 @@ $rootPath = '../';
 require_once __DIR__ . '/../includes/header.php';
 ?>
 <style>
-  .es-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:12px;}
-  .es-title{font-size:19px;font-weight:800;letter-spacing:.01em;}
-  .es-title small{display:block;font-size:12.5px;font-weight:500;color:var(--text-dim);margin-top:2px;}
-  .es-strip{display:grid;grid-template-columns:auto repeat(4,minmax(110px,1fr)) 2fr;gap:10px;align-items:stretch;margin-bottom:12px;}
-  .es-box{background:var(--surface,#fff);border:1px solid var(--line);border-radius:14px;padding:10px 14px;display:flex;flex-direction:column;justify-content:center;}
-  .es-box .l{font-size:11.5px;color:var(--text-dim);font-weight:600;} .es-box .v{font-size:22px;font-weight:800;line-height:1.2;}
   .es-ring{--p:0;width:86px;height:86px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--c) calc(var(--p)*1%), var(--canvas) 0);transition:background .4s;}
   .es-ring span{width:68px;height:68px;border-radius:50%;background:var(--surface,#fff);display:grid;place-items:center;font-weight:800;font-size:18px;line-height:1;text-align:center;}
   .es-ring small{display:block;font-size:9.5px;font-weight:600;color:var(--text-dim);}
-  .es-wings{display:flex;flex-wrap:wrap;gap:6px;align-content:center;}
-  .es-wchip{font-size:11.5px;font-weight:700;padding:4px 9px;border-radius:99px;background:var(--canvas);border:1px solid var(--line);cursor:pointer;display:inline-flex;gap:6px;align-items:center;}
-  .es-wchip i{display:inline-block;width:8px;height:8px;border-radius:50%;}
-  .es-wchip.on{border-color:var(--rail);background:color-mix(in srgb,var(--rail) 10%,transparent);}
   .es-tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;}
   .es-tools .form-control-custom,.es-tools .form-select-custom{max-width:220px;}
   .es-tools .sbtn{border:1px solid var(--line);background:var(--surface,#fff);border-radius:99px;font-size:12.5px;font-weight:700;padding:6px 12px;cursor:pointer;}
@@ -96,6 +86,82 @@ require_once __DIR__ . '/../includes/header.php';
   html[data-theme="dark"] table.es tfoot td{background:#1B2236;}
   html[data-theme="dark"] table.es td.edit{background:color-mix(in srgb,#F59E0B 8%,var(--surface,#141B2D));}
   .es-hidden{display:none;}
+  /* ---------- 🎓 Hero ---------- */
+  .es-hero{position:relative;overflow:hidden;border-radius:20px;padding:20px 22px;margin-bottom:14px;color:#fff;
+    background:radial-gradient(120% 140% at 100% 0%,rgba(217,83,15,.38) 0%,transparent 46%),radial-gradient(90% 120% at 0% 100%,rgba(123,63,158,.30) 0%,transparent 55%),linear-gradient(135deg,#141833 0%,#1F2450 60%,#262B5E 100%);
+    box-shadow:0 14px 34px -18px rgba(20,24,51,.65);}
+  .es-hero::after{content:'';position:absolute;right:-60px;top:-60px;width:220px;height:220px;border-radius:50%;border:1px solid rgba(255,255,255,.08);box-shadow:0 0 0 30px rgba(255,255,255,.025),0 0 0 62px rgba(255,255,255,.02);pointer-events:none;}
+  .es-hero-top{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;position:relative;z-index:1;}
+  .es-hero-t{min-width:0;flex:1 1 380px;}
+  .es-eyebrow{font-size:11px;font-weight:800;letter-spacing:.12em;color:#FDBA8C;text-transform:uppercase;}
+  .es-hero h1{font-size:22px;font-weight:800;margin:4px 0 4px;letter-spacing:.01em;line-height:1.25;color:#fff;}
+  .es-hero h1 span{color:#FDBA8C;}
+  .es-hero p{font-size:12.5px;color:rgba(255,255,255,.72);margin:0;max-width:620px;}
+  .es-actions{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
+  .es-hsel{background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.22);border-radius:10px;padding:7px 10px;font-size:13px;font-weight:600;cursor:pointer;}
+  .es-hsel option{color:#191C3A;}
+  .es-hbtn{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:10px;padding:7px 12px;font-size:12.5px;font-weight:600;text-decoration:none;transition:background .15s,transform .15s;}
+  .es-hbtn:hover{background:rgba(255,255,255,.2);color:#fff;transform:translateY(-1px);}
+  .es-hbtn.pri{background:var(--rail,#D9530F);border-color:var(--rail,#D9530F);box-shadow:0 6px 16px -6px rgba(217,83,15,.7);}
+  .es-hero-body{display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin-top:18px;position:relative;z-index:1;}
+  .es-hring{display:flex;gap:14px;align-items:center;padding-right:18px;border-right:1px solid rgba(255,255,255,.12);}
+  .es-hero .es-ring{--p:0;width:96px;height:96px;background:conic-gradient(var(--c) calc(var(--p)*1%), rgba(255,255,255,.12) 0);filter:drop-shadow(0 4px 12px rgba(0,0,0,.25));}
+  .es-hero .es-ring span{width:76px;height:76px;background:#1A1E44;color:#fff;font-size:20px;}
+  .es-hero .es-ring small{color:rgba(255,255,255,.6);}
+  .es-hring-t{display:flex;flex-direction:column;gap:2px;font-size:12px;color:rgba(255,255,255,.72);}
+  .es-hring-t b{font-size:15px;color:#fff;} .es-hring-t .up{color:#4ADE80;font-weight:700;} .es-hring-t .dn{color:#F87171;font-weight:700;}
+  .es-pace{display:inline-block;width:max-content;background:rgba(255,255,255,.1);border-radius:99px;padding:1px 9px;font-weight:700;color:#fff;margin-top:2px;}
+  .es-kpis{flex:1;display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));gap:10px;min-width:0;}
+  .es-kpi{position:relative;display:flex;gap:10px;align-items:center;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:11px 12px 14px;backdrop-filter:blur(4px);}
+  .es-kpi > i{flex:0 0 38px;height:38px;border-radius:11px;display:grid;place-items:center;font-style:normal;font-size:17px;background:color-mix(in srgb,var(--k) 22%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--k) 40%,transparent);}
+  .es-kpi .v{font-size:24px;font-weight:800;line-height:1.05;color:#fff;} .es-kpi .l{font-size:11.5px;color:rgba(255,255,255,.7);font-weight:600;}
+  .es-kpi em{position:absolute;left:12px;right:12px;bottom:6px;height:3px;border-radius:99px;background:rgba(255,255,255,.1);overflow:hidden;} .es-kpi em s{display:block;height:100%;border-radius:99px;transition:width .4s;}
+  /* ---------- Wing पट्टी ---------- */
+  .es-wingbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:var(--surface,#fff);border:1px solid var(--line);border-radius:14px;padding:10px 12px;margin-bottom:12px;}
+  .es-wl{font-size:12.5px;font-weight:800;margin-right:4px;white-space:nowrap;flex:0 0 auto;} .es-wl small{font-weight:500;color:var(--text-dim);}
+  .es-wchip{position:relative;font:inherit;font-size:12px;font-weight:700;padding:6px 11px 9px;border-radius:11px;background:var(--canvas);border:1px solid var(--line);cursor:pointer;display:inline-flex;gap:7px;align-items:center;color:inherit;transition:border-color .15s,transform .15s,box-shadow .15s;}
+  .es-wchip:hover{transform:translateY(-1px);box-shadow:0 4px 12px -6px rgba(0,0,0,.2);}
+  .es-wchip i{display:inline-block;width:8px;height:8px;border-radius:50%;}
+  .es-wchip em{position:absolute;left:10px;right:10px;bottom:4px;height:3px;border-radius:99px;background:var(--line);overflow:hidden;} .es-wchip em s{display:block;height:100%;border-radius:99px;transition:width .4s;}
+  .es-wchip.on{border-color:var(--rail);background:color-mix(in srgb,var(--rail) 10%,var(--surface,#fff));box-shadow:0 0 0 3px color-mix(in srgb,var(--rail) 14%,transparent);}
+  /* ---------- स्मार्ट Cards / Tools — थोडं अधिक उठावदार ---------- */
+  .es-card{box-shadow:0 1px 2px rgba(16,22,43,.04),0 8px 22px -16px rgba(16,22,43,.25);transition:box-shadow .2s;}
+  .es-card:hover{box-shadow:0 1px 2px rgba(16,22,43,.05),0 12px 28px -14px rgba(16,22,43,.3);}
+  .es-wrap{box-shadow:0 8px 26px -18px rgba(16,22,43,.35);}
+  table.es tbody tr td{transition:background .15s;}
+  @media (max-width:1100px){ .es-kpis{grid-template-columns:repeat(2,1fr);} .es-hring{border-right:0;padding-right:0;} }
+  /* ---------- 📱 Mobile — तक्त्याऐवजी Cards ---------- */
+  @media (max-width:767px){
+    .es-hero{padding:16px;border-radius:18px;} .es-hero h1{font-size:18px;} .es-hero p{font-size:12px;}
+    .es-actions{width:100%;} .es-actions form{flex:1 1 100%;} .es-hsel{width:100%;}
+    .es-hbtn{flex:1 1 calc(25% - 6px);justify-content:center;padding:8px 6px;} .es-hbtn span{font-size:11.5px;} .es-hbtn.pri{flex-basis:100%;}
+    .es-hero-body{gap:12px;} .es-hring{width:100%;justify-content:center;}
+    .es-kpis{grid-template-columns:1fr 1fr;width:100%;gap:8px;} .es-kpi{padding:9px 10px 12px;} .es-kpi .v{font-size:20px;} .es-kpi > i{flex-basis:32px;height:32px;font-size:15px;}
+    .es-wingbar{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;} .es-wingbar::-webkit-scrollbar{display:none;}
+    .es-wl small{display:none;} .es-wchip{flex:0 0 auto;}
+    .es-tools .form-control-custom{max-width:none;flex:1 1 100%;} .es-tools #esSort{flex:1 1 auto;max-width:none;}
+    .es-wrap{overflow:visible;max-height:none;border:0;background:transparent;box-shadow:none;}
+    table.es{min-width:0;display:block;} table.es thead{display:none;} table.es tbody{display:block;}
+    table.es tbody tr{display:grid;grid-template-columns:1fr auto;grid-template-areas:"staff stat" "desig stat" "wing sec" "task task" "notes notes" "pct pct";
+      background:var(--surface,#fff);border:1px solid var(--line);border-left:4px solid var(--wc,var(--rail));border-radius:14px;margin-bottom:10px;overflow:hidden;box-shadow:0 6px 18px -14px rgba(16,22,43,.35);}
+    table.es tbody tr.es-hidden{display:none;}
+    table.es td{display:block;border:0;padding:0 14px;background:transparent !important;}
+    table.es td.sr{display:none;}
+    table.es td.staff{grid-area:staff;padding-top:12px;font-size:14.5px;} table.es td.desig{grid-area:desig;font-size:11.5px;color:var(--text-dim);}
+    table.es td.stat{grid-area:stat;padding-top:12px;align-self:start;}
+    table.es td.wing{grid-area:wing;border-left:0;font-size:11.5px;padding-top:8px;color:var(--wc);} table.es td.wing.rep{color:var(--wc);font-weight:700;}
+    table.es td.sec{grid-area:sec;font-size:11.5px;color:var(--text-dim);padding-top:8px;text-align:right;}
+    table.es td.task{grid-area:task;max-width:none;min-width:0;margin:10px 14px 0;padding:9px 11px;background:var(--canvas) !important;border-radius:10px;font-size:12.5px;}
+    table.es td.notes{grid-area:notes;padding-top:10px;} table.es td.pct{grid-area:pct;width:auto !important;min-width:0 !important;padding:8px 14px 12px;}
+    table.es td[data-label]::before{content:attr(data-label);display:block;font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--text-dim);margin-bottom:3px;}
+    table.es td.task::before{margin-bottom:2px;}
+    table.es td.edit .es-note{border-color:var(--line);background:color-mix(in srgb,#FEF3C7 40%,var(--surface,#fff));}
+    table.es td.pct .es-pct input{width:72px;font-size:16px;} table.es td.pct .es-pct button{width:38px;height:36px;font-size:16px;}
+    table.es tr.mine td.staff b::after{content:' • मी';}
+    table.es tfoot{display:block;} table.es tfoot tr{display:flex;justify-content:space-between;align-items:center;gap:8px;background:#191C3A;color:#fff;border-radius:14px;padding:10px 14px;}
+    table.es tfoot td{position:static;display:block;background:transparent !important;color:#fff;border:0;padding:0;}
+    table.es tfoot td:first-child{flex:1;text-align:left !important;font-size:12px;font-weight:600;color:rgba(255,255,255,.75);}
+  }
   /* ---------- 🧠 स्मार्ट निष्कर्ष ---------- */
   .es-ai{margin-bottom:12px;}
   .es-tip{display:flex;gap:10px;align-items:center;border:1px solid color-mix(in srgb,var(--tc) 35%,var(--line));background:color-mix(in srgb,var(--tc) 8%,var(--surface,#fff));border-radius:12px;padding:9px 14px;font-size:13px;margin-bottom:10px;}
@@ -118,46 +184,57 @@ require_once __DIR__ . '/../includes/header.php';
   .ec-chart{display:flex;gap:18px;align-items:center;flex-wrap:wrap;padding:14px 18px;} .ec-chart svg{max-width:100%;height:auto;}
   .ec-hbar{display:grid;grid-template-columns:minmax(120px,32%) 1fr 48px;gap:10px;align-items:center;font-size:13px;padding:6px 0;border-bottom:1px dashed var(--line);}
   .ec-hbar .b{height:12px;border-radius:99px;background:var(--canvas);overflow:hidden;} .ec-hbar .b i{display:block;height:100%;border-radius:99px;}
-  @media (max-width:1100px){ .es-strip{grid-template-columns:auto repeat(2,1fr);} .es-strip .es-wings{grid-column:1/-1;} }
-  @media (max-width:600px){ .es-strip{grid-template-columns:1fr 1fr;} .es-strip .ring-box{grid-column:1/-1;align-items:center;} }
   @media print{ .es-tools,.no-print,details.es-charts{display:none !important;} .es-wrap{max-height:none;overflow:visible;border:0;} table.es th{position:static;} .es-note{border:0;resize:none;} }
 </style>
 
-<div class="page-eyebrow"><?= h(activeOrgName()) ?></div>
-<div class="es-head">
-  <div class="es-title">🎓 MONTHLY E-CAMPUS REPORT — <?= h(mb_strtoupper(activeOrgName())) ?> — <?= date('m/Y', strtotime($period . '-01')) ?>
-    <small><?= $isCurrent ? ($viewAll ? 'Progress Notes आणि % Complete थेट तक्त्यात भरा — आपोआप जतन होतं, Status आपोआप बदलतो.' : 'तुमच्या कामांची Progress Notes आणि % Complete इथे भरा — आपोआप जतन होतं.') : ecampusPeriodLabel($period) . ' — मागचा महिना (फक्त पाहण्यासाठी)' ?></small></div>
-  <div class="d-flex gap-2 flex-wrap no-print">
-    <form method="GET"><select name="month" class="form-select-custom" onchange="this.form.submit()"><?php foreach ($months as $m): ?><option value="<?= $m ?>" <?= $m === $period ? 'selected' : '' ?>><?= h(ecampusPeriodLabel($m)) ?></option><?php endforeach; ?></select></form>
-    <?php if ($viewAll): ?>
-      <a href="report.php?month=<?= h($period) ?>&print=1" target="_blank" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13px;padding:8px 14px;"><i class="fa-solid fa-print me-1"></i>Print</a>
-      <a href="report.php?month=<?= h($period) ?>&pdf=1&v=<?= time() ?>" target="_blank" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13px;padding:8px 14px;"><i class="fa-solid fa-file-pdf me-1"></i>PDF</a>
-      <a href="report.php?month=<?= h($period) ?>&pdf=dl&v=<?= time() ?>" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13px;padding:8px 14px;"><i class="fa-solid fa-download me-1"></i>Download</a>
-      <a href="report.php?month=<?= h($period) ?>&csv=1" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13px;padding:8px 14px;"><i class="fa-solid fa-file-excel me-1" style="color:#16A34A;"></i>Excel</a>
-    <?php endif; ?>
-    <?php if ($isSA): ?><a href="manage.php" class="btn" style="background:var(--rail);color:#fff;border-radius:9px;font-size:13px;padding:8px 14px;"><i class="fa-solid fa-user-gear me-1"></i>कामांचं वाटप</a><?php endif; ?>
+<?php $tot = max(1, (int)$S['work']); $delta = ($rows && $S['overall'] !== null && ($prevS['overall'] ?? null) !== null) ? $S['overall'] - $prevS['overall'] : null; ?>
+<!-- ---------- 🎓 Hero — शीर्षक, कृती, एकूण प्रगती व आकडे (तक्त्यातील बदलांबरोबर लगेच बदलतात) ---------- -->
+<div class="es-hero">
+  <div class="es-hero-top">
+    <div class="es-hero-t">
+      <div class="es-eyebrow">🎓 E-CAMPUS · <?= h(activeOrgName()) ?></div>
+      <h1>MONTHLY E-CAMPUS REPORT <span>— <?= date('m/Y', strtotime($period . '-01')) ?></span></h1>
+      <p><?= $isCurrent ? ($viewAll ? 'Progress Notes आणि % Complete थेट तक्त्यात भरा — आपोआप जतन होतं, Status आपोआप बदलतो.' : 'तुमच्या कामांची Progress Notes आणि % Complete इथे भरा — आपोआप जतन होतं.') : ecampusPeriodLabel($period) . ' — मागचा महिना (फक्त पाहण्यासाठी)' ?></p>
+    </div>
+    <div class="es-actions no-print">
+      <form method="GET"><select name="month" class="es-hsel" onchange="this.form.submit()" aria-label="महिना"><?php foreach ($months as $m): ?><option value="<?= $m ?>" <?= $m === $period ? 'selected' : '' ?>><?= h(ecampusPeriodLabel($m)) ?></option><?php endforeach; ?></select></form>
+      <?php if ($viewAll): ?>
+        <a href="report.php?month=<?= h($period) ?>&print=1" target="_blank" class="es-hbtn" title="Print"><i class="fa-solid fa-print"></i><span>Print</span></a>
+        <a href="report.php?month=<?= h($period) ?>&pdf=1&v=<?= time() ?>" target="_blank" class="es-hbtn" title="PDF"><i class="fa-solid fa-file-pdf"></i><span>PDF</span></a>
+        <a href="report.php?month=<?= h($period) ?>&pdf=dl&v=<?= time() ?>" class="es-hbtn" title="Download"><i class="fa-solid fa-download"></i><span>Download</span></a>
+        <a href="report.php?month=<?= h($period) ?>&csv=1" class="es-hbtn" title="Excel"><i class="fa-solid fa-file-excel"></i><span>Excel</span></a>
+      <?php endif; ?>
+      <?php if ($isSA): ?><a href="manage.php" class="es-hbtn pri"><i class="fa-solid fa-user-gear"></i><span>कामांचं वाटप</span></a><?php endif; ?>
+    </div>
   </div>
+  <?php if ($rows): ?>
+  <div class="es-hero-body" id="esStrip">
+    <div class="es-hring">
+      <div class="es-ring" id="esRing" style="--p:<?= (int)$S['overall'] ?>;--c:<?= $col[$S['level']] ?>;"><span><b id="esOverall"><?= (int)$S['overall'] ?>%</b><small>पूर्ण</small></span></div>
+      <div class="es-hring-t">
+        <b><span id="esLeft"><?= max(0, 100 - (int)$S['overall']) ?></span>% बाकी</b>
+        <?php if ($isCurrent): ?><span>महिना <?= (int)$S['expected'] ?>% गेला</span><span class="es-pace" id="esPace"><?= ($S['overall'] ?? 0) >= $S['expected'] ? '🚀 वेळेच्या पुढे' : '⏳ वेळेच्या मागे' ?></span><?php endif; ?>
+        <?php if ($delta !== null): ?><span class="<?= $delta >= 0 ? 'up' : 'dn' ?>"><?= $delta >= 0 ? '▲' : '▼' ?> <?= abs($delta) ?>% मागच्या महिन्यापेक्षा</span><?php endif; ?>
+      </div>
+    </div>
+    <div class="es-kpis">
+      <div class="es-kpi"><i style="--k:#A5B4FC;">📋</i><div><div class="v" id="esTotal"><?= (int)$S['work'] ?></div><div class="l">एकूण कामं · <?= (int)$S['staff'] ?> कर्मचारी</div></div></div>
+      <div class="es-kpi"><i style="--k:#4ADE80;">✅</i><div><div class="v" id="esDone"><?= (int)$S['done'] ?></div><div class="l">पूर्ण</div></div><em><s id="esDoneBar" style="width:<?= round($S['done'] * 100 / $tot) ?>%;background:#4ADE80;"></s></em></div>
+      <div class="es-kpi"><i style="--k:#FBBF24;">🔄</i><div><div class="v" id="esProg"><?= (int)$S['progress'] ?></div><div class="l">सुरू</div></div><em><s id="esProgBar" style="width:<?= round($S['progress'] * 100 / $tot) ?>%;background:#FBBF24;"></s></em></div>
+      <div class="es-kpi"><i style="--k:#F87171;">⛔</i><div><div class="v" id="esPend"><?= (int)$S['pending'] ?></div><div class="l">सुरू नाही</div></div><em><s id="esPendBar" style="width:<?= round($S['pending'] * 100 / $tot) ?>%;background:#F87171;"></s></em></div>
+    </div>
+  </div>
+  <?php endif; ?>
 </div>
 
 <?php if (!$rows): ?>
   <div class="panel" style="padding:40px;text-align:center;color:var(--text-dim);"><div style="font-size:38px;">🎓</div>या महिन्यासाठी E-Campus चं एकही काम नेमलेलं नाही.<?php if ($isSA): ?><div class="mt-3"><a href="manage.php" class="btn" style="background:var(--rail);color:#fff;border-radius:9px;">कामं नेमा / Excel आयात करा</a></div><?php endif; ?></div>
-<?php else: $delta = ($S['overall'] !== null && ($prevS['overall'] ?? null) !== null) ? $S['overall'] - $prevS['overall'] : null; ?>
+<?php else: ?>
 
-  <!-- ---------- वरचा सारांश (तक्त्यातील बदलांबरोबर लगेच बदलतो) ---------- -->
-  <div class="es-strip" id="esStrip">
-    <div class="es-box ring-box" style="flex-direction:row;gap:12px;align-items:center;">
-      <div class="es-ring" id="esRing" style="--p:<?= (int)$S['overall'] ?>;--c:<?= $col[$S['level']] ?>;"><span><b id="esOverall"><?= (int)$S['overall'] ?>%</b><small>पूर्ण</small></span></div>
-      <div style="font-size:12px;color:var(--text-dim);line-height:1.6;"><b style="color:inherit;"><span id="esLeft"><?= max(0, 100 - (int)$S['overall']) ?></span>% बाकी</b><br>
-        <?php if ($isCurrent): ?>महिना <?= (int)$S['expected'] ?>% गेला<br><span id="esPace"><?= ($S['overall'] ?? 0) >= $S['expected'] ? '🚀 वेळेच्या पुढे' : '⏳ वेळेच्या मागे' ?></span><?php endif; ?>
-        <?php if ($delta !== null): ?><br><?= $delta >= 0 ? '▲' : '▼' ?> <?= abs($delta) ?>% मागच्या महिन्यापेक्षा<?php endif; ?></div>
-    </div>
-    <div class="es-box"><div class="l">एकूण कामं</div><div class="v" id="esTotal"><?= (int)$S['work'] ?></div><div class="l"><?= (int)$S['staff'] ?> कर्मचारी</div></div>
-    <div class="es-box"><div class="l">✅ पूर्ण</div><div class="v" style="color:#16A34A;" id="esDone"><?= (int)$S['done'] ?></div></div>
-    <div class="es-box"><div class="l">🔄 सुरू</div><div class="v" style="color:#B45309;" id="esProg"><?= (int)$S['progress'] ?></div></div>
-    <div class="es-box"><div class="l">⛔ सुरू नाही</div><div class="v" style="color:#DC2626;" id="esPend"><?= (int)$S['pending'] ?></div></div>
-    <div class="es-box"><div class="l" style="margin-bottom:6px;">Wing नुसार — Click करून फक्त तेच पाहा</div>
-      <div class="es-wings"><?php foreach ($wings as $w): $g = $S['wings'][$w]; ?><span class="es-wchip" data-wing="<?= h($w) ?>"><i style="background:<?= $barCol($g['avg']) ?>;"></i><?= h($w) ?> <b data-wavg="<?= h($w) ?>"><?= (int)$g['avg'] ?>%</b></span><?php endforeach; ?></div>
-    </div>
+  <!-- ---------- Wing नुसार — Click करून फक्त तीच Wing ---------- -->
+  <div class="es-wingbar no-print">
+    <span class="es-wl">🏛️ Wing नुसार <small>— Click करून फक्त तेच पाहा</small></span>
+    <?php foreach ($wings as $w): $g = $S['wings'][$w]; ?><button type="button" class="es-wchip" data-wing="<?= h($w) ?>"><i style="background:<?= $barCol($g['avg']) ?>;"></i><span class="wn"><?= h($w) ?></span><b data-wavg="<?= h($w) ?>"><?= (int)$g['avg'] ?>%</b><em><s style="width:<?= (int)$g['avg'] ?>%;background:<?= $barCol($g['avg']) ?>;"></s></em></button><?php endforeach; ?>
   </div>
 
   <?php if ($viewAll): /* ---------- 🧠 स्मार्ट निष्कर्ष ---------- */
@@ -227,18 +304,18 @@ require_once __DIR__ . '/../includes/header.php';
       <tbody>
       <?php $prevWing = null; $wingColors = ['#D9530F', '#7B3F9E', '#2563EB', '#16A34A', '#0891B2', '#B45309', '#BE185D', '#4F46E5']; $wc = [];
       foreach ($rows as $i => $r): $wc[$r['wing']] ??= $wingColors[count($wc) % count($wingColors)]; $ed = $canEdit($r); $rep = $prevWing === $r['wing']; $prevWing = $r['wing']; ?>
-        <tr data-id="<?= (int)$r['id'] ?>" data-wing="<?= h($r['wing']) ?>" data-status="<?= h($r['status']) ?>" data-access="<?= h($r['access_type']) ?>" data-pct="<?= $r['percent'] ?>" data-mine="<?= (int)$r['user_id'] === (int)$me['id'] ? 1 : 0 ?>" data-sr="<?= $i ?>" data-upd="<?= $r['updated_at'] && !$r['carried'] ? strtotime($r['updated_at']) : 0 ?>" class="<?= (int)$r['user_id'] === (int)$me['id'] ? 'mine' : '' ?>">
+        <tr data-id="<?= (int)$r['id'] ?>" data-wing="<?= h($r['wing']) ?>" data-status="<?= h($r['status']) ?>" data-access="<?= h($r['access_type']) ?>" data-pct="<?= $r['percent'] ?>" style="--wc:<?= $wc[$r['wing']] ?>;" data-mine="<?= (int)$r['user_id'] === (int)$me['id'] ? 1 : 0 ?>" data-sr="<?= $i ?>" data-upd="<?= $r['updated_at'] && !$r['carried'] ? strtotime($r['updated_at']) : 0 ?>" class="<?= (int)$r['user_id'] === (int)$me['id'] ? 'mine' : '' ?>">
           <td class="sr"><?= $i + 1 ?></td>
           <td class="wing <?= $rep ? 'rep' : '' ?>" style="--wc:<?= $wc[$r['wing']] ?>;"><?= h($r['wing']) ?></td>
-          <td><?= h($r['section']) ?></td>
+          <td class="sec"><?= h($r['section']) ?></td>
           <td class="staff"><b><?= h($r['staff_name']) ?></b></td>
-          <td><?= h($r['designation_show']) ?></td>
-          <td class="task"><?= h($r['task_description']) ?></td>
-          <td class="<?= $ed ? 'edit' : '' ?>">
+          <td class="desig"><?= h($r['designation_show']) ?></td>
+          <td class="task" data-label="Assigned Task"><?= h($r['task_description']) ?></td>
+          <td class="notes <?= $ed ? 'edit' : '' ?>" data-label="Progress Notes">
             <?php if ($ed): ?><textarea class="es-note" rows="2" maxlength="2000" placeholder="नोंद लिहा…"><?= h($r['carried'] ? '' : (string)$r['notes']) ?></textarea>
             <?php else: ?><?= nl2br(h((string)$r['notes'])) ?: '<span style="color:var(--text-dim);">—</span>' ?><?php endif; ?>
           </td>
-          <td class="<?= $ed ? 'edit' : '' ?>" style="min-width:118px;width:118px;">
+          <td class="pct <?= $ed ? 'edit' : '' ?>" data-label="% Complete" style="min-width:118px;width:118px;">
             <?php if ($ed): ?>
               <div class="es-pct"><button type="button" data-step="-5" title="-5">−</button><input type="number" class="es-pval" min="0" max="100" step="1" value="<?= $r['percent'] ?>" inputmode="numeric"><button type="button" data-step="5" title="+5">+</button></div>
             <?php else: ?><div class="es-ro"><?= $r['percent'] ?>%</div><?php endif; ?>
@@ -249,7 +326,7 @@ require_once __DIR__ . '/../includes/header.php';
               <?php if (!$__u): ?><span class="es-flag bad">नोंद नाही</span><?php elseif ($__u < strtotime('-7 days')): ?><span class="es-flag warn">⚠️ 7+ दिवस जुनी</span><?php endif; ?>
             <?php endif; ?>
           </td>
-          <td><span class="es-st" style="background:<?= $r['status_color'] ?>;"><?= h($r['status_label']) ?></span></td>
+          <td class="stat"><span class="es-st" style="background:<?= $r['status_color'] ?>;"><?= h($r['status_label']) ?></span></td>
         </tr>
       <?php endforeach; ?>
       </tbody>
@@ -305,7 +382,9 @@ require_once __DIR__ . '/../includes/header.php';
     document.getElementById('esDone').textContent = c.done; document.getElementById('esProg').textContent = c.progress; document.getElementById('esPend').textContent = c.pending;
     document.getElementById('esFootPct').textContent = o + '%';
     document.getElementById('esFootSt').textContent = c.done + '/' + rows.length + ' ' + T('पूर्ण');
-    Object.keys(wing).forEach(function (w) { var el = document.querySelector('[data-wavg="' + CSS.escape(w) + '"]'); if (el) { var a = Math.round(wing[w][0] / wing[w][1]); el.textContent = a + '%'; el.previousElementSibling.style.background = barColor(a); } });
+    Object.keys(wing).forEach(function (w) { var el = document.querySelector('[data-wavg="' + CSS.escape(w) + '"]'); if (el) { var a = Math.round(wing[w][0] / wing[w][1]), ch = el.closest('.es-wchip'); el.textContent = a + '%'; ch.querySelector('i').style.background = barColor(a); var bar = ch.querySelector('em s'); if (bar) { bar.style.width = a + '%'; bar.style.background = barColor(a); } } });
+    var tot = Math.max(1, rows.length);
+    [['esDoneBar', c.done], ['esProgBar', c.progress], ['esPendBar', c.pending]].forEach(function (x) { var b = document.getElementById(x[0]); if (b) { b.style.width = Math.round(x[1] * 100 / tot) + '%'; } });
   }
 
   // ---- एका ओळीचं जतन (थोडं थांबून — टाइप करत असताना सतत नाही) ----
