@@ -52,16 +52,6 @@ $enabled = dailyReportEnabled($pdo, $orgId);
 $hour = dailyReportHour($pdo, $orgId);
 $recips = weeklyReportRecipients($pdo, $orgId);
 $lastAt = orgSetting($pdo, $orgId, 'daily_report_last_at');
-// 🩺 आपोआप जाण्याची स्थिती — Cron चालतो का, शेवटचा प्रयत्न, अडचण कुठे
-$cronAll = $cronJob = null;
-try {
-    $c = $pdo->query("SELECT * FROM cron_job_runs WHERE job_key IN ('run-all', 'daily-management-report')")->fetchAll();
-    foreach ($c as $r) { if ($r['job_key'] === 'run-all') { $cronAll = $r; } else { $cronJob = $r; } }
-} catch (PDOException $e) {}
-$cronAge = $cronAll && $cronAll['last_started_at'] ? time() - strtotime($cronAll['last_started_at']) : null;
-$cronCmd = '*/5 * * * * /usr/bin/php ' . realpath(__DIR__ . '/../cron/run-all.php');
-$lastDate = orgSetting($pdo, $orgId, 'daily_report_last_date');
-$lastVia = orgSetting($pdo, $orgId, 'daily_report_last_via');
 $lastMsg = orgSetting($pdo, $orgId, 'daily_report_last_msg');
 $dayLbl = array_map(fn($x) => date('d/m', strtotime($x)), $D['days']);
 $pct = fn($a, $b) => $b > 0 ? (int)round($a * 100 / $b) : 0;
@@ -161,25 +151,6 @@ echo smartTiles(array_slice($tiles, 0, 5));
     <?php $names = ['work' => '📋 कामकाज', 'attendance' => '🕘 हजेरी', 'tasks' => '✅ Tasks', 'requests' => '🛠️ कामाच्या विनंत्या', 'letters' => '✉️ पत्रव्यवहार', 'spend' => '💰 खर्च', 'vehicles' => '🚗 वाहने', 'hostel' => '🏠 वसतिगृह', 'guests' => '🎫 पाहुणे', 'facility' => '🛡️ सुरक्षा व सुविधा', 'renewals' => '📜 नूतनीकरण', 'ecampus' => '🎓 E-Campus', 'tomorrow' => '📅 उद्याचं नियोजन'];
     foreach ($names as $k => $n): if (!empty($S[$k])): ?><span><?= h($n) ?></span><?php endif; endforeach; ?>
     <?php if (!$S): ?><span>आज कोणतीही नोंद नाही</span><?php endif; ?>
-  </div>
-</div>
-
-<div class="panel mb-3" id="autoStatus">
-  <div class="panel-head"><div class="title">🩺 आपोआप पाठवण्याची स्थिती</div><div class="sub">अहवाल का गेला / का नाही — इथे लगेच कळतं</div></div>
-  <div style="padding:12px 18px 16px;font-size:13px;line-height:1.7;">
-    <div><?= $enabled ? '✅' : '⛔' ?> रोज आपोआप पाठवणं: <b><?= $enabled ? 'चालू — रोज ' . h(date('g A', mktime($hour, 0))) . ' नंतर' : 'बंद' ?></b></div>
-    <div><?= $recips ? '✅' : '❌' ?> Email पत्ते: <b><?= count($recips) ?></b><?= $recips ? '' : ' — एकही नाही, त्यामुळे अहवाल जाणार नाही' ?></div>
-    <div><?= $lastDate === date('Y-m-d') && str_starts_with((string)$lastMsg, '✓') ? '✅' : ($lastMsg && !str_starts_with((string)$lastMsg, '✓') ? '❌' : 'ℹ️') ?> शेवटचा अहवाल: <b><?= $lastDate ? h(date('d M Y', strtotime($lastDate))) : 'अजून एकदाही आपोआप गेलेला नाही' ?></b><?= $lastAt ? ' · पाठवला ' . h(date('d M, h:i A', strtotime($lastAt))) : '' ?><?= $lastMsg ? ' — ' . h($lastMsg) : '' ?><?= $lastVia === 'web' ? ' <span style="color:var(--text-dim);">(App मधून)</span>' : '' ?></div>
-    <div><?php if ($cronAge === null): ?>⚠️ Server Cron: <b>एकदाही चाललेला नाही</b>
-      <?php elseif ($cronAge > 3600): ?>⚠️ Server Cron: <b>बंद पडलेला दिसतो</b> — शेवटचा <?= h(date('d M, h:i A', strtotime($cronAll['last_started_at']))) ?>
-      <?php else: ?>✅ Server Cron: <b>चालू</b> — शेवटचा <?= h(date('h:i A', strtotime($cronAll['last_started_at']))) ?><?= $cronJob && $cronJob['last_status'] === 'failed' ? ' · <span style="color:var(--rose);">दैनिक अहवाल Job अयशस्वी: ' . h(mb_strimwidth((string)$cronJob['last_output'], 0, 160, '…')) . '</span>' : '' ?><?php endif; ?></div>
-    <?php if ($cronAge === null || $cronAge > 3600): ?>
-      <div style="margin-top:8px;background:var(--canvas);border-radius:10px;padding:10px 12px;font-size:12.5px;">
-        काळजी नको — <b>Cron नसला तरी</b> आता अहवाल आपोआप जातो: संध्याकाळी <?= h(date('g A', mktime($hour, 0))) ?> नंतर कोणीही App उघडलं की पार्श्वभूमीत जातो; रात्री कोणीच उघडलं नाही तर दुसऱ्या दिवशी सकाळी पहिल्यांदा App उघडताच कालचा अहवाल जातो.<br>
-        ठरलेल्या वेळेलाच नक्की जावा यासाठी <?= $isSA ? 'Hostinger <b>hPanel → Advanced → Cron Jobs</b> मध्ये दर 5 मिनिटांची ही ओळ टाका:' : 'Super Admin ला Hostinger मध्ये Cron लावायला सांगा.' ?>
-        <?php if ($isSA): ?><div class="d-flex gap-2 align-items-center mt-1 flex-wrap"><code id="cronCmd" style="background:#191C3A;color:#FDBA8C;padding:6px 10px;border-radius:8px;font-size:12px;word-break:break-all;"><!--i18n:off--><?= h($cronCmd) ?><!--i18n:on--></code><button type="button" class="dr-btn line" style="padding:5px 10px;" onclick="navigator.clipboard && navigator.clipboard.writeText(document.getElementById('cronCmd').innerText); this.innerText='✓ Copied';">Copy</button></div><?php endif; ?>
-      </div>
-    <?php endif; ?>
   </div>
 </div>
 
