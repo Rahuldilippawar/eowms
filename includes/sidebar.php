@@ -91,8 +91,7 @@ $currentDir = basename(dirname($_SERVER['SCRIPT_NAME']));
 // Link दिसतो, त्याच्याशी जुळलेली असावी — नाहीतर त्या पानावर असताना Group
 // आपोआप उघडणार नाही.)
 $dirToGroup = [
-    'letters' => 'letters', 'requests' => 'letters', 'announcements' => 'letters',
-    'suggestions' => 'letters', 'documents' => 'letters', 'emergency' => 'letters',
+    'letters' => 'letters', 'requests' => 'letters', 'emergency' => 'letters',
     'staff' => 'staff',
     'hostels' => 'hostel', 'residency' => 'hostel',
     'meditation' => 'activities', 'music' => 'activities', 'academics' => 'activities', 'sop' => 'activities',
@@ -282,18 +281,6 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
       </a>
       <a href="<?= $rp ?>requests/my-requests.php" class="tree-node <?= $currentDir === 'requests' && $currentPage === 'my-requests.php' ? 'active' : '' ?>">
         <i class="fa-solid fa-list-check fa-fw"></i><span>माझ्या पाठवलेल्या विनंत्या</span>
-      </a>
-      <a href="<?= $rp ?>staff/index.php?view=tree" class="tree-node <?= $currentDir === 'staff' && $currentPage === 'index.php' && ($_GET['view'] ?? '') === 'tree' ? 'active' : '' ?>">
-        <i class="fa-solid fa-address-book fa-fw"></i><span>📇 कर्मचारी Directory</span>
-      </a>
-      <a href="<?= $rp ?>announcements/index.php" class="tree-node <?= $currentDir === 'announcements' ? 'active' : '' ?>">
-        <i class="fa-solid fa-bullhorn fa-fw"></i><span>📢 परिपत्रक/सूचना</span>
-      </a>
-      <a href="<?= $rp ?>suggestions/index.php" class="tree-node <?= $currentDir === 'suggestions' ? 'active' : '' ?>">
-        <i class="fa-solid fa-lightbulb fa-fw"></i><span>💡 Software Suggestions</span>
-      </a>
-      <a href="<?= $rp ?>documents/index.php" class="tree-node <?= $currentDir === 'documents' ? 'active' : '' ?>">
-        <i class="fa-solid fa-book fa-fw"></i><span>📚 दस्तऐवज Repository</span>
       </a>
       <?php if (hasPermission('view_emergency_alerts')): ?>
         <a href="<?= $rp ?>emergency/index.php" class="tree-node <?= $currentDir === 'emergency' ? 'active' : '' ?>">
