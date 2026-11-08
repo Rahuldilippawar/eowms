@@ -163,7 +163,7 @@ $actionLabels = ['created' => 'विनंती नोंदवली गे�
 </style>
 </head>
 <body>
-<?= i18nSwitcher('style="position:fixed;top:16px;right:16px;z-index:50;border:1px solid var(--line);border-radius:9px;padding:8px 12px;font-size:12.5px;color:var(--text-dim);background:#fff;cursor:pointer;"') ?>
+<div class="lang-bar" style="display:flex;justify-content:flex-end;padding:0;margin:0 0 14px;max-width:640px;margin-left:auto;margin-right:auto;"><?= i18nSwitcher('style="border:1px solid var(--line);border-radius:9px;padding:8px 12px;font-size:12.5px;color:var(--text-dim);background:#fff;cursor:pointer;"') ?></div>
 <?= i18nClientScript() ?>
 
 <div class="wrap">

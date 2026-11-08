@@ -64,11 +64,11 @@ $avgEfficiency = $totalLiters > 0 ? round($totalKm / $totalLiters, 2) : null;
   table{width:100%;border-collapse:collapse;margin-top:6px;}
   th{background:#F3F4F7;text-align:left;padding:7px 9px;font-size:10.5px;text-transform:uppercase;color:var(--text-dim);border-bottom:1px solid var(--line);}
   td{padding:7px 9px;border-bottom:1px solid #EEF0F4;font-size:12px;}
-  @media print{ .toolbar{display:none;} #eowmsLangSelect{display:none !important;} body{background:#fff;} .doc{margin:0;} }
+  @media print{ .toolbar{display:none;} #eowmsLangSelect,.lang-bar{display:none !important;} body{background:#fff;} .doc{margin:0;} }
 </style>
 </head>
 <body>
-<?= i18nSwitcher('style="position:fixed;top:16px;right:16px;z-index:50;border:1px solid var(--line);border-radius:9px;padding:8px 12px;font-size:12.5px;color:var(--text-dim);background:#fff;cursor:pointer;"') ?>
+<div class="lang-bar" style="display:flex;justify-content:flex-end;padding:12px 16px 0;margin:0;max-width:none;margin-left:auto;margin-right:auto;"><?= i18nSwitcher('style="border:1px solid var(--line);border-radius:9px;padding:8px 12px;font-size:12.5px;color:var(--text-dim);background:#fff;cursor:pointer;"') ?></div>
 <?= i18nClientScript() ?>
 
 

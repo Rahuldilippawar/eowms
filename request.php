@@ -108,7 +108,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   .hero h1{font-family:'Space Grotesk';font-weight:700;font-size:21px;color:#fff;margin:0 0 8px;position:relative;z-index:1;}
   .hero p{font-size:12.5px;color:#B7BBD6;max-width:340px;margin:0 auto;position:relative;z-index:1;line-height:1.65;}
 
-  .lang-select{position:fixed;top:14px;right:14px;z-index:50;border:1px solid rgba(255,255,255,.25);border-radius:9px;padding:7px 11px;font-size:11.5px;color:#fff;background:rgba(255,255,255,.08);backdrop-filter:blur(4px);cursor:pointer;}
+  .lang-select{position:absolute;top:14px;right:14px;width:auto;z-index:50;border:1px solid rgba(255,255,255,.25);border-radius:9px;padding:7px 11px;font-size:11.5px;color:#fff;background:rgba(255,255,255,.08);backdrop-filter:blur(4px);cursor:pointer;}
   .lang-select option{color:#1A1D29;}
 
   .box{max-width:520px;margin:-46px auto 30px;background:#fff;border-radius:22px;padding:8px 26px 30px;box-shadow:0 20px 50px rgba(16,22,43,.14);position:relative;z-index:2;}
@@ -156,6 +156,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   .chips.pri .chip{flex:1 1 0;} .chips.pri .chip span{width:100%;}
   .mini-btn{display:inline-block;border:1.5px solid var(--line);border-radius:10px;padding:7px 14px;font-size:13px;font-weight:600;color:var(--ink);text-decoration:none;}
   a.back{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:22px;font-size:13px;color:var(--rail);text-decoration:none;font-weight:600;}
+  @media (max-width:640px){ .hero{padding-top:64px;} } /* Language निवड Logo वर येऊ नये */
 </style>
 </head>
 <body>

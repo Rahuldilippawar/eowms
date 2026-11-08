@@ -80,10 +80,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   .success-box{text-align:center;}
   .success-icon{width:60px;height:60px;border-radius:50%;background:#DCEFEC;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:26px;color:#D9530F;}
   .code-badge{font-family:'Space Grotesk';font-weight:700;font-size:17px;color:#D9530F;background:#DCEFEC;padding:8px 20px;border-radius:9px;display:inline-block;margin:10px 0;}
+  @media (max-width:640px){ body{padding-top:68px !important;} } /* Language निवड कार्डवर येऊ नये */
 </style>
 </head>
 <body>
-<?= i18nSwitcher('style="position:fixed;top:16px;right:16px;z-index:50;border:1px solid var(--line);border-radius:9px;padding:8px 12px;font-size:12.5px;color:var(--text-dim);background:#fff;cursor:pointer;"') ?>
+<?= i18nSwitcher('style="position:absolute;top:16px;right:16px;z-index:50;width:auto;border:1px solid var(--line);border-radius:9px;padding:8px 12px;font-size:12.5px;color:var(--text-dim);background:#fff;cursor:pointer;"') ?>
 <?= i18nClientScript() ?>
 
   <div class="card">
