@@ -240,3 +240,17 @@ a:focus-visible, button:focus-visible, select:focus-visible, [tabindex]:focus-vi
 .tree-node.nav-hit { background: rgba(27,138,131,.18); color: #fff; }
 #navQuickFind::-webkit-search-cancel-button { filter: invert(1); }
 @media (hover: none) { .tree-node .nav-star { opacity: .55; } .nav-smart-item .nav-fav-x { opacity: .7; } }
+
+/* ---------- 🗂️ Sidebar — व्यावसायिक विभागणी (शीर्षक + Icon + रेघ) ---------- */
+.org-tree .nav-section + .nav-section, .org-tree .nav-section + .tier-label { margin-top: 2px; }
+.org-tree .tier-label { display: flex; align-items: center; gap: 7px; padding: 16px 10px 6px; font-size: 10.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.org-tree .tier-label i { font-size: 10px; width: 14px; text-align: center; color: color-mix(in srgb, var(--rail, #D9530F) 75%, #fff); opacity: .9; }
+.org-tree .tier-label::after { content: ""; flex: 1; height: 1px; margin-left: 4px; background: color-mix(in srgb, currentColor 22%, transparent); }
+#navSmartTop .tier-label::after { display: none; }
+.nav-group-header .label { text-transform: none; letter-spacing: .01em; font-size: 13px; font-weight: 600; }
+.nav-group-header .label i { width: 18px; text-align: center; opacity: .85; }
+.nav-group-header:has(+ .nav-group-body .tree-node.active) .label { color: #fff; }
+html[data-sidebar="light"] .nav-group-header:has(+ .nav-group-body .tree-node.active) .label { color: var(--rail-2, #B6420A); }
+.nav-group-header .nav-group-badge { margin-right: 4px; }
+.nav-group-body .tree-node { font-size: 12.8px; }
+.tree-node .nav-ext { margin-left: auto; font-size: 9px; opacity: .45; }

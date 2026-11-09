@@ -93,27 +93,28 @@ $currentDir = basename(dirname($_SERVER['SCRIPT_NAME']));
 // आपोआप उघडणार नाही.)
 $dirToGroup = [
     'letters' => 'letters', 'requests' => 'letters', 'emergency' => 'letters',
+    'messages' => 'communication', 'grievances' => 'communication',
+    'renewals' => 'compliance', 'sop' => 'compliance',
     'staff' => 'staff',
     'hostels' => 'hostel', 'residency' => 'hostel',
-    'meditation' => 'activities', 'music' => 'activities', 'sop' => 'activities',
-    'events' => 'activities', 'guests' => 'activities',
+    'meditation' => 'activities', 'music' => 'activities', 'events' => 'activities', 'guests' => 'activities',
     'allocations' => 'facilities', 'room-booking' => 'facilities',
-    'messages' => 'communication', 'grievances' => 'communication',
-    'vehicles' => 'assets', 'deadstock' => 'assets', 'maintenance' => 'assets',
+    'vehicles' => 'assets', 'deadstock' => 'assets', 'maintenance' => 'assets', 'store' => 'assets',
     'cctv' => 'techdept', 'it' => 'techdept',
-    'organizations' => 'admin', 'roles' => 'admin', 'custom-fields' => 'admin', 'translations' => 'admin', 'backup' => 'admin',
-    'activity-log' => 'admin', 'campuses' => 'admin', 'system-update' => 'admin',
+    'organizations' => 'adminOrg', 'roles' => 'adminOrg', 'custom-fields' => 'adminOrg', 'campuses' => 'adminOrg',
+    'translations' => 'adminSys', 'backup' => 'adminSys', 'activity-log' => 'adminSys', 'system-update' => 'adminSys',
 ];
 // 'departments' आणि 'letters' (Admin-Group आतल्या Sub-Pages: categories,
 // workflows, templates) — हे स्वतंत्रपणे, खाली नेमक्या पानानुसार ठरवतो,
 // कारण या दोन्ही Directories मुख्य Tier/Group मध्येही वापरल्या जातात —
 // साधं Directory-Match इथे चुकीचं ठरेल.
 $activeGroup = $dirToGroup[$currentDir] ?? null;
-if ($currentDir === 'departments' && $currentPage === 'index.php') { $activeGroup = 'admin'; }
-if ($currentDir === 'letters' && in_array($currentPage, ['categories.php', 'workflows.php', 'workflow-create.php', 'workflow-edit.php'])) { $activeGroup = 'admin'; }
-if ($currentDir === 'staff' && $currentPage === 'import.php') { $activeGroup = 'admin'; }
+if ($currentDir === 'departments' && $currentPage === 'index.php') { $activeGroup = 'adminOrg'; }
+if ($currentDir === 'letters' && in_array($currentPage, ['categories.php', 'workflows.php', 'workflow-create.php', 'workflow-edit.php'])) { $activeGroup = 'adminLetters'; }
+if ($currentDir === 'staff' && $currentPage === 'import.php') { $activeGroup = 'adminOrg'; }
 if ($currentDir === 'it' && in_array($currentPage, ['general-request.php', 'my-general-requests.php'])) { $activeGroup = 'letters'; }
-if ($currentDir === 'about-manage' || $currentPage === 'about-manage.php') { $activeGroup = 'admin'; }
+if ($currentDir === 'about-manage' || $currentPage === 'about-manage.php') { $activeGroup = 'adminSys'; }
+if ($currentDir === 'residency' && $currentPage === 'my-residency.php') { $activeGroup = null; } // "माझं निवासस्थान" — आता "माझं काम" मध्ये
 
 // 🔢 Sidebar वरचे Live आकडे — माझे उघडे Tasks (मुदत संपलेले लाल), नूतनीकरण (संपलेले/७ दिवस),
 // रजा-अर्ज मंजुरी प्रलंबित. प्रत्येक पानावर चालतं म्हणून फक्त हलक्या COUNT Queries.
@@ -146,6 +147,23 @@ function navCount($n, $tone = 'amber') {
 
 function navGroupOpen($groupKey, $activeGroup) { return $groupKey === $activeGroup ? 'show' : ''; }
 function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activeGroup ? 'true' : 'false'; }
+/**
+ * 🗂️ Sidebar विभाग (शीर्षक + त्याखालचे Links). शीर्षक फक्त तेव्हाच छापतो जेव्हा त्याखाली
+ * किमान एक Link असेल — Access नसलेले Modules लपले तरी रिकामं शीर्षक दिसत नाही.
+ */
+function navSectionStart() { ob_start(); }
+function navSectionEnd($label, $icon) {
+    $html = ob_get_clean();
+    if (strpos($html, 'tree-node') === false) { return; }
+    echo '<div class="nav-section"><div class="tier-label"><i class="' . $icon . ' fa-fw"></i><span>' . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '</span></div>' . $html . '</div>';
+}
+/** Collapse होणारा Group — शीर्षक (Icon, नाव, Badge) */
+function navGroupHead($id, $key, $activeGroup, $icon, $label, $badge = 0) {
+    return '<div class="nav-group-header" data-bs-toggle="collapse" data-bs-target="#' . $id . '" aria-expanded="' . navGroupExpanded($key, $activeGroup) . '">'
+        . '<span class="label"><i class="' . $icon . ' fa-fw"></i> ' . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '</span>'
+        . ($badge > 0 ? '<span class="nav-group-badge">' . ($badge > 99 ? '99+' : (int)$badge) . '</span>' : '')
+        . '<i class="fa-solid fa-chevron-right chevron"></i></div>';
+}
 ?>
 <aside class="rail-sidebar">
   <div class="rail-brand">
@@ -190,143 +208,33 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
       <div id="navRecentWrap" hidden><div class="tier-label">🕘 अलीकडे</div><div id="navRecentList"></div></div>
     </div>
 
-    <!-- ==================== मुख्य कामकाज (नेहमी उघडं) ==================== -->
-    <div class="tier-label"><?= h(t('nav_command_center')) ?></div>
-    <a href="<?= $rp ?>index.php" class="tree-node <?= $currentPage === 'index.php' && $rp === '' ? 'active' : '' ?>">
-      <i class="fa-solid fa-gauge-high fa-fw"></i><span><?= h(t('nav_command_center')) ?></span>
-    </a>
-    <a href="<?= $rp ?>daily-work/entry.php" class="tree-node <?= $currentDir === 'daily-work' && in_array($currentPage, ['entry.php','save.php','edit.php','import.php']) ? 'active' : '' ?>">
-      <i class="fa-regular fa-clipboard fa-fw"></i><span><?= h(t('nav_daily_work')) ?></span>
-    </a>
-    <a href="<?= $rp ?>daily-work/my-work.php" class="tree-node <?= $currentDir === 'daily-work' && $currentPage === 'my-work.php' ? 'active' : '' ?>">
-      <i class="fa-regular fa-square-check fa-fw"></i><span><?= h(t('nav_my_work')) ?></span>
-    </a>
-    <?php if (hasPermission('assign_tasks') || hasPermission('view_task_tracker')): ?>
-      <a href="<?= $rp ?>tasks/index.php" class="tree-node <?= $currentDir === 'tasks' && in_array($currentPage, ['index.php','assign.php','report.php']) ? 'active' : '' ?>">
-        <i class="fa-solid fa-list-check fa-fw"></i><span><?= h(t('nav_task_assignment')) ?></span>
-      </a>
-    <?php endif; ?>
-    <?php // टास्क कोणालाही (HOD/Management सुद्धा) मिळू शकतो — म्हणून "माझे टास्क" नेहमी दिसतो ?>
-    <a href="<?= $rp ?>tasks/my-tasks.php" class="tree-node <?= $currentDir === 'tasks' && $currentPage === 'my-tasks.php' ? 'active' : '' ?>">
-      <i class="fa-solid fa-user-check fa-fw"></i><span><?= h(t('nav_my_tasks')) ?></span>
-      <?= navCount($navBadge['myTasks'], $navBadge['myTasksOverdue'] ? 'rose' : 'amber') ?>
-    </a>
-    <a href="<?= $rp ?>renewals/index.php" class="tree-node <?= $currentDir === 'renewals' ? 'active' : '' ?>">
-      <i class="fa-solid fa-shield-halved fa-fw"></i><span><?= h(t('nav_renewals')) ?></span>
-      <?= navCount($navBadge['renewals'], 'rose') ?>
-    </a>
-    <a href="<?= $rp ?>daily-work/report.php" class="tree-node <?= $currentDir === 'daily-work' && in_array($currentPage, ['report.php', 'report-print.php'], true) ? 'active' : '' ?>">
-      <i class="fa-solid fa-file-pdf fa-fw"></i><span><?= h(t('nav_reports')) ?></span>
-    </a>
     <?php
-      // 🎓 E-Campus — Management ला Dashboard; ज्याला काम नेमलंय त्याला "माझी E-Campus कामं"
+      // ---------- Badges व Access — आधी एकदाच मोजतो ----------
       require_once __DIR__ . '/ecampus-helpers.php';
       $__ecMine = ecampusReady($pdo) ? ecampusMyTaskCount($pdo, $user['id']) : 0;
-    ?>
-    <?php $__ecAll = ecampusReady($pdo) && ecampusCanViewAll(); ?>
-    <?php if ($__ecAll): ?>
-    <a href="<?= $rp ?>ecampus/index.php" class="tree-node <?= $currentDir === 'ecampus' && $currentPage !== 'my.php' ? 'active' : '' ?>">
-      <i class="fa-solid fa-graduation-cap fa-fw"></i><span>E-Campus Dashboard</span>
-      <?= !isManagementOrAbove() && $__ecMine ? navCount($__ecMine, 'amber') : '' ?>
-    </a>
-    <?php endif; ?>
-    <?php if ($__ecMine && !$__ecAll): ?>
-    <a href="<?= $rp ?>ecampus/index.php" class="tree-node <?= $currentDir === 'ecampus' ? 'active' : '' ?>">
-      <i class="fa-solid fa-laptop-file fa-fw"></i><span>माझी E-Campus कामं</span>
-      <?= navCount($__ecMine, 'amber') ?>
-    </a>
-    <?php endif; ?>
-    <?php if (isManagementOrAbove()): ?>
-    <a href="<?= $rp ?>reports/daily.php" class="tree-node <?= $currentDir === 'reports' && $currentPage === 'daily.php' ? 'active' : '' ?>">
-      <i class="fa-solid fa-moon fa-fw"></i><span>दैनिक अहवाल</span>
-    </a>
-    <a href="<?= $rp ?>reports/weekly.php" class="tree-node <?= $currentDir === 'reports' && $currentPage === 'weekly.php' ? 'active' : '' ?>">
-      <i class="fa-solid fa-chart-column fa-fw"></i><span>साप्ताहिक अहवाल</span>
-    </a>
-    <?php endif; ?>
+      $__ecAll = ecampusReady($pdo) && ecampusCanViewAll();
 
-    <!-- ==================== पत्र व विनंत्या ==================== -->
-    <?php
       $pendingReqCount = 0;
       try {
           $reqCountStmt = $pdo->prepare("SELECT COUNT(*) c FROM work_requests WHERE organization_id = ? AND status IN ('pending','in_progress')" . (isDeptScoped() ? " AND department_id = ?" : ""));
           $reqCountStmt->execute(isDeptScoped() ? [$activeOrgId, $user['department_id']] : [$activeOrgId]);
           $pendingReqCount = $reqCountStmt->fetch()['c'];
       } catch (PDOException $e) { /* work_requests table not migrated yet */ }
-
       $pendingLettersCount = 0;
       try {
           $letCountStmt = $pdo->prepare("SELECT COUNT(*) c FROM letters WHERE current_holder_id = ? AND status IN ('in_progress', 'returned')");
           $letCountStmt->execute([$user['id']]);
           $pendingLettersCount = $letCountStmt->fetch()['c'];
       } catch (PDOException $e) { /* letters table not migrated yet */ }
-
       $lettersGroupBadge = $pendingReqCount + $pendingLettersCount;
-    ?>
-    <div class="nav-group-header" data-bs-toggle="collapse" data-bs-target="#navGroupLetters" aria-expanded="<?= navGroupExpanded('letters', $activeGroup) ?>">
-      <span class="label"><i class="fa-solid fa-paper-plane fa-fw"></i> पत्र व विनंत्या</span>
-      <?php if ($lettersGroupBadge > 0): ?><span class="nav-group-badge"><?= $lettersGroupBadge ?></span><?php endif; ?>
-      <i class="fa-solid fa-chevron-right chevron"></i>
-    </div>
-    <div class="collapse nav-group-body <?= navGroupOpen('letters', $activeGroup) ?>" id="navGroupLetters">
-      <a href="<?= $rp ?>letters/index.php" class="tree-node <?= $currentDir === 'letters' ? 'active' : '' ?>">
-        <i class="fa-solid fa-paper-plane fa-fw"></i><span>पत्र व्यवहार</span>
-        <?php if ($pendingLettersCount > 0): ?><span class="count" style="color:var(--amber);"><?= $pendingLettersCount ?></span><?php endif; ?>
-      </a>
-      <a href="<?= $rp ?>requests/index.php" class="tree-node <?= $currentDir === 'requests' && in_array($currentPage, ['index.php', 'view.php']) && ($_GET['category'] ?? '') !== 'it' ? 'active' : '' ?>">
-        <i class="fa-solid fa-clipboard-question fa-fw"></i><span><?= h(t('nav_requests')) ?></span>
-        <?php if ($pendingReqCount > 0): ?><span class="count" style="color:var(--amber);"><?= $pendingReqCount ?></span><?php endif; ?>
-      </a>
-      <a href="<?= $rp ?>requests/create.php" class="tree-node <?= $currentDir === 'requests' && $currentPage === 'create.php' && ($_GET['category'] ?? '') !== 'it' ? 'active' : '' ?>">
-        <i class="fa-solid fa-paper-plane fa-fw"></i><span>दुसऱ्या विभागाला विनंती पाठवा</span>
-      </a>
-      <a href="<?= $rp ?>requests/my-requests.php" class="tree-node <?= $currentDir === 'requests' && $currentPage === 'my-requests.php' ? 'active' : '' ?>">
-        <i class="fa-solid fa-list-check fa-fw"></i><span>माझ्या पाठवलेल्या विनंत्या</span>
-      </a>
-      <?php if (hasPermission('view_emergency_alerts')): ?>
-        <a href="<?= $rp ?>emergency/index.php" class="tree-node <?= $currentDir === 'emergency' ? 'active' : '' ?>">
-          <i class="fa-solid fa-triangle-exclamation fa-fw"></i><span>🆘 आणीबाणी सूचना</span>
-        </a>
-      <?php endif; ?>
-    </div>
 
-    <!-- ==================== कर्मचारी ==================== -->
-    <?php // Attendance/रजा सगळ्यांनाच लागू — हा Group नेहमी दिसतो (आतले Staff-Directory/पगार-अहवाल Links मात्र फक्त Permission असलेल्यांनाच). ?>
-      <div class="nav-group-header" data-bs-toggle="collapse" data-bs-target="#navGroupStaff" aria-expanded="<?= navGroupExpanded('staff', $activeGroup) ?>">
-        <span class="label"><i class="fa-solid fa-address-book fa-fw"></i> कर्मचारी</span>
-        <?php if ($navBadge['leaveApprovals'] > 0): ?><span class="nav-group-badge"><?= $navBadge['leaveApprovals'] ?></span><?php endif; ?>
-        <i class="fa-solid fa-chevron-right chevron"></i>
-      </div>
-      <div class="collapse nav-group-body <?= navGroupOpen('staff', $activeGroup) ?>" id="navGroupStaff">
-        <?php if (hasPermission('view_staff_directory') || hasCategory('hod')): ?>
-          <a href="<?= $rp ?>staff/index.php" class="tree-node <?= $currentDir === 'staff' && $currentPage === 'index.php' ? 'active' : '' ?>">
-            <i class="fa-solid fa-address-book fa-fw"></i><span><?= h(t('nav_staff_directory')) ?></span>
-          </a>
-        <?php endif; ?>
-        <a href="<?= $rp ?>staff/attendance.php" class="tree-node <?= $currentDir === 'staff' && $currentPage === 'attendance.php' ? 'active' : '' ?>">
-          <i class="fa-solid fa-fingerprint fa-fw"></i><span>👆 Staff Attendance</span>
-        </a>
-        <a href="<?= $rp ?>staff/my-leaves.php" class="tree-node <?= $currentDir === 'staff' && in_array($currentPage, ['my-leaves.php','leave-apply.php']) ? 'active' : '' ?>">
-          <i class="fa-solid fa-umbrella-beach fa-fw"></i><span>🏖️ रजा व्यवस्थापन</span>
-        </a>
-        <?php /* staff/leave-approvals.php मधलीच अट — दोन्ही ठिकाणी सारखीच */ if (hasCategory('hod') || hasPermission('view_org_wide_dashboards') || hasRole('super_admin')): ?>
-          <a href="<?= $rp ?>staff/leave-approvals.php" class="tree-node <?= $currentDir === 'staff' && $currentPage === 'leave-approvals.php' ? 'active' : '' ?>">
-            <i class="fa-solid fa-clipboard-check fa-fw"></i><span>✅ रजा-अर्ज मंजुरी</span>
-            <?= navCount($navBadge['leaveApprovals']) ?>
-          </a>
-        <?php endif; ?>
-        <?php if (isManagementOrAbove()): ?>
-          <a href="<?= $rp ?>staff/salary-report.php" class="tree-node <?= $currentDir === 'staff' && $currentPage === 'salary-report.php' ? 'active' : '' ?>">
-            <i class="fa-solid fa-money-bill-wave fa-fw"></i><span>पगार अहवाल</span>
-          </a>
-          <a href="<?= $rp ?>staff/movement-report.php" class="tree-node <?= $currentDir === 'staff' && $currentPage === 'movement-report.php' ? 'active' : '' ?>">
-            <i class="fa-solid fa-people-arrows fa-fw"></i><span>कर्मचारी Movement</span>
-          </a>
-        <?php endif; ?>
-      </div>
+      $commBadge = 0;
+      try {
+          $commBadgeStmt = $pdo->prepare("SELECT COUNT(*) c FROM staff_messages WHERE recipient_id = ? AND is_read = 0");
+          $commBadgeStmt->execute([$user['id']]);
+          $commBadge = (int)($commBadgeStmt->fetch()['c'] ?? 0);
+      } catch (PDOException $e) { /* table not migrated yet */ }
 
-    <!-- ==================== वसतिगृह व रहिवासी ==================== -->
-    <?php
       $resDeptCheck = $pdo->prepare("SELECT code FROM departments WHERE id = ?");
       $resDeptCheck->execute([$user['department_id'] ?? 0]);
       $userDeptCodeNav = $resDeptCheck->fetch()['code'] ?? null;
@@ -340,119 +248,8 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
           $hosDeptHostels = $hosStmt->fetchAll();
       }
       $showResidency = $userIsResDept || hasPermission('manage_residency_all_depts'); // residency/index.php ची परवानगी तीच
-    ?>
-    <div class="nav-group-header" data-bs-toggle="collapse" data-bs-target="#navGroupHostel" aria-expanded="<?= navGroupExpanded('hostel', $activeGroup) ?>">
-      <span class="label"><i class="fa-solid fa-house-user fa-fw"></i> वसतिगृह व रहिवासी</span>
-      <i class="fa-solid fa-chevron-right chevron"></i>
-    </div>
-    <div class="collapse nav-group-body <?= navGroupOpen('hostel', $activeGroup) ?>" id="navGroupHostel">
-      <a href="<?= $rp ?>residency/my-residency.php" class="tree-node <?= $currentDir === 'residency' && $currentPage === 'my-residency.php' ? 'active' : '' ?>">
-        <i class="fa-solid fa-house-user fa-fw"></i><span>🏠 माझं निवासस्थान</span>
-      </a>
-      <?php if ($showHostel): ?>
-        <a href="<?= $rp ?>hostels/index.php" class="tree-node <?= $currentDir === 'hostels' ? 'active' : '' ?>">
-          <i class="fa-solid fa-house-user fa-fw"></i><span><?= h(t('nav_hostel_management')) ?></span>
-        </a>
-      <?php endif; ?>
-      <?php foreach ($hosDeptHostels as $hosNav): ?>
-        <a href="<?= $rp ?>hostels/dashboard.php?id=<?= (int)$hosNav['id'] ?>" class="tree-node <?= $currentDir === 'hostels' && (int)($_GET['id'] ?? $_GET['hostel_id'] ?? 0) === (int)$hosNav['id'] ? 'active' : '' ?>">
-          <i class="fa-solid fa-house-user fa-fw"></i><span><?= h($hosNav['name']) ?></span>
-        </a>
-      <?php endforeach; ?>
-      <?php if ($showResidency): ?>
-        <a href="<?= $rp ?>residency/index.php" class="tree-node <?= $currentDir === 'residency' && $currentPage !== 'my-residency.php' ? 'active' : '' ?>">
-          <i class="fa-solid fa-house-chimney-user fa-fw"></i><span>रहिवासी विभाग</span>
-        </a>
-      <?php endif; ?>
-    </div>
 
-    <!-- ==================== उपक्रम व अनुपालन ==================== -->
-    <div class="nav-group-header" data-bs-toggle="collapse" data-bs-target="#navGroupActivities" aria-expanded="<?= navGroupExpanded('activities', $activeGroup) ?>">
-      <span class="label"><i class="fa-solid fa-om fa-fw"></i> उपक्रम व अनुपालन</span>
-      <i class="fa-solid fa-chevron-right chevron"></i>
-    </div>
-    <div class="collapse nav-group-body <?= navGroupOpen('activities', $activeGroup) ?>" id="navGroupActivities">
-      <?php if (moduleAllowed('meditation')): ?>
-      <a href="<?= $rp ?>meditation/index.php" class="tree-node <?= $currentDir === 'meditation' ? 'active' : '' ?>">
-        <i class="fa-solid fa-spa fa-fw"></i><span>ध्यान व सत्संग</span>
-      </a>
-      <?php endif; ?>
-      <?php if (moduleAllowed('music')): // संगीत विभागाचा Staff किंवा manage_music ?>
-      <a href="<?= $rp ?>music/index.php" class="tree-node <?= $currentDir === 'music' ? 'active' : '' ?>">
-        <i class="fa-solid fa-music fa-fw"></i><span>🎵 संगीत विभाग</span>
-      </a>
-      <?php endif; ?>
-      <?php if (moduleAllowed('events')): ?>
-      <a href="<?= $rp ?>events/index.php" class="tree-node <?= $currentDir === 'events' ? 'active' : '' ?>">
-        <i class="fa-solid fa-calendar-days fa-fw"></i><span>🎉 कार्यक्रम व्यवस्थापन</span>
-      </a>
-      <?php endif; ?>
-      <?php if (moduleAllowed('guests')): ?>
-        <a href="<?= $rp ?>guests/index.php" class="tree-node <?= $currentDir === 'guests' ? 'active' : '' ?>">
-          <i class="fa-solid fa-id-card-clip fa-fw"></i><span>🎫 पाहुणे नोंदणी</span>
-        </a>
-      <?php endif; ?>
-      <?php if (!empty($user['department_id']) || isManagementOrAbove() || hasRole('super_admin')): ?>
-        <a href="<?= $rp ?>sop/checklist.php" class="tree-node <?= $currentDir === 'sop' && $currentPage === 'checklist.php' ? 'active' : '' ?>">
-          <i class="fa-solid fa-list-check fa-fw"></i><span>SOP Checklist</span>
-        </a>
-      <?php endif; ?>
-      <?php if (hasPermission('manage_sop')): ?>
-        <a href="<?= $rp ?>sop/index.php" class="tree-node <?= $currentDir === 'sop' && $currentPage !== 'checklist.php' ? 'active' : '' ?>">
-          <i class="fa-solid fa-clipboard-check fa-fw"></i><span>SOP व्यवस्थापन</span>
-        </a>
-      <?php endif; ?>
-    </div>
-
-    <!-- ==================== सुविधा व्यवस्थापन ==================== -->
-    <?php if (moduleAllowed('room-booking') || moduleAllowed('allocations')): ?>
-    <div class="nav-group-header" data-bs-toggle="collapse" data-bs-target="#navGroupFacilities" aria-expanded="<?= navGroupExpanded('facilities', $activeGroup) ?>">
-      <span class="label"><i class="fa-solid fa-building fa-fw"></i> सुविधा व्यवस्थापन</span>
-      <i class="fa-solid fa-chevron-right chevron"></i>
-    </div>
-    <div class="collapse nav-group-body <?= navGroupOpen('facilities', $activeGroup) ?>" id="navGroupFacilities">
-      <?php if (moduleAllowed('room-booking')): ?>
-      <a href="<?= $rp ?>room-booking/index.php" class="tree-node <?= $currentDir === 'room-booking' ? 'active' : '' ?>">
-        <i class="fa-solid fa-door-open fa-fw"></i><span>📐 Room/Hall Booking</span>
-      </a>
-      <?php endif; ?>
-      <?php if (moduleAllowed('allocations')): ?>
-      <a href="<?= $rp ?>allocations/index.php" class="tree-node <?= $currentDir === 'allocations' ? 'active' : '' ?>">
-        <i class="fa-solid fa-boxes-packing fa-fw"></i><span>📦 Issue / Return Register</span>
-      </a>
-      <?php endif; ?>
-    </div>
-    <?php endif; ?>
-
-    <!-- ==================== संवाद व सहभाग ==================== -->
-    <?php
-      $commBadge = 0;
-      try {
-          $commBadgeStmt = $pdo->prepare("SELECT COUNT(*) c FROM staff_messages WHERE recipient_id = ? AND is_read = 0");
-          $commBadgeStmt->execute([$user['id']]);
-          $commBadge = (int)($commBadgeStmt->fetch()['c'] ?? 0);
-      } catch (PDOException $e) { /* table not migrated yet */ }
-    ?>
-    <div class="nav-group-header" data-bs-toggle="collapse" data-bs-target="#navGroupCommunication" aria-expanded="<?= navGroupExpanded('communication', $activeGroup) ?>">
-      <span class="label"><i class="fa-solid fa-comments fa-fw"></i> संवाद व सहभाग</span>
-      <?php if ($commBadge > 0): ?><span class="nav-group-badge"><?= $commBadge ?></span><?php endif; ?>
-      <i class="fa-solid fa-chevron-right chevron"></i>
-    </div>
-    <div class="collapse nav-group-body <?= navGroupOpen('communication', $activeGroup) ?>" id="navGroupCommunication">
-      <a href="<?= $rp ?>messages/index.php" class="tree-node <?= $currentDir === 'messages' ? 'active' : '' ?>">
-        <i class="fa-solid fa-comments fa-fw"></i><span>💬 Messages<?= $commBadge > 0 ? ' (' . $commBadge . ')' : '' ?></span>
-      </a>
-      <a href="<?= $rp ?>grievances/index.php" class="tree-node <?= $currentDir === 'grievances' ? 'active' : '' ?>">
-        <i class="fa-solid fa-gavel fa-fw"></i><span>🎫 तक्रार निवारण</span>
-      </a>
-    </div>
-
-    <!-- ==================== वाहन व मालमत्ता ==================== -->
-    <?php
-      $vehDeptCheck = $pdo->prepare("SELECT code FROM departments WHERE id = ?");
-      $vehDeptCheck->execute([$user['department_id'] ?? 0]);
-      $vehUserDeptCode = $vehDeptCheck->fetch()['code'] ?? null;
-
+      $vehUserDeptCode = $userDeptCodeNav;
       // वाहन यादी (vehicles/index.php) — तिथेच प्रत्येकाला परवानगी असलेली वाहनं दिसतात:
       // Super Admin/manage_vehicles/Management/वाहतूक विभाग — सगळी; चालक — स्वतःला नेमलेली
       $myVeh = null;
@@ -464,7 +261,6 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
           } catch (PDOException $e) { /* vehicles table not migrated yet */ }
       }
       $showVehicles = moduleAllowed('vehicles') || $myVeh; // 🔐 Permission / वाहतूक विभाग / स्वतःकडे दिलेलं वाहन
-
       $mtnDeptCheck = $pdo->prepare("SELECT has_issue_register FROM departments WHERE id = ?");
       $mtnDeptCheck->execute([$user['department_id'] ?? 0]);
       $userHasIssueRegister = !empty($mtnDeptCheck->fetch()['has_issue_register']);
@@ -489,15 +285,236 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
           }
       } catch (PDOException $e) { /* IT tables not migrated yet */ }
     ?>
-    <?php if ($showVehicles || $showMaintenance || $showDeadStock): ?>
-      <div class="nav-group-header" data-bs-toggle="collapse" data-bs-target="#navGroupAssets" aria-expanded="<?= navGroupExpanded('assets', $activeGroup) ?>">
-        <span class="label"><i class="fa-solid fa-truck-fast fa-fw"></i> वाहन व मालमत्ता</span>
-        <i class="fa-solid fa-chevron-right chevron"></i>
-      </div>
+
+    <!-- ==================== 🏠 मुख्य ==================== -->
+    <?php navSectionStart(); ?>
+    <a href="<?= $rp ?>index.php" class="tree-node <?= $currentPage === 'index.php' && $rp === '' ? 'active' : '' ?>">
+      <i class="fa-solid fa-gauge-high fa-fw"></i><span><?= h(t('nav_command_center')) ?></span>
+    </a>
+    <?php navSectionEnd('मुख्य', 'fa-solid fa-house'); ?>
+
+    <!-- ==================== 👤 माझं काम — रोजचं, स्वतःचं ==================== -->
+    <?php navSectionStart(); ?>
+    <a href="<?= $rp ?>daily-work/entry.php" class="tree-node <?= $currentDir === 'daily-work' && in_array($currentPage, ['entry.php','save.php','edit.php','import.php']) ? 'active' : '' ?>">
+      <i class="fa-regular fa-clipboard fa-fw"></i><span><?= h(t('nav_daily_work')) ?></span>
+    </a>
+    <a href="<?= $rp ?>daily-work/my-work.php" class="tree-node <?= $currentDir === 'daily-work' && $currentPage === 'my-work.php' ? 'active' : '' ?>">
+      <i class="fa-regular fa-square-check fa-fw"></i><span><?= h(t('nav_my_work')) ?></span>
+    </a>
+    <?php // टास्क कोणालाही (HOD/Management सुद्धा) मिळू शकतो — म्हणून "माझे टास्क" नेहमी दिसतो ?>
+    <a href="<?= $rp ?>tasks/my-tasks.php" class="tree-node <?= $currentDir === 'tasks' && $currentPage === 'my-tasks.php' ? 'active' : '' ?>">
+      <i class="fa-solid fa-user-check fa-fw"></i><span><?= h(t('nav_my_tasks')) ?></span>
+      <?= navCount($navBadge['myTasks'], $navBadge['myTasksOverdue'] ? 'rose' : 'amber') ?>
+    </a>
+    <?php if (hasPermission('assign_tasks') || hasPermission('view_task_tracker')): ?>
+      <a href="<?= $rp ?>tasks/index.php" class="tree-node <?= $currentDir === 'tasks' && in_array($currentPage, ['index.php','assign.php','report.php']) ? 'active' : '' ?>">
+        <i class="fa-solid fa-list-check fa-fw"></i><span><?= h(t('nav_task_assignment')) ?></span>
+      </a>
+    <?php endif; ?>
+    <?php if ($__ecMine && !$__ecAll): ?>
+    <a href="<?= $rp ?>ecampus/index.php" class="tree-node <?= $currentDir === 'ecampus' ? 'active' : '' ?>">
+      <i class="fa-solid fa-laptop-file fa-fw"></i><span>माझी E-Campus कामं</span>
+      <?= navCount($__ecMine, 'amber') ?>
+    </a>
+    <?php endif; ?>
+    <a href="<?= $rp ?>residency/my-residency.php" class="tree-node <?= $currentDir === 'residency' && $currentPage === 'my-residency.php' ? 'active' : '' ?>">
+      <i class="fa-solid fa-house-user fa-fw"></i><span>माझं निवासस्थान</span>
+    </a>
+    <?php navSectionEnd('माझं काम', 'fa-solid fa-user'); ?>
+
+    <!-- ==================== 📊 अहवाल व विश्लेषण ==================== -->
+    <?php navSectionStart(); ?>
+    <a href="<?= $rp ?>daily-work/report.php" class="tree-node <?= $currentDir === 'daily-work' && in_array($currentPage, ['report.php', 'report-print.php'], true) ? 'active' : '' ?>">
+      <i class="fa-solid fa-file-pdf fa-fw"></i><span><?= h(t('nav_reports')) ?></span>
+    </a>
+    <?php if ($__ecAll): ?>
+    <a href="<?= $rp ?>ecampus/index.php" class="tree-node <?= $currentDir === 'ecampus' && $currentPage !== 'my.php' ? 'active' : '' ?>">
+      <i class="fa-solid fa-graduation-cap fa-fw"></i><span>E-Campus Dashboard</span>
+      <?= !isManagementOrAbove() && $__ecMine ? navCount($__ecMine, 'amber') : '' ?>
+    </a>
+    <?php endif; ?>
+    <?php if (isManagementOrAbove()): ?>
+    <a href="<?= $rp ?>reports/daily.php" class="tree-node <?= $currentDir === 'reports' && $currentPage === 'daily.php' ? 'active' : '' ?>">
+      <i class="fa-solid fa-moon fa-fw"></i><span>दैनिक अहवाल</span>
+    </a>
+    <a href="<?= $rp ?>reports/weekly.php" class="tree-node <?= $currentDir === 'reports' && $currentPage === 'weekly.php' ? 'active' : '' ?>">
+      <i class="fa-solid fa-chart-column fa-fw"></i><span>साप्ताहिक अहवाल</span>
+    </a>
+    <?php endif; ?>
+    <?php navSectionEnd('अहवाल व विश्लेषण', 'fa-solid fa-chart-pie'); ?>
+
+    <!-- ==================== 🗂️ कार्यालयीन कामकाज — पत्र, विनंत्या, संवाद, अनुपालन ==================== -->
+    <?php navSectionStart(); ?>
+    <?= navGroupHead('navGroupLetters', 'letters', $activeGroup, 'fa-solid fa-paper-plane', 'पत्र व विनंत्या', $lettersGroupBadge) ?>
+    <div class="collapse nav-group-body <?= navGroupOpen('letters', $activeGroup) ?>" id="navGroupLetters">
+      <a href="<?= $rp ?>letters/index.php" class="tree-node <?= $currentDir === 'letters' && !in_array($currentPage, ['categories.php', 'workflows.php', 'workflow-create.php', 'workflow-edit.php'], true) ? 'active' : '' ?>">
+        <i class="fa-solid fa-envelope-open-text fa-fw"></i><span>पत्र व्यवहार</span>
+        <?= navCount($pendingLettersCount) ?>
+      </a>
+      <a href="<?= $rp ?>requests/index.php" class="tree-node <?= $currentDir === 'requests' && in_array($currentPage, ['index.php', 'view.php']) && ($_GET['category'] ?? '') !== 'it' ? 'active' : '' ?>">
+        <i class="fa-solid fa-inbox fa-fw"></i><span><?= h(t('nav_requests')) ?></span>
+        <?= navCount($pendingReqCount) ?>
+      </a>
+      <a href="<?= $rp ?>requests/create.php" class="tree-node <?= $currentDir === 'requests' && $currentPage === 'create.php' && ($_GET['category'] ?? '') !== 'it' ? 'active' : '' ?>">
+        <i class="fa-solid fa-share-from-square fa-fw"></i><span>दुसऱ्या विभागाला विनंती पाठवा</span>
+      </a>
+      <a href="<?= $rp ?>requests/my-requests.php" class="tree-node <?= $currentDir === 'requests' && $currentPage === 'my-requests.php' ? 'active' : '' ?>">
+        <i class="fa-solid fa-clock-rotate-left fa-fw"></i><span>माझ्या पाठवलेल्या विनंत्या</span>
+      </a>
+      <?php if (hasPermission('view_emergency_alerts')): ?>
+        <a href="<?= $rp ?>emergency/index.php" class="tree-node <?= $currentDir === 'emergency' ? 'active' : '' ?>">
+          <i class="fa-solid fa-triangle-exclamation fa-fw"></i><span>आणीबाणी सूचना</span>
+        </a>
+      <?php endif; ?>
+    </div>
+    <?= navGroupHead('navGroupCommunication', 'communication', $activeGroup, 'fa-solid fa-comments', 'संवाद व तक्रारी', $commBadge) ?>
+    <div class="collapse nav-group-body <?= navGroupOpen('communication', $activeGroup) ?>" id="navGroupCommunication">
+      <a href="<?= $rp ?>messages/index.php" class="tree-node <?= $currentDir === 'messages' ? 'active' : '' ?>">
+        <i class="fa-solid fa-message fa-fw"></i><span>Messages</span>
+        <?= navCount($commBadge) ?>
+      </a>
+      <a href="<?= $rp ?>grievances/index.php" class="tree-node <?= $currentDir === 'grievances' ? 'active' : '' ?>">
+        <i class="fa-solid fa-gavel fa-fw"></i><span>तक्रार निवारण</span>
+      </a>
+    </div>
+    <?= navGroupHead('navGroupCompliance', 'compliance', $activeGroup, 'fa-solid fa-scale-balanced', 'अनुपालन व SOP', $navBadge['renewals']) ?>
+    <div class="collapse nav-group-body <?= navGroupOpen('compliance', $activeGroup) ?>" id="navGroupCompliance">
+      <a href="<?= $rp ?>renewals/index.php" class="tree-node <?= $currentDir === 'renewals' ? 'active' : '' ?>">
+        <i class="fa-solid fa-shield-halved fa-fw"></i><span><?= h(t('nav_renewals')) ?></span>
+        <?= navCount($navBadge['renewals'], 'rose') ?>
+      </a>
+      <?php if (!empty($user['department_id']) || isManagementOrAbove() || hasRole('super_admin')): ?>
+        <a href="<?= $rp ?>sop/checklist.php" class="tree-node <?= $currentDir === 'sop' && $currentPage === 'checklist.php' ? 'active' : '' ?>">
+          <i class="fa-solid fa-list-check fa-fw"></i><span>SOP Checklist</span>
+        </a>
+      <?php endif; ?>
+      <?php if (hasPermission('manage_sop')): ?>
+        <a href="<?= $rp ?>sop/index.php" class="tree-node <?= $currentDir === 'sop' && $currentPage !== 'checklist.php' ? 'active' : '' ?>">
+          <i class="fa-solid fa-clipboard-check fa-fw"></i><span>SOP व्यवस्थापन</span>
+        </a>
+      <?php endif; ?>
+    </div>
+    <?php navSectionEnd('कार्यालयीन कामकाज', 'fa-solid fa-briefcase'); ?>
+
+    <!-- ==================== 👥 मनुष्यबळ (HR) — Attendance/रजा सगळ्यांनाच; Directory/पगार फक्त Permission असलेल्यांना ==================== -->
+    <?php navSectionStart(); ?>
+    <?= navGroupHead('navGroupStaff', 'staff', $activeGroup, 'fa-solid fa-users', 'कर्मचारी', $navBadge['leaveApprovals']) ?>
+    <div class="collapse nav-group-body <?= navGroupOpen('staff', $activeGroup) ?>" id="navGroupStaff">
+      <?php if (hasPermission('view_staff_directory') || hasCategory('hod')): ?>
+        <a href="<?= $rp ?>staff/index.php" class="tree-node <?= $currentDir === 'staff' && $currentPage === 'index.php' ? 'active' : '' ?>">
+          <i class="fa-solid fa-address-book fa-fw"></i><span><?= h(t('nav_staff_directory')) ?></span>
+        </a>
+      <?php endif; ?>
+      <a href="<?= $rp ?>staff/attendance.php" class="tree-node <?= $currentDir === 'staff' && $currentPage === 'attendance.php' ? 'active' : '' ?>">
+        <i class="fa-solid fa-fingerprint fa-fw"></i><span>Staff Attendance</span>
+      </a>
+      <a href="<?= $rp ?>staff/my-leaves.php" class="tree-node <?= $currentDir === 'staff' && in_array($currentPage, ['my-leaves.php','leave-apply.php']) ? 'active' : '' ?>">
+        <i class="fa-solid fa-umbrella-beach fa-fw"></i><span>रजा व्यवस्थापन</span>
+      </a>
+      <?php /* staff/leave-approvals.php मधलीच अट — दोन्ही ठिकाणी सारखीच */ if (hasCategory('hod') || hasPermission('view_org_wide_dashboards') || hasRole('super_admin')): ?>
+        <a href="<?= $rp ?>staff/leave-approvals.php" class="tree-node <?= $currentDir === 'staff' && $currentPage === 'leave-approvals.php' ? 'active' : '' ?>">
+          <i class="fa-solid fa-clipboard-check fa-fw"></i><span>रजा-अर्ज मंजुरी</span>
+          <?= navCount($navBadge['leaveApprovals']) ?>
+        </a>
+      <?php endif; ?>
+      <?php if (isManagementOrAbove()): ?>
+        <a href="<?= $rp ?>staff/salary-report.php" class="tree-node <?= $currentDir === 'staff' && $currentPage === 'salary-report.php' ? 'active' : '' ?>">
+          <i class="fa-solid fa-money-bill-wave fa-fw"></i><span>पगार अहवाल</span>
+        </a>
+        <a href="<?= $rp ?>staff/movement-report.php" class="tree-node <?= $currentDir === 'staff' && $currentPage === 'movement-report.php' ? 'active' : '' ?>">
+          <i class="fa-solid fa-people-arrows fa-fw"></i><span>कर्मचारी Movement</span>
+        </a>
+      <?php endif; ?>
+    </div>
+    <?php navSectionEnd('मनुष्यबळ (HR)', 'fa-solid fa-people-group'); ?>
+
+    <!-- ==================== 🏢 संस्था कामकाज — सुविधा, उपक्रम, मालमत्ता, तांत्रिक, आर्थिक ==================== -->
+    <?php navSectionStart(); ?>
+    <?php // पूर्वीचे "विभाग Budget" + "Material Purchase व Payment" — आता एकच; दोन्हीपैकी कुठलीही परवानगी पुरेशी ?>
+    <?php if (moduleAllowed('dept-finance')): ?>
+      <a href="<?= $rp ?>dept-finance/dashboard.php" class="tree-node <?= $currentDir === 'dept-finance' ? 'active' : '' ?>">
+        <i class="fa-solid fa-sack-dollar fa-fw"></i><span>विभाग Finance</span>
+      </a>
+    <?php endif; ?>
+    <?php if (moduleAllowed('gaushala')): ?>
+    <a href="<?= $rp ?>gaushala/index.php" class="tree-node <?= $currentDir === 'gaushala' ? 'active' : '' ?>">
+      <i class="fa-solid fa-cow fa-fw"></i><span>गौशाळा</span>
+    </a>
+    <?php endif; ?>
+    <?php if ($showHostel || $hosDeptHostels || $showResidency): ?>
+    <?= navGroupHead('navGroupHostel', 'hostel', $activeGroup, 'fa-solid fa-house-user', 'वसतिगृह व रहिवासी') ?>
+    <div class="collapse nav-group-body <?= navGroupOpen('hostel', $activeGroup) ?>" id="navGroupHostel">
+      <?php if ($showHostel): ?>
+        <a href="<?= $rp ?>hostels/index.php" class="tree-node <?= $currentDir === 'hostels' ? 'active' : '' ?>">
+          <i class="fa-solid fa-bed fa-fw"></i><span><?= h(t('nav_hostel_management')) ?></span>
+        </a>
+      <?php endif; ?>
+      <?php foreach ($hosDeptHostels as $hosNav): ?>
+        <a href="<?= $rp ?>hostels/dashboard.php?id=<?= (int)$hosNav['id'] ?>" class="tree-node <?= $currentDir === 'hostels' && (int)($_GET['id'] ?? $_GET['hostel_id'] ?? 0) === (int)$hosNav['id'] ? 'active' : '' ?>">
+          <i class="fa-solid fa-bed fa-fw"></i><span><?= h($hosNav['name']) ?></span>
+        </a>
+      <?php endforeach; ?>
+      <?php if ($showResidency): ?>
+        <a href="<?= $rp ?>residency/index.php" class="tree-node <?= $currentDir === 'residency' && $currentPage !== 'my-residency.php' ? 'active' : '' ?>">
+          <i class="fa-solid fa-house-chimney-user fa-fw"></i><span>रहिवासी विभाग</span>
+        </a>
+      <?php endif; ?>
+    </div>
+    <?php endif; ?>
+
+    <?php if (moduleAllowed('meditation') || moduleAllowed('music') || moduleAllowed('events') || moduleAllowed('guests')): ?>
+    <?= navGroupHead('navGroupActivities', 'activities', $activeGroup, 'fa-solid fa-om', 'उपक्रम व कार्यक्रम') ?>
+    <div class="collapse nav-group-body <?= navGroupOpen('activities', $activeGroup) ?>" id="navGroupActivities">
+      <?php if (moduleAllowed('meditation')): ?>
+      <a href="<?= $rp ?>meditation/index.php" class="tree-node <?= $currentDir === 'meditation' ? 'active' : '' ?>">
+        <i class="fa-solid fa-spa fa-fw"></i><span>ध्यान व सत्संग</span>
+      </a>
+      <?php endif; ?>
+      <?php if (moduleAllowed('music')): // संगीत विभागाचा Staff किंवा manage_music ?>
+      <a href="<?= $rp ?>music/index.php" class="tree-node <?= $currentDir === 'music' ? 'active' : '' ?>">
+        <i class="fa-solid fa-music fa-fw"></i><span>संगीत विभाग</span>
+      </a>
+      <?php endif; ?>
+      <?php if (moduleAllowed('events')): ?>
+      <a href="<?= $rp ?>events/index.php" class="tree-node <?= $currentDir === 'events' ? 'active' : '' ?>">
+        <i class="fa-solid fa-calendar-days fa-fw"></i><span>कार्यक्रम व्यवस्थापन</span>
+      </a>
+      <?php endif; ?>
+      <?php if (moduleAllowed('guests')): ?>
+        <a href="<?= $rp ?>guests/index.php" class="tree-node <?= $currentDir === 'guests' ? 'active' : '' ?>">
+          <i class="fa-solid fa-id-card-clip fa-fw"></i><span>पाहुणे नोंदणी</span>
+        </a>
+      <?php endif; ?>
+    </div>
+    <?php endif; ?>
+
+    <?php if (moduleAllowed('room-booking') || moduleAllowed('allocations')): ?>
+    <?= navGroupHead('navGroupFacilities', 'facilities', $activeGroup, 'fa-solid fa-building', 'सुविधा व्यवस्थापन') ?>
+    <div class="collapse nav-group-body <?= navGroupOpen('facilities', $activeGroup) ?>" id="navGroupFacilities">
+      <?php if (moduleAllowed('room-booking')): ?>
+      <a href="<?= $rp ?>room-booking/index.php" class="tree-node <?= $currentDir === 'room-booking' ? 'active' : '' ?>">
+        <i class="fa-solid fa-door-open fa-fw"></i><span>Room/Hall Booking</span>
+      </a>
+      <?php endif; ?>
+      <?php if (moduleAllowed('allocations')): ?>
+      <a href="<?= $rp ?>allocations/index.php" class="tree-node <?= $currentDir === 'allocations' ? 'active' : '' ?>">
+        <i class="fa-solid fa-boxes-packing fa-fw"></i><span>Issue / Return Register</span>
+      </a>
+      <?php endif; ?>
+    </div>
+    <?php endif; ?>
+
+    <?php if ($showVehicles || $showMaintenance || $showDeadStock || $showStore): ?>
+      <?= navGroupHead('navGroupAssets', 'assets', $activeGroup, 'fa-solid fa-truck-fast', 'वाहन, भांडार व मालमत्ता') ?>
       <div class="collapse nav-group-body <?= navGroupOpen('assets', $activeGroup) ?>" id="navGroupAssets">
         <?php if ($showVehicles): ?>
           <a href="<?= $rp ?>vehicles/index.php" class="tree-node <?= $currentDir === 'vehicles' ? 'active' : '' ?>">
             <i class="fa-solid fa-truck-fast fa-fw"></i><span>वाहन व्यवस्थापन</span>
+          </a>
+        <?php endif; ?>
+        <?php if ($showStore): ?>
+          <a href="<?= $rp ?>store/items.php" class="tree-node <?= $currentDir === 'store' ? 'active' : '' ?>">
+            <i class="fa-solid fa-warehouse fa-fw"></i><span>भांडार Material-यादी</span>
           </a>
         <?php endif; ?>
         <?php if ($showDeadStock): ?>
@@ -513,18 +530,8 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
       </div>
     <?php endif; ?>
 
-    <?php if ($showStore): ?>
-      <a href="<?= $rp ?>store/items.php" class="tree-node <?= $currentDir === 'store' ? 'active' : '' ?>">
-        <i class="fa-solid fa-warehouse fa-fw"></i><span>भांडार Material-यादी</span>
-      </a>
-    <?php endif; ?>
-
-    <!-- ==================== तांत्रिक विभाग ==================== -->
-    <?php if ($showCctv || $showIt || !empty($myItLabs)): ?>
-      <div class="nav-group-header" data-bs-toggle="collapse" data-bs-target="#navGroupTechDept" aria-expanded="<?= navGroupExpanded('techdept', $activeGroup) ?>">
-        <span class="label"><i class="fa-solid fa-server fa-fw"></i> तांत्रिक विभाग</span>
-        <i class="fa-solid fa-chevron-right chevron"></i>
-      </div>
+    <?php if ($showCctv || $showIt || $showItRequestsManage || !empty($myItLabs)): ?>
+      <?= navGroupHead('navGroupTechDept', 'techdept', $activeGroup, 'fa-solid fa-server', 'तांत्रिक विभाग') ?>
       <div class="collapse nav-group-body <?= navGroupOpen('techdept', $activeGroup) ?>" id="navGroupTechDept">
         <?php if ($showCctv): ?>
           <a href="<?= $rp ?>cctv/index.php" class="tree-node <?= $currentDir === 'cctv' ? 'active' : '' ?>">
@@ -538,34 +545,21 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
         <?php endif; ?>
         <?php if ($showItRequestsManage): ?>
           <a href="<?= $rp ?>requests/index.php?category=it" class="tree-node <?= ($currentDir === 'requests' && ($_GET['category'] ?? '') === 'it' && $currentPage === 'index.php') || ($currentDir === 'it' && $currentPage === 'general-requests-manage.php') ? 'active' : '' ?>">
-            <i class="fa-solid fa-headset fa-fw"></i><span>🖥️ IT Requests व्यवस्थापन</span>
+            <i class="fa-solid fa-headset fa-fw"></i><span>IT Requests व्यवस्थापन</span>
           </a>
         <?php endif; ?>
         <?php foreach ($myItLabs as $myLab): ?>
           <a href="<?= $rp ?>it/assets.php?lab_id=<?= (int)$myLab['id'] ?>" class="tree-node <?= $currentDir === 'it' && in_array($currentPage, ['assets.php', 'asset-view.php', 'asset-edit.php']) ? 'active' : '' ?>">
-            <i class="fa-solid fa-desktop fa-fw"></i><span>माझी Lab — <?= h($myLab['lab_name']) ?></span>
+            <i class="fa-solid fa-computer fa-fw"></i><span>माझी Lab — <?= h($myLab['lab_name']) ?></span>
           </a>
         <?php endforeach; ?>
       </div>
     <?php endif; ?>
 
-    <!-- ==================== आर्थिक ==================== -->
-    <?php // पूर्वीचे "विभाग Budget" + "Material Purchase व Payment" — आता एकच; दोन्हीपैकी कुठलीही परवानगी पुरेशी ?>
-    <?php if (moduleAllowed('dept-finance')): ?>
-      <a href="<?= $rp ?>dept-finance/dashboard.php" class="tree-node <?= $currentDir === 'dept-finance' ? 'active' : '' ?>">
-        <i class="fa-solid fa-sack-dollar fa-fw"></i><span>💰 विभाग Finance</span>
-      </a>
-    <?php endif; ?>
-
-    <!-- ==================== गौशाळा ==================== -->
-    <?php if (moduleAllowed('gaushala')): ?>
-    <a href="<?= $rp ?>gaushala/index.php" class="tree-node <?= $currentDir === 'gaushala' ? 'active' : '' ?>">
-      <i class="fa-solid fa-cow fa-fw"></i><span>🐄 गौशाळा</span>
-    </a>
-    <?php endif; ?>
+    <?php navSectionEnd('संस्था कामकाज', 'fa-solid fa-building-columns'); ?>
 
     <!-- ==================== विभाग (Department Dashboards) — College/School/Trust नुसार गटवार ==================== -->
-    <div class="tier-label"><?= h(t('nav_departments')) ?></div>
+    <div class="tier-label"><i class="fa-solid fa-sitemap fa-fw"></i><span><?= h(t('nav_departments')) ?></span></div>
     <?php
       // Trust-स्तरीय (campus_id NULL, किंवा Trust HQ Campus खालचे) आणि प्रत्येक
       // College/School — असे स्वतंत्र गट तयार करतो.
@@ -618,21 +612,18 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
       <?php endforeach; ?>
     <?php endif; ?>
 
-    <!-- ==================== प्रशासन (Super Admin) ==================== -->
+    <!-- ==================== ⚙️ प्रशासन (Super Admin) — रचना / पत्र सेटिंग्ज / System ==================== -->
     <?php if (hasRole('super_admin')): ?>
-      <div class="tier-label"><?= h(t('nav_administration')) ?></div>
-      <div class="nav-group-header" data-bs-toggle="collapse" data-bs-target="#navGroupAdmin" aria-expanded="<?= navGroupExpanded('admin', $activeGroup) ?>">
-        <span class="label"><i class="fa-solid fa-gear fa-fw"></i> संस्था व्यवस्थापन</span>
-        <i class="fa-solid fa-chevron-right chevron"></i>
-      </div>
-      <div class="collapse nav-group-body <?= navGroupOpen('admin', $activeGroup) ?>" id="navGroupAdmin">
+      <div class="tier-label"><i class="fa-solid fa-user-shield fa-fw"></i><span><?= h(t('nav_administration')) ?></span></div>
+      <?= navGroupHead('navGroupAdminOrg', 'adminOrg', $activeGroup, 'fa-solid fa-sitemap', 'संस्था रचना') ?>
+      <div class="collapse nav-group-body <?= navGroupOpen('adminOrg', $activeGroup) ?>" id="navGroupAdminOrg">
         <a href="<?= $rp ?>organizations/index.php" class="tree-node <?= $currentDir === 'organizations' ? 'active' : '' ?>">
-          <i class="fa-solid fa-sitemap fa-fw"></i><span><?= h(t('nav_org_management')) ?></span>
+          <i class="fa-solid fa-building-flag fa-fw"></i><span><?= h(t('nav_org_management')) ?></span>
         </a>
         <a href="<?= $rp ?>campuses/index.php" class="tree-node <?= $currentDir === 'campuses' ? 'active' : '' ?>">
           <i class="fa-solid fa-city fa-fw"></i><span><?= h(t('nav_campus_management')) ?></span>
         </a>
-        <a href="<?= $rp ?>departments/index.php" class="tree-node <?= $currentDir === 'departments' && $currentPage !== 'dashboard.php' ? 'active' : '' ?>">
+        <a href="<?= $rp ?>departments/index.php" class="tree-node <?= $currentDir === 'departments' && $currentPage !== 'dashboard.php' && $currentPage !== 'all.php' ? 'active' : '' ?>">
           <i class="fa-solid fa-diagram-project fa-fw"></i><span><?= h(t('nav_department_management')) ?></span>
         </a>
         <a href="<?= $rp ?>roles/index.php" class="tree-node <?= $currentDir === 'roles' ? 'active' : '' ?>">
@@ -641,21 +632,21 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
         <a href="<?= $rp ?>custom-fields/index.php" class="tree-node <?= $currentDir === 'custom-fields' ? 'active' : '' ?>">
           <i class="fa-solid fa-list-ul fa-fw"></i><span><?= h(t('nav_custom_fields')) ?></span>
         </a>
-        <a href="<?= $rp ?>translations/index.php" class="tree-node <?= $currentDir === 'translations' ? 'active' : '' ?>">
-          <i class="fa-solid fa-language fa-fw"></i><span>🌐 भाषांतर व्यवस्थापन</span>
-        </a>
         <a href="<?= $rp ?>staff/import.php" class="tree-node <?= $currentDir === 'staff' && $currentPage === 'import.php' ? 'active' : '' ?>">
           <i class="fa-solid fa-file-csv fa-fw"></i><span><?= h(t('nav_csv_import')) ?></span>
         </a>
+      </div>
+      <?= navGroupHead('navGroupAdminLetters', 'adminLetters', $activeGroup, 'fa-solid fa-envelopes-bulk', 'पत्रव्यवहार सेटिंग्ज') ?>
+      <div class="collapse nav-group-body <?= navGroupOpen('adminLetters', $activeGroup) ?>" id="navGroupAdminLetters">
         <a href="<?= $rp ?>letters/categories.php" class="tree-node <?= $currentDir === 'letters' && $currentPage === 'categories.php' ? 'active' : '' ?>">
           <i class="fa-solid fa-tags fa-fw"></i><span>पत्र प्रकार</span>
         </a>
         <a href="<?= $rp ?>letters/workflows.php" class="tree-node <?= $currentDir === 'letters' && in_array($currentPage, ['workflows.php','workflow-create.php','workflow-edit.php']) ? 'active' : '' ?>">
-          <i class="fa-solid fa-diagram-project fa-fw"></i><span>कार्यप्रवाह टेम्प्लेट</span>
+          <i class="fa-solid fa-route fa-fw"></i><span>कार्यप्रवाह टेम्प्लेट</span>
         </a>
-        <a href="<?= $rp ?>about-manage.php" class="tree-node <?= $currentPage === 'about-manage.php' ? 'active' : '' ?>">
-          <i class="fa-solid fa-om fa-fw"></i><span>About Page व्यवस्थापन</span>
-        </a>
+      </div>
+      <?= navGroupHead('navGroupAdminSys', 'adminSys', $activeGroup, 'fa-solid fa-gear', 'System व सुरक्षा') ?>
+      <div class="collapse nav-group-body <?= navGroupOpen('adminSys', $activeGroup) ?>" id="navGroupAdminSys">
         <a href="<?= $rp ?>backup/index.php" class="tree-node <?= $currentDir === 'backup' ? 'active' : '' ?>">
           <i class="fa-solid fa-database fa-fw"></i><span><?= h(t('nav_backup_restore')) ?></span>
         </a>
@@ -663,13 +654,19 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
           <i class="fa-solid fa-clock-rotate-left fa-fw"></i><span><?= h(t('nav_activity_log')) ?></span>
         </a>
         <a href="<?= $rp ?>system-update/index.php" class="tree-node <?= $currentDir === 'system-update' && $currentPage === 'index.php' ? 'active' : '' ?>">
-          <i class="fa-solid fa-arrows-rotate fa-fw"></i><span>🔄 System Update</span>
+          <i class="fa-solid fa-arrows-rotate fa-fw"></i><span>System Update</span>
         </a>
         <a href="<?= $rp ?>system-update/maintenance.php" class="tree-node <?= $currentDir === 'system-update' && $currentPage === 'maintenance.php' ? 'active' : '' ?>">
-          <i class="fa-solid fa-screwdriver-wrench fa-fw"></i><span>🛠️ Site Maintenance Mode</span>
+          <i class="fa-solid fa-person-digging fa-fw"></i><span>Site Maintenance Mode</span>
+        </a>
+        <a href="<?= $rp ?>translations/index.php" class="tree-node <?= $currentDir === 'translations' ? 'active' : '' ?>">
+          <i class="fa-solid fa-language fa-fw"></i><span>भाषांतर व्यवस्थापन</span>
+        </a>
+        <a href="<?= $rp ?>about-manage.php" class="tree-node <?= $currentPage === 'about-manage.php' ? 'active' : '' ?>">
+          <i class="fa-solid fa-circle-info fa-fw"></i><span>About Page व्यवस्थापन</span>
         </a>
         <a href="<?= $rp ?>tv-display.php" target="_blank" class="tree-node">
-          <i class="fa-solid fa-tv fa-fw"></i><span>📺 Live TV Display</span>
+          <i class="fa-solid fa-tv fa-fw"></i><span>Live TV Display</span><i class="fa-solid fa-arrow-up-right-from-square nav-ext"></i>
         </a>
       </div>
     <?php endif; ?>
@@ -695,4 +692,4 @@ function navGroupExpanded($groupKey, $activeGroup) { return $groupKey === $activ
   </div>
 </aside>
 
-<script src="<?= $rp ?>assets/js/sidebar-smart.js?v=1" defer></script>
+<script src="<?= $rp ?>assets/js/sidebar-smart.js?v=2" defer></script>
