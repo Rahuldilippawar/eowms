@@ -21,7 +21,7 @@ $campusesForCascade = $campusesForCascade->fetchAll();
 $itemCurrentCampusId = null;
 foreach ($departments as $d) { if ((int)$d['id'] === (int)$item['department_id']) { $itemCurrentCampusId = $d['campus_id'] ?? null; break; } }
 
-$stmt = $pdo->prepare("SELECT * FROM dead_stock_item_master WHERE organization_id = ? AND is_active = 1 ORDER BY category, item_name");
+$stmt = $pdo->prepare("SELECT * FROM dead_stock_item_master WHERE organization_id = ? AND is_active = 1 ORDER BY category IS NULL OR category = '', category, item_name");   // प्रकार (Head) नुसार, "इतर" शेवटी
 $stmt->execute([$orgId]);
 $masterItems = $stmt->fetchAll();
 ?>
@@ -66,11 +66,11 @@ $masterItems = $stmt->fetchAll();
         <?php endif; ?>
       <div class="col-md-6">
         <label class="form-label-custom">वस्तू (यादीतून)</label>
-        <select name="item_master_id" class="form-select-custom" required>
+        <select name="item_master_id" class="form-select-custom" data-smart="1" required>
           <option value="">-- निवडा --</option>
-          <?php foreach ($masterItems as $mi): ?>
-            <option value="<?= $mi['id'] ?>" <?= $item['item_master_id'] == $mi['id'] ? 'selected' : '' ?>><?= h($mi['item_name']) ?><?= $mi['category'] ? ' (' . h($mi['category']) . ')' : '' ?></option>
-          <?php endforeach; ?>
+          <?php $lastCat = false; foreach ($masterItems as $mi): if ($mi['category'] !== $lastCat) { if ($lastCat !== false) echo '</optgroup>'; echo '<optgroup label="' . h($mi['category'] ?: 'इतर (प्रकार नाही)') . '">'; $lastCat = $mi['category']; } // प्रकार (Head) नुसार ?>
+            <option value="<?= $mi['id'] ?>" <?= $item['item_master_id'] == $mi['id'] ? 'selected' : '' ?>><?= h($mi['item_name']) ?></option>
+          <?php endforeach; if (!empty($masterItems)) echo '</optgroup>'; ?>
         </select>
         <?php if (!$item['item_master_id']): ?>
           <div style="font-size:11px;color:var(--text-dim);margin-top:3px;">मूळ नोंद: <?= h($item['item_name']) ?> (जुनी मुक्त-टायपिंग नोंद — वरून योग्य वस्तू निवडा)</div>

@@ -95,7 +95,7 @@ if ($canPickAnyDept) {
 }
 
 // Master item catalog — same list for every department, managed centrally by Super Admin
-$stmt = $pdo->prepare("SELECT * FROM dead_stock_item_master WHERE organization_id = ? AND is_active = 1 ORDER BY category, item_name");
+$stmt = $pdo->prepare("SELECT * FROM dead_stock_item_master WHERE organization_id = ? AND is_active = 1 ORDER BY category IS NULL OR category = '', category, item_name");   // प्रकार (Head) नुसार, "इतर" शेवटी
 $stmt->execute([$orgId]);
 $masterItems = $stmt->fetchAll();
 
@@ -152,9 +152,9 @@ require_once __DIR__ . '/../includes/header.php';
       <?php endif; ?>
       <div class="col-md-6">
         <label class="form-label-custom">वस्तू निवडा (यादीतून)</label>
-        <select name="item_master_id" id="itemMasterSelect" class="form-select-custom" required>
+        <select name="item_master_id" id="itemMasterSelect" class="form-select-custom" data-smart="1" required>
           <option value="">-- निवडा --</option>
-          <?php $lastCat = null; foreach ($masterItems as $mi): if ($mi['category'] !== $lastCat) { if ($lastCat !== null) echo '</optgroup>'; echo '<optgroup label="' . h($mi['category'] ?: 'इतर') . '">'; $lastCat = $mi['category']; } ?>
+          <?php $lastCat = null; foreach ($masterItems as $mi): if ($mi['category'] !== $lastCat) { if ($lastCat !== null) echo '</optgroup>'; echo '<optgroup label="' . h($mi['category'] ?: 'इतर (प्रकार नाही)') . '">'; $lastCat = $mi['category']; } ?>
             <option value="<?= $mi['id'] ?>" data-unit="<?= h($mi['default_unit'] ?? '') ?>"><?= h($mi['item_name']) ?></option>
           <?php endforeach; if (!empty($masterItems)) echo '</optgroup>'; ?>
         </select>
