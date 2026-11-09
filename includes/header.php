@@ -27,7 +27,7 @@ $titleOrgName = activeOrgName();
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="<?= $rootPath ?? '' ?>assets/css/eowms.css?v=4">
 <link rel="stylesheet" href="<?= $rootPath ?? '' ?>assets/css/eowms-advance.css?v=5">
-<link rel="stylesheet" href="<?= $rootPath ?? '' ?>assets/css/eowms-ui.css?v=7">
+<link rel="stylesheet" href="<?= $rootPath ?? '' ?>assets/css/eowms-ui.css?v=8">
 <link rel="stylesheet" href="<?= $rootPath ?? '' ?>assets/css/eowms-theme.css?v=3">
 <link rel="stylesheet" href="<?= $rootPath ?? '' ?>assets/css/eowms-mobile.css?v=3">
 <script>
