@@ -21,6 +21,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['form_error'] = "'$itemName' आधीच यादीत आहे.";
             }
         }
+    } elseif (isset($_POST['add_catalog'])) {
+        // 📚 मानक वस्तू यादी — निवडलेल्या प्रकारातल्या वस्तू (आधीच असलेल्या वगळून)
+        require_once __DIR__ . '/../database/deadstock-catalog.php';
+        $catalog = deadStockCatalog();
+        $pick = array_values(array_intersect((array)($_POST['catalog_cats'] ?? []), array_keys($catalog)));
+        if (!$pick) {
+            $_SESSION['form_error'] = 'किमान एक प्रकार निवडा.';
+        } else {
+            $ins = $pdo->prepare("INSERT IGNORE INTO dead_stock_item_master (organization_id, item_name, category, default_unit, created_by) VALUES (?, ?, ?, ?, ?)");
+            $added = 0; $total = 0;
+            $pdo->beginTransaction();
+            foreach ($pick as $cat) {
+                foreach ($catalog[$cat] as [$name, $unit]) { $total++; $ins->execute([$orgId, $name, $cat, $unit, $user['id']]); $added += $ins->rowCount(); }
+            }
+            $pdo->commit();
+            logActivity('Dead Stock मानक वस्तू यादी जोडली', 'dead_stock_item_master', 0, $added . ' वस्तू, ' . count($pick) . ' प्रकार');
+            $_SESSION['flash'] = "📚 $added नवीन वस्तू यादीत जोडल्या (" . count($pick) . ' प्रकार)' . ($total - $added ? ' — ' . ($total - $added) . ' आधीच होत्या म्हणून वगळल्या.' : '.');
+        }
     } elseif (isset($_POST['toggle_id'])) {
         $tid = (int)$_POST['toggle_id'];
         $pdo->prepare("UPDATE dead_stock_item_master SET is_active = 1 - is_active WHERE id = ? AND organization_id = ?")->execute([$tid, $orgId]);
@@ -103,6 +121,53 @@ $masterItems = $stmt->fetchAll();
   <?php unset($_SESSION['import_errors']); ?>
 <?php endif; ?>
 
+<?php
+  // 📚 मानक वस्तू यादी — कोणत्या प्रकारात किती वस्तू आधीच आहेत
+  require_once __DIR__ . '/../database/deadstock-catalog.php';
+  $catalog = deadStockCatalog();
+  $haveNames = array_flip(array_map(fn($n) => mb_strtolower(trim($n)), array_column($masterItems, 'item_name')));
+  $catTotal = 0; $catMissing = 0;
+?>
+<details class="panel mb-3" id="dsCatalog" <?= count($masterItems) < 50 ? 'open' : '' ?>>
+  <summary style="padding:14px 20px;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+    <span><span style="font-weight:800;font-size:15px;">📚 मानक वस्तू यादी — मोठ्या संस्थेसाठी</span><br>
+      <span style="font-size:12px;color:var(--text-dim);">फर्निचर, कार्यालय, IT, इलेक्ट्रिकल, प्रयोगशाळा, कार्यशाळा, वसतिगृह, मेस, वैद्यकीय, क्रीडा, ग्रंथालय, वाहन, गौशाळा, मंदिर… — हवे ते प्रकार निवडून एका Click मध्ये जोडा</span></span>
+    <span style="font-size:12px;font-weight:700;color:var(--rail);">उघडा / बंद करा ▾</span>
+  </summary>
+  <form method="POST" style="padding:4px 20px 18px;" onsubmit="return confirm('निवडलेल्या प्रकारातल्या वस्तू यादीत जोडायच्या? (आधीच असलेल्या वगळल्या जातील)');">
+    <input type="hidden" name="add_catalog" value="1">
+    <div class="d-flex gap-2 flex-wrap mb-2" style="font-size:12px;">
+      <button type="button" class="btn btn-sm" style="border:1px solid var(--line);border-radius:7px;font-size:12px;" onclick="document.querySelectorAll('.ds-cat-cb').forEach(c => c.checked = true)">सगळे निवडा</button>
+      <button type="button" class="btn btn-sm" style="border:1px solid var(--line);border-radius:7px;font-size:12px;" onclick="document.querySelectorAll('.ds-cat-cb').forEach(c => c.checked = false)">सगळे काढा</button>
+    </div>
+    <div class="ds-cat-grid">
+      <?php foreach ($catalog as $cat => $items):
+        $missing = count(array_filter($items, fn($it) => !isset($haveNames[mb_strtolower($it[0])])));
+        $catTotal += count($items); $catMissing += $missing; ?>
+        <label class="ds-cat <?= $missing ? '' : 'done' ?>">
+          <input type="checkbox" class="ds-cat-cb" name="catalog_cats[]" value="<?= h($cat) ?>" <?= $missing ? 'checked' : 'disabled' ?>>
+          <span class="nm"><?= h($cat) ?></span>
+          <span class="ct"><?= $missing ? $missing . ' नवीन / ' . count($items) : '✅ सगळ्या आहेत' ?></span>
+          <details class="pv" onclick="event.stopPropagation()"><summary>वस्तू पाहा</summary><div><?= h(implode(' · ', array_map(fn($it) => $it[0], $items))) ?></div></details>
+        </label>
+      <?php endforeach; ?>
+    </div>
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3">
+      <span style="font-size:12.5px;color:var(--text-dim);">एकूण <b><?= $catTotal ?></b> मानक वस्तू · त्यापैकी <b><?= $catMissing ?></b> अजून यादीत नाहीत. नंतर Edit / निष्क्रिय / Delete करता येतात.</span>
+      <button type="submit" class="btn" style="background:var(--rail);color:#fff;border-radius:9px;font-size:13.5px;padding:9px 20px;font-weight:700;" <?= $catMissing ? '' : 'disabled' ?>>📚 निवडलेल्या वस्तू यादीत जोडा</button>
+    </div>
+  </form>
+</details>
+<style>
+  .ds-cat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px;}
+  .ds-cat{display:grid;grid-template-columns:auto 1fr;gap:2px 8px;align-items:start;border:1px solid var(--line);border-radius:10px;padding:9px 11px;cursor:pointer;background:var(--surface,#fff);}
+  .ds-cat:has(input:checked){border-color:var(--rail);background:color-mix(in srgb,var(--rail) 6%,var(--surface,#fff));}
+  .ds-cat.done{opacity:.6;cursor:default;}
+  .ds-cat input{margin-top:3px;width:15px;height:15px;accent-color:var(--rail);}
+  .ds-cat .nm{font-size:13px;font-weight:700;} .ds-cat .ct{grid-column:2;font-size:11.5px;color:var(--text-dim);}
+  .ds-cat .pv{grid-column:2;font-size:11.5px;} .ds-cat .pv summary{color:var(--rail);cursor:pointer;font-weight:600;} .ds-cat .pv div{color:var(--text-dim);margin-top:4px;line-height:1.5;}
+</style>
+
 <div class="row g-3 mb-3">
   <div class="col-lg-7">
     <div class="panel">
@@ -153,7 +218,13 @@ $masterItems = $stmt->fetchAll();
 
 
 <div class="panel">
-  <table class="rtable">
+  <?php $__cats = array_values(array_unique(array_filter(array_column($masterItems, 'category')))); ?>
+  <div class="d-flex gap-2 flex-wrap align-items-center" style="padding:12px 16px;border-bottom:1px solid var(--line);">
+    <input type="search" id="dsFind" class="form-control-custom" style="max-width:280px;" placeholder="🔍 वस्तू शोधा…">
+    <select id="dsCatFilter" class="form-select-custom" style="max-width:280px;"><option value="">सर्व प्रकार (<?= count($masterItems) ?>)</option><?php foreach ($__cats as $c): ?><option value="<?= h($c) ?>"><?= h($c) ?></option><?php endforeach; ?></select>
+    <span id="dsCount" style="font-size:12.5px;color:var(--text-dim);margin-left:auto;"></span>
+  </div>
+  <table class="rtable" id="dsTable">
     <thead><tr><th>वस्तूचे नाव</th><th>प्रकार</th><th>एकक</th><th>स्थिती</th><th></th></tr></thead>
     <tbody>
       <?php if (empty($masterItems)): ?>
@@ -206,4 +277,17 @@ $masterItems = $stmt->fetchAll();
   </table>
 </div>
 
+<script>
+(function () {   // 🔍 वस्तू शोध + प्रकार Filter (600+ वस्तू असल्या तरी पटकन सापडाव्यात)
+  var q = document.getElementById('dsFind'), c = document.getElementById('dsCatFilter'), t = document.getElementById('dsTable'), n = document.getElementById('dsCount');
+  if (!q || !t) return;
+  var rows = [].slice.call(t.tBodies[0].rows).filter(function (r) { return r.cells.length > 2; });
+  function run() {
+    var s = q.value.trim().toLowerCase(), cat = c.value, shown = 0;
+    rows.forEach(function (r) { var ok = (!s || r.cells[0].textContent.toLowerCase().indexOf(s) !== -1) && (!cat || r.cells[1].textContent.trim() === cat); r.style.display = ok ? '' : 'none'; if (ok) shown++; });
+    n.textContent = shown + ' / ' + rows.length;
+  }
+  q.addEventListener('input', run); c.addEventListener('change', run); run();
+})();
+</script>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>
