@@ -46,3 +46,33 @@ function deptGroupsScript(PDO $pdo, $orgId) {
     if (!$map) { return ''; }
     return '<script>window.EOWMS_DEPT_GROUPS=' . json_encode($map, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) . ';</script>';
 }
+
+/** PDF (mPDF) मध्ये Emoji दिसत नाहीत — शीर्षकातलं सुरुवातीचं चिन्ह काढतो */
+function deptGroupPlain($label) { return trim(preg_replace('/^[^\p{L}\p{N}]+/u', '', (string)$label)); }
+
+/**
+ * 📊 अहवालातल्या विभाग-तक्त्यांसाठी — ओळी Campus नुसार गटवार (संस्था-स्तरीय → College → School → इतर), प्रत्येक गटाला शीर्षक-ओळ.
+ * गटातला मूळ क्रम (उदा. जास्त नोंदी आधी / कमकुवत आधी) तसाच राहतो.
+ * $rows — प्रत्येक ओळीत विभागाचा id ($idKey); $rowHtml(row) — त्या ओळीचं <tr>…</tr>; $cols — तक्त्यातले Columns
+ */
+function deptGroupRowsHtml(PDO $pdo, $orgId, array $rows, $cols, callable $rowHtml, $idKey = 'id', $pdf = true) {
+    if (!$rows) { return ''; }
+    $map = deptGroupMap($pdo, $orgId);
+    $buckets = [];
+    foreach ($rows as $r) {
+        $g = $map[(int)($r[$idKey] ?? 0)] ?? ['g' => '🏢 इतर', 'o' => '9'];
+        $buckets[$g['g']] ??= ['o' => $g['o'], 'rows' => []];
+        $buckets[$g['g']]['rows'][] = $r;
+    }
+    uasort($buckets, fn($a, $b) => strcmp($a['o'], $b['o']));
+    $out = '';
+    foreach ($buckets as $label => $b) {
+        $txt = $pdf ? deptGroupPlain($label) : $label;
+        $style = $pdf ? 'background:#EEF0F8;color:#2B2F6B;font-weight:bold;padding:5px 6px;border-bottom:1px solid #D5D9EC;'
+            : 'background:color-mix(in srgb,var(--rail,#D9530F) 9%,var(--surface,#fff));color:inherit;font-weight:800;font-size:12.5px;padding:7px 10px;border-left:3px solid var(--rail,#D9530F);';
+        $out .= '<tr class="dept-grp"><td colspan="' . (int)$cols . '" style="' . $style . '">'
+            . htmlspecialchars($txt, ENT_QUOTES, 'UTF-8') . ' <span style="font-weight:normal;opacity:.7;">(' . count($b['rows']) . ' विभाग)</span></td></tr>';
+        foreach ($b['rows'] as $r) { $out .= $rowHtml($r); }
+    }
+    return $out;
+}

@@ -148,15 +148,13 @@ require_once __DIR__ . '/../includes/smart-insights.php';
     <table class="rtable">
       <thead><tr><th>विभाग</th><th>आरोग्य</th><th>कामं (आठवडा)</th><th>मुदतबाह्य Tasks</th><th>SLA बाहेर</th></tr></thead>
       <tbody>
-      <?php foreach (array_slice($d['health'], 0, 8) as $r): ?>
-        <tr>
-          <td><b><?= h($r['name']) ?></b></td>
-          <td><span class="status-chip <?= $r['level'] === 'good' ? 'done' : ($r['level'] === 'warn' ? 'pending' : 'overdue') ?>"><?= $r['score'] ?>/100</span></td>
-          <td><?= $r['weekWork'] ?><?= $r['weekRate'] !== null ? ' <span style="color:var(--text-dim);font-size:12px;">(' . $r['weekRate'] . '%)</span>' : '' ?></td>
-          <td style="<?= $r['overdueTasks'] ? 'color:var(--rose);font-weight:700;' : '' ?>"><?= $r['overdueTasks'] ?></td>
-          <td style="<?= $r['overdueReq'] ? 'color:var(--amber);font-weight:700;' : '' ?>"><?= $r['overdueReq'] ?></td>
-        </tr>
-      <?php endforeach; ?>
+      <?php require_once __DIR__ . '/../includes/dept-groups.php';   // कमकुवत 8 — संस्था / College / School नुसार गटवार
+      echo deptGroupRowsHtml($pdo, $orgId ?? activeOrgId(), array_slice($d['health'], 0, 8), 5, fn($r) => '<tr>'
+          . '<td><b>' . h($r['name']) . '</b></td>'
+          . '<td><span class="status-chip ' . ($r['level'] === 'good' ? 'done' : ($r['level'] === 'warn' ? 'pending' : 'overdue')) . '">' . $r['score'] . '/100</span></td>'
+          . '<td>' . $r['weekWork'] . ($r['weekRate'] !== null ? ' <span style="color:var(--text-dim);font-size:12px;">(' . $r['weekRate'] . '%)</span>' : '') . '</td>'
+          . '<td style="' . ($r['overdueTasks'] ? 'color:var(--rose);font-weight:700;' : '') . '">' . $r['overdueTasks'] . '</td>'
+          . '<td style="' . ($r['overdueReq'] ? 'color:var(--amber);font-weight:700;' : '') . '">' . $r['overdueReq'] . '</td></tr>', 'id', false); ?>
       </tbody>
     </table>
   </div>

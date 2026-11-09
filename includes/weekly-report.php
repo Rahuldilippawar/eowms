@@ -224,15 +224,17 @@ function weeklyReportPdfHtml(array $d) {
     if (!$d['health']) { $html .= '<div class="muted">विभाग नाहीत.</div>'; }
     else {
         $html .= '<table class="g"><thead><tr><th style="width:27%;">विभाग</th><th class="ctr" style="width:17%;">आरोग्य</th><th class="num" style="width:11%;">कामं (आठवडा)</th><th class="num" style="width:10%;">पूर्णता</th><th class="num" style="width:12%;">मुदतबाह्य Tasks</th><th class="num" style="width:12%;">SLA बाहेर विनंत्या</th><th class="num" style="width:11%;">संपलेलं नूतनीकरण</th></tr></thead><tbody>';
-        foreach ($d['health'] as $r) {
-            $html .= '<tr><td><b>' . $h($r['name']) . '</b>' . ($r['hod'] ? '<br><span class="muted">' . $h($r['hod']) . '</span>' : '') . '</td>'
+        global $pdo;
+        require_once __DIR__ . '/dept-groups.php';
+        $html .= deptGroupRowsHtml($pdo, (int)$d['orgId'], $d['health'], 7, function ($r) use ($h, $lvlBg, $lvlColor, $lvlTxt) {   // Campus नुसार गटवार
+            return '<tr><td><b>' . $h($r['name']) . '</b>' . ($r['hod'] ? '<br><span class="muted">' . $h($r['hod']) . '</span>' : '') . '</td>'
                 . '<td class="ctr"><span class="pill" style="background:' . $lvlBg[$r['level']] . ';color:' . $lvlColor[$r['level']] . ';">' . $r['score'] . ' · ' . $lvlTxt[$r['level']] . '</span></td>'
                 . '<td class="num">' . $r['weekWork'] . '</td>'
                 . '<td class="num">' . ($r['weekRate'] === null ? '—' : $r['weekRate'] . '%') . '</td>'
                 . '<td class="num" style="' . ($r['overdueTasks'] ? 'color:#B42318;font-weight:bold;' : '') . '">' . $r['overdueTasks'] . '</td>'
                 . '<td class="num" style="' . ($r['overdueReq'] ? 'color:#B45309;font-weight:bold;' : '') . '">' . $r['overdueReq'] . '</td>'
                 . '<td class="num" style="' . ($r['expired'] ? 'color:#B42318;font-weight:bold;' : '') . '">' . $r['expired'] . '</td></tr>';
-        }
+        });
         $html .= '</tbody></table><div class="muted" style="margin-top:4px;">आरोग्य गुण = गेल्या 30 दिवसांची पूर्णता, मुदतबाह्य Tasks, SLA बाहेरच्या विनंत्या आणि संपलेली नूतनीकरणं यावरून (100 = उत्तम).</div>';
     }
 
