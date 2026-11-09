@@ -298,4 +298,6 @@ return [
     "अजून यादीत नाहीत. नंतर Edit / निष्क्रिय / Delete करता येतात." => ["अभी सूची में नहीं हैं। बाद में Edit / निष्क्रिय / Delete कर सकते हैं।", "are not in the list yet. You can edit / deactivate / delete them later."],
     "निवडलेल्या वस्तू यादीत जोडा" => ["चुनी गई वस्तुएँ सूची में जोड़ें", "Add selected items"],
     "वस्तू शोधा" => ["वस्तु खोजें", "Search items"],
+    "प्रकार / Head" => ["प्रकार / Head", "Category / Head"],
+    "इतर (प्रकार नाही)" => ["अन्य (प्रकार नहीं)", "Other (no category)"],
 ];

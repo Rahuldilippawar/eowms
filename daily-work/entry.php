@@ -39,7 +39,7 @@ try {
 // Store Item यादी — कामासाठी वापरलेलं साहित्य नोंदवण्यासाठी (ऐच्छिक)
 $storeItems = [];
 try {
-    $itemStmt = $pdo->prepare("SELECT id, item_name, unit FROM store_items WHERE organization_id = ? AND is_active = 1 ORDER BY item_name");
+    $itemStmt = $pdo->prepare("SELECT id, item_name, unit, category FROM store_items WHERE organization_id = ? AND is_active = 1 ORDER BY category IS NULL OR category = '', category, item_name");   // प्रकार (Head) नुसार
     $itemStmt->execute([activeOrgId()]);
     $storeItems = $itemStmt->fetchAll();
 } catch (PDOException $e) { /* store_items not available */ }
@@ -194,10 +194,10 @@ try {
         <button type="button" id="addMaterialRow" class="btn btn-sm" style="border:1px solid var(--line);border-radius:8px;font-size:12px;padding:6px 14px;">+ साहित्य जोडा</button>
         <template id="materialRowTemplate">
           <div class="d-flex gap-2 mb-2 material-row">
-            <select name="material_item_id[]" class="form-select-custom" style="flex:2;">
+            <div style="flex:2;min-width:0;"><select name="material_item_id[]" class="form-select-custom" style="width:100%;">
               <option value="">-- वस्तू निवडा --</option>
-              <?php foreach ($storeItems as $si): ?><option value="<?= $si['id'] ?>"><?= h($si['item_name']) ?> (<?= h($si['unit']) ?>)</option><?php endforeach; ?>
-            </select>
+              <?php $lastCat = false; foreach ($storeItems as $si): if ($si['category'] !== $lastCat) { if ($lastCat !== false) echo '</optgroup>'; echo '<optgroup label="' . h($si['category'] ?: 'इतर') . '">'; $lastCat = $si['category']; } ?><option value="<?= $si['id'] ?>"><?= h($si['item_name']) ?> (<?= h($si['unit']) ?>)</option><?php endforeach; if ($storeItems) echo '</optgroup>'; ?>
+            </select></div>
             <input type="number" step="0.01" name="material_quantity[]" class="form-control-custom" placeholder="प्रमाण" style="flex:1;">
             <button type="button" class="btn btn-sm remove-material-row" style="border:1px solid var(--rose);color:var(--rose);border-radius:8px;padding:6px 12px;">×</button>
           </div>
