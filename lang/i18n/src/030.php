@@ -280,4 +280,5 @@ return [
     "सध्या आहेत" => ["अभी हैं", "Currently staying"],
     "पसंतीची इमारत" => ["पसंद की इमारत", "Preferred building"],
     "संस्था-स्तरीय" => ["संस्था-स्तरीय", "Institution-level"],
+    "विभाग)" => ["विभाग)", "departments)"],
 ];

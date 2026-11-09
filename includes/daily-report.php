@@ -87,7 +87,7 @@ function dailyReportData(PDO $pdo, $orgId, $date) {
              FROM work_records WHERE organization_id = ? AND work_date = ?", [$o, $d], 'one');
     $wTrend = $series("SELECT work_date d, COUNT(*) c FROM work_records WHERE organization_id = ? AND work_date BETWEEN ? AND ? GROUP BY work_date", [$o, $d6, $d]);
     $avg6 = array_sum(array_slice($wTrend, 0, 6)) / 6;
-    $wDept = $q("SELECT COALESCE(NULLIF(dp.name_local,''), dp.name) dept, COUNT(*) total, SUM(w.status='completed') done
+    $wDept = $q("SELECT w.department_id id, COALESCE(NULLIF(dp.name_local,''), dp.name) dept, COUNT(*) total, SUM(w.status='completed') done
                  FROM work_records w JOIN departments dp ON dp.id = w.department_id WHERE w.organization_id = ? AND w.work_date = ? GROUP BY w.department_id ORDER BY total DESC LIMIT 10", [$o, $d]);
     $idleDepts = $q("SELECT COALESCE(NULLIF(name_local,''), name) n FROM departments dp WHERE organization_id = ? AND is_active = 1
                  AND EXISTS (SELECT 1 FROM work_records w WHERE w.department_id = dp.id AND w.work_date >= DATE_SUB(?, INTERVAL 30 DAY))
@@ -157,7 +157,7 @@ function dailyReportData(PDO $pdo, $orgId, $date) {
     $paid = (float)$q("SELECT COALESCE(SUM(amount),0) FROM dept_payment_ledger WHERE organization_id = ? AND payment_date = ?", [$o, $d], 'col');
     $spTrend = $series("SELECT COALESCE(spend_date, DATE(created_at)) d, SUM(amount) c FROM budget_transactions WHERE organization_id = ? AND COALESCE(spend_date, DATE(created_at)) BETWEEN ? AND ? GROUP BY d", [$o, $d6, $d]);
     $spCat = $q("SELECT category, SUM(amount) amt FROM budget_transactions WHERE organization_id = ? AND COALESCE(spend_date, DATE(created_at)) = ? GROUP BY category ORDER BY amt DESC", [$o, $d]);
-    $spDept = $q("SELECT COALESCE(NULLIF(dp.name_local,''), dp.name) dept, SUM(t.amount) amt FROM budget_transactions t JOIN departments dp ON dp.id = t.department_id
+    $spDept = $q("SELECT t.department_id id, COALESCE(NULLIF(dp.name_local,''), dp.name) dept, SUM(t.amount) amt FROM budget_transactions t JOIN departments dp ON dp.id = t.department_id
                   WHERE t.organization_id = ? AND COALESCE(t.spend_date, DATE(t.created_at)) = ? GROUP BY t.department_id ORDER BY amt DESC LIMIT 6", [$o, $d]);
     if ($spend > 0 || $paid > 0 || array_sum($spTrend) > 0) {
         $S['spend'] = ['spend' => $spend, 'paid' => $paid, 'trend' => $spTrend, 'cat' => $spCat, 'dept' => $spDept];
@@ -246,6 +246,9 @@ function dailyReportData(PDO $pdo, $orgId, $date) {
 
 // ---------- PDF HTML ----------
 function dailyReportPdfHtml(array $D) {
+    global $pdo;
+    require_once __DIR__ . '/dept-groups.php';   // विभाग-तक्ते Campus नुसार
+    $orgId = (int)$D['orgId'];
     $h = fn($x) => htmlspecialchars((string)$x, ENT_QUOTES, 'UTF-8');
     $S = $D['sections'];
     $C = ['good' => '#137A4B', 'warn' => '#B45309', 'bad' => '#B42318'];
@@ -304,7 +307,7 @@ function dailyReportPdfHtml(array $D) {
         if ($x['dept']) {
             $max = max(1, max(array_column($x['dept'], 'total')));
             $html .= '<table class="g" style="margin-top:6px;"><thead><tr><th style="width:30%;">विभाग</th><th style="width:44%;">नोंदी</th><th class="num-r" style="width:12%;">संख्या</th><th class="num-r" style="width:14%;">पूर्ण</th></tr></thead><tbody>';
-            foreach ($x['dept'] as $r) { $html .= '<tr><td>' . $h($r['dept']) . '</td><td>' . weeklyReportBar($r['total'] / $max * 100, '#D9530F', 70) . '</td><td class="num-r"><b>' . (int)$r['total'] . '</b></td><td class="num-r">' . $pct($r['done'], $r['total']) . '%</td></tr>'; }
+            $html .= deptGroupRowsHtml($pdo, $orgId, $x['dept'], 4, fn($r) => '<tr><td>' . $h($r['dept']) . '</td><td>' . weeklyReportBar($r['total'] / $max * 100, '#D9530F', 70) . '</td><td class="num-r"><b>' . (int)$r['total'] . '</b></td><td class="num-r">' . $pct($r['done'], $r['total']) . '%</td></tr>');   // Campus नुसार
             $html .= '</tbody></table>';
         }
         if ($x['idle']) { $html .= '<div class="muted" style="margin-top:4px;">आज नोंद नसलेले विभाग: ' . $h(implode(', ', array_slice($x['idle'], 0, 10))) . '</div>'; }
@@ -379,7 +382,7 @@ function dailyReportPdfHtml(array $D) {
         if ($x['dept']) {
             $max = max(1, max(array_column($x['dept'], 'amt')));
             $html .= '<table class="g" style="margin-top:4px;"><thead><tr><th style="width:30%;">विभाग</th><th style="width:48%;"></th><th class="num-r" style="width:22%;">आज</th></tr></thead><tbody>';
-            foreach ($x['dept'] as $r) { $html .= '<tr><td>' . $h($r['dept']) . '</td><td>' . weeklyReportBar($r['amt'] / $max * 100, '#7B3F9E', 76) . '</td><td class="num-r"><b>' . weeklyReportMoney($r['amt']) . '</b></td></tr>'; }
+            $html .= deptGroupRowsHtml($pdo, $orgId, $x['dept'], 3, fn($r) => '<tr><td>' . $h($r['dept']) . '</td><td>' . weeklyReportBar($r['amt'] / $max * 100, '#7B3F9E', 76) . '</td><td class="num-r"><b>' . weeklyReportMoney($r['amt']) . '</b></td></tr>');   // Campus नुसार
             $html .= '</tbody></table>';
         }
     }

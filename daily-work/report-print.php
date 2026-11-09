@@ -280,18 +280,10 @@ if ($scope === 'organization') {
     <div style="margin-bottom:20px;"><canvas id="orgCompareChart" height="90"></canvas></div>
     <?php endif; ?>
     <table>
-      <thead><tr><th><?= h(t('s1')) ?></th><th>College/School</th><th><?= h(t('s27')) ?></th><th><?= h(t('s26')) ?></th><th><?= h(t('s42')) ?></th><th><?= h(t('s43')) ?></th></tr></thead>
+      <thead><tr><th><?= h(t('s1')) ?></th><th><?= h(t('s27')) ?></th><th><?= h(t('s26')) ?></th><th><?= h(t('s42')) ?></th><th><?= h(t('s43')) ?></th></tr></thead>
       <tbody>
-        <?php foreach ($orgSummary as $row): ?>
-          <tr>
-            <td><?= h($row['name']) ?></td>
-            <td style="font-size:11px;color:var(--text-dim);"><?= h($row['campus_name'] ?: '🏛️ Trust-स्तरीय') ?></td>
-            <td><?= h($row['hod_name']) ?></td>
-            <td class="mono"><?= $row['total'] ?></td>
-            <td class="mono"><?= $row['done'] ?></td>
-            <td class="mono"><?= $row['pct'] ?>%</td>
-          </tr>
-        <?php endforeach; ?>
+        <?php require_once __DIR__ . '/../includes/dept-groups.php';   // संस्था / College / School नुसार गटवार
+        echo deptGroupRowsHtml($pdo, $orgId ?? activeOrgId(), $orgSummary, 5, fn($row) => '<tr><td>' . h($row['name']) . '</td><td>' . h($row['hod_name']) . '</td><td class="mono">' . $row['total'] . '</td><td class="mono">' . $row['done'] . '</td><td class="mono">' . $row['pct'] . '%</td></tr>', 'id', false); ?>
       </tbody>
     </table>
   <?php endif; ?>
