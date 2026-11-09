@@ -53,6 +53,7 @@ if ($selectedUserId) {
     }
 }
 
+require_once __DIR__ . '/../includes/dept-groups.php';
 $deptsStmt = $pdo->prepare("SELECT * FROM departments WHERE organization_id = ? AND is_active = 1 ORDER BY name_local");
 $deptsStmt->execute([$orgId]);
 $departments = $deptsStmt->fetchAll();
@@ -94,7 +95,14 @@ $departments = $deptsStmt->fetchAll();
         <form method="POST" style="padding:20px 24px;">
           <input type="hidden" name="user_id" value="<?= $selectedUser['id'] ?>">
           <div style="max-height:400px;overflow-y:auto;background:var(--canvas);border-radius:10px;padding:14px 16px;">
+            <?php // संस्था / College / School नुसार गटवार
+              $__dg = deptGroupMap($pdo, $orgId ?? activeOrgId());
+              usort($departments, fn($x, $y) => [($__dg[$x['id']]['o'] ?? '9'), ($__dg[$x['id']]['g'] ?? '')] <=> [($__dg[$y['id']]['o'] ?? '9'), ($__dg[$y['id']]['g'] ?? '')]);
+              $__lastG = null; ?>
             <?php foreach ($departments as $d): if ((int)$d['id'] === (int)$selectedUser['department_id']) continue; ?>
+              <?php $__g = $__dg[$d['id']]['g'] ?? '🏢 इतर'; if ($__g !== $__lastG): $__lastG = $__g; ?>
+                <div style="font-size:11.5px;font-weight:800;color:var(--rail);margin:10px 0 2px;padding-bottom:3px;border-bottom:1px solid var(--line);"><?= h($__g) ?></div>
+              <?php endif; ?>
               <label style="display:flex;align-items:center;gap:10px;padding:6px 0;font-size:13px;">
                 <input type="checkbox" name="department_ids[]" value="<?= $d['id'] ?>" style="width:16px;height:16px;" <?= in_array($d['id'], $grantedDeptIds) ? 'checked' : '' ?>>
                 <?= h($d['name_local'] ?: $d['name']) ?>
