@@ -202,10 +202,9 @@ function navGroupHead($id, $key, $activeGroup, $icon, $label, $badge = 0) {
 
   <div class="org-tree" id="navTreeRoot">
 
-    <!-- ⭐ आवडते व 🕘 अलीकडे — assets/js/sidebar-smart.js भरतो (या Browser पुरतं) -->
+    <!-- ⭐ आवडते — assets/js/sidebar-smart.js भरतो (या Browser पुरतं) -->
     <div id="navSmartTop" hidden>
       <div id="navFavWrap" hidden><div class="tier-label">⭐ आवडते</div><div id="navFavList"></div></div>
-      <div id="navRecentWrap" hidden><div class="tier-label">🕘 अलीकडे</div><div id="navRecentList"></div></div>
     </div>
 
     <?php
@@ -692,4 +691,4 @@ function navGroupHead($id, $key, $activeGroup, $icon, $label, $badge = 0) {
   </div>
 </aside>
 
-<script src="<?= $rp ?>assets/js/sidebar-smart.js?v=2" defer></script>
+<script src="<?= $rp ?>assets/js/sidebar-smart.js?v=3" defer></script>

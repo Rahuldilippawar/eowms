@@ -1,15 +1,16 @@
-// 🧭 Smart Sidebar — झटपट शोध, ⭐ आवडते, 🕘 अलीकडे, उघडे Groups लक्षात ठेवणं
+// 🧭 Smart Sidebar — झटपट शोध, ⭐ आवडते, उघडे Groups लक्षात ठेवणं
 // सगळं या Browser पुरतं (localStorage) — Server वर काहीही साठवत नाही.
 (function () {
   'use strict';
   var root = document.getElementById('navTreeRoot');
   if (!root) return;
-  var FAV = 'eowmsNavFav', RECENT = 'eowmsNavRecent', OPEN = 'eowmsNavOpen';
+  var FAV = 'eowmsNavFav', OPEN = 'eowmsNavOpen';
+  try { localStorage.removeItem('eowmsNavRecent'); } catch (e) {}   // "अलीकडे" यादी काढली — जुना साठा साफ
   var load = function (k) { try { return JSON.parse(localStorage.getItem(k) || '[]') || []; } catch (e) { return []; } };
   var save = function (k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
   var keyOf = function (a) { return a.pathname + a.search; };
 
-  // मुख्य Tree मधले Links (आवडते/अलीकडे यादी सोडून)
+  // मुख्य Tree मधले Links (आवडते यादी सोडून)
   function mainNodes() {
     return Array.prototype.filter.call(root.querySelectorAll('a.tree-node'), function (a) { return !a.closest('#navSmartTop'); });
   }
@@ -35,16 +36,13 @@
 
   // ---------- ⭐ आवडते ----------
   function renderTop() {
-    var favs = load(FAV), recent = load(RECENT);
-    var favList = document.getElementById('navFavList'), recList = document.getElementById('navRecentList');
-    favList.textContent = ''; recList.textContent = '';
+    var favs = load(FAV);
+    var favList = document.getElementById('navFavList');
+    favList.textContent = '';
     favs.forEach(function (f) { favList.appendChild(makeLink(f, true)); });
     var favKeys = favs.map(function (f) { return f.href; });
-    var shownRecent = recent.filter(function (r) { return r.href !== location.pathname + location.search && favKeys.indexOf(r.href) === -1; }).slice(0, 4);
-    shownRecent.forEach(function (r) { recList.appendChild(makeLink(r, false)); });
     document.getElementById('navFavWrap').hidden = !favs.length;
-    document.getElementById('navRecentWrap').hidden = !shownRecent.length;
-    document.getElementById('navSmartTop').hidden = !favs.length && !shownRecent.length;
+    document.getElementById('navSmartTop').hidden = !favs.length;
     // मुख्य यादीत ⭐ चिन्ह अद्ययावत
     mainNodes().forEach(function (a) {
       var star = a.querySelector('.nav-star');
@@ -66,13 +64,8 @@
     a.appendChild(star);
   });
 
-  // ---------- 🕘 अलीकडे — सध्याचं पान नोंदवतो ----------
+  // सध्याचं पान (उघड्या Group पर्यंत Scroll करण्यासाठी)
   var current = mainNodes().filter(function (a) { return a.classList.contains('active'); })[0];
-  if (current) {
-    var it = info(current), recent = load(RECENT).filter(function (r) { return r.href !== it.href; });
-    recent.unshift(it);
-    save(RECENT, recent.slice(0, 8));
-  }
   renderTop();
 
   // ---------- उघडे Groups लक्षात ठेवणं ----------
