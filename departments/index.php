@@ -13,7 +13,7 @@ $stmt = $pdo->prepare("
     FROM departments d
     LEFT JOIN campuses c ON c.id = d.campus_id
     LEFT JOIN users u ON u.id = d.hod_id
-    WHERE d.organization_id = ? ORDER BY d.name_local
+    WHERE d.organization_id = ? ORDER BY (d.campus_id IS NULL OR c.college_type = 'Trust HQ') DESC, c.name, d.name_local   -- संस्था-स्तरीय आधी, मग Campus नुसार
 ");
 $stmt->execute([$orgId]);
 $departments = $stmt->fetchAll();
