@@ -57,31 +57,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ->execute([$itemName, $category, $defaultUnit, $eid, $orgId]);
             $_SESSION['flash'] = 'वस्तू संपादित केली.';
         }
-    } elseif (isset($_POST['import_csv']) && !empty($_FILES['csv_file']['tmp_name'])) {
-        $handle = fopen($_FILES['csv_file']['tmp_name'], 'r');
-        if ($handle) {
-            $header = array_map(fn($h) => strtolower(trim($h)), fgetcsv($handle));
-            $colIndex = array_flip($header);
-            $get = fn($row, $col) => isset($colIndex[$col]) && isset($row[$colIndex[$col]]) ? trim($row[$colIndex[$col]]) : null;
-
-            $imported = 0;
-            $skipped = 0;
-            while (($row = fgetcsv($handle)) !== false) {
-                if (count($row) === 1 && trim($row[0]) === '') continue;
-                $itemName = $get($row, 'item_name');
-                if (!$itemName) { $skipped++; continue; }
-                try {
-                    $pdo->prepare("INSERT INTO dead_stock_item_master (organization_id, item_name, category, default_unit, created_by) VALUES (?, ?, ?, ?, ?)")
-                        ->execute([$orgId, $itemName, $get($row, 'category'), $get($row, 'default_unit'), $user['id']]);
-                    $imported++;
-                } catch (PDOException $e) {
-                    $skipped++; // duplicate item name — skip rather than fail the whole import
-                }
-            }
-            fclose($handle);
-            logActivity('Dead Stock वस्तू यादी CSV आयात', 'dead_stock_item_master', 0, "$imported नोंदी जोडल्या, $skipped वगळल्या");
-            $_SESSION['flash'] = "$imported वस्तू यादीत जोडल्या गेल्या." . ($skipped > 0 ? " ($skipped ओळी वगळल्या — रिकामे नाव किंवा आधीच अस्तित्वात.)" : '');
-        }
     }
     header('Location: item-master.php');
     exit;

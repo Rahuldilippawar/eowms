@@ -101,6 +101,7 @@ require_once __DIR__ . '/../includes/header.php';
   $ax = accessExplainUser($pdo, $target);
   $isSA = $target['role'] === 'super_admin';
   $allPermissions = $pdo->query("SELECT * FROM permissions ORDER BY sort_order")->fetchAll();
+  $allPermissions = array_values(array_filter($allPermissions, fn($p) => !in_array($p['permission_key'], roleRetiredPermissions(), true)));
   $groups = roleGroupedPermissions($allPermissions);
   $sensitive = array_flip(roleSensitivePermissions());
   $rolePermSet = [];

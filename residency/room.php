@@ -381,6 +381,8 @@ $isVacant = empty($activeOccupants);
             </div>
             <label class="form-label-custom">संख्या</label>
             <input type="number" name="quantity" class="form-control-custom mb-2" value="1" min="1">
+            <label class="form-label-custom">शेरा (ऐच्छिक)</label>
+            <input type="text" name="item_remarks" class="form-control-custom mb-2" maxlength="255" placeholder="उदा. नवीन, दुरुस्ती हवी, Serial No.">
             <button type="submit" class="btn w-100" style="border:1px solid var(--line);border-radius:9px;font-size:12.5px;padding:8px;">साहित्य जोडा</button>
           </form>
         <?php endif; ?>

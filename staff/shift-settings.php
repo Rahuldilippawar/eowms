@@ -100,7 +100,13 @@ $dayNames = ['रविवार', 'सोमवार', 'मंगळवार'
           <?php foreach ($dayNames as $i => $dn): ?><option value="<?= $i ?>" <?= $i == 0 ? 'selected' : '' ?>><?= $dn ?></option><?php endforeach; ?>
         </select>
       </div>
-      <div class="col-md-1"><button type="submit" class="btn w-100" style="background:var(--rail);color:#fff;border-radius:8px;font-size:12px;">लागू करा</button></div>
+      <div class="col-md-2">
+        <select name="bulk_weekly_off_2" class="form-select-custom" title="दुसरी साप्ताहिक सुट्टी (असल्यास)">
+          <option value="">-- सुट्टी 2 (नाही) --</option>
+          <?php foreach ($dayNames as $i => $dn): ?><option value="<?= $i ?>"><?= $dn ?></option><?php endforeach; ?>
+        </select>
+      </div>
+      <div class="col-md-2"><button type="submit" class="btn w-100" style="background:var(--rail);color:#fff;border-radius:8px;font-size:12px;">लागू करा</button></div>
     </div>
   </form>
 </div>
