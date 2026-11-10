@@ -45,7 +45,7 @@ $attention = array_values(array_filter($rows, function ($r) use ($isCurrent) {
 usort($attention, fn($a, $b) => [$a['percent'], $a['wing']] <=> [$b['percent'], $b['wing']]);
 // मुख्य तक्ता कामनिहाय — Wing नुसार क्रमाने (त्या गटात मूळ क्रम कायम)
 $__ord = array_keys($rows);
-usort($__ord, fn($x, $y) => [$rows[$x]['wing'], $x] <=> [$rows[$y]['wing'], $y]);
+usort($__ord, fn($x, $y) => [ecampusWingKey($rows[$x]['wing']), $x] <=> [ecampusWingKey($rows[$y]['wing']), $y]);
 $rows = array_map(fn($k) => $rows[$k], $__ord);
 // 📋 काम नुसार (Chart) — कमी % आधी
 $taskBoard = array_values(array_filter($rows, fn($r) => $r['access_type'] === 'work'));
@@ -360,7 +360,7 @@ require_once __DIR__ . '/../includes/header.php';
           foreach ($keys as $i => $k) { $lbl[] = ($i % $step === 0 || $i === count($keys) - 1) ? date('j', strtotime($k)) : ''; } ?><?= drBars($vals, $lbl, '#D9530F', 640, 170) ?><?php else: ?><div style="color:var(--text-dim);font-size:13px;">अजून नोंदी नाहीत.</div><?php endif; ?></div></div></div>
     </div>
     <div class="row g-3">
-      <div class="col-lg-12"><div class="panel h-100"><div class="panel-head"><div class="title">🏛️ Wing नुसार</div><div class="sub">कमी % आधी</div></div><div style="padding:8px 18px 14px;">
+      <div class="col-lg-12"><div class="panel h-100"><div class="panel-head"><div class="title">🏛️ Wing नुसार</div><div class="sub">VJMAT → Trust → AMRIT → AMIS → AMEMS</div></div><div style="padding:8px 18px 14px;">
         <?php foreach ($S['wings'] as $w => $g): ?><div class="ec-hbar"><div><b><?= h($w) ?></b><br><small style="color:var(--text-dim);"><?= (int)$g['done'] ?>/<?= (int)$g['n'] ?> पूर्ण</small></div><div class="b"><i style="width:<?= (int)$g['avg'] ?>%;background:<?= $barCol($g['avg']) ?>;"></i></div><b style="text-align:right;"><?= (int)$g['avg'] ?>%</b></div><?php endforeach; ?></div></div></div>
     </div>
     <div class="row g-3 mt-0">

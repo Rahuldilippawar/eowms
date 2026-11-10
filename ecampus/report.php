@@ -81,7 +81,7 @@ if (isset($_GET['csv'])) {
     fputcsv($f, ['Sr. No', 'Wing / Category', 'Section / Department', 'Staff Name', 'Designation', 'Assigned Task', 'Progress Notes', '% Complete', 'Status', 'Last Updated']);
     $cell = fn($v) => preg_match('/^[=+\-@]/', (string)$v) ? "'" . $v : (string)$v;   // Excel formula injection टाळा
     $ordC = array_keys($rows);
-    usort($ordC, fn($x, $y) => [$rows[$x]['wing'], $x] <=> [$rows[$y]['wing'], $y]);   // कामनिहाय — Wing नुसार
+    usort($ordC, fn($x, $y) => [ecampusWingKey($rows[$x]['wing']), $x] <=> [ecampusWingKey($rows[$y]['wing']), $y]);   // कामनिहाय — Wing नुसार
     foreach ($ordC as $i => $k) {
         $r = $rows[$k];
         fputcsv($f, [$i + 1, $cell($r['wing']), $cell($r['section']), $cell($r['staff_name']), $cell($r['designation_show']), $cell($r['task_description']), $cell((string)$r['notes']),
@@ -162,7 +162,7 @@ require_once __DIR__ . '/../includes/header.php';
     <?php
       // कामनिहाय — फक्त Wing नुसार गट
       $ord = array_keys($rows);
-      usort($ord, fn($x, $y) => [$rows[$x]['wing'], $x] <=> [$rows[$y]['wing'], $y]);
+      usort($ord, fn($x, $y) => [ecampusWingKey($rows[$x]['wing']), $x] <=> [ecampusWingKey($rows[$y]['wing']), $y]);
       $grp = null; $sr = 0;
       foreach ($ord as $k): $r = $rows[$k]; $g = $r['wing'];
         if ($g !== $grp): $grp = $g; ?>
