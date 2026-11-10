@@ -83,10 +83,12 @@ try {
     }
 } catch (PDOException $e) {}
 $loggedInUser = currentUser();
+// 🔒 Welcome हे Public पान आहे — Login नसल्यास कोणाचीही नावं/फोटो (वाढदिवस, वर्धापनदिन, शुभेच्छा) दाखवू नका
+if (!$loggedInUser) { $birthdays = []; $anniversaries = []; $wishesByUser = []; }
 
-// 📊 सार्वजनिक सेवा-आकडे — फक्त एकत्रित (Aggregate) संख्या, कोणाचीही वैयक्तिक माहिती नाही
+// 📊 सेवा-आकडे — फक्त Login केलेल्यांना (Public पानावर संस्थेचा Data नाही)
 $publicStats = null;
-try {
+if ($loggedInUser) try {
     $psOrg = (int)($org['id'] ?? 0);
     $ps = $pdo->prepare("SELECT
             SUM(status IN ('completed','closed') AND completed_at >= DATE_FORMAT(CURDATE(), '%Y-%m-01')) done_month,
