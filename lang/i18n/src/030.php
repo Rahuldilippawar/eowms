@@ -331,4 +331,5 @@ return [
     "पुढचा विचार" => ["अगला विचार", "Next thought"],
     "WhatsApp वर पाठवा" => ["WhatsApp पर भेजें", "Send on WhatsApp"],
     "विचार Copy केला" => ["विचार Copy किया", "Thought copied"],
+    "विनंती क्रमांक (उदा. REQ-…)" => ["अनुरोध क्रमांक (उदा. REQ-…)", "Request number (e.g. REQ-…)"],
 ];

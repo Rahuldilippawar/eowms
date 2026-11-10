@@ -200,16 +200,20 @@ $todayLabel = $marathiDays[(int)date('w')] . ', ' . (int)date('j') . ' ' . $mara
   }
 
   .today-strip{
-    display:inline-flex;align-items:center;gap:10px;font-family:'Space Grotesk';font-size:11px;font-weight:500;
-    letter-spacing:1.2px;color:#7A8199;margin-bottom:26px;padding:7px 16px;
+    display:flex;width:fit-content;margin-left:auto;margin-right:auto;flex-wrap:wrap;align-items:center;justify-content:center;gap:4px 0;max-width:100%;
+    font-family:'Noto Sans Devanagari','Inter',sans-serif;font-size:12px;font-weight:500;
+    color:#9AA1BA;margin-bottom:24px;padding:7px 16px;
     border:1px solid rgba(220,239,236,.12);border-radius:30px;background:rgba(255,255,255,.03);
     animation:eowms-fade-up .8s -.1s ease both;
   }
-  .today-strip .dot{width:5px;height:5px;border-radius:50%;background:#D9530F;box-shadow:0 0 8px #D9530F;}
+  .today-strip .dot{width:6px;height:6px;border-radius:50%;background:#D9530F;box-shadow:0 0 8px #D9530F;margin-right:8px;flex:none;}
+  .today-strip .ts-i{white-space:nowrap;}
+  .today-strip .ts-i:empty{display:none;}
+  .today-strip .ts-i:not(:empty) ~ .ts-i:not(:empty)::before{content:'·';margin:0 8px;color:#5A6280;}
 
   .hero-eyebrow{
-    display:inline-flex;align-items:center;gap:10px;font-family:'Space Grotesk';font-size:11.5px;font-weight:600;
-    letter-spacing:3px;text-transform:uppercase;color:#7FC9C2;margin-bottom:20px;
+    display:flex;width:fit-content;margin-left:auto;margin-right:auto;align-items:center;gap:12px;font-family:'Noto Sans Devanagari','Inter',sans-serif;font-size:14px;font-weight:600;
+    letter-spacing:0;color:#7FC9C2;margin-bottom:16px;
     animation:eowms-fade-up .8s -.05s ease both;
   }
   .hero-eyebrow::before,.hero-eyebrow::after{content:'';width:28px;height:1px;background:linear-gradient(90deg,transparent,#D9530F);}
@@ -232,7 +236,16 @@ $todayLabel = $marathiDays[(int)date('w')] . ', ' . (int)date('j') . ' ' . $mara
     animation:eowms-fade-up .8s .1s ease both;
     background:linear-gradient(90deg,#fff,#DCEFEC);-webkit-background-clip:text;background-clip:text;
   }
-  .hero p{color:#9FA6C0;font-size:14.5px;max-width:520px;margin:0 auto;animation:eowms-fade-up .8s .2s ease both;}
+  .hero p{color:#9FA6C0;font-size:14.5px;line-height:1.7;max-width:520px;margin:0 auto;animation:eowms-fade-up .8s .2s ease both;}
+  .hero h1{max-width:820px;margin-left:auto;margin-right:auto;text-wrap:balance;overflow-wrap:anywhere;}
+  @media (max-width:600px){
+    .hero{padding:56px 16px 72px;}
+    .hero h1{font-size:clamp(22px,6.6vw,28px);letter-spacing:0;line-height:1.25;}
+    .hero p{font-size:13.5px;}
+    .today-strip{font-size:11.5px;padding:7px 12px;}
+    .action-row{gap:10px;margin-top:26px;}
+    .action-row .btn-hero{width:100%;max-width:340px;justify-content:center;padding:13px 20px;}
+  }
 
   @keyframes eowms-fade-up{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
 
@@ -247,9 +260,7 @@ $todayLabel = $marathiDays[(int)date('w')] . ', ' . (int)date('j') . ' ' . $mara
   .med-crown{animation:med-crown 8s ease-in-out infinite !important;filter:drop-shadow(0 0 6px #E9D5FF);}
   .med-lotus{animation:med-float 6s ease-in-out infinite;}
   .med-sparks circle{transform-box:fill-box;transform-origin:center;opacity:0;animation:med-spark 6s ease-in infinite;}
-  .med-badge{position:absolute;left:50%;bottom:-30px;transform:translateX(-50%);width:54px !important;height:54px !important;border-radius:16px !important;font-size:19px !important;margin:0 !important;animation:none !important;z-index:2;}
-  .med-badge img{border-radius:16px !important;padding:4px !important;}
-  .med-breath{position:relative;height:20px;margin:40px auto 14px;font-size:12.5px;letter-spacing:.06em;color:#FDBA8C;font-weight:600;}
+  .med-breath{position:relative;height:20px;margin:6px auto 16px;font-size:12.5px;letter-spacing:.06em;color:#FDBA8C;font-weight:600;}
   .med-breath span{position:absolute;left:0;right:0;transition:opacity .9s;}
   .med-breath .in{animation:med-in 8s ease-in-out infinite;} .med-breath .out{animation:med-out 8s ease-in-out infinite;}
   @keyframes med-breathe{0%,100%{transform:scale(.86);opacity:.75;}50%{transform:scale(1.06);opacity:1;}}
@@ -337,8 +348,8 @@ $todayLabel = $marathiDays[(int)date('w')] . ', ' . (int)date('j') . ' ' . $mara
 
   .content{max-width:960px;margin:-20px auto 60px;padding:0 20px;position:relative;z-index:3;}
   .content-eyebrow{
-    text-align:center;font-family:'Space Grotesk';font-size:11px;font-weight:600;letter-spacing:2px;
-    text-transform:uppercase;color:#D9530F;margin-bottom:8px;
+    text-align:center;font-family:'Noto Sans Devanagari','Inter',sans-serif;font-size:13px;font-weight:600;letter-spacing:0;
+    color:#E07A3F;margin-bottom:8px;
     opacity:0;animation:eowms-fade-up .7s .05s ease both;
   }
   .content-title{
@@ -433,14 +444,9 @@ $todayLabel = $marathiDays[(int)date('w')] . ', ' . (int)date('j') . ' ' . $mara
         <?php foreach ([[62, 220, 0], [238, 210, 1.2], [84, 120, 2.4], [222, 112, .6], [46, 160, 3.1], [258, 166, 1.8], [118, 52, 2.8], [190, 48, .3]] as [$x, $y, $d]): ?><circle cx="<?= $x ?>" cy="<?= $y ?>" r="2.2" style="animation-delay:<?= $d ?>s"/><?php endforeach; ?>
       </g>
     </svg>
-    <?php if (!empty($org['logo_path'])): ?>
-      <div class="mark med-badge"><img src="<?= htmlspecialchars($org['logo_path']) ?>" alt="Logo"></div>
-    <?php else: ?>
-      <div class="mark med-badge"><?= htmlspecialchars(mb_substr($org['name'] ?? 'EO', 0, 2)) ?></div>
-    <?php endif; ?>
   </div>
   <div class="med-breath" id="medBreath"><span class="in">🌬️ श्वास घ्या…</span><span class="out">🍃 श्वास सोडा…</span></div>
-  <div class="today-strip"><span class="dot"></span><span id="wlGreet"></span><?= h($todayLabel) ?> · <span id="wlClock" class="wl-clock"></span></div>
+  <div class="today-strip"><span class="dot"></span><span id="wlGreet" class="ts-i"></span><span class="ts-i"><?= h($todayLabel) ?></span><span id="wlClock" class="ts-i wl-clock"></span></div>
   <div class="hero-eyebrow">!! आत्मा मालिक !!</div>
   <h1><?= htmlspecialchars($org['name'] ?? 'E-Admin — Smart Administration') ?></h1>
   <p><?= h(t('s145')) ?></p>
@@ -466,7 +472,7 @@ $todayLabel = $marathiDays[(int)date('w')] . ', ' . (int)date('j') . ' ' . $mara
 
   <form class="wl-track" action="track-request.php" method="GET" role="search">
     <i class="fa-solid fa-magnifying-glass"></i>
-    <input type="text" name="code" placeholder="विनंती क्रमांक टाका (उदा. REQ-…) — स्थिती लगेच पहा" required maxlength="50" aria-label="विनंती क्रमांक">
+    <input type="text" name="code" placeholder="विनंती क्रमांक (उदा. REQ-…)" required maxlength="50" aria-label="विनंती क्रमांक">
     <button type="submit">स्थिती पहा</button>
   </form>
   <button type="button" class="wl-install" id="wlInstall" hidden><i class="fa-solid fa-mobile-screen-button"></i> 📲 App म्हणून Install करा</button>
@@ -642,7 +648,7 @@ $todayLabel = $marathiDays[(int)date('w')] . ', ' . (int)date('j') . ' ' . $mara
   .wl-stats>div{background:#fff;border-radius:14px;padding:18px 16px;text-align:center;box-shadow:0 12px 30px rgba(16,22,43,.12);border:1px solid #E4E6EC;}
   .wl-stats b{display:block;font-family:'Space Grotesk',sans-serif;font-size:28px;color:#D9530F;}
   .wl-stats span{font-size:12.5px;color:#6B7080;font-weight:600;}
-  @media (max-width:600px){.wl-track{margin-left:12px;margin-right:12px;}.wl-stats{margin-top:-24px;}}
+  @media (max-width:600px){.wl-track{margin-left:0;margin-right:0;padding-left:12px;}.wl-track button{padding:10px 14px;}.wl-stats{margin-top:-24px;}}
 </style>
 <script>
 (function () {
@@ -650,7 +656,7 @@ $todayLabel = $marathiDays[(int)date('w')] . ', ' . (int)date('j') . ' ' . $mara
   var g = document.getElementById('wlGreet'), c = document.getElementById('wlClock');
   function tick() {
     var d = new Date(), h = d.getHours();
-    if (g) g.textContent = (h < 12 ? '☀️ शुभ सकाळ · ' : h < 17 ? '🌤️ नमस्कार · ' : h < 21 ? '🌇 शुभ संध्याकाळ · ' : '🌙 शुभ रात्री · ');
+    if (g) g.textContent = (h < 12 ? '☀️ शुभ सकाळ' : h < 17 ? '🌤️ नमस्कार' : h < 21 ? '🌇 शुभ संध्याकाळ' : '🌙 शुभ रात्री');
     if (c) c.textContent = d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
   }
   tick(); setInterval(tick, 30000);
