@@ -322,4 +322,13 @@ return [
     "श्वास घ्या…" => ["साँस लें…", "Breathe in…"],
     "श्वास सोडा…" => ["साँस छोड़ें…", "Breathe out…"],
     "ध्यान" => ["ध्यान", "Meditation"],
+    "आज उपस्थित कर्मचारी" => ["आज उपस्थित कर्मचारी", "Staff present today"],
+    "आज पूर्ण विनंत्या" => ["आज पूर्ण अनुरोध", "Requests completed today"],
+    "आज हललेल्या फाईल्स" => ["आज आगे बढ़ी फ़ाइलें", "Files moved today"],
+    "QR Code — Mobile ने Scan करा" => ["QR Code — Mobile से Scan करें", "QR Code — scan with mobile"],
+    "📱 Mobile ने Scan करा" => ["📱 Mobile से Scan करें", "📱 Scan with mobile"],
+    "मागचा विचार" => ["पिछला विचार", "Previous thought"],
+    "पुढचा विचार" => ["अगला विचार", "Next thought"],
+    "WhatsApp वर पाठवा" => ["WhatsApp पर भेजें", "Send on WhatsApp"],
+    "विचार Copy केला" => ["विचार Copy किया", "Thought copied"],
 ];

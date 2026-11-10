@@ -68,12 +68,23 @@ $moduleDefs = [
     ['fa-comment-dots', 'तक्रार निवारण', 'गोपनीय तक्रारी व पाठपुरावा', 'grievances'],
     ['fa-indian-rupee-sign', 'विभाग Finance', 'Budget, खर्च व Ledger', 'department_budgets'],
 ];
+// Login केलेल्यांसाठी — थेट त्या Module वर जाण्याची Link (Access तपासणी त्या पानावरच होते)
+$moduleLinks = ['work_records' => 'daily-work/entry.php', 'tasks' => 'tasks/my-tasks.php', 'renewal_items' => 'renewals/index.php', 'letters' => 'letters/index.php', 'work_requests' => 'requests/index.php', 'staff_attendance' => 'staff/attendance.php', 'leave_applications' => 'staff/my-leaves.php', 'hostels' => 'hostels/index.php', 'residency_occupants' => 'residency/my-residency.php', 'vehicles' => 'vehicles/index.php', 'store_items' => 'store/items.php', 'dead_stock_items' => 'deadstock/index.php', 'it_assets' => 'it/index.php', 'cctv_cameras' => 'cctv/index.php', 'events' => 'events/index.php', 'guests' => 'guests/index.php', 'bookable_rooms' => 'room-booking/index.php', 'gaushala_cattle' => 'gaushala/index.php', 'music_students' => 'music/index.php', 'satsang_events' => 'meditation/index.php', 'sops' => 'sop/checklist.php', 'grievances' => 'grievances/index.php', 'department_budgets' => 'dept-finance/dashboard.php'];
 $modules = [];
 foreach ($moduleDefs as [$icon, $name, $desc, $table]) {
     $n = aboutScalar("SELECT COUNT(*) FROM `$table` WHERE organization_id = ?", [$orgId]);
     if ($n === null) continue;               // Table नाही — Module बसवलेलं नाही
-    $modules[] = ['icon' => $icon, 'name' => $name, 'desc' => $desc, 'n' => (int)$n];
+    $modules[] = ['icon' => $icon, 'name' => $name, 'desc' => $desc, 'n' => (int)$n, 'link' => $moduleLinks[$table] ?? null];
 }
+$modMax = max(1, ...array_map(fn($m) => $m['n'], $modules ?: [['n' => 1]]));
+
+// ── 🟢 आज — Live हालचाल (फक्त एकूण आकडे) ──
+$today = [];
+$tpush = function ($icon, $label, $n) use (&$today) { if ($n !== null && $n !== false && (int)$n > 0) $today[] = [$icon, $label, (int)$n]; };
+$tpush('fa-clipboard-check', 'आज नोंदवलेली कामं', aboutScalar("SELECT COUNT(*) FROM work_records WHERE organization_id = ? AND work_date = CURDATE()", [$orgId]));
+$tpush('fa-user-check', 'आज उपस्थित कर्मचारी', aboutScalar("SELECT COUNT(*) FROM staff_attendance WHERE organization_id = ? AND attendance_date = CURDATE() AND status IN ('present','half_day')", [$orgId]));
+$tpush('fa-circle-check', 'आज पूर्ण विनंत्या', aboutScalar("SELECT COUNT(*) FROM work_requests WHERE organization_id = ? AND status IN ('completed','closed') AND DATE(completed_at) = CURDATE()", [$orgId]));
+$tpush('fa-envelope-circle-check', 'आज हललेल्या फाईल्स', aboutScalar("SELECT COUNT(DISTINCT la.letter_id) FROM letter_actions la JOIN letters l ON l.id = la.letter_id WHERE l.organization_id = ? AND DATE(la.created_at) = CURDATE()", [$orgId]));
 usort($modules, fn($a, $b) => ($b['n'] > 0) <=> ($a['n'] > 0));
 $modulesInUse = count(array_filter($modules, fn($m) => $m['n'] > 0));
 if ($modulesInUse) $stats[] = ['fa-cubes', 'वापरातील Modules', $modulesInUse];
@@ -103,7 +114,9 @@ try {
     foreach ($q->fetchAll() as $r) $thoughts[] = [$r['quote_text'], $r['author']];
 } catch (PDOException $e) {}
 if (!$thoughts) foreach (array_merge($byType['sadguru'], $byType['guide']) as $s) if (trim((string)$s['description']) !== '') $thoughts[] = [$s['description'], $s['title']];
-$thought = $thoughts ? $thoughts[(int)date('z') % count($thoughts)] : null;
+$thoughtIdx = $thoughts ? (int)date('z') % count($thoughts) : 0;
+$thought = $thoughts ? $thoughts[$thoughtIdx] : null;
+$thoughtsJs = array_map(fn($t) => ['t' => mb_strimwidth(trim((string)$t[0]), 0, 320, '…'), 'a' => (string)($t[1] ?? '')], array_slice($thoughts, 0, 40));
 
 // Section Nav — फक्त जे आहे तेच
 $nav = [];
@@ -295,6 +308,27 @@ $initial = fn($s) => mb_strtoupper(mb_substr(trim((string)$s), 0, 1));
     .clamp{-webkit-line-clamp:unset;display:block;}
     .dev-footer .dev-name{color:#111;-webkit-text-fill-color:#111;}
   }
+
+  /* ---------- Smart: आज Live, विचार-नियंत्रण, Module शोध/वापर/Link, QR ---------- */
+  .today{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:18px auto 0;max-width:820px;}
+  .today .live{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;color:#86EFAC;border:1px solid rgba(134,239,172,.35);border-radius:99px;padding:4px 11px;}
+  .today .live i{width:7px;height:7px;border-radius:50%;background:#22C55E;box-shadow:0 0 0 0 rgba(34,197,94,.6);animation:livepulse 1.8s infinite;}
+  @keyframes livepulse{70%{box-shadow:0 0 0 8px rgba(34,197,94,0);}100%{box-shadow:0 0 0 0 rgba(34,197,94,0);}}
+  .today .ti{font-size:12px;color:var(--dim);background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:99px;padding:4px 11px;}
+  .today .ti i{color:var(--gold2);margin-right:4px;} .today .ti b{color:#fff;font-family:'Space Grotesk';}
+  .th-tools{display:flex;gap:6px;justify-content:center;align-items:center;margin-top:14px;}
+  .th-b{width:32px;height:32px;border-radius:50%;border:1px solid var(--line);background:rgba(255,255,255,.05);color:#DCEFEC;display:inline-grid;place-items:center;cursor:pointer;text-decoration:none;font-size:13px;}
+  .th-b:hover{background:rgba(255,255,255,.12);color:#fff;} .th-b.wa{color:#4ADE80;}
+  .th-n{font-size:11.5px;color:var(--mute);min-width:44px;font-variant-numeric:tabular-nums;}
+  .thought blockquote,.thought cite{transition:opacity .35s;} .thought.fade blockquote,.thought.fade cite{opacity:0;}
+  .mod-q{max-width:220px;margin:0 !important;}
+  .mod .ubar{height:3px;border-radius:99px;background:rgba(255,255,255,.08);margin-top:8px;overflow:hidden;} .mod .ubar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--teal),var(--gold2));}
+  .mod .go{display:inline-flex;align-items:center;gap:5px;margin-top:8px;font-size:11.5px;font-weight:700;color:var(--gold2);text-decoration:none;}
+  .mod .go:hover{color:#fff;} .mod .go i{font-size:10px;transition:transform .2s;} .mod:hover .go i{transform:translateX(3px);}
+  .qr{position:fixed;inset:0;z-index:100;background:rgba(5,8,16,.78);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;padding:20px;}
+  .qr.open{display:flex;} .qr-card{background:var(--bg2);border:1px solid var(--line);border-radius:20px;padding:22px;text-align:center;max-width:300px;}
+  .qr-card img{background:#fff;border-radius:12px;padding:10px;display:block;margin:12px auto;} .qr-t{font-weight:700;} .qr-u{font-size:11px;color:var(--mute);word-break:break-all;margin-bottom:12px;}
+  @media print{ .today .live,.th-tools,.mod .go,.qr{display:none !important;} }
 </style>
 </head>
 <body>
@@ -309,6 +343,7 @@ $initial = fn($s) => mb_strtoupper(mb_substr(trim((string)$s), 0, 1));
     </div>
     <div class="tb-right">
       <button type="button" class="tb-btn" id="shareBtn" title="Share"><i class="fa-solid fa-share-nodes"></i> <span>Share</span></button>
+      <button type="button" class="tb-btn" id="qrBtn" title="QR Code — Mobile ने Scan करा"><i class="fa-solid fa-qrcode"></i> <span>QR</span></button>
       <button type="button" class="tb-btn" onclick="window.print()" title="Print"><i class="fa-solid fa-print"></i></button>
       <?= i18nSwitcher('class="lang-sel" aria-label="भाषा"') ?>
     </div>
@@ -322,6 +357,11 @@ $initial = fn($s) => mb_strtoupper(mb_substr(trim((string)$s), 0, 1));
     <h1><?= h($orgName) ?></h1>
     <p class="lead">आमच्या श्रद्धेचा, गुरुकृपेचा आणि या प्रकल्पामागील सर्वांच्या योगदानाचा हा एक छोटासा परिचय</p>
     <?php if ($since): ?><div class="since"><i class="fa-regular fa-calendar"></i> <?= $since ?> पासून सेवेत</div><?php endif; ?>
+    <?php if ($today): ?>
+      <div class="today"><span class="live"><i></i>आज · Live</span>
+        <?php foreach ($today as [$icon, $label, $n]): ?><span class="ti"><i class="fa-solid <?= $icon ?>"></i><b><?= number_format($n) ?></b> <?= h($label) ?></span><?php endforeach; ?>
+      </div>
+    <?php endif; ?>
     <?php if ($stats): ?>
       <div class="stats">
         <?php foreach ($stats as [$icon, $label, $n]): ?>
@@ -344,7 +384,12 @@ $initial = fn($s) => mb_strtoupper(mb_substr(trim((string)$s), 0, 1));
   <div class="thought reveal">
     <div class="tag">✨ आजचा विचार</div>
     <blockquote>“<?= nl2br(h(mb_strimwidth(trim($thought[0]), 0, 320, '…'))) ?>”</blockquote>
-    <?php if (!empty($thought[1])): ?><cite>— <?= h($thought[1]) ?></cite><?php endif; ?>
+    <cite<?= empty($thought[1]) ? ' style="display:none"' : '' ?>>— <?= h((string)($thought[1] ?? '')) ?></cite>
+    <div class="th-tools">
+      <?php if (count($thoughtsJs) > 1): ?><button type="button" class="th-b" data-th="-1" title="मागचा विचार"><i class="fa-solid fa-chevron-left"></i></button><span class="th-n"><?= $thoughtIdx + 1 ?> / <?= count($thoughtsJs) ?></span><button type="button" class="th-b" data-th="1" title="पुढचा विचार"><i class="fa-solid fa-chevron-right"></i></button><?php endif; ?>
+      <button type="button" class="th-b" id="thCopy" title="Copy"><i class="fa-regular fa-copy"></i></button>
+      <a class="th-b wa" id="thWa" target="_blank" rel="noopener" title="WhatsApp वर पाठवा"><i class="fa-brands fa-whatsapp"></i></a>
+    </div>
   </div>
 <?php endif; ?>
 
@@ -418,6 +463,7 @@ $initial = fn($s) => mb_strtoupper(mb_substr(trim((string)$s), 0, 1));
     <div class="section-heading">🧩 प्रणालीत काय-काय आहे</div>
     <div class="section-sub"><?= count($modules) ?> Modules · <?= $modulesInUse ?> सध्या वापरात</div>
     <div class="mod-tools" role="group">
+      <input type="search" class="search mod-q" id="modQ" placeholder="🔍 Module शोधा…" aria-label="Module शोधा">
       <button type="button" class="chip on" data-f="all">सर्व</button>
       <button type="button" class="chip" data-f="used">वापरात</button>
       <button type="button" class="chip" data-f="idle">अजून सुरू नाही</button>
@@ -430,6 +476,8 @@ $initial = fn($s) => mb_strtoupper(mb_substr(trim((string)$s), 0, 1));
             <div class="nm"><?= h($m['name']) ?></div>
             <div class="ds"><?= h($m['desc']) ?></div>
             <span class="bd"><?= $used ? ($loggedIn ? number_format($m['n']) . ' नोंदी' : '✓ वापरात') : 'उपलब्ध' ?></span>
+            <?php if ($used): ?><div class="ubar" title="वापर"><i style="width:<?= max(6, (int)round(sqrt($m['n'] / $modMax) * 100)) ?>%;"></i></div><?php endif; ?>
+            <?php if ($loggedIn && $m['link']): ?><a class="go" href="<?= h($m['link']) ?>">उघडा <i class="fa-solid fa-arrow-right"></i></a><?php endif; ?>
           </div>
         </div>
       <?php endforeach; ?>
@@ -475,6 +523,7 @@ $initial = fn($s) => mb_strtoupper(mb_substr(trim((string)$s), 0, 1));
 
 <div class="lb" id="lb" role="dialog" aria-modal="true"><img alt=""><div class="cap"></div></div>
 <div class="toast" id="toast"></div>
+<div class="qr" id="qr" role="dialog" aria-modal="true" aria-label="QR Code"><div class="qr-card"><div class="qr-t">📱 Mobile ने Scan करा</div><img alt="QR" width="220" height="220"><div class="qr-u"></div><button type="button" class="tb-btn" id="qrClose">बंद करा</button></div></div>
 <button type="button" class="to-top" id="toTop" aria-label="वर जा"><i class="fa-solid fa-arrow-up"></i></button>
 
 <?= i18nClientScript() ?>
@@ -528,15 +577,6 @@ $initial = fn($s) => mb_strtoupper(mb_substr(trim((string)$s), 0, 1));
     b.onclick = function () { var d = b.previousElementSibling, open = d.classList.toggle('clamp'); b.textContent = open ? lbl : '▴'; };
   });
 
-  // Module filter
-  document.querySelectorAll('.mod-tools .chip').forEach(function (c) {
-    c.onclick = function () {
-      document.querySelectorAll('.mod-tools .chip').forEach(function (x) { x.classList.toggle('on', x === c); });
-      document.querySelectorAll('.mod').forEach(function (m) {
-        var u = m.dataset.used === '1'; m.style.display = c.dataset.f === 'all' || (c.dataset.f === 'used') === u ? '' : 'none';
-      });
-    };
-  });
 
   // Contributor search
   var cs = document.getElementById('cSearch');
@@ -549,6 +589,49 @@ $initial = fn($s) => mb_strtoupper(mb_substr(trim((string)$s), 0, 1));
   // Share
   var toast = document.getElementById('toast');
   function say(t) { toast.textContent = t; toast.classList.add('show'); setTimeout(function () { toast.classList.remove('show'); }, 2200); }
+  // ✨ आजचा विचार — मागे/पुढे, Copy, WhatsApp
+  var TH = <?= json_encode($thoughtsJs, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP) ?>, thI = <?= (int)$thoughtIdx ?>, thBox = document.querySelector('.thought');
+  function thSet(i) {
+    if (!thBox || !TH.length) return;
+    thI = (i + TH.length) % TH.length; var t = TH[thI];
+    thBox.classList.add('fade');
+    setTimeout(function () {
+      thBox.querySelector('blockquote').textContent = '“' + t.t + '”';
+      var c = thBox.querySelector('cite'); c.textContent = t.a ? '— ' + t.a : ''; c.style.display = t.a ? '' : 'none';
+      var n = thBox.querySelector('.th-n'); if (n) n.textContent = (thI + 1) + ' / ' + TH.length;
+      var wa = document.getElementById('thWa'); if (wa) wa.href = 'https://wa.me/?text=' + encodeURIComponent('“' + t.t + '”' + (t.a ? ' — ' + t.a : '') + '\n\n' + location.href.split('#')[0]);
+      thBox.classList.remove('fade');
+    }, 300);
+  }
+  if (thBox && TH.length) {
+    thBox.querySelectorAll('[data-th]').forEach(function (b) { b.onclick = function () { thSet(thI + (+b.dataset.th)); }; });
+    var cp = document.getElementById('thCopy'); if (cp) cp.onclick = function () { var t = TH[thI]; if (navigator.clipboard) navigator.clipboard.writeText('“' + t.t + '”' + (t.a ? ' — ' + t.a : '')).then(function () { say(window.eowmsT ? eowmsT('विचार Copy केला') : 'विचार Copy केला'); }); };
+    var wa0 = document.getElementById('thWa'); if (wa0) { var t0 = TH[thI]; wa0.href = 'https://wa.me/?text=' + encodeURIComponent('“' + t0.t + '”' + (t0.a ? ' — ' + t0.a : '') + '\n\n' + location.href.split('#')[0]); }
+  }
+
+  // 🔍 Module शोध (Filter-chip सोबत)
+  var mq = document.getElementById('modQ'), modF = 'all';
+  function modApply() {
+    var q = mq ? mq.value.trim().toLowerCase() : '';
+    document.querySelectorAll('.mod').forEach(function (m) {
+      var u = m.dataset.used === '1', okF = modF === 'all' || (modF === 'used') === u, okQ = !q || m.textContent.toLowerCase().indexOf(q) > -1;
+      m.style.display = okF && okQ ? '' : 'none';
+    });
+  }
+  document.querySelectorAll('.mod-tools .chip').forEach(function (c) { c.onclick = function () { document.querySelectorAll('.mod-tools .chip').forEach(function (x) { x.classList.toggle('on', x === c); }); modF = c.dataset.f; modApply(); }; });
+  if (mq) mq.oninput = modApply;
+
+  // 📱 QR — हे पान Mobile ने उघडा / Share करा
+  var qr = document.getElementById('qr');
+  document.getElementById('qrBtn').onclick = function () {
+    var u = location.href.split('#')[0];
+    qr.querySelector('img').src = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=4&data=' + encodeURIComponent(u);
+    qr.querySelector('.qr-u').textContent = u; qr.classList.add('open');
+  };
+  document.getElementById('qrClose').onclick = function () { qr.classList.remove('open'); };
+  qr.onclick = function (e) { if (e.target === qr) qr.classList.remove('open'); };
+  addEventListener('keydown', function (e) { if (e.key === 'Escape') qr.classList.remove('open'); });
+
   document.getElementById('shareBtn').onclick = function () {
     var url = location.href.split('#')[0];
     if (navigator.share) { navigator.share({ title: document.title, url: url }).catch(function () {}); return; }
