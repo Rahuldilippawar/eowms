@@ -80,7 +80,7 @@ function notifyEnqueuePush($userId, $orgId, $title, $message, $link, $notificati
         $pdo->prepare("INSERT INTO notification_push_queue (organization_id, user_id, notification_id, title, message, link, is_urgent) VALUES (?, ?, ?, ?, ?, ?, ?)")
             ->execute([$orgId, $userId, $notificationId, mb_substr((string)$title, 0, 255), $message, $link, $urgent ? 1 : 0]);
         $queueId = (int)$pdo->lastInsertId();
-        notifyScheduleFlush();
+        notifyScheduleFlush($queueId);
         return $queueId;
     } catch (PDOException $e) {
         // Queue Table अजून Migrate झालेली नाही — जुन्या पद्धतीने लगेच पाठवा
@@ -126,19 +126,27 @@ function notifyDepartment($departmentId, $orgId, $title, $message = null, $link 
 }
 
 /** Response पाठवून झाल्यावर Queue चा छोटा Batch पाठवण्यासाठी — एकदाच Register */
-function notifyScheduleFlush() {
+function notifyScheduleFlush($queueId = null) {
     static $registered = false;
+    static $mine = [];   // या Request मध्ये रांगेत टाकलेले Push
+    if ($queueId) { $mine[] = (int)$queueId; }
     if ($registered || PHP_SAPI === 'cli') { return; }
     $registered = true;
-    register_shutdown_function(function () {
-        // PHP-FPM / LiteSpeed (Hostinger) — Response पाठवून मग Push; दोन्ही नसेल तर Visitor ला थांबवायचं नाही
-        // (मग Cron किंवा उघड्या पानाचं notifications/poll.php पाठवेल)
-        $finish = function_exists('fastcgi_finish_request') ? 'fastcgi_finish_request' : (function_exists('litespeed_finish_request') ? 'litespeed_finish_request' : null);
-        if (!$finish) { return; }
+    register_shutdown_function(function () use (&$mine) {
         if (session_status() === PHP_SESSION_ACTIVE) { session_write_close(); }
-        $finish();
         ignore_user_abort(true);
-        notifyDeliverPushQueue(NOTIFY_PUSH_BATCH, 15);
+        // PHP-FPM / LiteSpeed (Hostinger) — Response पाठवून मग Push (Visitor थांबत नाही)
+        $finish = function_exists('fastcgi_finish_request') ? 'fastcgi_finish_request' : (function_exists('litespeed_finish_request') ? 'litespeed_finish_request' : null);
+        if ($finish) {
+            $finish();
+            notifyDeliverPushQueue(NOTIFY_PUSH_BATCH, 15);
+            return;
+        }
+        // दोन्ही नसेल — Cron चालू नसला तरी सूचना अडकू नये (App बंद असलेल्यांनाही):
+        // या Request च्या पहिल्या काही सूचना इथेच पाठवतो (थोडक्या वेळेत); उरलेल्या Cron / पुढचं पान पाठवेल
+        while (ob_get_level() > 0) { @ob_end_flush(); }
+        @flush();
+        if ($mine) { notifyDeliverPushQueue(10, 6, array_slice($mine, 0, 10), 4); }
     });
 }
 
