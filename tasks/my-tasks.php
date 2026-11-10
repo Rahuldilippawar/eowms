@@ -17,6 +17,28 @@ $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $tasks = $stmt->fetchAll();
 
+// 📊 Excel — सध्याच्या Tab नुसार
+if (($_GET['export'] ?? '') === 'csv') {
+    while (ob_get_level()) ob_end_clean();
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename="my-tasks-' . $status . '-' . date('Y-m-d') . '.csv"');
+    $out = fopen('php://output', 'w');
+    fwrite($out, "\xEF\xBB\xBF");
+    fputcsv($out, ['क्रमांक', 'शीर्षक', 'तपशील', 'प्राधान्य', 'दिला', 'मुदत', 'स्थिती', 'पूर्ण', 'वेळेत?', 'खर्च (₹)', 'टिप्पणी', 'पडताळले']);
+    foreach ($tasks as $t) {
+        $done = $t['completed_at'] ? date('Y-m-d', strtotime($t['completed_at'])) : '';
+        fputcsv($out, [$t['task_code'], $t['title'], $t['description'], $t['priority'], $t['assigner_name'], $t['target_date'], $t['status'], $done,
+            $done ? ($done <= $t['target_date'] ? 'हो' : 'नाही') : '', $t['cost_incurred'], $t['completion_remarks'], !empty($t['verified_at']) ? 'हो' : '']);
+    }
+    fclose($out);
+    exit;
+}
+
+// Tab-आकडे
+$tcStmt = $pdo->prepare("SELECT COUNT(*) a, SUM(status IN ('pending','in_progress') AND target_date < CURDATE()) od, SUM(status = 'pending') p, SUM(status = 'in_progress') ip, SUM(status = 'completed') c, SUM(status = 'cancelled') x FROM tasks WHERE assigned_to = ? AND organization_id = ?");
+$tcStmt->execute([$user['id'], activeOrgId()]);
+$tc = array_map('intval', $tcStmt->fetch() ?: []);
+
 // 📊 सारांश — मुदत संपलेले / आज / आठवडा / सुरू / या महिन्यात पूर्ण
 $sumStmt = $pdo->prepare("SELECT
     SUM(status IN ('pending','in_progress') AND target_date < CURDATE()) overdue,
@@ -36,9 +58,12 @@ $statusChip = ['pending' => 'pending', 'in_progress' => 'pending', 'completed' =
 <div class="page-eyebrow"><?= h($user['designation']) ?></div>
 <div class="d-flex justify-content-between align-items-start mb-1">
   <div class="page-title mb-0"><?= h(t('s206')) ?></div>
+  <div class="d-flex gap-2">
+    <a href="?status=<?= h($status) ?>&export=csv" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13px;padding:9px 14px;">📊 Excel</a>
   <?php if (hasPermission('assign_tasks') || hasPermission('view_task_tracker')): ?>
     <a href="index.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13px;padding:9px 16px;"><i class="fa-solid fa-list-check me-1"></i>टास्क ट्रॅकर</a>
   <?php endif; ?>
+  </div>
 </div>
 
 <div class="mt-task-sum mb-3">
@@ -50,12 +75,12 @@ $statusChip = ['pending' => 'pending', 'in_progress' => 'pending', 'completed' =
 </div>
 
 <div class="period-toggle mb-3">
-  <a href="?status=all" class="period-btn <?= $status === 'all' ? 'active' : '' ?>"><?= h(t('s19')) ?></a>
-  <a href="?status=overdue" class="period-btn <?= $status === 'overdue' ? 'active' : '' ?>">⏰ मुदत संपलेले</a>
-  <a href="?status=pending" class="period-btn <?= $status === 'pending' ? 'active' : '' ?>"><?= h(t('s7')) ?></a>
-  <a href="?status=in_progress" class="period-btn <?= $status === 'in_progress' ? 'active' : '' ?>"><?= h(t('s9')) ?></a>
-  <a href="?status=completed" class="period-btn <?= $status === 'completed' ? 'active' : '' ?>"><?= h(t('s10')) ?></a>
-  <a href="?status=cancelled" class="period-btn <?= $status === 'cancelled' ? 'active' : '' ?>">रद्द</a>
+  <a href="?status=all" class="period-btn <?= $status === 'all' ? 'active' : '' ?>"><?= h(t('s19')) ?> <b class="mt-n"><?= $tc['a'] ?? 0 ?></b></a>
+  <a href="?status=overdue" class="period-btn <?= $status === 'overdue' ? 'active' : '' ?>">⏰ मुदत संपलेले <b class="mt-n<?= !empty($tc['od']) ? ' bad' : '' ?>"><?= $tc['od'] ?? 0 ?></b></a>
+  <a href="?status=pending" class="period-btn <?= $status === 'pending' ? 'active' : '' ?>"><?= h(t('s7')) ?> <b class="mt-n"><?= $tc['p'] ?? 0 ?></b></a>
+  <a href="?status=in_progress" class="period-btn <?= $status === 'in_progress' ? 'active' : '' ?>"><?= h(t('s9')) ?> <b class="mt-n"><?= $tc['ip'] ?? 0 ?></b></a>
+  <a href="?status=completed" class="period-btn <?= $status === 'completed' ? 'active' : '' ?>"><?= h(t('s10')) ?> <b class="mt-n"><?= $tc['c'] ?? 0 ?></b></a>
+  <a href="?status=cancelled" class="period-btn <?= $status === 'cancelled' ? 'active' : '' ?>">रद्द <b class="mt-n"><?= $tc['x'] ?? 0 ?></b></a>
 </div>
 
 <div class="row g-3" data-card-filter="Task शोधा — शीर्षक, क्रमांक, कोणी दिला…">
@@ -100,8 +125,13 @@ $statusChip = ['pending' => 'pending', 'in_progress' => 'pending', 'completed' =
           <?php if ($task['status'] === 'cancelled'): ?>
             <div style="font-size:12px;color:var(--rose);font-weight:600;">✖ हा टास्क रद्द केला गेला आहे.</div>
           <?php elseif ($task['status'] !== 'completed'): ?>
-            <form method="POST" action="update-status.php">
-              <input type="hidden" name="task_id" value="<?= $task['id'] ?>">
+            <div class="mt-quick">
+              <?php if ($task['status'] === 'pending'): ?><form method="POST" action="update-status.php"><input type="hidden" name="task_id" value="<?= $task['id'] ?>"><input type="hidden" name="status" value="in_progress"><input type="hidden" name="back" value="<?= h($status) ?>"><button class="mt-qb go">▶ सुरू केलं</button></form><?php endif; ?>
+              <form method="POST" action="update-status.php"><input type="hidden" name="task_id" value="<?= $task['id'] ?>"><input type="hidden" name="status" value="completed"><input type="hidden" name="back" value="<?= h($status) ?>"><button class="mt-qb ok">✅ पूर्ण झालं</button></form>
+              <button type="button" class="mt-qb" onclick="this.closest('.panel').querySelector('.mt-more').classList.toggle('d-none')">💬 टिप्पणी / खर्च</button>
+            </div>
+            <form method="POST" action="update-status.php" class="mt-more d-none">
+              <input type="hidden" name="task_id" value="<?= $task['id'] ?>"><input type="hidden" name="back" value="<?= h($status) ?>">
               <div class="d-flex gap-2 mb-2">
                 <select name="status" class="form-select-custom" style="width:auto;">
                   <option value="pending" <?= $task['status'] === 'pending' ? 'selected' : '' ?>><?= h(t('s7')) ?></option>
@@ -126,4 +156,11 @@ $statusChip = ['pending' => 'pending', 'in_progress' => 'pending', 'completed' =
   <?php endforeach; ?>
 </div>
 
+<style>
+.mt-n{display:inline-block;min-width:18px;margin-left:3px;padding:0 6px;border-radius:9px;background:var(--line);font-size:10.5px;text-align:center;}
+.period-btn.active .mt-n{background:rgba(255,255,255,.3);} .mt-n.bad{background:#FEE2E2;color:#991B1B;}
+.mt-quick{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;} .mt-quick form{margin:0;}
+.mt-qb{border:1px solid var(--line);background:var(--panel,#fff);border-radius:9px;padding:6px 11px;font-size:12.5px;font-weight:600;color:var(--text);}
+.mt-qb.ok{background:var(--rail);border-color:var(--rail);color:#fff;} .mt-qb.go{border-color:var(--amber);color:#92400E;}
+</style>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

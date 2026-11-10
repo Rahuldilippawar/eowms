@@ -68,6 +68,24 @@ $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $tasks = $stmt->fetchAll();
 
+// 📊 Excel — सध्याच्या Filter नुसार (विभाग / स्थिती / मी दिलेले)
+if (($_GET['export'] ?? '') === 'csv') {
+    while (ob_get_level()) ob_end_clean();
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename="tasks-' . $status . '-' . date('Y-m-d') . '.csv"');
+    $out = fopen('php://output', 'w');
+    fwrite($out, "\xEF\xBB\xBF");
+    fputcsv($out, ['क्रमांक', 'शीर्षक', 'तपशील', 'विभाग', 'नेमलेलं', 'दिलं', 'प्राधान्य', 'तयार', 'मुदत', 'स्थिती', 'पूर्ण', 'उशीर (दिवस)', 'पडताळले', 'खर्च (₹)', 'टिप्पणी']);
+    foreach ($tasks as $t) {
+        $done = $t['completed_at'] ? date('Y-m-d', strtotime($t['completed_at'])) : '';
+        $late = $done ? max(0, (int)((strtotime($done) - strtotime($t['target_date'])) / 86400)) : (in_array($t['status'], ['pending', 'in_progress'], true) ? max(0, (int)((strtotime(date('Y-m-d')) - strtotime($t['target_date'])) / 86400)) : '');
+        fputcsv($out, [$t['task_code'], $t['title'], $t['description'], $t['dept_name'], $t['assignee_name'], $t['assigner_name'], $t['priority'], date('Y-m-d', strtotime($t['created_at'])),
+            $t['target_date'], $t['status'], $done, $late, !empty($t['verified_at']) ? 'हो' : '', $t['cost_incurred'], $t['completion_remarks']]);
+    }
+    fclose($out);
+    exit;
+}
+
 $counts = ['all' => 0, 'overdue' => 0, 'pending' => 0, 'in_progress' => 0, 'completed' => 0, 'cancelled' => 0];
 $odStmt = $pdo->prepare("SELECT COUNT(*) FROM tasks t" . $filterSql . " AND t.status IN ('pending','in_progress') AND t.target_date < CURDATE()");
 $odStmt->execute($filterParams);
@@ -143,6 +161,7 @@ $statusChip = ['pending' => 'pending', 'in_progress' => 'pending', 'completed' =
     <a href="my-tasks.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13px;padding:9px 16px;"><i class="fa-solid fa-user-check me-1"></i>माझे टास्क</a>
     <?php if ($canViewTracker): ?>
     <a href="report.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13px;padding:9px 16px;"><i class="fa-solid fa-chart-column me-1"></i>Report</a>
+    <a href="?<?= h(http_build_query(array_merge($_GET, ['export' => 'csv']))) ?>" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13px;padding:9px 14px;" title="सध्याच्या Filter नुसार">📊 Excel</a>
     <?php endif; ?>
     <?php if (hasPermission('assign_tasks')): ?>
     <a href="assign.php" class="btn" style="background:var(--rail);color:#fff;border-radius:9px;font-size:13.5px;padding:9px 20px;font-weight:600;">
