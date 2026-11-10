@@ -234,6 +234,34 @@ $todayLabel = $marathiDays[(int)date('w')] . ', ' . (int)date('j') . ' ' . $mara
 
   @keyframes eowms-fade-up{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
 
+  /* ---------------- 🧘 ध्यान Animation ---------------- */
+  .med-wrap{position:relative;width:min(300px,72vw);margin:-20px auto 4px;animation:eowms-fade-up .9s ease both;}
+  .med-art{display:block;width:100%;height:auto;overflow:visible;}
+  .med-aura{transform-origin:150px 150px;transform-box:view-box;animation:med-breathe 8s ease-in-out infinite;}
+  .med-figure{transform-box:view-box;transform-origin:150px 220px;animation:med-rise 8s ease-in-out infinite;}
+  .med-mandala{transform-box:view-box;transform-origin:150px 150px;animation:med-spin 60s linear infinite;}
+  .med-mandala.rev{animation-duration:90s;animation-direction:reverse;}
+  .med-chakras circle{transform-box:fill-box;transform-origin:center;animation:med-pulse 3.85s ease-in-out infinite;}
+  .med-crown{animation:med-crown 8s ease-in-out infinite !important;filter:drop-shadow(0 0 6px #E9D5FF);}
+  .med-lotus{animation:med-float 6s ease-in-out infinite;}
+  .med-sparks circle{transform-box:fill-box;transform-origin:center;opacity:0;animation:med-spark 6s ease-in infinite;}
+  .med-badge{position:absolute;left:50%;bottom:-30px;transform:translateX(-50%);width:54px !important;height:54px !important;border-radius:16px !important;font-size:19px !important;margin:0 !important;animation:none !important;z-index:2;}
+  .med-badge img{border-radius:16px !important;padding:4px !important;}
+  .med-breath{position:relative;height:20px;margin:40px auto 14px;font-size:12.5px;letter-spacing:.06em;color:#FDBA8C;font-weight:600;}
+  .med-breath span{position:absolute;left:0;right:0;transition:opacity .9s;}
+  .med-breath .in{animation:med-in 8s ease-in-out infinite;} .med-breath .out{animation:med-out 8s ease-in-out infinite;}
+  @keyframes med-breathe{0%,100%{transform:scale(.86);opacity:.75;}50%{transform:scale(1.06);opacity:1;}}
+  @keyframes med-rise{0%,100%{transform:scale(1);}50%{transform:scale(1.025);}}
+  @keyframes med-spin{to{transform:rotate(360deg);}}
+  @keyframes med-pulse{0%,100%{opacity:.55;transform:scale(.85);}50%{opacity:1;transform:scale(1.35);}}
+  @keyframes med-crown{0%,100%{opacity:.4;transform:scale(.8);}50%{opacity:1;transform:scale(1.6);}}
+  @keyframes med-float{0%,100%{transform:translate(150px,244px);}50%{transform:translate(150px,240px);}}
+  @keyframes med-spark{0%{opacity:0;transform:translateY(0);}20%{opacity:.9;}100%{opacity:0;transform:translateY(-46px);}}
+  @keyframes med-in{0%,45%{opacity:1;}50%,95%{opacity:0;}100%{opacity:1;}}
+  @keyframes med-out{0%,45%{opacity:0;}50%,95%{opacity:1;}100%{opacity:0;}}
+  @media (max-width:600px){ .med-wrap{width:min(250px,70vw);margin-top:-30px;} }
+  @media (prefers-reduced-motion: reduce){ .med-breath .out{display:none;} }
+
   .quote-card{
     max-width:600px;margin:40px auto 0;padding:34px 38px 28px;position:relative;
     background:linear-gradient(160deg,rgba(217,83,15,.16),rgba(255,255,255,.03));
@@ -338,7 +366,7 @@ $todayLabel = $marathiDays[(int)date('w')] . ', ' . (int)date('j') . ' ' . $mara
   footer{text-align:center;padding:26px;font-size:12px;color:#8A90AC;}
 
   @media (prefers-reduced-motion: reduce){
-    .hero::before,.hero::after,.quote-om,.mark,.hero h1,.hero p,.quote-card,.action-row,.birthday-wrap,.sacred-ring,.yantra,.hero-eyebrow,.today-strip,.content-eyebrow,.content-title,.content-glyph{animation:none;opacity:1;}
+    .med-aura,.med-figure,.med-mandala,.med-chakras circle,.med-crown,.med-lotus,.med-sparks circle,.med-breath .in,.hero::before,.hero::after,.quote-om,.mark,.hero h1,.hero p,.quote-card,.action-row,.birthday-wrap,.sacred-ring,.yantra,.hero-eyebrow,.today-strip,.content-eyebrow,.content-title,.content-glyph{animation:none;opacity:1;}
   }
 </style>
 </head>
@@ -355,11 +383,61 @@ $todayLabel = $marathiDays[(int)date('w')] . ', ' . (int)date('j') . ' ' . $mara
   </div>
   <div class="yantra-core"></div>
   <div class="hero-inner">
-  <?php if (!empty($org['logo_path'])): ?>
-    <div class="mark"><img src="<?= htmlspecialchars($org['logo_path']) ?>" alt="Logo"></div>
-  <?php else: ?>
-    <div class="mark"><?= htmlspecialchars(mb_substr($org['name'] ?? 'EO', 0, 2)) ?></div>
-  <?php endif; ?>
+  <!-- 🧘 ध्यान — Animation (SVG, बाहेरचं चित्र नाही) -->
+  <div class="med-wrap" aria-hidden="true">
+    <svg class="med-art" viewBox="0 0 300 300" role="img" aria-label="ध्यान">
+      <defs>
+        <radialGradient id="medAura" cx="50%" cy="48%" r="50%"><stop offset="0%" stop-color="#FDBA74" stop-opacity=".55"/><stop offset="45%" stop-color="#F59E0B" stop-opacity=".18"/><stop offset="100%" stop-color="#F59E0B" stop-opacity="0"/></radialGradient>
+        <linearGradient id="medBody" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#FDBA8C"/><stop offset="55%" stop-color="#F97316"/><stop offset="100%" stop-color="#C2410C"/></linearGradient>
+        <linearGradient id="medLotus" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#FBCFE8"/><stop offset="100%" stop-color="#DB2777"/></linearGradient>
+        <filter id="medGlow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+      </defs>
+      <!-- प्रकाशवलय — श्वासासोबत -->
+      <circle class="med-aura" cx="150" cy="150" r="140" fill="url(#medAura)"/>
+      <!-- फिरणारं मंडल -->
+      <g class="med-mandala" fill="none" stroke="#FDBA74">
+        <circle cx="150" cy="150" r="132" stroke-opacity=".22" stroke-dasharray="2 7"/>
+        <circle cx="150" cy="150" r="118" stroke-opacity=".14"/>
+        <?php for ($i = 0; $i < 16; $i++): ?><ellipse cx="150" cy="30" rx="7" ry="16" stroke-opacity=".28" transform="rotate(<?= $i * 22.5 ?> 150 150)"/><?php endfor; ?>
+      </g>
+      <g class="med-mandala rev" fill="none" stroke="#FDE68A" stroke-opacity=".18">
+        <?php for ($i = 0; $i < 8; $i++): ?><path d="M150 46 L158 62 L150 78 L142 62 Z" transform="rotate(<?= $i * 45 ?> 150 150)"/><?php endfor; ?>
+      </g>
+      <!-- ध्यानस्थ आकृती -->
+      <g class="med-figure" filter="url(#medGlow)">
+        <path d="M84 216 C108 194 192 194 216 216 C200 236 100 236 84 216 Z" fill="url(#medBody)" opacity=".95"/>
+        <path d="M150 110 C127 110 115 121 113 140 L123 196 L177 196 L187 140 C185 121 173 110 150 110 Z" fill="url(#medBody)"/>
+        <path d="M117 134 C99 150 93 170 101 200" stroke="url(#medBody)" stroke-width="14" stroke-linecap="round" fill="none"/>
+        <path d="M183 134 C201 150 207 170 199 200" stroke="url(#medBody)" stroke-width="14" stroke-linecap="round" fill="none"/>
+        <circle cx="103" cy="204" r="8" fill="#FDBA8C"/><circle cx="197" cy="204" r="8" fill="#FDBA8C"/>
+        <rect x="143" y="100" width="14" height="14" rx="5" fill="#FDBA8C"/>
+        <circle cx="150" cy="86" r="21" fill="url(#medBody)"/>
+      </g>
+      <!-- सप्तचक्र -->
+      <g class="med-chakras">
+        <?php foreach ([[206, '#EF4444'], [190, '#F97316'], [174, '#FACC15'], [156, '#22C55E'], [137, '#38BDF8'], [120, '#6366F1'], [84, '#A855F7']] as $ci => [$cy, $cc]): ?>
+          <circle cx="150" cy="<?= $cy ?>" r="<?= $ci === 6 ? 3.4 : 4 ?>" fill="<?= $cc ?>" style="animation-delay:<?= $ci * .55 ?>s"/>
+        <?php endforeach; ?>
+        <circle class="med-crown" cx="150" cy="58" r="5" fill="#F5F3FF"/>
+      </g>
+      <!-- कमळ -->
+      <g class="med-lotus" transform="translate(150 244)">
+        <?php foreach ([-60, -35, -12, 12, 35, 60] as $a): ?><path d="M0 0 C-10 -14 -8 -30 0 -38 C8 -30 10 -14 0 0 Z" fill="url(#medLotus)" opacity=".85" transform="rotate(<?= $a ?>)"/><?php endforeach; ?>
+        <path d="M0 0 C-12 -16 -9 -36 0 -46 C9 -36 12 -16 0 0 Z" fill="url(#medLotus)"/>
+        <ellipse cx="0" cy="4" rx="58" ry="6" fill="#0F766E" opacity=".55"/>
+      </g>
+      <!-- तरंगणारे प्रकाशकण -->
+      <g class="med-sparks" fill="#FDE68A">
+        <?php foreach ([[62, 220, 0], [238, 210, 1.2], [84, 120, 2.4], [222, 112, .6], [46, 160, 3.1], [258, 166, 1.8], [118, 52, 2.8], [190, 48, .3]] as [$x, $y, $d]): ?><circle cx="<?= $x ?>" cy="<?= $y ?>" r="2.2" style="animation-delay:<?= $d ?>s"/><?php endforeach; ?>
+      </g>
+    </svg>
+    <?php if (!empty($org['logo_path'])): ?>
+      <div class="mark med-badge"><img src="<?= htmlspecialchars($org['logo_path']) ?>" alt="Logo"></div>
+    <?php else: ?>
+      <div class="mark med-badge"><?= htmlspecialchars(mb_substr($org['name'] ?? 'EO', 0, 2)) ?></div>
+    <?php endif; ?>
+  </div>
+  <div class="med-breath" id="medBreath"><span class="in">🌬️ श्वास घ्या…</span><span class="out">🍃 श्वास सोडा…</span></div>
   <div class="today-strip"><span class="dot"></span><span id="wlGreet"></span><?= h($todayLabel) ?> · <span id="wlClock" class="wl-clock"></span></div>
   <div class="hero-eyebrow">!! आत्मा मालिक !!</div>
   <h1><?= htmlspecialchars($org['name'] ?? 'E-Admin — Smart Administration') ?></h1>
