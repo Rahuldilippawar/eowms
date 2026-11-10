@@ -181,6 +181,8 @@ class WebPush
             'Content-Type: application/octet-stream',
             'Content-Encoding: aes128gcm',
             'TTL: 2419200',
+            // Android Doze / Battery Saver मध्येही लगेच पोहोचावी
+            'Urgency: high',
         ]);
 
         $ch = curl_init($endpoint);

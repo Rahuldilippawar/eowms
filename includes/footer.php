@@ -199,63 +199,17 @@ if ('serviceWorker' in navigator) {
   window.addEventListener('load', function () {
     navigator.serviceWorker.register(swRootPath + 'sw.js', { scope: swRootPath || './' })
       .then(function (registration) {
-        setupPushSubscription(registration, swRootPath);
       })
       .catch(function () {});
   });
 }
 
-// ---------------- Push Notification (App बंद असतानाही सूचना) ----------------
-function urlBase64ToUint8Array(base64String) {
-  var padding = '='.repeat((4 - base64String.length % 4) % 4);
-  var base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-  var rawData = window.atob(base64);
-  var outputArray = new Uint8Array(rawData.length);
-  for (var i = 0; i < rawData.length; ++i) { outputArray[i] = rawData.charCodeAt(i); }
-  return outputArray;
-}
-
-function setupPushSubscription(registration, rootPath) {
-  if (!('PushManager' in window)) { return; } // हा Browser Push समर्थित करत नाही
-  if (Notification.permission === 'denied') { return; } // User ने आधीच नाकारलं आहे
-
-  fetch(rootPath + 'push-vapid-key.php')
-    .then(function (r) { return r.json(); })
-    .then(function (data) {
-      if (!data.publicKey) { return; } // Super Admin ने अजून Push Setup केलेलं नाही
-
-      registration.pushManager.getSubscription().then(function (existingSub) {
-        if (existingSub) { return; } // आधीच Subscribe केलेलं आहे
-
-        // पहिल्यांदाच — थेट न विचारता, User च्या एखाद्या कृतीनंतर (इथे,
-        // पान Load झाल्यावर काही सेकंदांनी) सौम्यपणे विचारतो.
-        setTimeout(function () {
-          if (Notification.permission === 'granted') {
-            subscribeUser(registration, rootPath, data.publicKey);
-          } else if (Notification.permission === 'default') {
-            Notification.requestPermission().then(function (permission) {
-              if (permission === 'granted') { subscribeUser(registration, rootPath, data.publicKey); }
-            });
-          }
-        }, 4000);
-      });
-    })
-    .catch(function () {});
-}
-
-function subscribeUser(registration, rootPath, publicKey) {
-  registration.pushManager.subscribe({
-    userVisibleOnly: true,
-    applicationServerKey: urlBase64ToUint8Array(publicKey),
-  }).then(function (subscription) {
-    fetch(rootPath + 'push-subscribe.php', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(subscription),
-    }).catch(function () {});
-  }).catch(function () {});
-}
+// Push / सूचना — assets/js/push-smart.js (Permission फक्त "चालू करा" दाबल्यावर)
 </script>
+
+<script>window.eowmsUid = <?= (int)(currentUser()['id'] ?? 0) ?>;</script>
+<script src="<?= $rootPath ?? '' ?>assets/js/push-smart.js?v=1"></script>
+<script>if (window.eowmsPushStart && window.eowmsUid) eowmsPushStart(<?= json_encode($rootPath ?? '') ?>);</script>
 
 <!-- Offline-first form queue (works alongside the service worker above) -->
 <script src="<?= $rootPath ?? '' ?>assets/js/offline-queue.js"></script>
