@@ -650,4 +650,9 @@ return [
     "नूतनीकरण Attachments" => ["नवीनीकरण Attachments", "Renewal attachments"],
     "वाहन दुरुस्ती-विनंत्या" => ["वाहन सुधार-अनुरोध", "Vehicle correction requests"],
     "नोंदींचे बाकी तपशील पूर्ण भरले (पगार, बँक, शीर्षक, मूळ तारखा इ.)" => ["प्रविष्टियों के बाकी विवरण पूरे भरे (वेतन, बैंक, शीर्षक, मूल तारीखें आदि)", "records completed with remaining details (salary, bank, title, original dates, etc.)"],
+    "-- सुट्टी 2 (नाही) --" => ["-- छुट्टी 2 (नहीं) --", "-- Off 2 (none) --"],
+    "दुसरी साप्ताहिक सुट्टी (असल्यास)" => ["दूसरी साप्ताहिक छुट्टी (यदि हो)", "Second weekly off (if any)"],
+    "नवीन Reference / प्रमाणपत्र क्रमांक (बदलायचा असल्यास)" => ["नया Reference / प्रमाणपत्र क्रमांक (बदलना हो तो)", "New reference / certificate no. (if changed)"],
+    "शेरा (ऐच्छिक)" => ["टिप्पणी (वैकल्पिक)", "Remarks (optional)"],
+    "उदा. नवीन, दुरुस्ती हवी, Serial No." => ["उदा. नया, मरम्मत चाहिए, Serial No.", "e.g. new, needs repair, serial no."],
 ];

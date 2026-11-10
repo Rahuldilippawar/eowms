@@ -30,6 +30,10 @@ $rolePerms = [];
 foreach ($pdo->query("SELECT role_key, permission_key FROM role_permissions")->fetchAll() as $rp) {
     $rolePerms[$rp['role_key']][$rp['permission_key']] = true;
 }
+// काढलेल्या Modules चे अधिकार मोजणीत नकोत
+$retiredPerms = array_flip(roleRetiredPermissions());
+$allPermissions = array_values(array_filter($allPermissions, fn($p) => !isset($retiredPerms[$p['permission_key']])));
+foreach ($rolePerms as &$rpSet) { $rpSet = array_diff_key($rpSet, $retiredPerms); } unset($rpSet);
 $permTotal = count($allPermissions);
 $sensitive = array_flip(roleSensitivePermissions());
 

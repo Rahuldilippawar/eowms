@@ -500,6 +500,8 @@ window.addEventListener('DOMContentLoaded', function () {
                   <input type="number" step="0.01" name="renewal_cost" class="form-control-custom mb-3">
                   <label class="form-label-custom">Vendor (बदलायचं असल्यास)</label>
                   <input type="text" name="vendor_name" class="form-control-custom mb-3" placeholder="<?= h($item['vendor_name'] ?: '') ?>">
+                  <label class="form-label-custom">नवीन Reference / प्रमाणपत्र क्रमांक (बदलायचा असल्यास)</label>
+                  <input type="text" name="reference_no" class="form-control-custom mb-3" maxlength="100" placeholder="<?= h($item['reference_no'] ?? '') ?>">
                   <label class="form-label-custom">नवीन प्रमाणपत्र (PDF/प्रतिमा, ऐच्छिक)</label>
                   <input type="file" name="certificate" class="form-control-custom" accept=".pdf,.jpg,.jpeg,.png,.webp">
                 </div>
