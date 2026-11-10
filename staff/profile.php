@@ -152,6 +152,7 @@ $statusChip = ['pending' => 'pending', 'in_progress' => 'pending', 'completed' =
     <?php endif; ?>
     <?php if (hasRole('super_admin')): ?>
       <a href="edit.php?id=<?= $emp['id'] ?>" class="btn btn-sm" style="border:1px solid var(--line);border-radius:9px;font-size:12.5px;padding:8px 16px;"><i class="fa-solid fa-pen me-1"></i>Edit</a>
+      <a href="../roles/user-access.php?user_id=<?= $emp['id'] ?>" class="btn btn-sm" style="border:1px solid var(--amber);color:var(--amber);border-radius:9px;font-size:12.5px;padding:8px 16px;"><i class="fa-solid fa-user-shield me-1"></i>Access</a>
       <form method="POST" action="toggle-active.php" onsubmit="return confirm('<?= $emp['is_active'] ? 'हे खाते निष्क्रिय करायचे?' : 'हे खाते सक्रिय करायचे?' ?>');">
         <input type="hidden" name="id" value="<?= $emp['id'] ?>">
         <?php if ($emp['is_active']): ?>

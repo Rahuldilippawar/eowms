@@ -477,6 +477,21 @@ function activeOrgName() {
     return $cache[$id] = ($row['name'] ?? 'VJMAT');
 }
 
+/** [permission_key => 'grant'|'deny'] — मुदत संपलेले वगळून (टेबल नसेल तर रिकामं) */
+function userPermissionOverrides($userId) {
+    global $pdo;
+    static $cache = [];
+    if (isset($cache[$userId])) { return $cache[$userId]; }
+    $cache[$userId] = [];
+    if (!$userId || !($pdo instanceof PDO)) { return []; }
+    try {
+        $st = $pdo->prepare("SELECT permission_key, mode FROM user_permissions WHERE user_id = ? AND (expires_on IS NULL OR expires_on >= CURDATE())");
+        $st->execute([$userId]);
+        foreach ($st->fetchAll() as $r) { $cache[$userId][$r['permission_key']] = $r['mode'] === 'deny' ? 'deny' : 'grant'; }
+    } catch (PDOException $e) {}
+    return $cache[$userId];
+}
+
 /**
  * Granular per-role permissions — Super Admin decides EXACTLY which features
  * each role/designation can access from "पदे व्यवस्थापन" -> role -> Permissions.
@@ -504,6 +519,10 @@ function hasPermission($permissionKey) {
             return isManagementOrAbove();
         }
     }
+
+    // 👤 व्यक्तीनुसार अधिकार (पदे व्यवस्थापन → व्यक्तीनुसार Access) — deny पदाच्या अधिकारावरही मात करतो
+    $own = userPermissionOverrides((int)$u['id']);
+    if (isset($own[$permissionKey])) { return $own[$permissionKey] === 'grant'; }
 
     if (in_array($permissionKey, $cache[$roleKey], true)) { return true; }
 

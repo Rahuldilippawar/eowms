@@ -303,8 +303,19 @@ function notifyUserIdsByPermission($orgId, $permissionKey, $includeSuperAdmin = 
         $st = $pdo->prepare("SELECT DISTINCT u.id FROM users u LEFT JOIN role_permissions rp ON rp.role_key = u.role AND rp.permission_key = ?
             WHERE u.organization_id = ? AND u.is_active = 1 AND (rp.id IS NOT NULL" . ($includeSuperAdmin ? " OR u.role = 'super_admin'" : "") . ")");
         $st->execute([$permissionKey, (int)$orgId]);
-        return array_map('intval', $st->fetchAll(PDO::FETCH_COLUMN));
+        $ids = array_map('intval', $st->fetchAll(PDO::FETCH_COLUMN));
     } catch (PDOException $e) {
         return [];
     }
+    // 👤 व्यक्तीनुसार अधिकार — दिलेले जोडतो, काढलेले वगळतो (मुदत संपलेले नाही)
+    try {
+        $o = $pdo->prepare("SELECT up.user_id, up.mode FROM user_permissions up JOIN users u ON u.id = up.user_id
+            WHERE up.permission_key = ? AND u.organization_id = ? AND u.is_active = 1 AND u.role <> 'super_admin' AND (up.expires_on IS NULL OR up.expires_on >= CURDATE())");
+        $o->execute([$permissionKey, (int)$orgId]);
+        foreach ($o->fetchAll() as $r) {
+            if ($r['mode'] === 'deny') { $ids = array_values(array_diff($ids, [(int)$r['user_id']])); }
+            elseif (!in_array((int)$r['user_id'], $ids, true)) { $ids[] = (int)$r['user_id']; }
+        }
+    } catch (PDOException $e) {}
+    return $ids;
 }

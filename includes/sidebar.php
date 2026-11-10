@@ -188,8 +188,8 @@ function navGroupHead($id, $key, $activeGroup, $icon, $label, $badge = 0) {
         <input type="hidden" name="back" value="<?= h($_SERVER['REQUEST_URI']) ?>">
         <label style="font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#6E7396;font-weight:600;display:block;margin-bottom:5px;"><?= h(t('s292')) ?></label>
         <select name="organization_id" onchange="this.form.submit()" style="width:100%;background:#1B2340;border:1px solid rgba(255,255,255,.12);color:#fff;border-radius:8px;padding:7px 10px;font-size:12.5px;">
-          <?php foreach ($allOrgs as $org): ?>
-            <option value="<?= $org['id'] ?>" <?= $activeOrgId === (int)$org['id'] ? 'selected' : '' ?>><?= h($org['name']) ?></option>
+          <?php foreach ($allOrgs as $swOrg): /* $org नाव नको — पानांचा स्वतःचा $org (उदा. संस्था Edit) पुसला जायचा */ ?>
+            <option value="<?= $swOrg['id'] ?>" <?= $activeOrgId === (int)$swOrg['id'] ? 'selected' : '' ?>><?= h($swOrg['name']) ?></option>
           <?php endforeach; ?>
         </select>
       </form>
