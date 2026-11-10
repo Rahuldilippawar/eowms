@@ -33,10 +33,23 @@ $prevPeriod = date('Y-m', strtotime($period . '-01 -1 month'));
 $prevS = $viewAll ? ecampusSummary(ecampusRows($pdo, $orgId, $prevPeriod), $prevPeriod) : ['overall' => null];
 // 🧠 स्मार्ट विश्लेषण — अंदाज, कर्मचारीनिहाय, आठवड्यातली प्रगती, मागचे 6 महिने
 $forecast = $viewAll ? ecampusForecast($trend, $period, $S['overall']) : null;
-$board = $viewAll ? ecampusStaffBoard($rows, $period) : [];
+// (कर्मचारीनिहाय Board आता नाही — Dashboard कामनिहाय)
 $movers = $viewAll ? ecampusMovers($pdo, $period, $rows) : [];
 $history = $viewAll ? ecampusMonthlyHistory($pdo, $orgId, 6) : [];
-$attention = array_values(array_filter($board, fn($b) => $b['stale'] || $b['pending']));
+// 🎯 लक्ष द्या — कामनिहाय: सुरू न झालेली / नोंद नसलेली / 7+ दिवस जुनी नोंद (कमी % आधी)
+$attention = array_values(array_filter($rows, function ($r) use ($isCurrent) {
+    if ($r['access_type'] !== 'work' || $r['percent'] >= 100) { return false; }
+    $u = $r['updated_at'] && !$r['carried'] ? strtotime($r['updated_at']) : 0;
+    return $r['percent'] <= 0 || !$u || ($isCurrent && $u < strtotime('-7 days'));
+}));
+usort($attention, fn($a, $b) => [$a['percent'], $a['wing']] <=> [$b['percent'], $b['wing']]);
+// मुख्य तक्ता कामनिहाय — Wing नुसार क्रमाने (त्या गटात मूळ क्रम कायम)
+$__ord = array_keys($rows);
+usort($__ord, fn($x, $y) => [$rows[$x]['wing'], $x] <=> [$rows[$y]['wing'], $y]);
+$rows = array_map(fn($k) => $rows[$k], $__ord);
+// 📋 काम नुसार (Chart) — कमी % आधी
+$taskBoard = array_values(array_filter($rows, fn($r) => $r['access_type'] === 'work'));
+usort($taskBoard, fn($a, $b) => [$a['percent'], $a['wing']] <=> [$b['percent'], $b['wing']]);
 $months = [];
 for ($i = 0; $i < 12; $i++) { $months[] = date('Y-m', strtotime(date('Y-m-01') . " -$i month")); }
 $wings = array_keys($S['wings']);
@@ -241,7 +254,7 @@ require_once __DIR__ . '/../includes/header.php';
   <?php if ($viewAll): /* ---------- 🧠 स्मार्ट निष्कर्ष ---------- */
     $ovr = (int)($S['overall'] ?? 0);
     if ($ovr >= 100) { $tip = ['🎉', 'सगळी कामं पूर्ण — उत्तम!', '#16A34A']; }
-    elseif ($forecast && !$forecast['onTrack']) { $tip = ['⚠️', 'या वेगाने महिनाअखेर फक्त ' . $forecast['projected'] . '% — 100% साठी रोज सरासरी ' . $forecast['need'] . '% प्रगती हवी' . ($attention ? '; आधी "लक्ष द्या" मधल्या ' . count($attention) . ' कर्मचाऱ्यांशी बोला' : ''), '#B45309']; }
+    elseif ($forecast && !$forecast['onTrack']) { $tip = ['⚠️', 'या वेगाने महिनाअखेर फक्त ' . $forecast['projected'] . '% — 100% साठी रोज सरासरी ' . $forecast['need'] . '% प्रगती हवी' . ($attention ? '; आधी "लक्ष द्या" मधली ' . count($attention) . ' कामं पाहा' : ''), '#B45309']; }
     elseif ($forecast) { $tip = ['🚀', 'वेळापत्रकाप्रमाणे — महिनाअखेर अंदाजे ' . $forecast['projected'] . '% पूर्ण होईल' . ($S['pending'] ? ' · पण ' . $S['pending'] . ' कामं अजून सुरू झाली नाहीत' : ''), $S['pending'] ? '#B45309' : '#16A34A']; }
     elseif ($S['pending']) { $tip = ['⛔', $S['pending'] . ' कामं सुरूच झाली नाहीत', '#DC2626']; }
     else { $tip = null; }
@@ -266,24 +279,24 @@ require_once __DIR__ . '/../includes/header.php';
       <div class="es-card">
         <div class="es-card-h">📈 या आठवड्यातली प्रगती</div>
         <?php if ($movers): foreach ($movers as $mv): ?>
-          <div class="es-li"><div><b><?= h($mv['row']['staff_name']) ?></b><small><?= h($mv['row']['section']) ?></small></div><span class="es-up">▲ <?= $mv['delta'] ?>%<small><?= $mv['from'] ?>→<?= $mv['to'] ?>%</small></span></div>
+          <div class="es-li"><div><b><?= h(mb_strimwidth((string)$mv['row']['task_description'], 0, 60, '…')) ?></b><small><?= h($mv['row']['wing']) ?> · <?= h($mv['row']['staff_name']) ?></small></div><span class="es-up">▲ <?= $mv['delta'] ?>%<small><?= $mv['from'] ?>→<?= $mv['to'] ?>%</small></span></div>
         <?php endforeach; else: ?><div class="es-sub" style="padding:8px 0;"><?= $isCurrent ? 'गेल्या 7 दिवसांत एकाही कामाची % वाढलेली नाही.' : 'फक्त चालू महिन्यासाठी.' ?></div><?php endif; ?>
       </div>
       <div class="es-card">
-        <div class="es-card-h d-flex justify-content-between align-items-center">🎯 लक्ष द्या
-          <?php if ($canRemind && $isCurrent && $attention): ?><form method="POST" onsubmit="return confirm('<?= count($attention) ?> कर्मचाऱ्यांना E-Campus प्रगती भरण्याची आठवण पाठवायची?');"><input type="hidden" name="action" value="remind"><button class="es-rbtn">🔔 सगळ्यांना आठवण</button></form><?php endif; ?></div>
-        <?php if ($attention): foreach (array_slice($attention, 0, 6) as $b): ?>
-          <div class="es-li"><div><b><?= h($b['name']) ?></b><small><?= $b['pending'] ? $b['pending'] . ' सुरू नाही' : '' ?><?= $b['pending'] && $b['stale'] ? ' · ' : '' ?><?= $b['stale'] ? 'नोंद: ' . h(ecampusAgo($b['last'])) : '' ?></small></div>
-            <span style="display:flex;gap:6px;align-items:center;"><b style="color:<?= $barCol($b['avg']) ?>;"><?= $b['avg'] ?>%</b>
-            <?php if ($canRemind && $isCurrent): ?><form method="POST"><input type="hidden" name="action" value="remind"><input type="hidden" name="user_id" value="<?= (int)$b['user_id'] ?>"><button class="es-rbtn sm" title="<?= h($b['name']) ?> यांना आठवण पाठवा">🔔</button></form><?php endif; ?></span></div>
-        <?php endforeach; if (count($attention) > 6): ?><div class="es-sub">आणखी <?= count($attention) - 6 ?>…</div><?php endif; else: ?><div class="es-sub" style="padding:8px 0;color:#16A34A;font-weight:700;">✅ सगळ्यांच्या नोंदी अद्ययावत आहेत.</div><?php endif; ?>
+        <div class="es-card-h d-flex justify-content-between align-items-center">🎯 लक्ष द्या — कामं
+          <?php if ($canRemind && $isCurrent && $attention): $__au = array_unique(array_map(fn($r) => (int)$r['user_id'], $attention)); ?><form method="POST" onsubmit="return confirm('<?= count($attention) ?> कामांच्या <?= count($__au) ?> कर्मचाऱ्यांना E-Campus प्रगती भरण्याची आठवण पाठवायची?');"><input type="hidden" name="action" value="remind"><button class="es-rbtn">🔔 सगळ्यांना आठवण</button></form><?php endif; ?></div>
+        <?php if ($attention): foreach (array_slice($attention, 0, 6) as $r): $__u = $r['updated_at'] && !$r['carried'] ? $r['updated_at'] : null; ?>
+          <div class="es-li"><div><b><?= h(mb_strimwidth((string)$r['task_description'], 0, 60, '…')) ?></b><small><?= h($r['wing']) ?> · <?= h($r['staff_name']) ?> · <?= $r['percent'] <= 0 ? 'सुरू नाही' : 'नोंद: ' . h(ecampusAgo($__u)) ?></small></div>
+            <span style="display:flex;gap:6px;align-items:center;"><b style="color:<?= $barCol($r['percent']) ?>;"><?= $r['percent'] ?>%</b>
+            <?php if ($canRemind && $isCurrent): ?><form method="POST"><input type="hidden" name="action" value="remind"><input type="hidden" name="user_id" value="<?= (int)$r['user_id'] ?>"><button class="es-rbtn sm" title="<?= h($r['staff_name']) ?> यांना आठवण पाठवा">🔔</button></form><?php endif; ?></span></div>
+        <?php endforeach; if (count($attention) > 6): ?><div class="es-sub">आणखी <?= count($attention) - 6 ?> कामं…</div><?php endif; else: ?><div class="es-sub" style="padding:8px 0;color:#16A34A;font-weight:700;">✅ सगळ्या कामांच्या नोंदी अद्ययावत आहेत.</div><?php endif; ?>
       </div>
     </div>
   </div>
   <?php endif; ?>
 
   <div class="es-tools no-print">
-    <input type="search" id="esSearch" class="form-control-custom" placeholder="🔍 नाव / Section / काम शोधा…">
+    <input type="search" id="esSearch" class="form-control-custom" placeholder="🔍 नाव / Wing / काम शोधा…">
     <button type="button" class="sbtn on" data-st="">सर्व</button>
     <button type="button" class="sbtn" data-st="pending">⛔ सुरू नाही</button>
     <button type="button" class="sbtn" data-st="progress">🔄 सुरू</button>
@@ -347,14 +360,12 @@ require_once __DIR__ . '/../includes/header.php';
           foreach ($keys as $i => $k) { $lbl[] = ($i % $step === 0 || $i === count($keys) - 1) ? date('j', strtotime($k)) : ''; } ?><?= drBars($vals, $lbl, '#D9530F', 640, 170) ?><?php else: ?><div style="color:var(--text-dim);font-size:13px;">अजून नोंदी नाहीत.</div><?php endif; ?></div></div></div>
     </div>
     <div class="row g-3">
-      <div class="col-lg-6"><div class="panel h-100"><div class="panel-head"><div class="title">🏛️ Wing नुसार</div><div class="sub">कमी % आधी</div></div><div style="padding:8px 18px 14px;">
+      <div class="col-lg-12"><div class="panel h-100"><div class="panel-head"><div class="title">🏛️ Wing नुसार</div><div class="sub">कमी % आधी</div></div><div style="padding:8px 18px 14px;">
         <?php foreach ($S['wings'] as $w => $g): ?><div class="ec-hbar"><div><b><?= h($w) ?></b><br><small style="color:var(--text-dim);"><?= (int)$g['done'] ?>/<?= (int)$g['n'] ?> पूर्ण</small></div><div class="b"><i style="width:<?= (int)$g['avg'] ?>%;background:<?= $barCol($g['avg']) ?>;"></i></div><b style="text-align:right;"><?= (int)$g['avg'] ?>%</b></div><?php endforeach; ?></div></div></div>
-      <div class="col-lg-6"><div class="panel h-100"><div class="panel-head"><div class="title">🗂️ Section नुसार</div><div class="sub">कमी % आधी</div></div><div style="padding:8px 18px 14px;max-height:420px;overflow:auto;">
-        <?php foreach ($S['sections'] as $sec => $g): ?><div class="ec-hbar"><div><b><?= h($sec) ?></b><br><small style="color:var(--text-dim);"><?= h($g['wing']) ?></small></div><div class="b"><i style="width:<?= (int)$g['avg'] ?>%;background:<?= $barCol($g['avg']) ?>;"></i></div><b style="text-align:right;"><?= (int)$g['avg'] ?>%</b></div><?php endforeach; ?></div></div></div>
     </div>
     <div class="row g-3 mt-0">
-      <div class="col-lg-7"><div class="panel h-100"><div class="panel-head"><div class="title">👥 कर्मचारी नुसार</div><div class="sub">कमी % आधी · शेवटची नोंद</div></div><div style="padding:8px 18px 14px;max-height:420px;overflow:auto;">
-        <?php foreach ($board as $b): ?><div class="ec-hbar"><div><b><?= h($b['name']) ?></b><br><small style="color:var(--text-dim);"><?= (int)$b['done'] ?>/<?= (int)$b['n'] ?> पूर्ण · <?= h(ecampusAgo($b['last'])) ?></small></div><div class="b"><i style="width:<?= (int)$b['avg'] ?>%;background:<?= $barCol($b['avg']) ?>;"></i></div><b style="text-align:right;"><?= (int)$b['avg'] ?>%</b></div><?php endforeach; ?></div></div></div>
+      <div class="col-lg-7"><div class="panel h-100"><div class="panel-head"><div class="title">📋 काम नुसार</div><div class="sub">कमी % आधी · Wing · कर्मचारी</div></div><div style="padding:8px 18px 14px;max-height:420px;overflow:auto;">
+        <?php foreach ($taskBoard as $t): ?><div class="ec-hbar"><div><b><?= h(mb_strimwidth((string)$t['task_description'], 0, 55, '…')) ?></b><br><small style="color:var(--text-dim);"><?= h($t['wing']) ?> · <?= h($t['staff_name']) ?></small></div><div class="b"><i style="width:<?= (int)$t['percent'] ?>%;background:<?= $barCol($t['percent']) ?>;"></i></div><b style="text-align:right;"><?= (int)$t['percent'] ?>%</b></div><?php endforeach; ?></div></div></div>
       <div class="col-lg-5"><div class="panel h-100"><div class="panel-head"><div class="title">📅 मागचे 6 महिने</div><div class="sub">महिन्याची एकूण प्रगती</div></div>
         <div class="ec-chart" style="display:block;"><?php $hData = array_filter($history, fn($v) => $v !== null); /* नोंदी नसलेले महिने वगळा — 0% दाखवणं दिशाभूल करणारं */ if ($hData): ?><?= drBars(array_map('intval', array_values($hData)), array_map(fn($m) => date('M Y', strtotime($m . '-01')), array_keys($hData)), '#7B3F9E', 420, 170) ?><?php if (count($hData) < count($history)): ?><div class="es-sub">E-Campus नोंदी असलेलेच महिने</div><?php endif; ?><?php else: ?><div style="color:var(--text-dim);font-size:13px;">अजून इतिहास नाही.</div><?php endif; ?></div></div></div>
     </div>

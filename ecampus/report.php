@@ -81,7 +81,7 @@ if (isset($_GET['csv'])) {
     fputcsv($f, ['Sr. No', 'Wing / Category', 'Section / Department', 'Staff Name', 'Designation', 'Assigned Task', 'Progress Notes', '% Complete', 'Status', 'Last Updated']);
     $cell = fn($v) => preg_match('/^[=+\-@]/', (string)$v) ? "'" . $v : (string)$v;   // Excel formula injection टाळा
     $ordC = array_keys($rows);
-    usort($ordC, fn($x, $y) => [$rows[$x]['wing'], $rows[$x]['section'], $x] <=> [$rows[$y]['wing'], $rows[$y]['section'], $y]);   // कामनिहाय — Wing → Section
+    usort($ordC, fn($x, $y) => [$rows[$x]['wing'], $x] <=> [$rows[$y]['wing'], $y]);   // कामनिहाय — Wing नुसार
     foreach ($ordC as $i => $k) {
         $r = $rows[$k];
         fputcsv($f, [$i + 1, $cell($r['wing']), $cell($r['section']), $cell($r['staff_name']), $cell($r['designation_show']), $cell($r['task_description']), $cell((string)$r['notes']),
@@ -160,13 +160,13 @@ require_once __DIR__ . '/../includes/header.php';
     <thead><tr><th>Sr.</th><th>Staff Name</th><th>Designation</th><th>Assigned Task</th><th>Progress Notes</th><th>% Complete</th><th>Status</th></tr></thead>
     <tbody>
     <?php
-      // कामनिहाय — Wing → Section गटांत
+      // कामनिहाय — फक्त Wing नुसार गट
       $ord = array_keys($rows);
-      usort($ord, fn($x, $y) => [$rows[$x]['wing'], $rows[$x]['section'], $x] <=> [$rows[$y]['wing'], $rows[$y]['section'], $y]);
+      usort($ord, fn($x, $y) => [$rows[$x]['wing'], $x] <=> [$rows[$y]['wing'], $y]);
       $grp = null; $sr = 0;
-      foreach ($ord as $k): $r = $rows[$k]; $g = $r['wing'] . '|' . $r['section'];
+      foreach ($ord as $k): $r = $rows[$k]; $g = $r['wing'];
         if ($g !== $grp): $grp = $g; ?>
-        <tr class="ecr-g"><td colspan="7"><b><?= h($r['wing']) ?></b> <span>· <?= h($r['section']) ?></span></td></tr>
+        <tr class="ecr-g"><td colspan="7"><b><?= h($r['wing']) ?></b></td></tr>
       <?php endif; ?>
       <tr>
         <td><?= ++$sr ?></td><td><b><?= h($r['staff_name']) ?></b></td><td><?= h($r['designation_show']) ?></td>
