@@ -80,7 +80,10 @@ if (isset($_GET['csv'])) {
     fwrite($f, "\xEF\xBB\xBF");
     fputcsv($f, ['Sr. No', 'Wing / Category', 'Section / Department', 'Staff Name', 'Designation', 'Assigned Task', 'Progress Notes', '% Complete', 'Status', 'Last Updated']);
     $cell = fn($v) => preg_match('/^[=+\-@]/', (string)$v) ? "'" . $v : (string)$v;   // Excel formula injection टाळा
-    foreach ($rows as $i => $r) {
+    $ordC = array_keys($rows);
+    usort($ordC, fn($x, $y) => [$rows[$x]['wing'], $rows[$x]['section'], $x] <=> [$rows[$y]['wing'], $rows[$y]['section'], $y]);   // कामनिहाय — Wing → Section
+    foreach ($ordC as $i => $k) {
+        $r = $rows[$k];
         fputcsv($f, [$i + 1, $cell($r['wing']), $cell($r['section']), $cell($r['staff_name']), $cell($r['designation_show']), $cell($r['task_description']), $cell((string)$r['notes']),
             $r['percent'], $r['status_label'], $r['updated_at'] && !$r['carried'] ? date('d-m-Y h:i A', strtotime($r['updated_at'])) : '']);
     }
@@ -101,6 +104,7 @@ require_once __DIR__ . '/../includes/header.php';
 <style>
   .ecr td,.ecr th{font-size:12.5px;vertical-align:top;} .ecr td.t{white-space:pre-line;max-width:320px;} .ecr td.n{max-width:260px;white-space:normal;}
   .ec-st{font-size:11px;font-weight:700;padding:2px 9px;border-radius:99px;color:#fff;white-space:nowrap;}
+  .ecr tr.ecr-g td{background:#191C3A;color:#fff;font-size:12.5px;} .ecr tr.ecr-g td span{color:#FDBA8C;}
   @media print{ @page{size:A4 landscape;margin:10mm;} .no-print,.rail-sidebar,.topbar,.mb-nav,footer,#idleModal,.sos-fab{display:none !important;} .content{margin:0 !important;padding:0 !important;} }
 </style>
 <div class="page-eyebrow"><?= h($orgName) ?></div>
@@ -153,16 +157,24 @@ require_once __DIR__ . '/../includes/header.php';
 <div class="panel">
   <div style="overflow-x:auto;">
   <table class="rtable ecr">
-    <thead><tr><th>Sr.</th><th>Wing / Category</th><th>Section / Department</th><th>Staff Name</th><th>Designation</th><th>Assigned Task</th><th>Progress Notes</th><th>% Complete</th><th>Status</th></tr></thead>
+    <thead><tr><th>Sr.</th><th>Staff Name</th><th>Designation</th><th>Assigned Task</th><th>Progress Notes</th><th>% Complete</th><th>Status</th></tr></thead>
     <tbody>
-    <?php foreach ($rows as $i => $r): ?>
+    <?php
+      // कामनिहाय — Wing → Section गटांत
+      $ord = array_keys($rows);
+      usort($ord, fn($x, $y) => [$rows[$x]['wing'], $rows[$x]['section'], $x] <=> [$rows[$y]['wing'], $rows[$y]['section'], $y]);
+      $grp = null; $sr = 0;
+      foreach ($ord as $k): $r = $rows[$k]; $g = $r['wing'] . '|' . $r['section'];
+        if ($g !== $grp): $grp = $g; ?>
+        <tr class="ecr-g"><td colspan="7"><b><?= h($r['wing']) ?></b> <span>· <?= h($r['section']) ?></span></td></tr>
+      <?php endif; ?>
       <tr>
-        <td><?= $i + 1 ?></td><td><?= h($r['wing']) ?></td><td><?= h($r['section']) ?></td><td><b><?= h($r['staff_name']) ?></b></td><td><?= h($r['designation_show']) ?></td>
+        <td><?= ++$sr ?></td><td><b><?= h($r['staff_name']) ?></b></td><td><?= h($r['designation_show']) ?></td>
         <td class="t"><?= h($r['task_description']) ?></td><td class="n"><?= h((string)$r['notes']) ?></td>
         <td><b><?= $r['percent'] ?>%</b></td><td><span class="ec-st" style="background:<?= $r['status_color'] ?>;"><?= h($r['status_label']) ?></span></td>
       </tr>
     <?php endforeach; ?>
-    <?php if (!$rows): ?><tr><td colspan="9" style="text-align:center;color:var(--text-dim);padding:24px;">या महिन्यासाठी नोंदी नाहीत.</td></tr><?php endif; ?>
+    <?php if (!$rows): ?><tr><td colspan="7" style="text-align:center;color:var(--text-dim);padding:24px;">या महिन्यासाठी नोंदी नाहीत.</td></tr><?php endif; ?>
     </tbody>
   </table>
   </div>

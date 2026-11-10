@@ -243,23 +243,21 @@ function ecampusPdfSection(PDO $pdo, $orgId, $period, $mode = 'brief', $since = 
             . '<b>महिनाअखेरचा अंदाज: ' . $fc['projected'] . '%</b> — सध्याचा वेग रोज ~' . $fc['perDay'] . '% · ' . $fc['daysLeft'] . ' दिवस बाकी'
             . ($fc['onTrack'] ? ' · वेळेत पूर्ण होण्याच्या मार्गावर' : ' · 100% साठी रोज ~' . $fc['need'] . '% प्रगती हवी') . '</div>';
     }
-    $board = $mode === 'detail' ? [] : ecampusStaffBoard($rows, $period);
-    if (count($board) > 1) {
-        $html .= '<h2>कर्मचारीनिहाय प्रगती <span class="h2s">कमी % आधी — कोणाकडे लक्ष द्यायचं</span></h2>'
-            . '<table class="g"><thead><tr><th style="width:24%;">कर्मचारी</th><th style="width:18%;">पद</th><th class="num-r" style="width:8%;">कामं</th><th class="num-r" style="width:8%;">पूर्ण</th>'
-            . '<th style="width:20%;">सरासरी</th><th style="width:12%;">शेवटची नोंद</th><th class="num-r" style="width:10%;">7+ दिवस जुनी</th></tr></thead><tbody>';
-        foreach ($board as $b) {
-            $html .= '<tr><td><b>' . $h($b['name']) . '</b></td><td>' . $h($b['designation']) . '</td><td class="num-r">' . (int)$b['n'] . '</td><td class="num-r">' . (int)$b['done'] . '</td>'
-                . '<td>' . weeklyReportBar($b['avg'], $bc($b['avg']), 30) . ' <b style="color:' . $bc($b['avg']) . ';">' . (int)$b['avg'] . '%</b></td>'
-                . '<td>' . ($b['last'] ? date('d/m/Y', strtotime($b['last'])) : '<span style="color:#B42318;">नोंद नाही</span>') . '</td>'
-                . '<td class="num-r">' . ($b['stale'] ? '<b style="color:#B45309;">' . (int)$b['stale'] . '</b>' : '0') . '</td></tr>';
+    // मासिक अहवाल कामनिहाय — कर्मचारीनिहाय भाग नाही
+    if ($mode !== 'detail') { $html .= '<h2>कामनिहाय तपशील</h2>'; }
+    // Wing → Section गटांत (Sort क्रम कायम ठेवून)
+    $ord = array_keys($rows);
+    usort($ord, fn($x, $y) => [$rows[$x]['wing'], $rows[$x]['section'], $x] <=> [$rows[$y]['wing'], $rows[$y]['section'], $y]);
+    $html .= '<table class="g"><thead><tr><th style="width:4%;">Sr.</th><th style="width:14%;">Staff Name</th><th style="width:30%;">Assigned Task</th><th style="width:30%;">Progress Notes</th><th class="num-r" style="width:8%;">%</th><th style="width:10%;">Status</th></tr></thead><tbody>';
+    $grp = null; $sr = 0;
+    foreach ($ord as $k) {
+        $r = $rows[$k];
+        $g = $r['wing'] . '|' . $r['section'];
+        if ($g !== $grp) {
+            $grp = $g;
+            $html .= '<tr><td colspan="6" style="background:#191C3A;color:#fff;font-weight:bold;padding:4px 6px;">' . $h($r['wing']) . ' <span style="color:#FDBA8C;font-weight:normal;">· ' . $h($r['section']) . '</span></td></tr>';
         }
-        $html .= '</tbody></table>';
-    }
-    if ($mode !== 'detail') { $html .= '<h2>सर्व कामांचा तपशील</h2>'; }
-    $html .= '<table class="g"><thead><tr><th style="width:4%;">Sr.</th><th style="width:11%;">Wing / Category</th><th style="width:12%;">Section / Department</th><th style="width:12%;">Staff Name</th><th style="width:10%;">Designation</th><th style="width:22%;">Assigned Task</th><th style="width:17%;">Progress Notes</th><th class="num-r" style="width:6%;">%</th><th style="width:6%;">Status</th></tr></thead><tbody>';
-    foreach ($rows as $i => $r) {
-        $html .= '<tr><td>' . ($i + 1) . '</td><td>' . $h($r['wing']) . '</td><td>' . $h($r['section']) . '</td><td>' . $h($r['staff_name']) . '</td><td>' . $h($r['designation_show']) . '</td><td>' . nl2br($h($r['task_description'])) . '</td><td>'
+        $html .= '<tr><td>' . (++$sr) . '</td><td><b>' . $h($r['staff_name']) . '</b><div class="muted">' . $h($r['designation_show']) . '</div></td><td>' . nl2br($h($r['task_description'])) . '</td><td>'
             . $h((string)$r['notes']) . '</td><td class="num-r" style="font-weight:bold;color:' . $bc($r['percent']) . ';">' . $r['percent'] . '%</td><td style="font-weight:bold;color:' . $r['status_color'] . ';">' . $h($r['status_label']) . '</td></tr>';
     }
     return $html . '</tbody></table>';
