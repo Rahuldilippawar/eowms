@@ -160,6 +160,13 @@ if (hasRole('super_admin')) {
   <?= i18nClientScript() ?>
 
   <div class="content">
+    <?php if (function_exists('saViewingAs') && saViewingAs()): ?>
+      <div class="sa-viewas-bar">
+        <span>👁️ तुम्ही <b><?= h($_SESSION['sa_view_as']['target_name'] ?? '') ?></b> यांच्या नजरेतून पाहत आहात — फक्त पाहणं, काहीही बदलता येणार नाही.</span>
+        <form method="POST" action="<?= h($rootPath ?? '') ?>admin/view-as.php" style="margin:0;"><input type="hidden" name="action" value="stop"><button type="submit">✕ थांबा — परत Super Admin</button></form>
+      </div>
+      <style>.sa-viewas-bar{position:sticky;top:0;z-index:1050;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:#B42318;color:#fff;padding:9px 14px;border-radius:10px;margin-bottom:12px;font-size:13px;box-shadow:0 4px 14px rgba(180,35,24,.3);}.sa-viewas-bar button{background:#fff;color:#B42318;border:0;border-radius:8px;padding:5px 12px;font-weight:700;font-size:12.5px;cursor:pointer;}</style>
+    <?php endif; ?>
     <?php if (!empty($_SESSION['flash'])):
       // बरीच Pages चुकीचे संदेशही 'flash' मधूनच पाठवतात — असा संदेश हिरव्या ऐवजी पिवळ्या Banner मध्ये
       $flashIsError = !empty($_SESSION['flash_error']) || preg_match('/^(⚠️|❌)|अवैध|त्रुटी|सापडल[ाीे] नाही|झाल[ाेंी]* नाही|झाले नाहीत|करता येत नाही|बदलता येत नाही|परवानगी नाही|आवश्यक आहे/u', $_SESSION['flash']); ?>

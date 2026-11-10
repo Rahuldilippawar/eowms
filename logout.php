@@ -6,7 +6,12 @@ $idle = ($_GET['reason'] ?? '') === 'idle';
 $next = $idle ? safeNextPath($_GET['next'] ?? '') : null;
 
 // Session रिकामी करण्याआधीच Log करा — नाहीतर "कोण Logout झालं" हे कळणारच नाही
-if (currentUser()) { logActivity($idle ? 'आपोआप Logout (निष्क्रियता)' : 'Logout केलं'); }
+if (currentUser()) {
+    require_once __DIR__ . '/includes/superadmin.php';
+    if (saViewingAs()) { saViewAsStop(); }   // View as चालू असताना Logout — आधी खरा Login परत
+    logActivity($idle ? 'आपोआप Logout (निष्क्रियता)' : 'Logout केलं');
+    saSessionEnd();
+}
 
 $_SESSION = [];
 

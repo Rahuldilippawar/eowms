@@ -12,7 +12,7 @@ try {
     $st->execute([$id, $user['id']]);
     $n = $st->fetch();
     if ($n) {
-        $pdo->prepare("UPDATE notifications SET is_read = 1 WHERE id = ? AND user_id = ?")->execute([$id, $user['id']]);
+        if (!saViewingAs()) $pdo->prepare("UPDATE notifications SET is_read = 1 WHERE id = ? AND user_id = ?")->execute([$id, $user['id']]);
         $target = notifyNormalizeLink($n['link']) ?? $target;
     }
 } catch (PDOException $e) {}

@@ -31,6 +31,7 @@ if ($confirmText !== $hostel['name']) {
 
 // FK cascades (ON DELETE CASCADE) will remove hostel_staff allocations and
 // hostel_students records under this hostel automatically.
+recycleCapture($pdo, 'hostels', $id);   // 🗑️ Recycle Bin
 $pdo->prepare("DELETE FROM hostels WHERE id = ?")->execute([$id]);
 
 logActivity('वसतिगृह कायमचे डिलीट केले', 'hostel', $id, $hostel['name']);

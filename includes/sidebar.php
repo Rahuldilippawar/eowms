@@ -614,6 +614,9 @@ function navGroupHead($id, $key, $activeGroup, $icon, $label, $badge = 0) {
     <!-- ==================== ⚙️ प्रशासन (Super Admin) — रचना / पत्र सेटिंग्ज / System ==================== -->
     <?php if (hasRole('super_admin')): ?>
       <div class="tier-label"><i class="fa-solid fa-user-shield fa-fw"></i><span><?= h(t('nav_administration')) ?></span></div>
+      <a href="<?= $rp ?>admin/index.php" class="tree-node <?= $currentDir === 'admin' ? 'active' : '' ?>" style="font-weight:600;">
+        <i class="fa-solid fa-shield-halved fa-fw"></i><span>Control Center</span>
+      </a>
       <?= navGroupHead('navGroupAdminOrg', 'adminOrg', $activeGroup, 'fa-solid fa-sitemap', 'संस्था रचना') ?>
       <div class="collapse nav-group-body <?= navGroupOpen('adminOrg', $activeGroup) ?>" id="navGroupAdminOrg">
         <a href="<?= $rp ?>organizations/index.php" class="tree-node <?= $currentDir === 'organizations' ? 'active' : '' ?>">

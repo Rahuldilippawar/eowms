@@ -30,6 +30,7 @@ $entryId = (int)$req['entry_id'];
 $vehicleId = (int)$req['vehicle_id'];
 $oldReading = vehicleEntryReading($pdo, $req['entry_type'], (int)$req['entry_id']);
 
+recycleCapture($pdo, $tableMap[$entryType], $entryId, null, $orgId);   // 🗑️ Recycle Bin
 $pdo->prepare("DELETE FROM {$tableMap[$entryType]} WHERE id = ? AND vehicle_id = ?")->execute([$entryId, $vehicleId]);
 if ($entryType !== 'maintenance') {
     vehicleRecomputeOdometer($pdo, $vehicleId, $oldReading);

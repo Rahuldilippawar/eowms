@@ -77,6 +77,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $pdo->prepare("UPDATE users SET failed_login_attempts = ?, locked_until = DATE_ADD(NOW(), INTERVAL 15 MINUTE) WHERE id = ?")
                     ->execute([$attempts, $user['id']]);
                 $error = "खूप चुकीचे प्रयत्न झाले — सुरक्षिततेसाठी हे खाते १५ मिनिटांसाठी तात्पुरते बंद केले आहे.";
+                // 🚨 Super Admin ला लगेच सूचना
+                try {
+                    $saIds = notifyUserIdsByCategory((int)$user['organization_id'], ['super_admin']);
+                    notifyUsers($saIds, (int)$user['organization_id'], '🚨 खातं Lock झालं: ' . $user['name'], '5 वेळा चुकीचा Password — IP ' . clientIp() . '. सुरक्षा इशारे पानावरून Unlock करता येईल.', 'admin/security.php');
+                } catch (Throwable $e) {}
             } else {
                 $pdo->prepare("UPDATE users SET failed_login_attempts = ?, locked_until = NULL WHERE id = ?")->execute([$attempts, $user['id']]);
                 $remaining = 5 - $attempts;
@@ -282,6 +287,10 @@ $loginOrgName = $loginOrg['name'] ?? 'VJMAT';
       <?php if (!empty($_SESSION['session_expired'])): ?>
         <div class="lg-msg warn"><i class="fa-solid fa-clock"></i><span>बराच वेळ काहीही न केल्यामुळे तुम्ही सुरक्षिततेसाठी आपोआप Logout झालात. कृपया परत Login करा<?= !empty($_SESSION['login_next']) ? ' — तुम्ही जिथे होता त्याच पानावर परत जाल' : '' ?>.</span></div>
         <?php unset($_SESSION['session_expired']); ?>
+      <?php endif; ?>
+      <?php if (!empty($_SESSION['force_logged_out'])): ?>
+        <div class="lg-msg err"><i class="fa-solid fa-right-from-bracket"></i><span>सुरक्षिततेसाठी Super Admin ने तुमचं हे Login बंद केलं आहे. कृपया परत Login करा.</span></div>
+        <?php unset($_SESSION['force_logged_out']); ?>
       <?php endif; ?>
       <?php if (!empty($_SESSION['account_deactivated'])): ?>
         <div class="lg-msg err"><i class="fa-solid fa-user-slash"></i><span>तुमचं खातं किंवा संस्था निष्क्रिय (Inactive) केली गेली आहे — त्यामुळे तुम्हाला Logout केलं. कृपया Super Admin शी संपर्क साधा.</span></div>

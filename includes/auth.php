@@ -142,6 +142,10 @@ function requireLogin($rootPath = '') {
         $_SESSION['user_recheck_at'] = time();
     }
 
+    // 🛡️ Super Admin Hooks — View as (फक्त पाहणं), Session नोंद/Force Logout, Module वापर
+    require_once __DIR__ . '/superadmin.php';
+    saRequestHooks($rootPath);
+
     // 🛠️ Site Maintenance Mode — Super Admin ने Site "Off" केली असेल तर,
     // Super Admin सोडून बाकी सगळ्यांना Maintenance-पानावर वळवतो.
     $currentScriptForMaintenance = basename($_SERVER['SCRIPT_NAME']);
@@ -184,7 +188,7 @@ function requireLogin($rootPath = '') {
         if ($currentDirForRestriction === '.' || $currentDirForRestriction === '/' || $currentDirForRestriction === '') {
             $currentDirForRestriction = '__root__';
         }
-        $exemptDirs = ['account', '__root__', 'ecampus']; // Profile/Password — नेहमीच सगळ्यांना उपलब्ध; E-Campus — पानं स्वतः नेमणूक तपासतात
+        $exemptDirs = ['account', '__root__', 'ecampus', 'admin']; // admin/ — सगळी पानं स्वतः Super Admin तपासतात; View as "थांबा" नेहमी पोहोचावं // Profile/Password — नेहमीच सगळ्यांना उपलब्ध; E-Campus — पानं स्वतः नेमणूक तपासतात
         $exemptRootPages = ['logout.php', 'force-password-change.php', 'maintenance.php'];
         $currentPageForRestriction = basename($_SERVER['SCRIPT_NAME']);
 
