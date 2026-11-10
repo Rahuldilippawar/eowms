@@ -257,3 +257,13 @@
     }, { passive: true });
   });
 })();
+
+// ✍️ नाव टाइप करताना प्रत्येक शब्दाचं पहिलं अक्षर आपोआप Capital (input[data-capname])
+(function () {
+  document.addEventListener('input', function (e) {
+    var el = e.target;
+    if (!el || !el.hasAttribute || !el.hasAttribute('data-capname') || e.isComposing) { return; }
+    var v = el.value, nv = v.replace(/(^|[\s.\-'(])([a-z])/g, function (m, p, c) { return p + c.toUpperCase(); });
+    if (nv !== v) { var s = el.selectionStart, en = el.selectionEnd; el.value = nv; try { el.setSelectionRange(s, en); } catch (x) {} }
+  });
+})();

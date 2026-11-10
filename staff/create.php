@@ -9,7 +9,7 @@ $user = currentUser();
 $error = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $name = trim($_POST['name'] ?? '');
+    $name = nameCase($_POST['name'] ?? '');
     $email = trim($_POST['email'] ?? '');
     $password = trim($_POST['password'] ?? '');
     $role = $_POST['role'] ?? 'staff';
@@ -144,7 +144,7 @@ require_once __DIR__ . '/../includes/header.php';
     <div class="row g-3">
       <div class="col-md-6">
         <label class="form-label-custom"><?= h(t('s60')) ?></label>
-        <input type="text" name="name" class="form-control-custom" required>
+        <input type="text" name="name" class="form-control-custom" data-capname autocapitalize="words" required>
       </div>
       <div class="col-md-6">
         <label class="form-label-custom"><?= h(t('s61')) ?></label>
