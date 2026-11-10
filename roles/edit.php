@@ -65,7 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ->execute([$restrictedMode, $restrictedModulesStr, $roleKey]);
     }
 
-    $_SESSION['flash'] = "'{$role['label_local']}' अद्ययावत केले.";
+    $_SESSION['flash'] = "'" . ($role['label_local'] ?: $role['label']) . "' अद्ययावत केले.";
     header('Location: index.php');
     exit;
 }
@@ -219,11 +219,11 @@ require_once __DIR__ . '/../includes/header.php';
 </form>
 
 <div class="panel mb-3">
-  <div class="panel-head"><div class="title">👥 या पदावरील व्यक्ती (<?= count($holders) ?>)</div><div class="sub">वरचे बदल यांच्या सगळ्यांच्या प्रवेशावर लगेच लागू होतात</div></div>
+  <div class="panel-head"><div class="title">👥 या पदावरील व्यक्ती (<?= count($holders) ?>)</div><div class="sub">वरचे बदल यांच्या सगळ्यांच्या प्रवेशावर लगेच लागू होतात · नावावर Click = त्या व्यक्तीचा Access / व्यक्तीनुसार अधिकार</div></div>
   <?php if (!$holders): ?><div class="sm-empty">हे पद अजून कोणालाही दिलेलं नाही</div><?php else: ?>
   <div class="rp-holders">
     <?php foreach ($holders as $hd): ?>
-      <a href="../staff/profile.php?id=<?= (int)$hd['id'] ?>" class="rp-holder" style="<?= $hd['is_active'] ? '' : 'opacity:.55;' ?>">
+      <a href="user-access.php?user_id=<?= (int)$hd['id'] ?>" title="या व्यक्तीचा Access पाहा / बदला" class="rp-holder" style="<?= $hd['is_active'] ? '' : 'opacity:.55;' ?>">
         <span class="av"><?= h(mb_strtoupper(mb_substr($hd['name'], 0, 1))) ?></span>
         <span><b><?= h($hd['name']) ?></b><small><?= h($hd['dept'] ?: '—') ?><?= $hd['is_active'] ? '' : ' · निष्क्रिय' ?></small></span>
       </a>

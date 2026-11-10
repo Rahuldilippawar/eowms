@@ -3004,3 +3004,18 @@ UPDATE departments SET hod_id = (SELECT id FROM users WHERE email='mtn.hod@sanje
 
 -- Maintenance-type department gets the Issue Register tab by default (Super Admin can enable more later)
 UPDATE departments SET has_issue_register = 1 WHERE code = 'MTN';
+
+-- 👤 व्यक्तीनुसार Permission — पद न बदलता एका व्यक्तीला अधिकार द्या (grant) किंवा पदाचा अधिकार काढा (deny), हवं तर ठराविक तारखेपर्यंत
+CREATE TABLE user_permissions (
+  user_id INT NOT NULL,
+  permission_key VARCHAR(80) NOT NULL,
+  mode VARCHAR(5) NOT NULL DEFAULT 'grant',
+  expires_on DATE NULL,
+  note VARCHAR(255) NULL,
+  granted_by INT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (user_id, permission_key),
+  INDEX idx_perm (permission_key),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (granted_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

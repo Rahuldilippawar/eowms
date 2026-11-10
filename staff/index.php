@@ -187,6 +187,7 @@ try {
       <a href="id-cards-bulk.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13.5px;padding:9px 18px;"><i class="fa-solid fa-id-card me-1"></i>Bulk ID Cards</a>
     <?php endif; ?>
     <?php if (hasRole('super_admin')): ?>
+      <a href="../roles/user-access.php" class="btn" style="border:1px solid var(--amber);color:var(--amber);border-radius:9px;font-size:13.5px;padding:9px 18px;"><i class="fa-solid fa-user-shield me-1"></i>👤 व्यक्तीनुसार अधिकार</a>
       <a href="extra-access.php" class="btn" style="border:1px solid var(--amber);color:var(--amber);border-radius:9px;font-size:13.5px;padding:9px 18px;"><i class="fa-solid fa-unlock-keyhole me-1"></i>🔓 Extra विभाग Access</a>
       <a href="extra-campus-access.php" class="btn" style="border:1px solid var(--amber);color:var(--amber);border-radius:9px;font-size:13.5px;padding:9px 18px;"><i class="fa-solid fa-building-columns me-1"></i>🏫 Extra Campus Access</a>
       <a href="import.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13.5px;padding:9px 18px;"><i class="fa-solid fa-file-csv me-1"></i>CSV Import</a>

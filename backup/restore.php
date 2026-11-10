@@ -881,6 +881,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                 }
             } catch (PDOException $e) { /* table not migrated yet */ }
 
+            // ---------------- 👤 व्यक्तीनुसार Permissions ----------------
+            try {
+                foreach ($data['user_permissions'] ?? [] as $up) {
+                    $newUserIdUp = $userMap[$up['user_id']] ?? null;
+                    if (!$newUserIdUp) continue;
+                    $pdo->prepare("INSERT IGNORE INTO user_permissions (user_id, permission_key, mode, expires_on, note, granted_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)")
+                        ->execute([$newUserIdUp, $up['permission_key'], $up['mode'], $up['expires_on'], $up['note'], $up['granted_by'] ? ($userMap[$up['granted_by']] ?? null) : null, $up['created_at']]);
+                }
+            } catch (PDOException $e) { /* table not migrated yet */ }
+
             // ---------------- ध्यान व सत्संग (Meditation/Satsang Module) ----------------
             try {
                 $satsangEventMap = [];
