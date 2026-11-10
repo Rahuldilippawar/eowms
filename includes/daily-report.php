@@ -284,7 +284,12 @@ function dailyReportPdfHtml(array $D) {
 
     // --- सारांश ---
     $w = $S['work']['w'] ?? null; $at = $S['attendance']['a'] ?? null;
-    $cells = [$kpi('आजचा गुण', $D['score'] . '<span style="font-size:9pt;color:#8A90AC;">/100</span>', ['good' => 'चांगला दिवस', 'warn' => 'लक्ष द्या', 'bad' => 'गंभीर'][$D['level']], $C[$D['level']])];
+    $scoreSub = ['good' => 'चांगला दिवस', 'warn' => 'लक्ष द्या', 'bad' => 'गंभीर'][$D['level']];
+    if (isset($D['prevScore'])) {   // कालच्या तुलनेत
+        $dd = $D['score'] - $D['prevScore'];
+        $scoreSub .= ' · काल ' . $D['prevScore'] . ' <b style="color:' . ($dd > 0 ? '#137A4B' : ($dd < 0 ? '#B42318' : '#8A90AC')) . ';">' . ($dd > 0 ? '▲' . $dd : ($dd < 0 ? '▼' . abs($dd) : '=')) . '</b>';
+    }
+    $cells = [$kpi('आजचा गुण', $D['score'] . '<span style="font-size:9pt;color:#8A90AC;">/100</span>', $scoreSub, $C[$D['level']])];
     if ($w) { $cells[] = $kpi('कामाच्या नोंदी', (int)$w['total'], $pct($w['done'], $w['total']) . '% पूर्ण · सरासरी ' . round($S['work']['avg'])); }
     if ($at && $at['total']) { $cells[] = $kpi('हजेरी', $pct($at['present'], $at['total']) . '%', (int)$at['present'] . '/' . (int)$at['total'] . ' उपस्थित · ' . (int)$at['late'] . ' उशिरा', $pct($at['present'], $at['total']) >= 85 ? '#137A4B' : '#B45309'); }
     if (!empty($S['tasks'])) { $cells[] = $kpi('मुदतबाह्य Tasks', (int)$S['tasks']['t']['overdue'], (int)$S['tasks']['t']['done'] . ' आज पूर्ण', $S['tasks']['t']['overdue'] ? '#B42318' : '#137A4B'); }
@@ -442,13 +447,24 @@ function dailyReportPdfHtml(array $D) {
         foreach ($items as $it) { $html .= '<div class="al" style="background:#F3F1EE;border-left:3px solid #7B3F9E;">' . $it . '</div>'; }
     }
 
+    // 👤 व्यक्तीनिहाय जबाबदारी
+    require_once __DIR__ . '/report-smart.php';
+    $html .= mgmtAccountabilityHtml(mgmtAccountability($pdo, $orgId, $D['date'], 10));
+
     if (!$S) { $html .= '<div class="al" style="background:#F3F1EE;margin-top:14px;">आज प्रणालीत कोणतीही नोंद झाली नाही.</div>'; }
     $html .= '<div class="muted" style="margin-top:16px;text-align:center;">!! आत्मा मालिक !! — E-Admin ने आपोआप तयार केलेला दैनिक अहवाल · ' . $h($D['org']) . '</div>';
     return $html;
 }
 
 function dailyReportPdf(array $D) {
-    return mgmtReportPdf(dailyReportPdfHtml($D), 'दैनिक अहवाल — ' . $D['org'] . ' — ' . $D['date'], $D['org']);
+    global $pdo;
+    if (!isset($D['prevScore']) && $pdo instanceof PDO) {   // कालचा गुण — तुलनेसाठी
+        try { $D['prevScore'] = (int)dailyReportData($pdo, (int)$D['orgId'], date('Y-m-d', strtotime($D['date'] . ' -1 day')))['score']; } catch (Throwable $e) {}
+    }
+    return mgmtReportPdf(dailyReportPdfHtml($D), 'दैनिक अहवाल — ' . $D['org'] . ' — ' . $D['date'], $D['org'], 'A4', [
+        'link' => 'reports/daily.php?date=' . $D['date'], 'orgId' => $D['orgId'] ?? null,
+        'subtitle' => 'दैनिक व्यवस्थापन अहवाल · ' . weeklyReportMarathiDate($D['date']),
+    ]);
 }
 
 function dailyReportFileName(array $D) {

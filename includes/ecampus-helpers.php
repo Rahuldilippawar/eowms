@@ -219,8 +219,28 @@ function ecampusPdfSection(PDO $pdo, $orgId, $period, $mode = 'brief', $since = 
         }
         return $html;
     }
-    // full — PDF मधल्या मासिक अहवालासारखा पूर्ण तक्ता
-    $html .= '<table class="g" style="margin-top:8px;"><thead><tr><th style="width:4%;">Sr.</th><th style="width:11%;">Wing / Category</th><th style="width:12%;">Section / Department</th><th style="width:12%;">Staff Name</th><th style="width:10%;">Designation</th><th style="width:22%;">Assigned Task</th><th style="width:17%;">Progress Notes</th><th class="num-r" style="width:6%;">%</th><th style="width:6%;">Status</th></tr></thead><tbody>';
+    // full — 🔮 महिनाअखेरचा अंदाज + 👥 कर्मचारीनिहाय + पूर्ण तक्ता
+    $fc = ecampusForecast(ecampusDailyTrend($pdo, $orgId, $period, $rows), $period, $S['overall']);
+    if ($fc) {
+        $html .= '<div class="al" style="margin-top:6px;padding:5px 9px;background:' . ($fc['onTrack'] ? '#E7F6EF' : '#FEF3C7') . ';border-left:3px solid ' . ($fc['onTrack'] ? '#137A4B' : '#B45309') . ';font-size:8.6pt;">'
+            . '<b>महिनाअखेरचा अंदाज: ' . $fc['projected'] . '%</b> — सध्याचा वेग रोज ~' . $fc['perDay'] . '% · ' . $fc['daysLeft'] . ' दिवस बाकी'
+            . ($fc['onTrack'] ? ' · वेळेत पूर्ण होण्याच्या मार्गावर' : ' · 100% साठी रोज ~' . $fc['need'] . '% प्रगती हवी') . '</div>';
+    }
+    $board = ecampusStaffBoard($rows, $period);
+    if (count($board) > 1) {
+        $html .= '<h2>कर्मचारीनिहाय प्रगती <span class="h2s">कमी % आधी — कोणाकडे लक्ष द्यायचं</span></h2>'
+            . '<table class="g"><thead><tr><th style="width:24%;">कर्मचारी</th><th style="width:18%;">पद</th><th class="num-r" style="width:8%;">कामं</th><th class="num-r" style="width:8%;">पूर्ण</th>'
+            . '<th style="width:20%;">सरासरी</th><th style="width:12%;">शेवटची नोंद</th><th class="num-r" style="width:10%;">7+ दिवस जुनी</th></tr></thead><tbody>';
+        foreach ($board as $b) {
+            $html .= '<tr><td><b>' . $h($b['name']) . '</b></td><td>' . $h($b['designation']) . '</td><td class="num-r">' . (int)$b['n'] . '</td><td class="num-r">' . (int)$b['done'] . '</td>'
+                . '<td>' . weeklyReportBar($b['avg'], $bc($b['avg']), 30) . ' <b style="color:' . $bc($b['avg']) . ';">' . (int)$b['avg'] . '%</b></td>'
+                . '<td>' . ($b['last'] ? date('d/m/Y', strtotime($b['last'])) : '<span style="color:#B42318;">नोंद नाही</span>') . '</td>'
+                . '<td class="num-r">' . ($b['stale'] ? '<b style="color:#B45309;">' . (int)$b['stale'] . '</b>' : '0') . '</td></tr>';
+        }
+        $html .= '</tbody></table>';
+    }
+    $html .= '<h2>सर्व कामांचा तपशील</h2>';
+    $html .= '<table class="g"><thead><tr><th style="width:4%;">Sr.</th><th style="width:11%;">Wing / Category</th><th style="width:12%;">Section / Department</th><th style="width:12%;">Staff Name</th><th style="width:10%;">Designation</th><th style="width:22%;">Assigned Task</th><th style="width:17%;">Progress Notes</th><th class="num-r" style="width:6%;">%</th><th style="width:6%;">Status</th></tr></thead><tbody>';
     foreach ($rows as $i => $r) {
         $html .= '<tr><td>' . ($i + 1) . '</td><td>' . $h($r['wing']) . '</td><td>' . $h($r['section']) . '</td><td>' . $h($r['staff_name']) . '</td><td>' . $h($r['designation_show']) . '</td><td>' . nl2br($h($r['task_description'])) . '</td><td>'
             . $h((string)$r['notes']) . '</td><td class="num-r" style="font-weight:bold;color:' . $bc($r['percent']) . ';">' . $r['percent'] . '%</td><td style="font-weight:bold;color:' . $r['status_color'] . ';">' . $h($r['status_label']) . '</td></tr>';
@@ -246,16 +266,18 @@ function ecampusReportPdf(PDO $pdo, $orgId, $period, $orgName) {
     require_once __DIR__ . '/weekly-report.php';
     require_once __DIR__ . '/daily-report.php';
     $css = '<style>body{font-family:freesans;color:#1A1D29;font-size:8.6pt;}
-      .hdr{background:#191C3A;color:#fff;padding:10px 16px;border-bottom:4px solid #D9530F;} .hdr .o{font-size:14pt;font-weight:bold;} .hdr .t{font-size:10.5pt;color:#FDBA8C;}
+      .hdr{background:#191C3A;color:#fff;padding:12px 16px;border-bottom:4px solid #D9530F;} .hdr .o{font-size:14pt;font-weight:bold;} .hdr .t{font-size:10.5pt;color:#FDBA8C;}
       table.kp{width:100%;border-collapse:separate;border-spacing:5px;margin:0 -5px;} td.kpi{background:#F7F5F2;border:1px solid #EAE5DF;padding:6px 8px;vertical-align:top;}
       .kl{font-size:7.6pt;color:#64708A;} .kv{font-size:14pt;font-weight:bold;} .ks{font-size:7.2pt;color:#64708A;}
       table.g{width:100%;border-collapse:collapse;font-size:8pt;} table.g th{background:#F3F1EE;color:#475069;text-align:left;padding:4px 5px;border-bottom:1px solid #DDD6CE;font-size:7.6pt;}
       table.g td{padding:4px 5px;border-bottom:1px solid #EEE9E3;vertical-align:top;} .num-r{text-align:right;} .muted{color:#8A90AC;font-size:7.6pt;}
-      table.split{width:100%;border-collapse:collapse;} table.split td{vertical-align:top;padding:0;}</style>';
-    $html = $css . '<div class="hdr"><div class="o">' . htmlspecialchars($orgName) . '</div><div class="t">MONTHLY E-CAMPUS REPORT — ' . htmlspecialchars(ecampusPeriodLabel($period)) . ' (' . date('m/Y', strtotime($period . '-01')) . ')</div></div>'
-        . ecampusPdfSection($pdo, $orgId, $period, 'full')
-        . '<div class="muted" style="margin-top:10px;text-align:center;">!! आत्मा मालिक !! — E-Admin · तयार: ' . date('d-m-Y, h:i A') . '</div>';
-    return mgmtReportPdf($html, 'E-Campus Report — ' . $period, $orgName, 'A4-L');
+      table.split{width:100%;border-collapse:collapse;} table.split td{vertical-align:top;padding:0;}
+      h2{font-size:10.5pt;color:#191C3A;margin:10px 0 5px;padding-bottom:2px;border-bottom:1.2px solid #EAE5DF;} .h2s{font-size:7.6pt;color:#8A90AC;font-weight:normal;}</style>';
+    $html = $css . '<div class="hdr"><div class="o">' . htmlspecialchars($orgName) . '</div><div class="t">MONTHLY E-CAMPUS REPORT — ' . htmlspecialchars(ecampusPeriodLabel($period)) . ' (' . date('m/Y', strtotime($period . '-01')) . ')</div><div class="p" style="font-size:7.6pt;color:#C9CCE0;">!! आत्मा मालिक !! · तयार: ' . date('d-m-Y, h:i A') . '</div></div>'
+        . ecampusPdfSection($pdo, $orgId, $period, 'full');
+    return mgmtReportPdf($html, 'E-Campus Report — ' . $period, $orgName, 'A4-L', [
+        'link' => 'ecampus/index.php?month=' . $period, 'orgId' => $orgId, 'badgeMm' => 13, 'subtitle' => 'मासिक E-Campus अहवाल · ' . ecampusPeriodLabel($period),
+    ]);
 }
 
 function ecampusReportFileName($period) { return 'e-campus-report-' . $period . '-' . date('Ymd-His') . '.pdf'; }

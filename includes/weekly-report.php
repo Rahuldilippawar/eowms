@@ -175,7 +175,7 @@ function weeklyReportPdfHtml(array $d) {
       body{font-family:freesans;color:#1A1D29;font-size:10pt;}
       .hdr{background:#191C3A;color:#fff;padding:14px 18px;border-bottom:4px solid #D9530F;}
       .hdr .o{font-size:17pt;font-weight:bold;} .hdr .t{font-size:11pt;color:#FDBA8C;margin-top:2px;} .hdr .p{font-size:9pt;color:#C9CCE0;margin-top:4px;}
-      h2{font-size:12.5pt;color:#191C3A;margin:16px 0 6px;padding-bottom:3px;border-bottom:1.5px solid #EAE5DF;}
+      h2{font-size:12.5pt;color:#191C3A;margin:16px 0 6px;padding-bottom:3px;border-bottom:1.5px solid #EAE5DF;} .h2s{font-size:8.5pt;color:#8A90AC;font-weight:normal;}
       table.kp{width:100%;border-collapse:separate;border-spacing:6px;margin:0 -6px;}
       td.kpi{background:#F7F5F2;border:1px solid #EAE5DF;padding:8px 10px;width:25%;vertical-align:top;}
       .kl{font-size:8.5pt;color:#64708A;} .kv{font-size:17pt;font-weight:bold;margin:2px 0;} .ks{font-size:8pt;color:#64708A;}
@@ -290,6 +290,13 @@ function weeklyReportPdfHtml(array $d) {
         $html .= '</tbody></table>';
     }
 
+    // 👤 व्यक्तीनिहाय जबाबदारी — कोणाकडे काय अडकलं आहे
+    global $pdo;
+    if ($pdo instanceof PDO) {
+        require_once __DIR__ . '/report-smart.php';
+        $html .= mgmtAccountabilityHtml(mgmtAccountability($pdo, (int)$d['orgId'], $d['period']['end'], 12));
+    }
+
     $html .= '<div class="muted" style="margin-top:18px;text-align:center;">!! आत्मा मालिक !! — E-Admin ने आपोआप तयार केलेला अहवाल · ' . $h($d['org']) . '</div>';
     return $html;
 }
@@ -311,15 +318,20 @@ function weeklyReportBar($pct, $color, $fullMm = 110) {
     return '<img src="' . weeklyReportPixel($color) . '" style="width:' . $w . 'mm;height:2.6mm;">';
 }
 
-/** HTML → PDF (bytes) — साप्ताहिक व दैनिक दोन्ही अहवालांसाठी एकच mPDF सेटअप */
-function mgmtReportPdf($html, $title, $orgName, $format = 'A4') {
+/**
+ * HTML → PDF (bytes) — साप्ताहिक, दैनिक व E-Campus अहवालांसाठी एकच mPDF सेटअप
+ * @param array $opts ['link' => Online अहवालाचा relative पत्ता (QR), 'orgId' => Logo साठी, 'subtitle' => पान 2+ वरच्या पट्टीत]
+ */
+function mgmtReportPdf($html, $title, $orgName, $format = 'A4', array $opts = []) {
+    global $pdo;
     require_once __DIR__ . '/../lib/vendor/autoload.php';
+    require_once __DIR__ . '/report-smart.php';
     $tmp = __DIR__ . '/../storage/tmp/mpdf';
     if (!is_dir($tmp)) { @mkdir($tmp, 0755, true); }
     $fontDir = (new \Mpdf\Config\ConfigVariables())->getDefaults()['fontDir'];
     $mpdf = new \Mpdf\Mpdf([
         'mode' => 'utf-8', 'format' => $format, 'tempDir' => $tmp,
-        'margin_left' => 12, 'margin_right' => 12, 'margin_top' => 10, 'margin_bottom' => 14,
+        'margin_left' => 12, 'margin_right' => 12, 'margin_top' => 10, 'margin_bottom' => 14, 'margin_header' => 4,
         'fontDir' => $fontDir,
         'fontdata' => [
             'freesans' => ['R' => 'FreeSans.ttf', 'B' => 'FreeSansBold.ttf', 'useOTL' => 0xFF],
@@ -328,17 +340,39 @@ function mgmtReportPdf($html, $title, $orgName, $format = 'A4') {
         'default_font' => 'freesans',
         'backupSubsFont' => ['dejavusans'],
         'useSubstitutions' => true,
+        'h2bookmarks' => ['H2' => 0],   // PDF च्या बाजूच्या यादीत (Bookmarks) प्रत्येक विभाग
     ]);
     $mpdf->SetTitle($title);
-    $mpdf->SetAuthor('E-Admin');
-    $mpdf->SetFooter($orgName . '||पान {PAGENO} / {nbpg}');
-    $mpdf->WriteHTML($html);
+    $mpdf->SetAuthor('E-Admin — ' . $orgName);
+    $mpdf->SetSubject($title);
+    $mpdf->SetKeywords('E-Admin, अहवाल, ' . $orgName);
+    $mpdf->SetCreator('E-Admin');
+
+    // पान 2 पासून वरची पट्टी — कोणत्याही पानावर कळतं हा कोणता अहवाल
+    $sub = htmlspecialchars($opts['subtitle'] ?? $title, ENT_QUOTES, 'UTF-8');
+    $running = '<htmlpageheader name="runhdr"><table width="100%" style="border-bottom:0.6pt solid #EAE5DF;font-size:7.5pt;color:#8A90AC;"><tr>'
+        . '<td><b style="color:#191C3A;">' . htmlspecialchars($orgName, ENT_QUOTES, 'UTF-8') . '</b></td><td style="text-align:right;">' . $sub . '</td></tr></table></htmlpageheader>'
+        . '<sethtmlpageheader name="runhdr" value="on" show-this-page="0" />';
+    $mpdf->SetHTMLFooter('<table width="100%" style="font-size:7.5pt;color:#8A90AC;border-top:0.6pt solid #EAE5DF;"><tr>'
+        . '<td width="40%"><i>' . htmlspecialchars($orgName, ENT_QUOTES, 'UTF-8') . '</i></td>'
+        . '<td width="30%" style="text-align:center;">गोपनीय — फक्त अंतर्गत वापरासाठी</td>'
+        . '<td width="30%" style="text-align:right;">पान {PAGENO} / {nbpg}</td></tr></table>');
+
+    $html = mgmtReportDecorate($html, [
+        'link' => !empty($opts['link']) ? mgmtReportLink($opts['link']) : '',
+        'logo' => (!empty($opts['orgId']) && $pdo instanceof PDO) ? mgmtReportLogo($pdo, $opts['orgId']) : '',
+        'size' => $opts['badgeMm'] ?? 19,   // Header ची उंची कमी असेल (E-Campus Landscape) तर लहान
+    ]);
+    $mpdf->WriteHTML($running . $html);
     return $mpdf->Output('', \Mpdf\Output\Destination::STRING_RETURN);
 }
 
 /** साप्ताहिक PDF (bytes) */
 function weeklyReportPdf(array $d) {
-    return mgmtReportPdf(weeklyReportPdfHtml($d), 'साप्ताहिक अहवाल — ' . $d['org'], $d['org']);
+    return mgmtReportPdf(weeklyReportPdfHtml($d), 'साप्ताहिक अहवाल — ' . $d['org'], $d['org'], 'A4', [
+        'link' => 'reports/weekly.php', 'orgId' => $d['orgId'] ?? null,
+        'subtitle' => 'साप्ताहिक व्यवस्थापन अहवाल · ' . weeklyReportMarathiDate($d['period']['start'], false) . ' – ' . weeklyReportMarathiDate($d['period']['end']),
+    ]);
 }
 
 function weeklyReportFileName(array $d) {
