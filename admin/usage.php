@@ -5,7 +5,7 @@ requireLogin('../');
 requireRole(['super_admin'], '../');
 require_once __DIR__ . '/../includes/module-registry.php';
 $orgId = activeOrgId();
-$days = in_array((int)($_GET['days'] ?? 30), [7, 30, 90], true) ? (int)$_GET['days'] : 30;
+$days = in_array((int)($_GET['days'] ?? 30), [7, 30, 90], true) ? (int)($_GET['days'] ?? 30) : 30;
 $ready = saTableReady($pdo, 'module_usage_daily');
 $from = date('Y-m-d', strtotime('-' . ($days - 1) . ' days'));
 

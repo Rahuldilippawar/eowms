@@ -60,7 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $history = [];
 if ($ready) {
-    $st = $pdo->prepare("SELECT b.*, u.name sender, (SELECT COUNT(*) FROM notifications n WHERE n.broadcast_id = b.id AND n.is_read = 1) reads,
+    $st = $pdo->prepare("SELECT b.*, u.name sender, (SELECT COUNT(*) FROM notifications n WHERE n.broadcast_id = b.id AND n.is_read = 1) read_cnt,
         (SELECT COUNT(*) FROM notifications n WHERE n.broadcast_id = b.id) delivered
         FROM broadcasts b LEFT JOIN users u ON u.id = b.sent_by WHERE b.organization_id = ? ORDER BY b.created_at DESC LIMIT 30");
     $st->execute([$orgId]);
@@ -114,13 +114,13 @@ require_once __DIR__ . '/../includes/header.php';
   <div class="col-lg-7">
     <div class="panel">
       <div class="panel-head"><div class="title">पाठवलेल्या सूचना</div><div class="sub">किती जणांनी वाचल्या</div></div>
-      <?php if (!$history): ?><div class="sm-empty">अजून एकही Broadcast नाही.</div><?php else: foreach ($history as $b): $pct = $b['delivered'] ? (int)round($b['reads'] * 100 / $b['delivered']) : 0; ?>
+      <?php if (!$history): ?><div class="sm-empty">अजून एकही Broadcast नाही.</div><?php else: foreach ($history as $b): $pct = $b['delivered'] ? (int)round($b['read_cnt'] * 100 / $b['delivered']) : 0; ?>
         <div class="bc-row">
           <div style="flex:1;min-width:0;"><b><?= h($b['title']) ?></b>
             <small><?= h($b['audience_label']) ?> · <?= h($b['sender'] ?: '') ?> · <?= date('d/m/Y h:i A', strtotime($b['created_at'])) ?></small>
             <?php if ($b['message']): ?><div class="bc-msg"><?= h(mb_strimwidth($b['message'], 0, 140, '…')) ?></div><?php endif; ?></div>
-          <div class="bc-read"><div class="bar"><i style="width:<?= $pct ?>%;"></i></div><span><b><?= (int)$b['reads'] ?></b>/<?= (int)$b['delivered'] ?> वाचलं</span>
-            <?php if ($b['delivered'] > $b['reads']): ?><a href="?unread=<?= (int)$b['id'] ?>#unread">न वाचलेले →</a><?php endif; ?></div>
+          <div class="bc-read"><div class="bar"><i style="width:<?= $pct ?>%;"></i></div><span><b><?= (int)$b['read_cnt'] ?></b>/<?= (int)$b['delivered'] ?> वाचलं</span>
+            <?php if ($b['delivered'] > $b['read_cnt']): ?><a href="?unread=<?= (int)$b['id'] ?>#unread">न वाचलेले →</a><?php endif; ?></div>
         </div>
         <?php if ($showUnread === (int)$b['id']): ?>
           <div class="bc-unread" id="unread"><b>न वाचलेले (<?= count($unreadList) ?>):</b> <?= h(implode(', ', array_map(fn($u) => $u['name'] . ($u['dept'] ? ' (' . $u['dept'] . ')' : ''), $unreadList))) ?></div>

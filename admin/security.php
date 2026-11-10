@@ -5,7 +5,7 @@ requireLogin('../');
 requireRole(['super_admin'], '../');
 require_once __DIR__ . '/../includes/two-factor.php';
 $orgId = activeOrgId();
-$days = in_array((int)($_GET['days'] ?? 7), [1, 7, 30], true) ? (int)$_GET['days'] : 7;
+$days = in_array((int)($_GET['days'] ?? 7), [1, 7, 30], true) ? (int)($_GET['days'] ?? 7) : 7;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'unlock') {
     $uid = (int)($_POST['uid'] ?? 0);
