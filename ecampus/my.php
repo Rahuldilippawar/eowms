@@ -1,12 +1,15 @@
 <?php
-// 🎓 माझी E-Campus कामं — नेमलेला कर्मचारी चालू महिन्याची प्रगती (% + नोंद) भरतो
+// 🎓 माझी E-Campus कामं — नेमलेला कर्मचारी महिन्याची प्रगती (% + नोंद) भरतो — चालू किंवा मागचे 12 महिने
 require_once __DIR__ . '/../includes/auth.php';
 requireLogin('../');
 requireMigratedTable($pdo, 'ecampus_progress', '../');
 require_once __DIR__ . '/../includes/ecampus-helpers.php';
 $me = currentUser();
 $orgId = activeOrgId();
-$period = date('Y-m');
+// कोणता महिना — चालू किंवा मागच्या 12 पैकी (POST मध्ये फॉर्मसोबत येतो)
+$period = (string)($_POST['period'] ?? $_GET['month'] ?? date('Y-m'));
+if (!ecampusEditablePeriod($period)) { $period = date('Y-m'); }
+$isCurrent = $period === date('Y-m');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $taskId = (int)($_POST['task_id'] ?? 0);
@@ -20,16 +23,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     $pct = (int)($_POST['percent'] ?? 0);
     ecampusSave($pdo, $taskId, $period, $pct, $_POST['notes'] ?? '', $me['id']);
-    logActivity('E-Campus प्रगती भरली', 'ecampus_task', $taskId, $task['section'] . ' — ' . $pct . '%');
-    $_SESSION['ec_flash'] = '✅ जतन झालं — ' . $task['section'] . ': ' . $pct . '%';
-    header('Location: ' . ((($_POST['back'] ?? '') === 'dash' && ecampusCanViewAll()) ? 'index.php' : 'my.php#t' . $taskId));
+    logActivity('E-Campus प्रगती भरली', 'ecampus_task', $taskId, ecampusPeriodLabel($period) . ' · ' . $task['section'] . ' — ' . $pct . '%');
+    $_SESSION['ec_flash'] = '✅ जतन झालं (' . ecampusPeriodLabel($period) . ') — ' . $task['section'] . ': ' . $pct . '%';
+    $qs = $isCurrent ? '' : '?month=' . $period;
+    header('Location: ' . ((($_POST['back'] ?? '') === 'dash' && ecampusCanViewAll()) ? 'index.php' . $qs : 'my.php' . $qs . '#t' . $taskId));
     exit;
 }
 
 $rows = ecampusRows($pdo, $orgId, $period, $me['id']);
 if (!$rows && ecampusCanViewAll()) { header('Location: index.php'); exit; }
 $flash = $_SESSION['ec_flash'] ?? null; unset($_SESSION['ec_flash']);
-$hist = $pdo->prepare("SELECT u.percent, u.notes, u.created_at, us.name FROM ecampus_updates u LEFT JOIN users us ON us.id = u.user_id WHERE u.task_id = ? ORDER BY u.created_at DESC, u.id DESC LIMIT 5");
+$hist = $pdo->prepare("SELECT u.percent, u.notes, u.created_at, us.name FROM ecampus_updates u LEFT JOIN users us ON us.id = u.user_id WHERE u.task_id = ? AND u.period = ? ORDER BY u.created_at DESC, u.id DESC LIMIT 5");
 $work = array_filter($rows, fn($r) => $r['access_type'] === 'work');
 $myAvg = $work ? (int)round(array_sum(array_column($work, 'percent')) / count($work)) : null;
 
@@ -57,8 +61,14 @@ require_once __DIR__ . '/../includes/header.php';
 <div class="page-eyebrow"><?= h(activeOrgName()) ?></div>
 <div class="d-flex justify-content-between align-items-start mb-2">
   <div class="page-title mb-0">🎓 माझी E-Campus कामं</div>
-  <?php if (ecampusCanViewAll()): ?><a href="index.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13px;padding:8px 14px;"><i class="fa-solid fa-chart-pie me-1"></i>Dashboard</a><?php endif; ?>
+  <div class="d-flex gap-2 align-items-center flex-wrap">
+    <form method="GET" style="margin:0;"><select name="month" class="form-select-custom" onchange="this.form.submit()" aria-label="महिना" style="min-width:170px;">
+      <?php foreach (ecampusEditableMonths() as $m): ?><option value="<?= $m ?>" <?= $m === $period ? 'selected' : '' ?>><?= h(ecampusPeriodLabel($m)) ?><?= $m === date('Y-m') ? ' (चालू)' : '' ?></option><?php endforeach; ?>
+    </select></form>
+    <?php if (ecampusCanViewAll()): ?><a href="index.php<?= $isCurrent ? '' : '?month=' . h($period) ?>" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13px;padding:8px 14px;"><i class="fa-solid fa-chart-pie me-1"></i>Dashboard</a><?php endif; ?>
+  </div>
 </div>
+<?php if (!$isCurrent): ?><div class="alert alert-warning" style="border-radius:10px;font-size:13px;">📅 तुम्ही <b><?= h(ecampusPeriodLabel($period)) ?></b> (मागचा महिना) भरत आहात — त्या महिन्यात झालेलं काम पाहून % आणि नोंद भरा. <a href="my.php">चालू महिन्याकडे →</a></div><?php endif; ?>
 <?php if ($flash): ?><div class="alert alert-success"><?= h($flash) ?></div><?php endif; ?>
 
 <?php if (!$rows): ?>
@@ -77,14 +87,14 @@ require_once __DIR__ . '/../includes/header.php';
         <div style="flex:1;min-width:0;">
           <div><span class="ec-chip"><?= h($r['wing']) ?></span><span class="ec-chip"><?= h($r['section']) ?></span><span class="ec-st" style="background:<?= $r['status_color'] ?>;"><?= h($r['status_label']) ?></span></div>
           <div class="ec-task"><?= h($r['task_description']) ?></div>
-          <div style="font-size:12px;color:var(--text-dim);margin-top:4px;"><?= $r['task_type'] === 'monthly' ? 'दरमहा काम' : 'एकदाच काम' ?> · शेवटचा बदल: <?= h(ecampusAgo($r['updated_at'])) ?><?= $r['carried'] ? ' (मागच्या महिन्याचा)' : '' ?></div>
+          <div style="font-size:12px;color:var(--text-dim);margin-top:4px;"><?= $r['task_type'] === 'monthly' ? 'दरमहा काम' : 'एकदाच काम' ?> · शेवटचा बदल: <?= h(ecampusAgo($r['updated_at'])) ?><?= $r['carried'] ? ' (आधीच्या महिन्यात 100% पूर्ण)' : '' ?></div>
         </div>
       </div>
       <?php if ($r['access_type'] === 'view_only'): ?>
         <div class="ec-form" style="font-size:13px;color:var(--text-dim);">ℹ️ हा फक्त पाहण्याचा Access आहे — प्रगती भरायची गरज नाही.</div>
       <?php else: ?>
         <form method="POST" class="ec-form">
-          <input type="hidden" name="task_id" value="<?= (int)$r['id'] ?>">
+          <input type="hidden" name="task_id" value="<?= (int)$r['id'] ?>"><input type="hidden" name="period" value="<?= h($period) ?>">
           <label class="form-label-custom">किती काम पूर्ण झालं? <b class="ec-val"><?= $r['percent'] ?>%</b></label>
           <input type="range" class="ec-range" name="percent" min="0" max="100" step="1" value="<?= $r['percent'] ?>">
           <div class="ec-quick"><?php foreach ([0, 25, 50, 75, 90, 100] as $q): ?><button type="button" data-q="<?= $q ?>"><?= $q ?>%</button><?php endforeach; ?></div>
@@ -92,7 +102,7 @@ require_once __DIR__ . '/../includes/header.php';
           <textarea name="notes" class="form-control-custom mb-2" rows="2" maxlength="2000" placeholder="उदा. A.Y. 2026-27 नवीन Admission ची Entry सुरू आहे"><?= h($r['carried'] ? '' : (string)$r['notes']) ?></textarea>
           <button class="btn" style="background:var(--rail);color:#fff;border-radius:9px;font-size:13.5px;padding:9px 20px;font-weight:600;"><i class="fa-solid fa-floppy-disk me-1"></i>जतन करा</button>
         </form>
-        <?php $hist->execute([$r['id']]); $hs = $hist->fetchAll(); if ($hs): ?>
+        <?php $hist->execute([$r['id'], $period]); $hs = $hist->fetchAll(); if ($hs): ?>
           <div class="ec-hist"><b>अलीकडचे बदल</b>
             <?php foreach ($hs as $x): ?><div><?= h(date('d M, h:i A', strtotime($x['created_at']))) ?> — <b><?= (int)$x['percent'] ?>%</b> <?= $x['notes'] ? '· ' . h(mb_strimwidth($x['notes'], 0, 90, '…')) : '' ?> <span style="opacity:.7;">(<?= h($x['name']) ?>)</span></div><?php endforeach; ?>
           </div>
