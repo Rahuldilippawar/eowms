@@ -95,6 +95,7 @@ usort($topUsed, fn($a, $b) => $b['uses'] <=> $a['uses'] ?: $b['q'] <=> $a['q']);
 $topUsed = array_slice($topUsed, 0, 6);
 arsort($catCounts);
 
+$stockBal = storeBalances($pdo, $orgId);
 $deptsStmt = $pdo->prepare("SELECT id, name_local, name FROM departments WHERE organization_id = ? AND is_active = 1 ORDER BY name_local");
 $deptsStmt->execute([$orgId]);
 $deptsForItems = $deptsStmt->fetchAll();
@@ -106,8 +107,8 @@ $campusesForCascade = $campusesForCascade->fetchAll();
 <div class="page-eyebrow"><?= h(activeOrgName()) ?></div>
 <div class="d-flex justify-content-between align-items-start mb-1">
   <div class="page-title mb-0">📋 भांडार वस्तू यादी</div>
-  <a href="../index.php" style="font-size:12.5px;color:var(--rail);font-weight:600;text-decoration:none;align-self:center;"><i class="fa-solid fa-arrow-left me-1"></i>Dashboard</a>
 </div>
+<?= storeNav('items') ?>
 
 <?php if (!empty($_SESSION['flash'])): ?>
   <div class="alert alert-success" style="border-radius:10px;font-size:13px;"><?= h($_SESSION['flash']) ?></div>
@@ -194,11 +195,14 @@ $campusesForCascade = $campusesForCascade->fetchAll();
 
 <div class="panel">
   <table class="rtable">
-    <thead><tr><th>वस्तू</th><th>प्रकार</th><th>विभाग</th><th>एकक</th><th>किमान मर्यादा</th><th title="मागील ३० दिवसांत कामात वापरलेलं प्रमाण">३० दिवस वापर</th><th>शेवटचा वापर</th><th></th></tr></thead>
+    <thead><tr><th>वस्तू</th><th>प्रकार</th><th>विभाग</th><th>एकक</th><th class="text-end">शिल्लक</th><th>किमान मर्यादा</th><th title="मागील ३० दिवसांत कामात वापरलेलं प्रमाण">३० दिवस वापर</th><th>शेवटचा वापर</th><th></th></tr></thead>
     <tbody>
       <?php foreach ($items as $it): ?>
         <tr style="<?= $it['is_active'] ? '' : 'opacity:.55;' ?>">
-          <td style="font-weight:500;"><?= h($it['item_name']) ?><?= $it['is_active'] ? '' : ' <span class="status-chip overdue">निष्क्रिय</span>' ?></td><td><?= h($it['category']) ?></td><td><?= h($it['dept_name'] ?: '⚪ सामायिक') ?></td><td><?= h($it['unit']) ?></td><td><?= number_format($it['reorder_level'], 2) ?></td>
+          <td style="font-weight:500;"><?= h($it['item_name']) ?><?= $it['is_active'] ? '' : ' <span class="status-chip overdue">निष्क्रिय</span>' ?></td><td><?= h($it['category']) ?></td><td><?= h($it['dept_name'] ?: '⚪ सामायिक') ?></td><td><?= h($it['unit']) ?></td>
+          <?php $sb = $stockBal[(int)$it['id']] ?? null; $sq = $sb ? $sb['bal'] : null; $lowS = $sq !== null && ($sq <= 0 || ($it['reorder_level'] > 0 && $sq <= $it['reorder_level'])); ?>
+          <td class="text-end font-mono" style="<?= $lowS ? 'color:var(--rose);font-weight:700;' : '' ?>"><?= $sq === null ? '<a href="move.php?type=opening&item=' . (int)$it['id'] . '" style="font-size:11px;">+ शिल्लक</a>' : storeQty($sq) ?></td>
+          <td><?= number_format($it['reorder_level'], 2) ?></td>
           <?php $u = $usage[(int)$it['id']] ?? null; $q30 = $u ? (float)$u['q30'] : 0; $qp = $u ? (float)$u['qprev'] : 0; ?>
           <td class="font-mono" data-sort="<?= $q30 ?>"><?= $q30 > 0 ? rtrim(rtrim(number_format($q30, 2), '0'), '.') : '—' ?>
             <?php if ($q30 > 0 || $qp > 0): $chg = $qp > 0 ? (int)round(($q30 - $qp) * 100 / $qp) : null; ?>
@@ -214,7 +218,7 @@ $campusesForCascade = $campusesForCascade->fetchAll();
           </td>
         </tr>
         <tr id="itemEdit<?= $it['id'] ?>" class="d-none">
-          <td colspan="8">
+          <td colspan="9">
             <form method="POST" class="row g-2 align-items-end">
               <input type="hidden" name="action" value="update"><input type="hidden" name="item_id" value="<?= $it['id'] ?>">
               <div class="col-md-3"><input type="text" name="item_name" class="form-control-custom" value="<?= h($it['item_name']) ?>" required></div>

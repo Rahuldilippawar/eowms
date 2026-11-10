@@ -512,8 +512,8 @@ function navGroupHead($id, $key, $activeGroup, $icon, $label, $badge = 0) {
           </a>
         <?php endif; ?>
         <?php if ($showStore): ?>
-          <a href="<?= $rp ?>store/items.php" class="tree-node <?= $currentDir === 'store' ? 'active' : '' ?>">
-            <i class="fa-solid fa-warehouse fa-fw"></i><span>भांडार Material-यादी</span>
+          <a href="<?= $rp ?>store/index.php" class="tree-node <?= $currentDir === 'store' ? 'active' : '' ?>">
+            <i class="fa-solid fa-warehouse fa-fw"></i><span>भांडार (Stock)</span>
           </a>
         <?php endif; ?>
         <?php if ($showDeadStock): ?>

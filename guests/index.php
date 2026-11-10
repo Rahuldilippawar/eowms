@@ -49,13 +49,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canManage) {
             }
             logActivity('पाहुणे Check-in केले', 'guests', $newGuestId, $name);
             $_SESSION['flash'] = "Check-in झालं — Pass Code: $passCode";
+            $_SESSION['guest_pass_id'] = (int)$newGuestId;
         }
     } elseif ($action === 'checkout') {
         $guestId = (int)($_POST['guest_id'] ?? 0);
         $pdo->prepare("UPDATE guests SET check_out_time = NOW() WHERE id = ? AND organization_id = ?")->execute([$guestId, $orgId]);
         $_SESSION['flash'] = 'Check-out झालं.';
     }
-    header('Location: index.php');
+    header('Location: index.php' . (preg_match('/^\d{4}-\d{2}-\d{2}$/', $_POST['back_date'] ?? '') ? '?date=' . $_POST['back_date'] : ''));
+    exit;
+}
+
+
+$filterDate = preg_match('/^\d{4}-\d{2}-\d{2}$/', $_GET['date'] ?? '') ? $_GET['date'] : date('Y-m-d');
+$searchQ = trim(mb_substr($_GET['q'] ?? '', 0, 60));
+$fromD = preg_match('/^\d{4}-\d{2}-\d{2}$/', $_GET['from'] ?? '') ? $_GET['from'] : null;
+$toD = preg_match('/^\d{4}-\d{2}-\d{2}$/', $_GET['to'] ?? '') ? $_GET['to'] : null;
+if ($fromD && $toD && $fromD > $toD) [$fromD, $toD] = [$toD, $fromD];
+
+$gSql = "SELECT g.*, u.name AS meeting_with_name, c.name AS campus_name
+    FROM guests g LEFT JOIN users u ON u.id = g.meeting_with LEFT JOIN campuses c ON c.id = g.campus_id WHERE g.organization_id = ?";
+$gP = [$orgId];
+if ($searchQ !== '') {
+    // 🔍 शोध — नाव / Mobile / संस्था / Pass Code, मागचं 1 वर्ष (किंवा दिलेला कालावधी)
+    $gSql .= " AND (g.name LIKE ? OR g.mobile LIKE ? OR g.guest_organization LIKE ? OR g.pass_code LIKE ?) AND DATE(g.check_in_time) BETWEEN ? AND ?";
+    $like = '%' . $searchQ . '%';
+    array_push($gP, $like, $like, $like, $like, $fromD ?: date('Y-m-d', strtotime('-1 year')), $toD ?: date('Y-m-d'));
+} elseif ($fromD && $toD) {
+    $gSql .= " AND DATE(g.check_in_time) BETWEEN ? AND ?";
+    array_push($gP, $fromD, $toD);
+} else {
+    $gSql .= " AND DATE(g.check_in_time) = ?";
+    $gP[] = $filterDate;
+}
+$guestsStmt = $pdo->prepare($gSql . " ORDER BY g.check_in_time DESC LIMIT 2000");
+$guestsStmt->execute($gP);
+$guests = $guestsStmt->fetchAll();
+$isRange = $searchQ !== '' || ($fromD && $toD);
+
+// 📊 Excel
+if (($_GET['export'] ?? '') === 'csv') {
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename="guests-' . ($isRange ? ($fromD ?: 'search') . '-' . ($toD ?: date('Y-m-d')) : $filterDate) . '.csv"');
+    $out = fopen('php://output', 'w');
+    fwrite($out, "\xEF\xBB\xBF");
+    fputcsv($out, ['दिनांक', 'नाव', 'Mobile', 'संस्था/कंपनी', 'कारण', 'कोणाला भेटले', 'College/School', 'Check-in', 'Check-out', 'वेळ (मिनिटं)', 'Pass Code']);
+    foreach ($guests as $g) {
+        fputcsv($out, [date('Y-m-d', strtotime($g['check_in_time'])), $g['name'], $g['mobile'], $g['guest_organization'], $g['purpose'], $g['meeting_with_name'], $g['campus_name'],
+            date('H:i', strtotime($g['check_in_time'])), $g['check_out_time'] ? date('Y-m-d H:i', strtotime($g['check_out_time'])) : '',
+            $g['check_out_time'] ? (int)round((strtotime($g['check_out_time']) - strtotime($g['check_in_time'])) / 60) : '', $g['pass_code']]);
+    }
+    fclose($out);
     exit;
 }
 
@@ -63,18 +107,13 @@ $pageTitle = 'पाहुणे नोंदणी';
 $rootPath = '../';
 require_once __DIR__ . '/../includes/header.php';
 
-$filterDate = $_GET['date'] ?? date('Y-m-d');
+// 🔴 आत्ता आत असलेले — कोणत्याही दिवशी आलेले, Check-out न झालेले
+$insideStmt = $pdo->prepare("SELECT g.id, g.name, g.mobile, g.pass_code, g.check_in_time, u.name AS meeting_with_name FROM guests g LEFT JOIN users u ON u.id = g.meeting_with
+    WHERE g.organization_id = ? AND g.check_out_time IS NULL AND g.check_in_time >= DATE_SUB(NOW(), INTERVAL 30 DAY) ORDER BY g.check_in_time");
+$insideStmt->execute([$orgId]);
+$insideNow = $insideStmt->fetchAll();
 
-$guestsStmt = $pdo->prepare("
-    SELECT g.*, u.name AS meeting_with_name, c.name AS campus_name
-    FROM guests g LEFT JOIN users u ON u.id = g.meeting_with LEFT JOIN campuses c ON c.id = g.campus_id
-    WHERE g.organization_id = ? AND DATE(g.check_in_time) = ?
-    ORDER BY g.check_in_time DESC
-");
-$guestsStmt->execute([$orgId, $filterDate]);
-$guests = $guestsStmt->fetchAll();
-
-$currentlyInCount = count(array_filter($guests, fn($g) => !$g['check_out_time']));
+$currentlyInCount = count($insideNow);
 
 $campusesStmt = $pdo->prepare("SELECT id, name FROM campuses WHERE organization_id = ? AND is_active = 1 ORDER BY name");
 $campusesStmt->execute([$orgId]);
@@ -106,6 +145,11 @@ $allStaffForGuest = $staffStmt->fetchAll();
   <?php unset($_SESSION['flash']); ?>
 <?php endif; ?>
 
+<?php if (!empty($_SESSION['guest_pass_id'])): ?>
+  <div class="alert alert-success d-flex align-items-center gap-2 flex-wrap" style="border-radius:10px;font-size:13px;">✅ पाहुण्यांचा Gate Pass तयार आहे
+    <a href="pass.php?id=<?= (int)$_SESSION['guest_pass_id'] ?>" target="_blank" class="btn btn-sm gp-pass" style="background:var(--rail);color:#fff;border-radius:7px;font-size:11.5px;">🖨️ Gate Pass Print</a></div>
+  <?php unset($_SESSION['guest_pass_id']); ?>
+<?php endif; ?>
 <div class="row g-3 mb-4">
   <div class="col-6 col-lg-3"><div class="kpi-mini"><div class="lbl">आजचे एकूण पाहुणे</div><div class="val"><?= count($guests) ?></div></div></div>
   <div class="col-6 col-lg-3"><div class="kpi-mini"><div class="lbl">🔴 अजून Building मध्ये</div><div class="val" style="color:var(--rose);"><?= $currentlyInCount ?></div></div></div>
@@ -123,23 +167,50 @@ $allStaffForGuest = $staffStmt->fetchAll();
         <div style="font-size:13px;font-weight:600;"><?= h($pr['name']) ?> <span style="font-weight:400;color:var(--text-dim);">— <?= h($pr['mobile']) ?></span></div>
         <div style="font-size:11px;color:var(--text-dim);"><?= h($pr['purpose'] ?: '') ?><?= $pr['meeting_with_name'] ? ' · ' . h($pr['meeting_with_name']) . ' यांना भेटणार' : '' ?></div>
       </div>
-      <span class="status-chip pending">⏳ अजून आले नाहीत</span>
+      <?php if ($canManage): ?><button type="button" class="btn btn-sm gp-prein" data-mobile="<?= h($pr['mobile']) ?>" style="background:var(--rail);color:#fff;border-radius:7px;font-size:11.5px;">✅ आले — Check-in</button><?php else: ?><span class="status-chip pending">⏳ अजून आले नाहीत</span><?php endif; ?>
     </div>
   <?php endforeach; ?>
 </div>
 <?php endif; ?>
 
-<form method="GET" class="mb-4">
-  <input type="date" name="date" class="form-control-custom" style="width:auto;" value="<?= h($filterDate) ?>" onchange="this.form.submit()">
-</form>
+<?php if ($insideNow): ?>
+<div class="panel mb-3">
+  <div class="panel-head"><div class="title">🔴 आत्ता परिसरात असलेले पाहुणे (<?= count($insideNow) ?>)</div><div class="sub">Check-out न झालेले — कितीही दिवसांपूर्वी आलेले</div></div>
+  <div class="gp-in">
+    <?php foreach ($insideNow as $g): $mins = (int)((time() - strtotime($g['check_in_time'])) / 60); $old = $mins > 8 * 60; ?>
+      <div class="gp-ic<?= $old ? ' old' : '' ?>">
+        <div><b><?= h($g['name']) ?></b><small><?= h($g['meeting_with_name'] ?: '—') ?> · <?= h($g['pass_code']) ?></small>
+          <small class="<?= $old ? 'text-danger fw-bold' : '' ?>">⏱ <?= $mins >= 1440 ? floor($mins / 1440) . ' दिवस' : ($mins >= 60 ? floor($mins / 60) . ' तास ' . ($mins % 60) . ' मि.' : $mins . ' मि.') ?><?= $old ? ' — Check-out विसरलं?' : '' ?></small></div>
+        <?php if ($canManage): ?><form method="POST"><input type="hidden" name="action" value="checkout"><input type="hidden" name="guest_id" value="<?= $g['id'] ?>"><input type="hidden" name="back_date" value="<?= h($filterDate) ?>"><button class="btn btn-sm" style="background:var(--amber);color:#fff;border-radius:6px;font-size:10.5px;">Check-out</button></form><?php endif; ?>
+      </div>
+    <?php endforeach; ?>
+  </div>
+</div>
+<?php endif; ?>
+
+<div class="gp-bar">
+  <a class="gp-nav" href="?date=<?= date('Y-m-d', strtotime($filterDate . ' -1 day')) ?>" title="मागचा दिवस">‹</a>
+  <form method="GET" class="m-0"><input type="date" name="date" class="form-control-custom" style="width:auto;" value="<?= h($filterDate) ?>" max="<?= date('Y-m-d') ?>" onchange="this.form.submit()"></form>
+  <a class="gp-nav" href="?date=<?= date('Y-m-d', strtotime($filterDate . ' +1 day')) ?>" title="पुढचा दिवस">›</a>
+  <?php if ($filterDate !== date('Y-m-d') || $isRange): ?><a class="gp-nav" style="font-size:12.5px;" href="index.php">आज</a><?php endif; ?>
+  <form method="GET" class="gp-search">
+    <input type="search" name="q" class="form-control-custom" placeholder="🔍 नाव / Mobile / संस्था / Pass" value="<?= h($searchQ) ?>">
+    <input type="date" name="from" class="form-control-custom" value="<?= h($fromD ?? '') ?>" title="पासून">
+    <input type="date" name="to" class="form-control-custom" value="<?= h($toD ?? '') ?>" title="पर्यंत">
+    <button class="btn btn-sm" style="background:var(--rail);color:#fff;border-radius:8px;">शोधा</button>
+  </form>
+  <a class="btn btn-sm ms-auto" style="border:1px solid var(--line);border-radius:8px;" href="?<?= h(http_build_query(array_merge($_GET, ['export' => 'csv']))) ?>">📊 Excel</a>
+</div>
+<?php if ($isRange): ?><div style="font-size:12.5px;color:var(--text-dim);margin:-6px 0 10px;"><?= count($guests) ?> नोंदी<?= $searchQ !== '' ? ' — "' . h($searchQ) . '"' : '' ?><?= $fromD ? ' · ' . h($fromD) . ' ते ' . h($toD ?? date('Y-m-d')) : '' ?></div><?php endif; ?>
 
 <div class="panel">
   <table class="rtable">
-    <thead><tr><th>नाव</th><th>संस्था</th><th>कारण</th><th>कोणाला भेटले</th><th>Check-in</th><th>Check-out</th><th>Pass Code</th><?php if ($canManage): ?><th></th><?php endif; ?></tr></thead>
+    <thead><tr><?php if ($isRange): ?><th>दिनांक</th><?php endif; ?><th>नाव</th><th>संस्था</th><th>कारण</th><th>कोणाला भेटले</th><th>Check-in</th><th>Check-out</th><th>Pass Code</th><?php if ($canManage): ?><th></th><?php endif; ?></tr></thead>
     <tbody>
-      <?php if (empty($guests)): ?><tr><td colspan="8"><div class="empty-state"><div class="icon"><i class="fa-solid fa-id-card-clip"></i></div><div class="title">या दिवशी कुठलेही पाहुणे आले नाहीत</div><div class="sub">नवीन पाहुणे आले की, वरच्या "+ नवीन Check-in" ने नोंद करा</div></div></td></tr><?php endif; ?>
+      <?php if (empty($guests)): ?><tr><td colspan="9"><div class="empty-state"><div class="icon"><i class="fa-solid fa-id-card-clip"></i></div><div class="title">या दिवशी कुठलेही पाहुणे आले नाहीत</div><div class="sub">नवीन पाहुणे आले की, वरच्या "+ नवीन Check-in" ने नोंद करा</div></div></td></tr><?php endif; ?>
       <?php foreach ($guests as $g): ?>
         <tr style="<?= !$g['check_out_time'] ? 'background:var(--rail-soft, #DCEFEC);' : '' ?>">
+          <?php if ($isRange): ?><td class="font-mono" style="white-space:nowrap;"><?= date('d M Y', strtotime($g['check_in_time'])) ?></td><?php endif; ?>
           <td style="font-weight:600;">
             <div class="d-flex align-items-center gap-2">
               <?php if ($g['photo_path']): ?><img src="../<?= h($g['photo_path']) ?>" style="width:32px;height:32px;border-radius:50%;object-fit:cover;"><?php endif; ?>
@@ -151,11 +222,11 @@ $allStaffForGuest = $staffStmt->fetchAll();
           <td><?= h($g['meeting_with_name'] ?: '—') ?></td>
           <td class="font-mono"><?= date('h:i A', strtotime($g['check_in_time'])) ?></td>
           <td class="font-mono"><?= $g['check_out_time'] ? date('h:i A', strtotime($g['check_out_time'])) : '—' ?></td>
-          <td class="font-mono"><?= h($g['pass_code']) ?></td>
+          <td class="font-mono"><?= h($g['pass_code']) ?> <a href="pass.php?id=<?= $g['id'] ?>" target="_blank" title="Gate Pass Print" style="text-decoration:none;">🖨️</a></td>
           <?php if ($canManage): ?>
             <td>
               <?php if (!$g['check_out_time']): ?>
-                <form method="POST"><input type="hidden" name="action" value="checkout"><input type="hidden" name="guest_id" value="<?= $g['id'] ?>">
+                <form method="POST"><input type="hidden" name="action" value="checkout"><input type="hidden" name="guest_id" value="<?= $g['id'] ?>"><input type="hidden" name="back_date" value="<?= h($filterDate) ?>">
                   <button type="submit" class="btn btn-sm" style="background:var(--amber);color:#fff;border-radius:6px;font-size:10.5px;padding:4px 10px;">Check-out</button>
                 </form>
               <?php endif; ?>
@@ -222,6 +293,12 @@ $allStaffForGuest = $staffStmt->fetchAll();
 </div>
 
 <script>
+document.querySelectorAll('.gp-prein').forEach(function (b) {
+  b.onclick = function () {
+    var m = document.getElementById('guestMobile'); m.value = b.dataset.mobile; lookupGuestMobile(b.dataset.mobile);
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('checkinModal')).show();
+  };
+});
 let guestCamStream = null;
 
 function startGuestCam() {
@@ -275,4 +352,13 @@ function lookupGuestMobile(mobile) {
 </script>
 <?php endif; ?>
 
+<style>
+.gp-bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:14px;}
+.gp-nav{display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:36px;border:1px solid var(--line);border-radius:9px;text-decoration:none;color:var(--text);font-weight:700;font-size:17px;padding:0 10px;background:var(--panel,#fff);}
+.gp-search{display:flex;flex-wrap:wrap;gap:6px;margin:0;} .gp-search input[type=search]{width:220px;} .gp-search input[type=date]{width:auto;}
+.gp-in{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;padding:12px 16px;}
+.gp-ic{display:flex;justify-content:space-between;align-items:center;gap:10px;border:1px solid var(--line);border-radius:10px;padding:9px 12px;}
+.gp-ic.old{border-color:var(--rose);background:color-mix(in srgb,var(--rose) 6%,transparent);}
+.gp-ic b{display:block;font-size:13px;} .gp-ic small{display:block;font-size:11px;color:var(--text-dim);}
+</style>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

@@ -1393,6 +1393,51 @@ CREATE TABLE work_record_materials (
   FOREIGN KEY (item_id) REFERENCES store_items(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
+-- ---------------- 📦 भांडार — Stock आवक/जावक, Vendor ----------------
+-- शिल्लक = store_stock_moves.quantity ची बेरीज (आवक +, जावक/कामात वापर −)
+CREATE TABLE store_vendors (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  organization_id INT NOT NULL,
+  name VARCHAR(200) NOT NULL,
+  contact_person VARCHAR(150) NULL,
+  mobile VARCHAR(20) NULL,
+  gstin VARCHAR(20) NULL,
+  address VARCHAR(255) NULL,
+  supplies VARCHAR(255) NULL,
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  created_by INT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_org (organization_id, is_active),
+  FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE store_stock_moves (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  organization_id INT NOT NULL,
+  item_id INT NOT NULL,
+  move_type VARCHAR(20) NOT NULL,
+  quantity DECIMAL(12,2) NOT NULL,
+  rate DECIMAL(12,2) NULL,
+  move_date DATE NOT NULL,
+  vendor_id INT NULL,
+  bill_no VARCHAR(60) NULL,
+  department_id INT NULL,
+  issued_to VARCHAR(150) NULL,
+  work_record_id INT NULL,
+  notes VARCHAR(255) NULL,
+  created_by INT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_org_date (organization_id, move_date),
+  INDEX idx_item (item_id, move_date),
+  INDEX idx_type (organization_id, move_type),
+  FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+  FOREIGN KEY (item_id) REFERENCES store_items(id) ON DELETE CASCADE,
+  FOREIGN KEY (vendor_id) REFERENCES store_vendors(id) ON DELETE SET NULL,
+  FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE SET NULL,
+  FOREIGN KEY (work_record_id) REFERENCES work_records(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
 CREATE TABLE cctv_dvrs (
   id INT AUTO_INCREMENT PRIMARY KEY,
   organization_id INT NOT NULL,

@@ -19,4 +19,23 @@ try {
     }
     if ($notToday && (int)date('G') >= 11) array_unshift($al, ['info', '📋 ' . count($notToday) . ' DVR ची आजची तपासणी बाकी: ' . implode(', ', array_slice($notToday, 0, 4)) . (count($notToday) > 4 ? '…' : ''), '']);
     smartAlerts(array_slice($al, 0, 10));
+
+    // 📈 मागचे 14 दिवस — किती DVR ची तपासणी झाली; 💾 प्रत्येक DVR ची सध्याची Storage
+    $st->execute([$orgId]);
+    $dvrList = $st->fetchAll();
+    $totalD = count($dvrList);
+    if ($totalD) {
+        $cq = $pdo->prepare("SELECT checkup_date d, COUNT(DISTINCT dvr_id) n FROM cctv_checkups WHERE organization_id = ? AND checkup_date >= DATE_SUB(CURDATE(), INTERVAL 13 DAY) GROUP BY d");
+        $cq->execute([$orgId]);
+        $byDay = array_column($cq->fetchAll(), 'n', 'd');
+        $cl = $cv = []; $doneDays = 0;
+        for ($i = 13; $i >= 0; $i--) { $d = date('Y-m-d', strtotime("-$i day")); $cl[] = date('d/m', strtotime($d)); $n = (int)($byDay[$d] ?? 0); $cv[] = $n; if ($n >= $totalD) $doneDays++; }
+        echo '<div class="row g-3 mb-3"><div class="col-lg-7"><div class="panel h-100"><div class="panel-head"><div class="title">📈 रोजची तपासणी — मागचे 14 दिवस</div><div class="sub">' . $doneDays . ' / 14 दिवस सगळ्या ' . $totalD . ' DVR ची तपासणी पूर्ण</div></div><div style="padding:10px 16px;height:210px;"><canvas id="cctvTrend"></canvas></div></div></div><div class="col-lg-5">';
+        $rows = [];
+        foreach ($dvrList as $d) if ($d['storage'] !== null) $rows[] = ['name' => $d['dvr_name'], 'value' => (float)$d['storage'], 'label' => (float)$d['storage'] . '%', 'color' => (float)$d['storage'] >= 90 ? 'var(--rose)' : ((float)$d['storage'] >= 75 ? 'var(--amber)' : 'var(--rail)')];
+        usort($rows, fn($a, $b) => $b['value'] <=> $a['value']);
+        smartBars('💾 Storage — शेवटच्या तपासणीनुसार', '90%+ लाल', array_slice($rows, 0, 8), 'var(--rail)', 'अजून तपासणी नाही');
+        echo '</div></div>';
+        echo '<script>document.addEventListener("DOMContentLoaded",function(){if(!window.Chart)return;new Chart(document.getElementById("cctvTrend"),{type:"bar",data:{labels:' . json_encode($cl) . ',datasets:[{label:"तपासलेले DVR",data:' . json_encode($cv) . ',backgroundColor:' . json_encode(array_map(fn($n) => $n >= $totalD ? '#0F766E' : ($n ? '#F59E0B' : '#E5E7EB'), $cv)) . ',borderRadius:5}]},options:{maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,max:' . $totalD . ',ticks:{precision:0}}}}});});</script>';
+    }
 } catch (PDOException $e) {}
