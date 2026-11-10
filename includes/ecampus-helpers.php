@@ -230,8 +230,8 @@ function ecampusPdfSection(PDO $pdo, $orgId, $period, $mode = 'brief', $since = 
 
     if ($mode === 'brief') {
         if ($S['lagging']) {
-            $html .= '<table class="g" style="margin-top:6px;"><thead><tr><th style="width:24%;">कर्मचारी</th><th style="width:24%;">Section</th><th class="num-r" style="width:10%;">%</th><th style="width:42%;">नोंद</th></tr></thead><tbody>';
-            foreach (array_slice($S['lagging'], 0, 8) as $r) { $html .= '<tr><td>' . $h($r['staff_name']) . '</td><td>' . $h($r['section']) . '</td><td class="num-r" style="font-weight:bold;color:' . $bc($r['percent']) . ';">' . $r['percent'] . '%</td><td>' . $h(mb_strimwidth((string)$r['notes'], 0, 70, '…')) . '</td></tr>'; }
+            $html .= '<table class="g" style="margin-top:6px;"><thead><tr><th style="width:24%;">कर्मचारी</th><th style="width:24%;">Wing</th><th class="num-r" style="width:10%;">%</th><th style="width:42%;">नोंद</th></tr></thead><tbody>';
+            foreach (array_slice($S['lagging'], 0, 8) as $r) { $html .= '<tr><td>' . $h($r['staff_name']) . '</td><td>' . $h($r['wing']) . '</td><td class="num-r" style="font-weight:bold;color:' . $bc($r['percent']) . ';">' . $r['percent'] . '%</td><td>' . $h(mb_strimwidth((string)$r['notes'], 0, 70, '…')) . '</td></tr>'; }
             $html .= '</tbody></table>';
         }
         return $html;
@@ -245,17 +245,17 @@ function ecampusPdfSection(PDO $pdo, $orgId, $period, $mode = 'brief', $since = 
     }
     // मासिक अहवाल कामनिहाय — कर्मचारीनिहाय भाग नाही
     if ($mode !== 'detail') { $html .= '<h2>कामनिहाय तपशील</h2>'; }
-    // Wing → Section गटांत (Sort क्रम कायम ठेवून)
+    // फक्त Wing नुसार गट (विभागनिहाय नाही; Sort क्रम कायम)
     $ord = array_keys($rows);
-    usort($ord, fn($x, $y) => [$rows[$x]['wing'], $rows[$x]['section'], $x] <=> [$rows[$y]['wing'], $rows[$y]['section'], $y]);
+    usort($ord, fn($x, $y) => [$rows[$x]['wing'], $x] <=> [$rows[$y]['wing'], $y]);
     $html .= '<table class="g"><thead><tr><th style="width:4%;">Sr.</th><th style="width:14%;">Staff Name</th><th style="width:30%;">Assigned Task</th><th style="width:30%;">Progress Notes</th><th class="num-r" style="width:8%;">%</th><th style="width:10%;">Status</th></tr></thead><tbody>';
     $grp = null; $sr = 0;
     foreach ($ord as $k) {
         $r = $rows[$k];
-        $g = $r['wing'] . '|' . $r['section'];
+        $g = $r['wing'];
         if ($g !== $grp) {
             $grp = $g;
-            $html .= '<tr><td colspan="6" style="background:#191C3A;color:#fff;font-weight:bold;padding:4px 6px;">' . $h($r['wing']) . ' <span style="color:#FDBA8C;font-weight:normal;">· ' . $h($r['section']) . '</span></td></tr>';
+            $html .= '<tr><td colspan="6" style="background:#191C3A;color:#fff;font-weight:bold;padding:4px 6px;">' . $h($r['wing']) . '</td></tr>';
         }
         $html .= '<tr><td>' . (++$sr) . '</td><td><b>' . $h($r['staff_name']) . '</b><div class="muted">' . $h($r['designation_show']) . '</div></td><td>' . nl2br($h($r['task_description'])) . '</td><td>'
             . $h((string)$r['notes']) . '</td><td class="num-r" style="font-weight:bold;color:' . $bc($r['percent']) . ';">' . $r['percent'] . '%</td><td style="font-weight:bold;color:' . $r['status_color'] . ';">' . $h($r['status_label']) . '</td></tr>';
@@ -469,7 +469,7 @@ function ecampusRangeData(PDO $pdo, $orgId, array $months) {
         foreach ($byU as $u => $list) { $staff[$u]['m'][$p] = (int)round(array_sum($list) / count($list)); }
     }
     uasort($staff, fn($a, $b) => strcmp($a['name'], $b['name']));
-    uasort($tasks, fn($a, $b) => [$a['row']['wing'], $a['row']['section'], $a['row']['staff_name']] <=> [$b['row']['wing'], $b['row']['section'], $b['row']['staff_name']]);
+    uasort($tasks, fn($a, $b) => [$a['row']['wing'], $a['row']['staff_name']] <=> [$b['row']['wing'], $b['row']['staff_name']]);
     return ['months' => $months, 'per' => $per, 'sum' => $sum, 'staff' => $staff, 'tasks' => $tasks];
 }
 
@@ -521,17 +521,17 @@ function ecampusRangeReportPdf(PDO $pdo, $orgId, array $months, $orgName, $withD
     }
     $html .= '</tbody></table>';
 
-    // 2) कामनिहाय — Wing → Section गटांत, प्रत्येक कामाचा महिनावार % व सरासरी
+    // 2) कामनिहाय — फक्त Wing नुसार गट, प्रत्येक कामाचा महिनावार % व सरासरी
     if ($D['tasks']) {
         $html .= '<h2>कामनिहाय प्रगती — महिनावार % <span class="h2s">हिरवा = 100% · पिवळा = 50–74% · लाल = 50% पेक्षा कमी · — = त्या महिन्याची नोंद भरलेली नाही</span></h2>'
             . '<table class="g"><thead><tr><th style="width:3%;">#</th><th style="width:13%;">कर्मचारी</th><th style="width:' . max(16, 40 - count($months) * 2) . '%;">काम</th>' . $mh . '<th class="mc">सरासरी</th></tr></thead><tbody>';
         $grp = null; $sr = 0; $ncol = count($months) + 4;
         foreach ($D['tasks'] as $t) {
             $r = $t['row'];
-            $g = $r['wing'] . ' — ' . $r['section'];
+            $g = $r['wing'];
             if ($g !== $grp) {
                 $grp = $g;
-                $html .= '<tr><td colspan="' . $ncol . '" style="background:#191C3A;color:#fff;font-weight:bold;padding:4px 6px;">' . $h($r['wing']) . ' <span style="color:#FDBA8C;font-weight:normal;">· ' . $h($r['section']) . '</span></td></tr>';
+                $html .= '<tr><td colspan="' . $ncol . '" style="background:#191C3A;color:#fff;font-weight:bold;padding:4px 6px;">' . $h($r['wing']) . '</td></tr>';
             }
             $vals = array_values(array_filter($t['m'], fn($v) => $v !== null));
             $a = $vals ? (int)round(array_sum($vals) / count($vals)) : null;
