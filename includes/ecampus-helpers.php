@@ -116,6 +116,14 @@ function ecampusRows(PDO $pdo, $orgId, $period, $userId = null) {
     return $rows;
 }
 
+/** Wing चा ठरलेला क्रम — VJMAT → Trust → AMRIT → AMIS → AMEMS → बाकी (नावानुसार) */
+function ecampusWingKey($wing) {
+    static $order = ['VJMAT', 'TRUST', 'AMRIT', 'AMIS', 'AMEMS'];
+    $u = strtoupper(trim((string)$wing));
+    foreach ($order as $i => $w) { if (preg_match('/^' . $w . '(?![A-Z])/', $u)) { return [$i, $u]; } }
+    return [count($order), $u];
+}
+
 /** एकत्रित हिशोब — एकूण %, स्थितीनुसार संख्या, Wing/Section नुसार, मागे पडलेली कामं */
 function ecampusSummary(array $rows, $period) {
     $work = array_values(array_filter($rows, fn($r) => $r['access_type'] === 'work'));
@@ -140,7 +148,8 @@ function ecampusSummary(array $rows, $period) {
     foreach (['wings', 'sections'] as $k) {
         foreach ($s[$k] as &$g) { $g['avg'] = (int)round($g['sum'] / max(1, $g['n'])); }
         unset($g);
-        uasort($s[$k], fn($a, $b) => $a['avg'] <=> $b['avg']);
+        if ($k === 'wings') { uksort($s[$k], fn($a, $b) => ecampusWingKey($a) <=> ecampusWingKey($b)); }
+        else { uasort($s[$k], fn($a, $b) => $a['avg'] <=> $b['avg']); }
     }
     usort($s['lagging'], fn($a, $b) => $a['percent'] <=> $b['percent']);
     $s['level'] = $s['overall'] === null ? 'good' : ($s['overall'] >= 85 ? 'good' : ($s['overall'] >= 60 ? 'warn' : 'bad'));
@@ -247,7 +256,7 @@ function ecampusPdfSection(PDO $pdo, $orgId, $period, $mode = 'brief', $since = 
     if ($mode !== 'detail') { $html .= '<h2>कामनिहाय तपशील</h2>'; }
     // फक्त Wing नुसार गट (विभागनिहाय नाही; Sort क्रम कायम)
     $ord = array_keys($rows);
-    usort($ord, fn($x, $y) => [$rows[$x]['wing'], $x] <=> [$rows[$y]['wing'], $y]);
+    usort($ord, fn($x, $y) => [ecampusWingKey($rows[$x]['wing']), $x] <=> [ecampusWingKey($rows[$y]['wing']), $y]);
     $html .= '<table class="g"><thead><tr><th style="width:4%;">Sr.</th><th style="width:14%;">Staff Name</th><th style="width:30%;">Assigned Task</th><th style="width:30%;">Progress Notes</th><th class="num-r" style="width:8%;">%</th><th style="width:10%;">Status</th></tr></thead><tbody>';
     $grp = null; $sr = 0;
     foreach ($ord as $k) {
@@ -469,7 +478,7 @@ function ecampusRangeData(PDO $pdo, $orgId, array $months) {
         foreach ($byU as $u => $list) { $staff[$u]['m'][$p] = (int)round(array_sum($list) / count($list)); }
     }
     uasort($staff, fn($a, $b) => strcmp($a['name'], $b['name']));
-    uasort($tasks, fn($a, $b) => [$a['row']['wing'], $a['row']['staff_name']] <=> [$b['row']['wing'], $b['row']['staff_name']]);
+    uasort($tasks, fn($a, $b) => [ecampusWingKey($a['row']['wing']), $a['row']['staff_name']] <=> [ecampusWingKey($b['row']['wing']), $b['row']['staff_name']]);
     return ['months' => $months, 'per' => $per, 'sum' => $sum, 'staff' => $staff, 'tasks' => $tasks];
 }
 
