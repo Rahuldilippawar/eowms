@@ -73,6 +73,7 @@ try {
       🖥️ IT Requests व्यवस्थापन <?php if ($pendingTickets > 0): ?><span style="background:var(--rose);color:#fff;border-radius:20px;font-size:10.5px;padding:1px 7px;margin-left:4px;"><?= $pendingTickets ?></span><?php endif; ?>
     </a>
     <a href="smartboard-report.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13px;padding:9px 16px;">📺 Smart Board अहवाल</a>
+    <a href="export.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13px;padding:9px 16px;" title="सगळे Assets">📥 Excel</a>
   </div>
 </div>
 <p style="font-size:12.5px;color:var(--text-dim);margin-bottom:20px;"></p>

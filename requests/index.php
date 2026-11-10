@@ -59,6 +59,26 @@ try {
     $stmt->execute($scopeParams);
     $requests = $stmt->fetchAll();
 
+    // 📊 Excel — सध्याच्या Filter नुसार (मर्यादा 5000)
+    if (($_GET['export'] ?? '') === 'csv') {
+        $ex = $pdo->prepare(str_replace(' LIMIT 300', ' LIMIT 5000', $sql));
+        $ex->execute($scopeParams);
+        while (ob_get_level()) ob_end_clean();
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="work-requests-' . $status . '-' . date('Y-m-d') . '.csv"');
+        $out = fopen('php://output', 'w');
+        fwrite($out, "\xEF\xBB\xBF");
+        fputcsv($out, ['क्रमांक', 'नोंद', 'विषय', 'प्रकार', 'प्राधान्य', 'विभाग', 'मागणी करणारा विभाग', 'मागणी करणारे', 'ठिकाण', 'नेमलं', 'स्थिती', 'मुदत', 'पूर्ण', 'लागलेला वेळ (तास)', 'मुदतीत?', 'खर्च (₹)', 'समाधान (/5)']);
+        foreach ($ex->fetchAll() as $r) {
+            $hrs = $r['completed_at'] ? round((strtotime($r['completed_at']) - strtotime($r['created_at'])) / 3600, 1) : '';
+            $inSla = $r['completed_at'] && $r['due_at'] ? ($r['completed_at'] <= $r['due_at'] ? 'हो' : 'नाही') : '';
+            fputcsv($out, [$r['request_code'], $r['created_at'], $r['title'], TICKET_CATEGORIES[$r['category']] ?? $r['category'], $r['priority'], $r['dept_name'], $r['requesting_dept_name'],
+                $r['requester_name'], $r['location'], $r['assigned_to_name'], $r['status'], $r['due_at'], $r['completed_at'], $hrs, $inSla, $r['cost_incurred'], $r['rating']]);
+        }
+        fclose($out);
+        exit;
+    }
+
     $cStmt = $pdo->prepare("SELECT
         COUNT(*) a,
         SUM(r.status IN ('pending','in_progress')) o,
@@ -142,6 +162,7 @@ $currentUrl = 'index.php' . $qs([]);
   <div class="d-flex gap-2">
     <a href="create.php" class="btn" style="background:var(--rail);color:#fff;border-radius:9px;font-size:13px;padding:9px 16px;"><i class="fa-solid fa-plus me-1"></i>नवीन</a>
     <a href="report.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13px;padding:9px 16px;"><i class="fa-solid fa-chart-column me-1"></i>Report</a>
+    <a href="<?= h($qs(['export' => 'csv'])) ?>" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13px;padding:9px 16px;" title="सध्याच्या Filter नुसार">📊 Excel</a>
   </div>
 </div>
 <p style="font-size:12.5px;color:var(--text-dim);margin-bottom:14px;"><?= h(t('s302')) ?> · SLA: तातडीचं 8 तास, जास्त 1 दिवस, सर्वसाधारण 3 दिवस, कमी 7 दिवस</p>

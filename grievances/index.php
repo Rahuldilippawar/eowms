@@ -220,6 +220,19 @@ $statusChips = ['open' => 'overdue', 'in_progress' => 'pending', 'resolved' => '
   <div class="col-6 col-lg-3"><div class="kpi-mini"><div class="lbl">एकूण</div><div class="val"><?= count($grievances) ?></div></div></div>
   <div class="col-6 col-lg-3"><div class="kpi-mini"><div class="lbl">🔴 Open</div><div class="val" style="color:var(--amber);"><?= $openCount ?></div></div></div>
   <div class="col-6 col-lg-3"><div class="kpi-mini"><div class="lbl">⚠️ SLA चुकलेल्या</div><div class="val" style="color:<?= $overdueCount > 0 ? 'var(--rose)' : 'var(--rail)' ?>;"><?= $overdueCount ?></div></div></div>
+  <div class="col-6 col-lg-3 d-flex align-items-center justify-content-lg-end"><a href="export.php" class="btn btn-sm" style="border:1px solid var(--line);border-radius:8px;">📊 Excel (सर्व तक्रारी)</a></div>
+</div>
+<?php require __DIR__ . '/../includes/insights/grievances.php'; ?>
+<?php endif; ?>
+
+<?php if (count($grievances) > 4): $gCats = array_values(array_unique(array_filter(array_map(fn($g) => trim((string)$g['category']), $grievances)))); ?>
+<div class="gv-tools">
+  <?php foreach (['' => 'सर्व', 'open' => '🔴 नवीन', 'in_progress' => '🟡 सुरू आहे', 'overdue' => '⚠️ SLA चुकली', 'resolved' => '✅ सोडवलं', 'closed' => '⚪ बंद'] as $k => $lbl): ?>
+    <button type="button" class="gv-chip<?= $k === '' ? ' on' : '' ?>" data-f="<?= $k ?>"><?= h($lbl) ?></button>
+  <?php endforeach; ?>
+  <?php if ($gCats): ?><select id="gvCat" class="form-select-custom" style="width:auto;"><option value="">सर्व प्रकार</option><?php foreach ($gCats as $c): ?><option><?= h($c) ?></option><?php endforeach; ?></select><?php endif; ?>
+  <input type="search" id="gvQ" class="form-control-custom" placeholder="🔍 शोधा… (# क्रमांक / मजकूर)" style="max-width:240px;">
+  <span id="gvCnt" style="font-size:12px;color:var(--text-dim);"></span>
 </div>
 <?php endif; ?>
 
@@ -230,7 +243,7 @@ $statusChips = ['open' => 'overdue', 'in_progress' => 'pending', 'resolved' => '
     $mine = $isSubmitter($g);
     $canHandle = $canManage || $isAssignee($g);
   ?>
-    <div class="col-md-6" id="g<?= $g['id'] ?>">
+    <div class="col-md-6 gv-card" id="g<?= $g['id'] ?>" data-st="<?= h($g['status']) ?>" data-od="<?= $isOverdue ? 1 : 0 ?>" data-cat="<?= h(trim((string)$g['category'])) ?>" data-q="<?= h(mb_strtolower('#' . $g['id'] . ' ' . $g['category'] . ' ' . $g['description'] . ' ' . ($g['assigned_name'] ?? ''))) ?>">
       <div class="panel" style="padding:18px;<?= $isOverdue ? 'border-left:3px solid var(--rose);' : '' ?>">
         <div class="d-flex justify-content-between align-items-start mb-1">
           <span class="status-chip <?= $statusChips[$g['status']] ?? 'pending' ?>"><?= $statusLabels[$g['status']] ?? h($g['status']) ?></span>
@@ -328,4 +341,25 @@ $statusChips = ['open' => 'overdue', 'in_progress' => 'pending', 'resolved' => '
   </div></div>
 </div>
 
+<style>
+.gv-tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px;}
+.gv-chip{border:1px solid var(--line);background:var(--panel,#fff);border-radius:20px;padding:6px 13px;font-size:12.5px;font-weight:600;color:var(--text);}
+.gv-chip.on{background:var(--rail);border-color:var(--rail);color:#fff;}
+</style>
+<script>
+(function () {
+  var f = '', cards = document.querySelectorAll('.gv-card'), q = document.getElementById('gvQ'), cat = document.getElementById('gvCat');
+  if (!q) return;
+  function apply() {
+    var s = q.value.trim().toLowerCase(), c = cat ? cat.value : '', n = 0;
+    cards.forEach(function (el) {
+      var ok = (!f || (f === 'overdue' ? el.dataset.od === '1' : el.dataset.st === f)) && (!c || el.dataset.cat === c) && (!s || el.dataset.q.indexOf(s) !== -1);
+      el.style.display = ok ? '' : 'none'; if (ok) n++;
+    });
+    document.getElementById('gvCnt').textContent = n + ' / ' + cards.length;
+  }
+  document.querySelectorAll('.gv-chip').forEach(function (b) { b.onclick = function () { f = b.dataset.f; document.querySelectorAll('.gv-chip').forEach(function (x) { x.classList.toggle('on', x === b); }); apply(); }; });
+  q.oninput = apply; if (cat) cat.onchange = apply;
+})();
+</script>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

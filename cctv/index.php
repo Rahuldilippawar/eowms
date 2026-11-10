@@ -70,6 +70,7 @@ try {
     <a href="dvrs.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13px;padding:9px 16px;">DVR यादी</a>
     <a href="cameras.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13px;padding:9px 16px;">Camera यादी</a>
     <a href="report.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13px;padding:9px 16px;">📊 अहवाल</a>
+    <a href="export.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13px;padding:9px 16px;" title="या महिन्याच्या तपासण्या">📥 Excel</a>
     <a href="checkup.php" class="btn" style="background:var(--rail);color:#fff;border-radius:9px;font-size:13px;padding:9px 18px;font-weight:600;">✅ आजची Checkup करा</a>
   </div>
 </div>
