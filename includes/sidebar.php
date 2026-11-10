@@ -334,7 +334,7 @@ function navGroupHead($id, $key, $activeGroup, $icon, $label, $badge = 0) {
     <?php endif; ?>
     <?php if (isManagementOrAbove()): ?>
     <a href="<?= $rp ?>reports/daily.php" class="tree-node <?= $currentDir === 'reports' && $currentPage === 'daily.php' ? 'active' : '' ?>">
-      <i class="fa-solid fa-moon fa-fw"></i><span>दैनिक अहवाल</span>
+      <i class="fa-solid fa-calendar-day fa-fw"></i><span>दैनिक अहवाल</span>
     </a>
     <a href="<?= $rp ?>reports/weekly.php" class="tree-node <?= $currentDir === 'reports' && $currentPage === 'weekly.php' ? 'active' : '' ?>">
       <i class="fa-solid fa-chart-column fa-fw"></i><span>साप्ताहिक अहवाल</span>
