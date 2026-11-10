@@ -236,14 +236,14 @@ function ecampusPdfSection(PDO $pdo, $orgId, $period, $mode = 'brief', $since = 
         }
         return $html;
     }
-    // full — 🔮 महिनाअखेरचा अंदाज + 👥 कर्मचारीनिहाय + पूर्ण तक्ता
-    $fc = ecampusForecast(ecampusDailyTrend($pdo, $orgId, $period, $rows), $period, $S['overall']);
+    // full — 🔮 महिनाअखेरचा अंदाज + 👥 कर्मचारीनिहाय + पूर्ण तक्ता · detail (अनेक महिन्यांच्या अहवालात) — फक्त पूर्ण तक्ता
+    $fc = $mode === 'detail' ? null : ecampusForecast(ecampusDailyTrend($pdo, $orgId, $period, $rows), $period, $S['overall']);
     if ($fc) {
         $html .= '<div class="al" style="margin-top:6px;padding:5px 9px;background:' . ($fc['onTrack'] ? '#E7F6EF' : '#FEF3C7') . ';border-left:3px solid ' . ($fc['onTrack'] ? '#137A4B' : '#B45309') . ';font-size:8.6pt;">'
             . '<b>महिनाअखेरचा अंदाज: ' . $fc['projected'] . '%</b> — सध्याचा वेग रोज ~' . $fc['perDay'] . '% · ' . $fc['daysLeft'] . ' दिवस बाकी'
             . ($fc['onTrack'] ? ' · वेळेत पूर्ण होण्याच्या मार्गावर' : ' · 100% साठी रोज ~' . $fc['need'] . '% प्रगती हवी') . '</div>';
     }
-    $board = ecampusStaffBoard($rows, $period);
+    $board = $mode === 'detail' ? [] : ecampusStaffBoard($rows, $period);
     if (count($board) > 1) {
         $html .= '<h2>कर्मचारीनिहाय प्रगती <span class="h2s">कमी % आधी — कोणाकडे लक्ष द्यायचं</span></h2>'
             . '<table class="g"><thead><tr><th style="width:24%;">कर्मचारी</th><th style="width:18%;">पद</th><th class="num-r" style="width:8%;">कामं</th><th class="num-r" style="width:8%;">पूर्ण</th>'
@@ -256,7 +256,7 @@ function ecampusPdfSection(PDO $pdo, $orgId, $period, $mode = 'brief', $since = 
         }
         $html .= '</tbody></table>';
     }
-    $html .= '<h2>सर्व कामांचा तपशील</h2>';
+    if ($mode !== 'detail') { $html .= '<h2>सर्व कामांचा तपशील</h2>'; }
     $html .= '<table class="g"><thead><tr><th style="width:4%;">Sr.</th><th style="width:11%;">Wing / Category</th><th style="width:12%;">Section / Department</th><th style="width:12%;">Staff Name</th><th style="width:10%;">Designation</th><th style="width:22%;">Assigned Task</th><th style="width:17%;">Progress Notes</th><th class="num-r" style="width:6%;">%</th><th style="width:6%;">Status</th></tr></thead><tbody>';
     foreach ($rows as $i => $r) {
         $html .= '<tr><td>' . ($i + 1) . '</td><td>' . $h($r['wing']) . '</td><td>' . $h($r['section']) . '</td><td>' . $h($r['staff_name']) . '</td><td>' . $h($r['designation_show']) . '</td><td>' . nl2br($h($r['task_description'])) . '</td><td>'
@@ -409,4 +409,161 @@ function ecampusSendReminders(PDO $pdo, $orgId, ?array $userIds = null) {
         $sent++;
     }
     return $sent;
+}
+
+/* ======================= 📚 अनेक महिन्यांचा / वार्षिक अहवाल ======================= */
+
+/** एका अहवालात जास्तीत जास्त किती महिने (PDF तक्ता Landscape मध्ये बसावा म्हणून) */
+const ECAMPUS_RANGE_MAX = 12;
+
+/** तयार कालावधी — [key => [लेबल, from, to]] (भविष्यातला शेवट चालू महिन्यापर्यंतच) */
+function ecampusRangePresets() {
+    $now = date('Y-m');
+    $y = (int)date('Y'); $m = (int)date('n');
+    $fyStart = $m >= 4 ? $y : $y - 1;   // आर्थिक वर्ष एप्रिल–मार्च
+    $clip = fn($p) => min($p, $now);
+    return [
+        'fy' => ['चालू आर्थिक वर्ष (' . $fyStart . '-' . substr($fyStart + 1, 2) . ')', sprintf('%d-04', $fyStart), $clip(sprintf('%d-03', $fyStart + 1))],
+        'lastfy' => ['मागचं आर्थिक वर्ष (' . ($fyStart - 1) . '-' . substr($fyStart, 2) . ')', sprintf('%d-04', $fyStart - 1), sprintf('%d-03', $fyStart)],
+        'year' => ['हे वर्ष (जाने–डिसें ' . $y . ')', $y . '-01', $clip($y . '-12')],
+        'last6' => ['मागचे 6 महिने', date('Y-m', strtotime(date('Y-m-01') . ' -5 month')), $now],
+        'last12' => ['मागचे 12 महिने', date('Y-m', strtotime(date('Y-m-01') . ' -11 month')), $now],
+    ];
+}
+
+/** from–to मधले महिने (क्रमाने); चुकीचं असेल तर [] — जास्तीत जास्त ECAMPUS_RANGE_MAX */
+function ecampusRangeMonths($from, $to) {
+    $ok = fn($p) => is_string($p) && preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $p) && $p >= '2020-01' && $p <= date('Y-m');
+    if (!$ok($from) || !$ok($to)) { return []; }
+    if ($from > $to) { [$from, $to] = [$to, $from]; }
+    $out = [];
+    for ($p = $from; $p <= $to && count($out) < ECAMPUS_RANGE_MAX; $p = date('Y-m', strtotime($p . '-01 +1 month'))) { $out[] = $p; }
+    return $out;
+}
+
+/** लहान महिना-लेबल (तक्त्याच्या Column साठी) — उदा. "ऑक्टो 26" */
+function ecampusShortMonth($ym) {
+    $m = ['', 'जाने', 'फेब्रु', 'मार्च', 'एप्रि', 'मे', 'जून', 'जुलै', 'ऑग', 'सप्टें', 'ऑक्टो', 'नोव्हें', 'डिसें'];
+    return $m[(int)substr($ym, 5, 2)] . ' ' . substr($ym, 2, 2);
+}
+
+/**
+ * कालावधीचा Data — [months, perMonth[ym=>rows], summary[ym=>S], staff[uid=>[name,desig,m[ym]=>avg]], tasks[tid=>[row, m[ym]=>pct]]]
+ */
+function ecampusRangeData(PDO $pdo, $orgId, array $months) {
+    $per = []; $sum = []; $staff = []; $tasks = [];
+    foreach ($months as $p) {
+        $rows = ecampusRows($pdo, $orgId, $p);
+        $per[$p] = $rows;
+        $sum[$p] = $rows ? ecampusSummary($rows, $p) : null;
+        // त्या महिन्यात एकही नोंद भरलेली नसेल तर 0% नव्हे — "नोंद नाही" (सरासरी/सर्वोत्तम/कमी मध्ये धरत नाही)
+        if ($sum[$p]) { $sum[$p]['filled'] = $sum[$p]['work'] - $sum[$p]['notUpdated']; if ($sum[$p]['filled'] <= 0) { $sum[$p]['overall'] = null; } }
+        $byU = [];
+        foreach ($rows as $r) {
+            if ($r['access_type'] !== 'work') { continue; }
+            $u = (int)$r['user_id'];
+            $staff[$u] ??= ['name' => $r['staff_name'], 'desig' => $r['designation_show'], 'm' => []];
+            if ($r['updated_at'] || $r['carried']) { $byU[$u][] = $r['percent']; }   // भरलेल्या नोंदींचीच सरासरी
+            $tasks[(int)$r['id']] ??= ['row' => $r, 'm' => []];
+            // भरलेलं नसलेलं (नोंदच नाही) वेगळं दाखवण्यासाठी — null
+            $tasks[(int)$r['id']]['m'][$p] = ($r['updated_at'] || $r['carried']) ? (int)$r['percent'] : null;
+        }
+        foreach ($byU as $u => $list) { $staff[$u]['m'][$p] = (int)round(array_sum($list) / count($list)); }
+    }
+    uasort($staff, fn($a, $b) => strcmp($a['name'], $b['name']));
+    uasort($tasks, fn($a, $b) => [$a['row']['wing'], $a['row']['section'], $a['row']['staff_name']] <=> [$b['row']['wing'], $b['row']['section'], $b['row']['staff_name']]);
+    return ['months' => $months, 'per' => $per, 'sum' => $sum, 'staff' => $staff, 'tasks' => $tasks];
+}
+
+/** 📄 अनेक महिन्यांचा / वार्षिक E-Campus PDF (Landscape) */
+function ecampusRangeReportPdf(PDO $pdo, $orgId, array $months, $orgName, $withDetail = false) {
+    require_once __DIR__ . '/weekly-report.php';
+    require_once __DIR__ . '/daily-report.php';
+    $D = ecampusRangeData($pdo, $orgId, $months);
+    $h = fn($x) => htmlspecialchars((string)$x, ENT_QUOTES, 'UTF-8');
+    $bc = fn($p) => $p >= 100 ? '#16A34A' : ($p >= 75 ? '#65A30D' : ($p >= 50 ? '#F59E0B' : '#DC2626'));
+    $bg = fn($p) => $p === null ? '#F3F1EE' : ($p >= 100 ? '#DCFCE7' : ($p >= 75 ? '#ECFCCB' : ($p >= 50 ? '#FEF3C7' : '#FEE2E2')));
+    $cell = fn($p) => '<td class="mc" style="background:' . $bg($p) . ';color:' . ($p === null ? '#A8AEC2' : $bc($p)) . ';">' . ($p === null ? '—' : $p . '%') . '</td>';
+    $first = $months[0]; $last = end($months);
+    $label = $first === $last ? ecampusPeriodLabel($first) : ecampusPeriodLabel($first) . ' ते ' . ecampusPeriodLabel($last);
+    $overalls = array_filter(array_map(fn($s) => $s['overall'] ?? null, $D['sum']), fn($v) => $v !== null);
+    $avg = $overalls ? (int)round(array_sum($overalls) / count($overalls)) : null;
+    $best = $overalls ? array_search(max($overalls), $overalls, true) : null;
+    $worst = $overalls ? array_search(min($overalls), $overalls, true) : null;
+    $mh = implode('', array_map(fn($p) => '<th class="mc">' . $h(ecampusShortMonth($p)) . '</th>', $months));
+    $kpi = fn($l, $v, $s = '', $col = '#191C3A') => '<td class="kpi"><div class="kl">' . $l . '</div><div class="kv" style="color:' . $col . ';">' . $v . '</div><div class="ks">' . $s . '</div></td>';
+
+    $css = '<style>body{font-family:freesans;color:#1A1D29;font-size:8.4pt;}
+      .hdr{background:#191C3A;color:#fff;padding:12px 16px;border-bottom:4px solid #D9530F;} .hdr .o{font-size:14pt;font-weight:bold;} .hdr .t{font-size:10.5pt;color:#FDBA8C;}
+      table.kp{width:100%;border-collapse:separate;border-spacing:5px;margin:0 -5px;} td.kpi{background:#F7F5F2;border:1px solid #EAE5DF;padding:6px 8px;vertical-align:top;}
+      .kl{font-size:7.6pt;color:#64708A;} .kv{font-size:14pt;font-weight:bold;} .ks{font-size:7.2pt;color:#64708A;}
+      table.g{width:100%;border-collapse:collapse;font-size:7.8pt;} table.g th{background:#F3F1EE;color:#475069;text-align:left;padding:4px 4px;border-bottom:1px solid #DDD6CE;font-size:7.4pt;}
+      table.g td{padding:3px 4px;border-bottom:1px solid #EEE9E3;vertical-align:top;} .num-r{text-align:right;} .muted{color:#8A90AC;font-size:7.4pt;}
+      th.mc,td.mc{text-align:center;width:6.2%;font-weight:bold;} td.mc{border-left:1px solid #fff;}
+      h2{font-size:10.5pt;color:#191C3A;margin:12px 0 5px;padding-bottom:2px;border-bottom:1.2px solid #EAE5DF;} .h2s{font-size:7.6pt;color:#8A90AC;font-weight:normal;}
+      table.split{width:100%;border-collapse:collapse;} table.split td{vertical-align:top;padding:0;}</style>';
+    $html = $css . '<div class="hdr"><div class="o">' . $h($orgName) . '</div><div class="t">E-CAMPUS REPORT — ' . $h($label) . ' (' . count($months) . ' महिने)</div>'
+        . '<div class="p" style="font-size:7.6pt;color:#C9CCE0;">!! आत्मा मालिक !! · तयार: ' . date('d-m-Y, h:i A') . '</div></div>';
+
+    $html .= '<table class="kp"><tr>'
+        . $kpi('कालावधीची सरासरी प्रगती', $avg === null ? '—' : $avg . '%', count($overalls) . ' महिन्यांची नोंद', $avg === null ? '#8A90AC' : $bc($avg))
+        . $kpi('सर्वोत्तम महिना', $best ? $h(ecampusPeriodLabel($best)) : '—', $best ? $overalls[$best] . '%' : '', '#137A4B')
+        . $kpi('सर्वात कमी', $worst ? $h(ecampusPeriodLabel($worst)) : '—', $worst ? $overalls[$worst] . '%' : '', '#B42318')
+        . $kpi('कर्मचारी / कामं', count($D['staff']) . ' / ' . count($D['tasks']), 'या कालावधीत') . '</tr></table>';
+
+    // 1) महिनावार एकूण
+    $html .= '<h2>महिनावार एकूण प्रगती</h2><table class="g"><thead><tr><th style="width:18%;">महिना</th><th style="width:44%;"></th><th class="num-r">एकूण %</th><th class="num-r">पूर्ण</th><th class="num-r">सुरू</th><th class="num-r">सुरू नाही</th><th class="num-r">नोंद नाही</th></tr></thead><tbody>';
+    foreach ($months as $p) {
+        $s = $D['sum'][$p];
+        if (!$s) { $html .= '<tr><td>' . $h(ecampusPeriodLabel($p)) . '</td><td colspan="6" class="muted">कामं नेमलेली नव्हती</td></tr>'; continue; }
+        if ($s['overall'] === null) { $html .= '<tr><td>' . $h(ecampusPeriodLabel($p)) . '</td><td colspan="6" class="muted">— या महिन्याची एकही नोंद भरलेली नाही</td></tr>'; continue; }
+        $o = (int)$s['overall'];
+        $html .= '<tr><td><b>' . $h(ecampusPeriodLabel($p)) . '</b></td><td>' . weeklyReportBar($o, $bc($o), 95) . '</td><td class="num-r" style="font-weight:bold;color:' . $bc($o) . ';">' . $o . '%</td>'
+            . '<td class="num-r">' . (int)$s['done'] . '/' . (int)$s['work'] . '</td><td class="num-r">' . (int)$s['progress'] . '</td><td class="num-r">' . (int)$s['pending'] . '</td><td class="num-r">' . (int)$s['notUpdated'] . '</td></tr>';
+    }
+    $html .= '</tbody></table>';
+
+    // 2) कर्मचारी × महिने
+    if ($D['staff']) {
+        $html .= '<h2>कर्मचारीनिहाय — महिनावार सरासरी % <span class="h2s">हिरवा = 100% · पिवळा = 50–74% · लाल = 50% पेक्षा कमी · — = नोंद भरलेली नाही</span></h2>'
+            . '<table class="g"><thead><tr><th style="width:18%;">कर्मचारी</th><th style="width:12%;">पद</th>' . $mh . '<th class="mc">सरासरी</th></tr></thead><tbody>';
+        foreach ($D['staff'] as $st) {
+            $vals = array_values($st['m']);
+            $a = $vals ? (int)round(array_sum($vals) / count($vals)) : null;
+            $html .= '<tr><td><b>' . $h($st['name']) . '</b></td><td>' . $h($st['desig']) . '</td>';
+            foreach ($months as $p) { $html .= $cell($st['m'][$p] ?? null); }
+            $html .= $cell($a) . '</tr>';
+        }
+        $html .= '</tbody></table>';
+    }
+
+    // 3) काम × महिने
+    if ($D['tasks']) {
+        $html .= '<h2>कामनिहाय — महिनावार % <span class="h2s">— = त्या महिन्याची नोंद भरलेली नाही</span></h2>'
+            . '<table class="g"><thead><tr><th style="width:12%;">Wing / Section</th><th style="width:11%;">कर्मचारी</th><th style="width:20%;">काम</th>' . $mh . '</tr></thead><tbody>';
+        foreach ($D['tasks'] as $t) {
+            $r = $t['row'];
+            $html .= '<tr><td>' . $h($r['wing']) . '<div class="muted">' . $h($r['section']) . '</div></td><td>' . $h($r['staff_name']) . '</td><td>' . $h(mb_strimwidth((string)$r['task_description'], 0, 90, '…')) . '</td>';
+            foreach ($months as $p) { $html .= $cell(array_key_exists($p, $t['m']) ? $t['m'][$p] : null); }
+            $html .= '</tr>';
+        }
+        $html .= '</tbody></table>';
+    }
+
+    // 4) प्रत्येक महिन्याचा पूर्ण तपशील (ऐच्छिक)
+    if ($withDetail) {
+        foreach ($months as $p) {
+            if (!$D['per'][$p]) { continue; }
+            $html .= '<pagebreak /><h2>' . $h(ecampusPeriodLabel($p)) . ' — पूर्ण तपशील</h2>' . ecampusPdfSection($pdo, $orgId, $p, 'detail');
+        }
+    }
+    $html .= '<div class="muted" style="margin-top:8px;text-align:center;">— = नोंद नाही / कामं नव्हती · नवीन महिन्यात प्रत्येक काम 0% पासून मोजलं जातं</div>';
+    return mgmtReportPdf($html, 'E-Campus Report — ' . $label, $orgName, 'A4-L', [
+        'link' => 'ecampus/report.php?from=' . $first . '&to=' . $last, 'orgId' => $orgId, 'badgeMm' => 13,
+        'subtitle' => 'E-Campus अहवाल · ' . $label,
+    ]);
+}
+
+function ecampusRangeFileName(array $months) {
+    return 'e-campus-report-' . $months[0] . '-to-' . end($months) . '-' . date('Ymd-His') . '.pdf';
 }
