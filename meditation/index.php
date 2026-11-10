@@ -48,7 +48,9 @@ $today = date('Y-m-d');
   <?php unset($_SESSION['flash']); ?>
 <?php endif; ?>
 
-<div class="row g-3">
+<?php require __DIR__ . '/../includes/insights/meditation.php'; ?>
+
+<div class="row g-3" data-card-filter="सत्संग शोधा — विषय, विभाग, दिनांक…">
   <?php if (empty($events)): ?>
     <div class="col-12"><div class="panel" style="padding:30px;text-align:center;color:var(--text-dim);"><?= h(t('s593')) ?></div></div>
   <?php endif; ?>

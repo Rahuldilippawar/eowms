@@ -46,7 +46,17 @@ try {
 ?>
 
 <div class="page-eyebrow"><?= h(activeOrgName()) ?></div>
-<div class="page-title mb-1">🐄 गौशाळा</div>
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+  <div class="page-title mb-1">🐄 गौशाळा</div>
+  <div class="dropdown">
+    <button class="btn btn-sm dropdown-toggle" data-bs-toggle="dropdown" style="border:1px solid var(--line);border-radius:9px;padding:8px 14px;">📊 Excel</button>
+    <div class="dropdown-menu dropdown-menu-end">
+      <a class="dropdown-item" href="export.php?type=cattle">🐮 सगळी जनावरं</a>
+      <a class="dropdown-item" href="export.php?type=milk">🥛 या महिन्याचं दूध</a>
+      <a class="dropdown-item" href="export.php?type=health&from=<?= date('Y-01-01') ?>">💉 आरोग्य नोंदी (या वर्षी)</a>
+    </div>
+  </div>
+</div>
 <p style="font-size:12.5px;color:var(--text-dim);margin-bottom:20px;">गाय-नोंदी, आरोग्य, दूध-उत्पादन, चारा, प्रजनन, दान — सगळं एकत्र</p>
 
 <div class="row g-3 mb-4">
@@ -55,6 +65,8 @@ try {
   <div class="col-6 col-lg-3"><div class="kpi-mini"><div class="lbl">🍼 गाभण</div><div class="val" style="color:var(--amber);"><?= $pregnantCount ?></div></div></div>
   <div class="col-6 col-lg-3"><div class="kpi-mini"><div class="lbl">🌾 चारा कमी</div><div class="val" style="color:<?= $lowFodderCount > 0 ? 'var(--rose)' : 'var(--rail)' ?>;"><?= $lowFodderCount ?></div></div></div>
 </div>
+
+<?php require __DIR__ . '/../includes/insights/gaushala.php'; ?>
 
 <div class="row g-3">
   <div class="col-md-4">
