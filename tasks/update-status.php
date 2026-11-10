@@ -51,6 +51,8 @@ if ($status === 'completed' && $task['status'] !== 'completed' && (int)$task['as
     notifyUser($task['assigned_by'], $task['organization_id'], 'टास्क पूर्ण झाला — पडताळणी करा', "{$task['task_code']} — {$task['title']} ({$user['name']})", 'tasks/index.php?only_mine=1&status=completed');
 }
 
-$_SESSION['flash'] = t('s487');
-header('Location: my-tasks.php');
+$_SESSION['flash'] = $status === 'in_progress' && $task['status'] === 'pending' ? 'टास्क सुरू झाला म्हणून नोंदवलं.' : t('s487');
+// परत त्याच Tab वर
+$back = (string)($_POST['back'] ?? '');
+header('Location: my-tasks.php' . (in_array($back, ['all', 'overdue', 'pending', 'in_progress', 'completed', 'cancelled'], true) ? '?status=' . $back : ''));
 exit;

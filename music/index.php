@@ -34,7 +34,17 @@ $needsTuning = $needsTuning->fetch()['c'];
 ?>
 
 <div class="page-eyebrow"><?= h(activeOrgName()) ?></div>
-<div class="page-title mb-1">🎵 संगीत विभाग</div>
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+  <div class="page-title mb-1">🎵 संगीत विभाग</div>
+  <div class="dropdown">
+    <button class="btn btn-sm dropdown-toggle" data-bs-toggle="dropdown" style="border:1px solid var(--line);border-radius:9px;padding:8px 14px;">📊 Excel</button>
+    <div class="dropdown-menu dropdown-menu-end">
+      <a class="dropdown-item" href="export.php?type=students">🙋 विद्यार्थी व उपस्थिती</a>
+      <a class="dropdown-item" href="export.php?type=instruments">🎻 वाद्यं</a>
+      <a class="dropdown-item" href="export.php?type=exams">📝 परीक्षा निकाल</a>
+    </div>
+  </div>
+</div>
 <p style="font-size:12.5px;color:var(--text-dim);margin-bottom:20px;">वाद्य-साहित्य, सराव-खोली, विद्यार्थी, परीक्षा, कार्यक्रम — सगळं एका ठिकाणी.</p>
 
 <div class="row g-3 mb-4">
@@ -43,6 +53,8 @@ $needsTuning = $needsTuning->fetch()['c'];
   <div class="col-6 col-lg-3"><div class="kpi-mini"><div class="lbl">एकूण विद्यार्थी</div><div class="val"><?= $studentCount ?></div></div></div>
   <div class="col-6 col-lg-3"><div class="kpi-mini"><div class="lbl">येणारे कार्यक्रम</div><div class="val" style="color:var(--rail);"><?= $upcomingEvents ?></div></div></div>
 </div>
+
+<?php require __DIR__ . '/../includes/insights/music.php'; ?>
 
 <div class="row g-3">
   <div class="col-md-6 col-lg-4">
