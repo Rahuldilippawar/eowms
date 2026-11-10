@@ -85,7 +85,7 @@ $tpush('fa-clipboard-check', 'आज नोंदवलेली कामं', 
 $tpush('fa-user-check', 'आज उपस्थित कर्मचारी', aboutScalar("SELECT COUNT(*) FROM staff_attendance WHERE organization_id = ? AND attendance_date = CURDATE() AND status IN ('present','half_day')", [$orgId]));
 $tpush('fa-circle-check', 'आज पूर्ण विनंत्या', aboutScalar("SELECT COUNT(*) FROM work_requests WHERE organization_id = ? AND status IN ('completed','closed') AND DATE(completed_at) = CURDATE()", [$orgId]));
 $tpush('fa-envelope-circle-check', 'आज हललेल्या फाईल्स', aboutScalar("SELECT COUNT(DISTINCT la.letter_id) FROM letter_actions la JOIN letters l ON l.id = la.letter_id WHERE l.organization_id = ? AND DATE(la.created_at) = CURDATE()", [$orgId]));
-usort($modules, fn($a, $b) => ($b['n'] > 0) <=> ($a['n'] > 0));
+if ($loggedIn) usort($modules, fn($a, $b) => ($b['n'] > 0) <=> ($a['n'] > 0));
 $modulesInUse = count(array_filter($modules, fn($m) => $m['n'] > 0));
 if ($modulesInUse) $stats[] = ['fa-cubes', 'वापरातील Modules', $modulesInUse];
 
@@ -105,6 +105,8 @@ usort($milestones, fn($a, $b) => strcmp($a['d'], $b['d']));
 // जुना Data Import केला असेल तर 'संस्था नोंदवली' नंतर येतं — तेव्हा तो टप्पा गाळा
 if ($milestones && $milestones[0]['icon'] !== 'fa-seedling') $milestones = array_values(array_filter($milestones, fn($m) => $m['icon'] !== 'fa-seedling'));
 $since = $milestones ? (int)substr($milestones[0]['d'], 0, 4) : null;
+// 🔒 About हे Public पान आहे — Login नसल्यास नोंदींचे आकडे, आजची हालचाल, नोंदींवरचे टप्पे व वापराची माहिती दाखवू नका
+if (!$loggedIn) { $stats = []; $today = []; $milestones = []; }
 
 // ── आजचा विचार — ध्यान-सुविचार, नाहीतर सद्गुरू/मार्गदर्शकांच्या शब्दांतून; रोज बदलतो ──
 $thoughts = [];
@@ -461,22 +463,24 @@ $initial = fn($s) => mb_strtoupper(mb_substr(trim((string)$s), 0, 1));
 <?php if ($modules): ?>
   <section class="section" id="modules">
     <div class="section-heading">🧩 प्रणालीत काय-काय आहे</div>
-    <div class="section-sub"><?= count($modules) ?> Modules · <?= $modulesInUse ?> सध्या वापरात</div>
+    <div class="section-sub"><?= count($modules) ?> Modules<?php if ($loggedIn): ?> · <?= $modulesInUse ?> सध्या वापरात<?php endif; ?></div>
     <div class="mod-tools" role="group">
       <input type="search" class="search mod-q" id="modQ" placeholder="🔍 Module शोधा…" aria-label="Module शोधा">
+      <?php if ($loggedIn): ?>
       <button type="button" class="chip on" data-f="all">सर्व</button>
       <button type="button" class="chip" data-f="used">वापरात</button>
       <button type="button" class="chip" data-f="idle">अजून सुरू नाही</button>
+      <?php endif; ?>
     </div>
     <div class="mod-grid">
-      <?php foreach ($modules as $m): $used = $m['n'] > 0; ?>
-        <div class="mod reveal<?= $used ? '' : ' idle' ?>" data-used="<?= $used ? 1 : 0 ?>">
+      <?php foreach ($modules as $m): $used = $m['n'] > 0; $idle = $loggedIn && !$used; ?>
+        <div class="mod reveal<?= $idle ? ' idle' : '' ?>" data-used="<?= $loggedIn && $used ? 1 : 0 ?>">
           <div class="ic"><i class="fa-solid <?= $m['icon'] ?>"></i></div>
           <div>
             <div class="nm"><?= h($m['name']) ?></div>
             <div class="ds"><?= h($m['desc']) ?></div>
-            <span class="bd"><?= $used ? ($loggedIn ? number_format($m['n']) . ' नोंदी' : '✓ वापरात') : 'उपलब्ध' ?></span>
-            <?php if ($used): ?><div class="ubar" title="वापर"><i style="width:<?= max(6, (int)round(sqrt($m['n'] / $modMax) * 100)) ?>%;"></i></div><?php endif; ?>
+            <?php if ($loggedIn): ?><span class="bd"><?= $used ? number_format($m['n']) . ' नोंदी' : 'उपलब्ध' ?></span><?php endif; ?>
+            <?php if ($loggedIn && $used): ?><div class="ubar" title="वापर"><i style="width:<?= max(6, (int)round(sqrt($m['n'] / $modMax) * 100)) ?>%;"></i></div><?php endif; ?>
             <?php if ($loggedIn && $m['link']): ?><a class="go" href="<?= h($m['link']) ?>">उघडा <i class="fa-solid fa-arrow-right"></i></a><?php endif; ?>
           </div>
         </div>
