@@ -1,6 +1,7 @@
 <?php
 // एक वाक्य — मराठी मूळ (भाषांतरित होऊ नये म्हणून i18n:off) + हिंदी/English दुरुस्ती Form
 // अपेक्षित: $p (मराठी), $uses (मजकूर), $hi, $en (शब्दकोश)
+if (!isset($p)) { http_response_code(404); exit; }   // थेट URL ने उघडलं तर (हा फक्त index.php मधला भाग)
 $hv = $hi[$p] ?? ''; $ev = $en[$p] ?? '';
 ?>
 <form method="POST" class="tr-row">

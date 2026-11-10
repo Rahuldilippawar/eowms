@@ -3,6 +3,7 @@ require_once __DIR__ . '/../includes/auth.php';
 requireLogin('../');
 requireRole(['super_admin'], '../');
 require_once __DIR__ . '/../includes/offsite-backup.php';
+require_once __DIR__ . '/../includes/restore-fill.php';
 $user = currentUser();
 
 $orgId = activeOrgId();
@@ -109,6 +110,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
     if (!$data || !isset($data['eowms_backup_version'])) {
         $error = $error ?: t('s544');
     } else {
+        // ♻️ Restore आधीचे सर्वात मोठे IDs — यानंतरच्या (नव्या) नोंदींचेच हरवलेले Columns नंतर भरतो
+        $restoreMaxBefore = restoreMaxIds($pdo);
         $pdo->beginTransaction();
         try {
             $campusMap = [];
@@ -142,6 +145,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     $c['college_type'] ?? null, $c['principal_name'] ?? null, $c['affiliated_university'] ?? null,
                     $c['ugc_recognition'] ?? null, $c['naac_grade'] ?? null, $c['established_year'] ?? null,
                 ]);
+                restoreTrack('campuses', $c['id'] ?? null, $pdo);
                 $campusMap[$c['id']] = $pdo->lastInsertId();
                 $existingCampusByName[$nameKey] = $campusMap[$c['id']]; // याच Batch मधल्या पुढच्या Duplicate साठीही लक्षात ठेवतो
                 $counts['campuses']++;
@@ -169,6 +173,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                 }
                 $ins = $pdo->prepare("INSERT INTO departments (organization_id, campus_id, name, name_local, code, icon, is_active) VALUES (?, ?, ?, ?, ?, ?, ?)");
                 $ins->execute([$orgId, $newCampusId, $d['name'], $d['name_local'], $d['code'], $d['icon'], $d['is_active']]);
+                restoreTrack('departments', $d['id'] ?? null, $pdo);
                 $deptMap[$d['id']] = $pdo->lastInsertId();
                 $existingDeptByName[$nameKey] = $deptMap[$d['id']];
                 $counts['departments']++;
@@ -202,6 +207,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                 // employee_code is UNIQUE — make collision-safe
                 $empCode = $u['employee_code'] ? $u['employee_code'] . '-R' . substr(uniqid(), -4) : null;
                 $ins->execute([$orgId, $newCampusId, $newDeptId, $empCode, $u['name'], $u['email'], $u['mobile'], $u['designation'], $u['password'], $u['role'], $u['is_active']]);
+                restoreTrack('users', $u['id'] ?? null, $pdo);
                 $userMap[$u['id']] = $pdo->lastInsertId();
                 $counts['users']++;
             }
@@ -236,6 +242,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                 ");
                 $workCode = $w['work_code'] . '-R' . substr(uniqid(), -4);
                 $ins->execute([$workCode, $orgId, $newCampusId, $newDeptId, $w['requested_by'] ?? null, $newEmpId, $w['entered_by_role'], $newEnteredBy, $w['work_date'], $w['title'], $w['description'], $w['priority'], $w['status'], $w['start_date'], $w['due_date'], $w['completion_date'], $w['estimated_cost'], $w['actual_cost']]);
+                restoreTrack('work_records', $w['id'] ?? null, $pdo);
                 $workRecordMap[$w['id']] = $pdo->lastInsertId();
                 $existingWrKeys[$wrKey] = $workRecordMap[$w['id']];
                 $counts['work_records']++;
@@ -248,6 +255,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                 if (!$newRecordId || !$newTeamUserId) continue;
                 $pdo->prepare("INSERT IGNORE INTO work_record_team (work_record_id, user_id) VALUES (?, ?)")
                     ->execute([$newRecordId, $newTeamUserId]);
+                restoreTrack('work_record_team', $wt['id'] ?? null, $pdo);
             }
 
             // ---------------- Custom Fields (field_key ने आधीच असेल तर वगळतो) + Values ----------------
@@ -259,6 +267,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                 if (isset($existingCfKeys[$cf['field_key']])) { continue; }
                 $ins = $pdo->prepare("INSERT INTO custom_fields (organization_id, field_key, field_label, field_type, field_options, is_required, sort_order, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
                 $ins->execute([$orgId, $cf['field_key'], $cf['field_label'], $cf['field_type'], $cf['field_options'], $cf['is_required'], $cf['sort_order'], $cf['is_active']]);
+                restoreTrack('custom_fields', $cf['id'] ?? null, $pdo);
                 $existingCfKeys[$cf['field_key']] = true;
             }
             $existingCfvStmt = $pdo->prepare("
@@ -276,6 +285,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                 if (isset($existingCfvKeys[$cfvKey])) { continue; }
                 $pdo->prepare("INSERT INTO custom_field_values (work_record_id, field_key, field_value) VALUES (?, ?, ?)")
                     ->execute([$newWrId, $cfv['field_key'], $cfv['field_value']]);
+                restoreTrack('custom_field_values', $cfv['id'] ?? null, $pdo);
                 $existingCfvKeys[$cfvKey] = true;
             }
 
@@ -295,6 +305,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                 $newResponsibleUserId = !empty($r['responsible_user_id']) ? ($userMap[$r['responsible_user_id']] ?? null) : null;
                 $ins = $pdo->prepare("INSERT INTO renewal_items (organization_id, campus_id, department_id, responsible_user_id, item_type, regulatory_body, item_name, reference_no, issued_date, expiry_date, renewal_cost, is_recurring_monthly, monthly_amount, recurring_start_month, vendor_name, vendor_contact, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
                 $ins->execute([$orgId, $newCampusId, $newDeptId, $newResponsibleUserId, $r['item_type'], $r['regulatory_body'] ?? null, $r['item_name'], $r['reference_no'], $r['issued_date'], $r['expiry_date'], $r['renewal_cost'], $r['is_recurring_monthly'] ?? 0, $r['monthly_amount'] ?? null, $r['recurring_start_month'] ?? null, $r['vendor_name'], $r['vendor_contact'] ?? null, $r['status']]);
+                restoreTrack('renewal_items', $r['id'] ?? null, $pdo);
                 $renewalItemMap[$r['id']] = $pdo->lastInsertId();
                 $existingRenewalKeys[$renKey] = true;
                 $counts['renewal_items']++;
@@ -307,6 +318,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                         INSERT INTO renewal_history (renewal_item_id, old_expiry_date, old_issued_date, old_renewal_cost, old_vendor_name, old_reference_no, renewed_by, renewed_at)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                     ")->execute([$newRenewalItemId, $rh['old_expiry_date'], $rh['old_issued_date'], $rh['old_renewal_cost'], $rh['old_vendor_name'], $rh['old_reference_no'], $rh['renewed_by'] ? ($userMap[$rh['renewed_by']] ?? null) : null, $rh['renewed_at']]);
+                    restoreTrack('renewal_history', $rh['id'] ?? null, $pdo);
                 } catch (PDOException $e) { /* renewal_history table not migrated yet */ }
             }
 
@@ -327,6 +339,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                 $taskCode = $t['task_code'] . '-R' . substr(uniqid(), -4);
                 $ins = $pdo->prepare("INSERT INTO tasks (task_code, organization_id, campus_id, department_id, assigned_by, assigned_to, title, description, priority, target_date, status, completed_at, completion_remarks, cost_incurred) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
                 $ins->execute([$taskCode, $orgId, $newCampusId, $newDeptId, $newAssignedBy, $newAssignedTo, $t['title'], $t['description'], $t['priority'], $t['target_date'], $t['status'], $t['completed_at'], $t['completion_remarks'], $t['cost_incurred'] ?? null]);
+                restoreTrack('tasks', $t['id'] ?? null, $pdo);
                 $existingTaskKeys[$taskKey] = true;
                 $counts['tasks']++;
             }
@@ -348,6 +361,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                 }
                 $ins = $pdo->prepare("INSERT INTO hostels (organization_id, campus_id, department_id, name, capacity, is_active) VALUES (?, ?, ?, ?, ?, ?)");
                 $ins->execute([$orgId, $newCampusId, $newDeptId, $h['name'], $h['capacity'], $h['is_active']]);
+                restoreTrack('hostels', $h['id'] ?? null, $pdo);
                 $hostelMap[$h['id']] = $pdo->lastInsertId();
                 $existingHostelByName[$hNameKey] = $hostelMap[$h['id']];
                 $counts['hostels']++;
@@ -356,7 +370,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                 $newHostelId = $hostelMap[$hs['hostel_id']] ?? null;
                 $newUserId = $userMap[$hs['user_id']] ?? null;
                 if (!$newHostelId || !$newUserId) continue;
-                try { $pdo->prepare("INSERT INTO hostel_staff (hostel_id, user_id) VALUES (?, ?)")->execute([$newHostelId, $newUserId]); } catch (PDOException $e) {}
+                try { $pdo->prepare("INSERT INTO hostel_staff (hostel_id, user_id) VALUES (?, ?)")->execute([$newHostelId, $newUserId]); restoreTrack('hostel_staff', $hs['id'] ?? null, $pdo); } catch (PDOException $e) {}
             }
             $existingStudentStmt = $pdo->prepare("
                 SELECT hst.id, hst.hostel_id, hst.name, hst.admission_date FROM hostel_students hst
@@ -377,6 +391,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                 }
                 $ins = $pdo->prepare("INSERT INTO hostel_students (hostel_id, name, school_name, class_grade, district, gender, admission_date, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
                 $ins->execute([$newHostelId, $hst['name'], $hst['school_name'], $hst['class_grade'], $hst['district'], $hst['gender'], $hst['admission_date'], $hst['is_active']]);
+                restoreTrack('hostel_students', $hst['id'] ?? null, $pdo);
                 $newStudentId = $pdo->lastInsertId();
                 $hostelStudentMap[$hst['id']] = $newStudentId;
                 $existingStudentKeys[$stKey] = $newStudentId;
@@ -395,6 +410,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     if ($existing) { $roomMap[$hr['id']] = $existing['id']; continue; }
                     $ins = $pdo->prepare("INSERT INTO hostel_rooms (hostel_id, room_number, capacity, is_active, created_at) VALUES (?, ?, ?, ?, ?)");
                     $ins->execute([$newHostelId2, $hr['room_number'], $hr['capacity'], $hr['is_active'], $hr['created_at']]);
+                    restoreTrack('hostel_rooms', $hr['id'] ?? null, $pdo);
                     $roomMap[$hr['id']] = $pdo->lastInsertId();
                 }
                 foreach ($data['hostel_room_allocations'] ?? [] as $hra) {
@@ -403,6 +419,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     if (!$newRoomId || !$newStudId4) continue;
                     $pdo->prepare("INSERT INTO hostel_room_allocations (room_id, student_id, bed_label, allocated_date, vacated_date, status, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
                         ->execute([$newRoomId, $newStudId4, $hra['bed_label'], $hra['allocated_date'], $hra['vacated_date'], $hra['status'], $hra['created_by'] ? ($userMap[$hra['created_by']] ?? null) : null, $hra['created_at']]);
+                    restoreTrack('hostel_room_allocations', $hra['id'] ?? null, $pdo);
                 }
             } catch (PDOException $e) { /* table not migrated yet */ }
 
@@ -416,6 +433,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                         INSERT IGNORE INTO hostel_student_attendance (hostel_id, student_id, attendance_date, session, status, remark, marked_by, marked_at)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                     ")->execute([$newHostelId, $newStudIdHsa, $hsa['attendance_date'], $hsa['session'], $hsa['status'], $hsa['remark'], $hsa['marked_by'] ? ($userMap[$hsa['marked_by']] ?? null) : null, $hsa['marked_at']]);
+                    restoreTrack('hostel_student_attendance', $hsa['id'] ?? null, $pdo);
                 }
             } catch (PDOException $e) { /* table not migrated yet */ }
 
@@ -427,6 +445,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     if (!$newStudId5) continue;
                     $ins = $pdo->prepare("INSERT INTO hostel_fees (student_id, fee_period, amount_due, due_date, status, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)");
                     $ins->execute([$newStudId5, $hf['fee_period'], $hf['amount_due'], $hf['due_date'], $hf['status'], $hf['created_by'] ? ($userMap[$hf['created_by']] ?? null) : null, $hf['created_at']]);
+                    restoreTrack('hostel_fees', $hf['id'] ?? null, $pdo);
                     $feeMap[$hf['id']] = $pdo->lastInsertId();
                 }
                 foreach ($data['hostel_fee_payments'] ?? [] as $hfp) {
@@ -434,6 +453,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     if (!$newFeeId) continue;
                     $pdo->prepare("INSERT INTO hostel_fee_payments (fee_id, amount_paid, payment_mode, paid_date, received_by, remarks, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)")
                         ->execute([$newFeeId, $hfp['amount_paid'], $hfp['payment_mode'], $hfp['paid_date'], $hfp['received_by'] ? ($userMap[$hfp['received_by']] ?? null) : null, $hfp['remarks'], $hfp['created_at']]);
+                    restoreTrack('hostel_fee_payments', $hfp['id'] ?? null, $pdo);
                 }
             } catch (PDOException $e) { /* table not migrated yet */ }
 
@@ -444,12 +464,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     if (!$newStudId6) continue;
                     $pdo->prepare("INSERT IGNORE INTO hostel_student_health (student_id, blood_group, allergies, regular_medication, emergency_contact_name, emergency_contact_phone, medical_notes, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
                         ->execute([$newStudId6, $hh['blood_group'], $hh['allergies'], $hh['regular_medication'], $hh['emergency_contact_name'], $hh['emergency_contact_phone'], $hh['medical_notes'], $hh['updated_at']]);
+                    restoreTrack('hostel_student_health', $hh['id'] ?? null, $pdo);
                 }
                 foreach ($data['hostel_health_incidents'] ?? [] as $hi) {
                     $newStudId7 = $hostelStudentMap[$hi['student_id']] ?? null;
                     if (!$newStudId7) continue;
                     $pdo->prepare("INSERT INTO hostel_health_incidents (student_id, incident_date, description, action_taken, reported_by, created_at) VALUES (?, ?, ?, ?, ?, ?)")
                         ->execute([$newStudId7, $hi['incident_date'], $hi['description'], $hi['action_taken'], $hi['reported_by'] ? ($userMap[$hi['reported_by']] ?? null) : null, $hi['created_at']]);
+                    restoreTrack('hostel_health_incidents', $hi['id'] ?? null, $pdo);
                 }
             } catch (PDOException $e) { /* table not migrated yet */ }
 
@@ -460,12 +482,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     if (!$newStudId8) continue;
                     $pdo->prepare("INSERT INTO hostel_leave_records (student_id, leave_date, expected_return_date, actual_return_date, reason, approved_by, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
                         ->execute([$newStudId8, $hl['leave_date'], $hl['expected_return_date'], $hl['actual_return_date'], $hl['reason'], $hl['approved_by'] ? ($userMap[$hl['approved_by']] ?? null) : null, $hl['status'], $hl['created_at']]);
+                    restoreTrack('hostel_leave_records', $hl['id'] ?? null, $pdo);
                 }
                 foreach ($data['hostel_alumni'] ?? [] as $hal) {
                     $newStudId9 = $hostelStudentMap[$hal['student_id']] ?? null;
                     if (!$newStudId9) continue;
                     $pdo->prepare("INSERT IGNORE INTO hostel_alumni (student_id, departure_date, departure_reason, current_status, contact_number, notes, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
                         ->execute([$newStudId9, $hal['departure_date'], $hal['departure_reason'], $hal['current_status'], $hal['contact_number'], $hal['notes'], $hal['created_by'] ? ($userMap[$hal['created_by']] ?? null) : null, $hal['created_at']]);
+                    restoreTrack('hostel_alumni', $hal['id'] ?? null, $pdo);
                 }
             } catch (PDOException $e) { /* table not migrated yet */ }
 
@@ -478,6 +502,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     $newRespondedBy = !empty($ss['responded_by']) ? ($userMap[$ss['responded_by']] ?? null) : null;
                     $ins = $pdo->prepare("INSERT INTO software_suggestions (organization_id, title, description, category, module_name, status, admin_response, responded_by, responded_at, submitted_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
                     $ins->execute([$orgId, $ss['title'], $ss['description'], $ss['category'], $ss['module_name'], $ss['status'], $ss['admin_response'], $newRespondedBy, $ss['responded_at'], $newSubmittedBy, $ss['created_at']]);
+                    restoreTrack('software_suggestions', $ss['id'] ?? null, $pdo);
                     $suggestionMap[$ss['id']] = $pdo->lastInsertId();
                 }
                 foreach ($data['software_suggestion_votes'] ?? [] as $ssv) {
@@ -486,6 +511,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     if (!$newSugId || !$newVoterId) continue;
                     $pdo->prepare("INSERT IGNORE INTO software_suggestion_votes (suggestion_id, user_id, created_at) VALUES (?, ?, ?)")
                         ->execute([$newSugId, $newVoterId, $ssv['created_at']]);
+                    restoreTrack('software_suggestion_votes', $ssv['id'] ?? null, $pdo);
                 }
                 foreach ($data['software_suggestion_comments'] ?? [] as $ssc) {
                     $newSugId2 = $suggestionMap[$ssc['suggestion_id']] ?? null;
@@ -493,6 +519,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     if (!$newSugId2 || !$newCommenterId) continue;
                     $pdo->prepare("INSERT INTO software_suggestion_comments (suggestion_id, comment, commented_by, created_at) VALUES (?, ?, ?, ?)")
                         ->execute([$newSugId2, $ssc['comment'], $newCommenterId, $ssc['created_at']]);
+                    restoreTrack('software_suggestion_comments', $ssc['id'] ?? null, $pdo);
                 }
             } catch (PDOException $e) { /* table not migrated yet */ }
 
@@ -505,7 +532,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
             $workRequestMap = [];
             foreach ($data['work_requests'] ?? [] as $wr) {
                 $newDeptId = $deptMap[$wr['department_id']] ?? null;
-                if (!$newDeptId) continue;
+                if (!$newDeptId && !empty($wr['department_id'])) continue;
                 $wrqKey = $newDeptId . '|' . mb_strtolower(trim($wr['requester_name'] ?? '')) . '|' . mb_strtolower(trim($wr['work_description']));
                 if (isset($existingWorkReqKeys[$wrqKey])) { $workRequestMap[$wr['id']] = $existingWorkReqKeys[$wrqKey]; continue; }
                 $reqCode = $wr['request_code'] . '-R' . substr(uniqid(), -4);
@@ -515,6 +542,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                 $newAssignedToUserId = !empty($wr['assigned_to_user_id']) ? ($userMap[$wr['assigned_to_user_id']] ?? null) : null;
                 $ins = $pdo->prepare("INSERT INTO work_requests (request_code, organization_id, department_id, requester_name, requester_contact, requested_by_user_id, requesting_department_id, assigned_to_user_id, work_description, cost_incurred, completion_remarks, status, completed_by, completed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
                 $ins->execute([$reqCode, $orgId, $newDeptId, $wr['requester_name'], $wr['requester_contact'], $newRequestedByUserId, $newRequestingDeptId, $newAssignedToUserId, $wr['work_description'], $wr['cost_incurred'] ?? null, $wr['completion_remarks'] ?? null, $wr['status'], $newCompletedBy, $wr['completed_at']]);
+                restoreTrack('work_requests', $wr['id'] ?? null, $pdo);
                 $newWorkReqId = $pdo->lastInsertId();
                 $workRequestMap[$wr['id']] = $newWorkReqId;
                 $existingWorkReqKeys[$wrqKey] = $newWorkReqId;
@@ -528,6 +556,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     if (!$newRequestId) continue;
                     $pdo->prepare("INSERT INTO work_request_actions (request_id, action_type, old_status, new_status, remark, changed_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)")
                         ->execute([$newRequestId, $wra['action_type'], $wra['old_status'], $wra['new_status'], $wra['remark'], $wra['changed_by'] ? ($userMap[$wra['changed_by']] ?? null) : null, $wra['created_at']]);
+                    restoreTrack('work_request_actions', $wra['id'] ?? null, $pdo);
                 }
             } catch (PDOException $e) { /* table not migrated yet */ }
 
@@ -541,7 +570,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
 
             foreach ($data['vehicles'] ?? [] as $v) {
                 $newDeptId = $deptMap[$v['department_id']] ?? null;
-                if (!$newDeptId) continue;
+                if (!$newDeptId && !empty($v['department_id'])) continue;   // विभाग नसलेलं वाहन (सामायिक) — तसंच
                 $vehKey = mb_strtoupper(trim($v['vehicle_number']));
                 if (isset($existingVehByNumber[$vehKey])) {
                     $vehicleMap[$v['id']] = $existingVehByNumber[$vehKey];
@@ -550,6 +579,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                 $ins = $pdo->prepare("INSERT INTO vehicles (organization_id, campus_id, department_id, vehicle_number, vehicle_type, driver_id, is_active) VALUES (?, ?, ?, ?, ?, ?, ?)");
                 $newVehCampusId = $v['campus_id'] ? ($campusMap[$v['campus_id']] ?? reset($campusMap)) : null;
                 $ins->execute([$orgId, $newVehCampusId, $newDeptId, $v['vehicle_number'], $v['vehicle_type'], $v['driver_id'] ? ($userMap[$v['driver_id']] ?? null) : null, $v['is_active']]);
+                restoreTrack('vehicles', $v['id'] ?? null, $pdo);
                 $existingVehByNumber[$vehKey] = $pdo->lastInsertId();
                 $vehicleMap[$v['id']] = $pdo->lastInsertId();
                 $counts['vehicles']++;
@@ -559,18 +589,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                 if (!$newVehId) continue;
                 $ins = $pdo->prepare("INSERT INTO vehicle_trips (vehicle_id, trip_date, from_location, to_location, start_time, end_time, start_odometer, end_odometer, distance_km, purpose, driver_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
                 $ins->execute([$newVehId, $vt['trip_date'], $vt['from_location'], $vt['to_location'], $vt['start_time'], $vt['end_time'], $vt['start_odometer'], $vt['end_odometer'], $vt['distance_km'], $vt['purpose'], $vt['driver_id'] ? ($userMap[$vt['driver_id']] ?? null) : null]);
+                restoreTrack('vehicle_trips', $vt['id'] ?? null, $pdo);
             }
             foreach ($data['vehicle_fuel_log'] ?? [] as $vf) {
                 $newVehId = $vehicleMap[$vf['vehicle_id']] ?? null;
                 if (!$newVehId) continue;
                 $ins = $pdo->prepare("INSERT INTO vehicle_fuel_log (vehicle_id, fill_date, odometer_reading, liters, cost, fuel_station, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)");
                 $ins->execute([$newVehId, $vf['fill_date'], $vf['odometer_reading'], $vf['liters'], $vf['cost'], $vf['fuel_station'], $vf['created_by'] ? ($userMap[$vf['created_by']] ?? null) : null]);
+                restoreTrack('vehicle_fuel_log', $vf['id'] ?? null, $pdo);
             }
             foreach ($data['vehicle_maintenance'] ?? [] as $vm) {
                 $newVehId = $vehicleMap[$vm['vehicle_id']] ?? null;
                 if (!$newVehId) continue;
                 $ins = $pdo->prepare("INSERT INTO vehicle_maintenance (vehicle_id, maintenance_date, type, description, cost, odometer_reading, next_due_date, vendor, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
                 $ins->execute([$newVehId, $vm['maintenance_date'], $vm['type'], $vm['description'], $vm['cost'], $vm['odometer_reading'], $vm['next_due_date'], $vm['vendor'], $vm['created_by'] ? ($userMap[$vm['created_by']] ?? null) : null]);
+                restoreTrack('vehicle_maintenance', $vm['id'] ?? null, $pdo);
             }
 
             // ---------------- Buildings (नावाने) + Maintenance Locations (आधी लागतं — देखभाल/रहिवासीसाठी) ----------------
@@ -590,6 +623,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                 }
                 $ins = $pdo->prepare("INSERT INTO buildings (organization_id, campus_id, name, created_by) VALUES (?, ?, ?, ?)");
                 $ins->execute([$orgId, $newBCampusId, $b['name'], $userMap[$b['created_by']] ?? null]);
+                restoreTrack('buildings', $b['id'] ?? null, $pdo);
                 $buildingMap[$b['id']] = $pdo->lastInsertId();
                 $existingBuildingKeys[$bKey] = $buildingMap[$b['id']];
             }
@@ -609,6 +643,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                 $ins = $pdo->prepare("INSERT INTO maintenance_locations (organization_id, campus_id, building_id, floor, name, location_code, is_active, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
                 $code = $ml['location_code'] . '-R' . substr(uniqid(), -4);
                 $ins->execute([$orgId, $campusMap[$ml['campus_id']] ?? reset($campusMap), $newBuildingId, $ml['floor'] ?? 0, $ml['name'], $code, $ml['is_active'], $userMap[$ml['created_by']] ?? null]);
+                restoreTrack('maintenance_locations', $ml['id'] ?? null, $pdo);
                 $locationMap[$ml['id']] = $pdo->lastInsertId();
                 $existingLocKeys[$mlKey] = $locationMap[$ml['id']];
             }
@@ -627,6 +662,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                 if (isset($existingMlgKeys[$mlgKey])) { $maintenanceLogMap[$mlg['id']] = $existingMlgKeys[$mlgKey]; continue; }
                 $ins = $pdo->prepare("INSERT INTO maintenance_logs (organization_id, location_id, department_id, item_description, work_type, work_date, cost, remarks, performed_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
                 $ins->execute([$orgId, $newLocId, $newDeptId, $mlg['item_description'], $mlg['work_type'], $mlg['work_date'], $mlg['cost'], $mlg['remarks'], $mlg['performed_by'] ? ($userMap[$mlg['performed_by']] ?? null) : null]);
+                restoreTrack('maintenance_logs', $mlg['id'] ?? null, $pdo);
                 $newMlgId = $pdo->lastInsertId();
                 $maintenanceLogMap[$mlg['id']] = $newMlgId;
                 $existingMlgKeys[$mlgKey] = $newMlgId;
@@ -636,18 +672,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
             $existingResStmt->execute([$orgId]);
             $existingResKeys = [];
             $occupantMap = [];
-            foreach ($existingResStmt->fetchAll() as $eres) { $existingResKeys[$eres['location_id'] . '|' . mb_strtolower(trim($eres['name']))] = $eres['id']; }
+            foreach ($existingResStmt->fetchAll() as $eres) { $existingResKeys[$eres['location_id'] . '|' . mb_strtolower(trim((string)$eres['name']))] = $eres['id']; }
 
             foreach ($data['residency_occupants'] ?? [] as $ro) {
                 $newLocId = $locationMap[$ro['location_id']] ?? null;
                 if (!$newLocId) continue;
-                $resKey = $newLocId . '|' . mb_strtolower(trim($ro['name']));
+                $resKey = $newLocId . '|' . mb_strtolower(trim((string)$ro['name']));
                 if (isset($existingResKeys[$resKey])) {
                     $occupantMap[$ro['id']] = $existingResKeys[$resKey];
                     continue;
                 }
                 $ins = $pdo->prepare("INSERT INTO residency_occupants (organization_id, location_id, occupant_type, user_id, name, relation, age, moved_in_date, status, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
                 $ins->execute([$orgId, $newLocId, $ro['occupant_type'], $ro['user_id'] ? ($userMap[$ro['user_id']] ?? null) : null, $ro['name'], $ro['relation'], $ro['age'], $ro['moved_in_date'], $ro['status'], $userMap[$ro['created_by']] ?? null]);
+                restoreTrack('residency_occupants', $ro['id'] ?? null, $pdo);
                 $newOccId = $pdo->lastInsertId();
                 $occupantMap[$ro['id']] = $newOccId;
                 $existingResKeys[$resKey] = $newOccId;
@@ -660,6 +697,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     if (!$newLocIdRri) continue;
                     $pdo->prepare("INSERT INTO residency_room_items (organization_id, location_id, item_name, ownership, quantity, remarks, added_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
                         ->execute([$orgId, $newLocIdRri, $rri['item_name'], $rri['ownership'], $rri['quantity'], $rri['remarks'], $rri['added_by'] ? ($userMap[$rri['added_by']] ?? null) : null, $rri['created_at']]);
+                    restoreTrack('residency_room_items', $rri['id'] ?? null, $pdo);
                 }
             } catch (PDOException $e) { /* table not migrated yet */ }
 
@@ -678,6 +716,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     if (isset($existingBillKeys[$billKey])) { $billMap[$rb['id']] = $existingBillKeys[$billKey]; continue; }
                     $ins = $pdo->prepare("INSERT INTO residency_bills (organization_id, location_id, billing_month, room_rent, electricity_bill, water_bill, total_amount, billing_unit_count, per_person_amount, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
                     $ins->execute([$orgId, $newLocId, $rb['billing_month'], $rb['room_rent'], $rb['electricity_bill'], $rb['water_bill'], $rb['total_amount'], $rb['billing_unit_count'], $rb['per_person_amount'], $rb['created_by'] ? ($userMap[$rb['created_by']] ?? null) : null]);
+                    restoreTrack('residency_bills', $rb['id'] ?? null, $pdo);
                     $newBillId = $pdo->lastInsertId();
                     $billMap[$rb['id']] = $newBillId;
                     $existingBillKeys[$billKey] = $newBillId;
@@ -691,6 +730,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     if ($dupStmt->fetch()) continue;
                     $pdo->prepare("INSERT INTO residency_bill_shares (bill_id, occupant_id, amount_due, status, paid_at) VALUES (?, ?, ?, ?, ?)")
                         ->execute([$newBillId, $newOccId, $rbs['amount_due'], $rbs['status'], $rbs['paid_at']]);
+                    restoreTrack('residency_bill_shares', $rbs['id'] ?? null, $pdo);
                 }
             } catch (PDOException $e) { /* residency billing tables not migrated yet */ }
 
@@ -703,6 +743,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     $newAllottedLoc = !empty($rar['allotted_location_id']) ? ($locationMap[$rar['allotted_location_id']] ?? null) : null;
                     $ins = $pdo->prepare("INSERT INTO residency_allotment_requests (organization_id, requested_by, preferred_building_id, family_size, reason, status, allotted_location_id, approved_by, approved_at, remarks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
                     $ins->execute([$orgId, $newRequestedBy, $newBuildingId, $rar['family_size'], $rar['reason'], $rar['status'], $newAllottedLoc, $rar['approved_by'] ? ($userMap[$rar['approved_by']] ?? null) : null, $rar['approved_at'], $rar['remarks']]);
+                    restoreTrack('residency_allotment_requests', $rar['id'] ?? null, $pdo);
                 }
             } catch (PDOException $e) { /* table not migrated yet */ }
 
@@ -714,6 +755,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     if (!$newLocId || !$newInspectedBy) continue;
                     $pdo->prepare("INSERT INTO residency_inspections (organization_id, location_id, inspection_date, condition_rating, remarks, inspected_by) VALUES (?, ?, ?, ?, ?, ?)")
                         ->execute([$orgId, $newLocId, $ri['inspection_date'], $ri['condition_rating'], $ri['remarks'], $newInspectedBy]);
+                    restoreTrack('residency_inspections', $ri['id'] ?? null, $pdo);
                 }
             } catch (PDOException $e) { /* table not migrated yet */ }
 
@@ -726,6 +768,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     $newFromLoc = !empty($rrt['from_location_id']) ? ($locationMap[$rrt['from_location_id']] ?? null) : null;
                     $pdo->prepare("INSERT INTO residency_room_transfers (occupant_id, from_location_id, to_location_id, transfer_date, reason, transferred_by) VALUES (?, ?, ?, ?, ?, ?)")
                         ->execute([$newOccId, $newFromLoc, $newToLoc, $rrt['transfer_date'], $rrt['reason'], $rrt['transferred_by'] ? ($userMap[$rrt['transferred_by']] ?? null) : null]);
+                    restoreTrack('residency_room_transfers', $rrt['id'] ?? null, $pdo);
                 }
             } catch (PDOException $e) { /* table not migrated yet */ }
 
@@ -737,6 +780,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     $newHostId = !empty($rg['host_occupant_id']) ? ($occupantMap[$rg['host_occupant_id']] ?? null) : null;
                     $pdo->prepare("INSERT INTO residency_guests (organization_id, location_id, host_occupant_id, guest_name, guest_contact, relation, purpose, arrival_date, expected_departure_date, actual_departure_date, status, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
                         ->execute([$orgId, $newLocId, $newHostId, $rg['guest_name'], $rg['guest_contact'], $rg['relation'], $rg['purpose'], $rg['arrival_date'], $rg['expected_departure_date'], $rg['actual_departure_date'], $rg['status'], $rg['created_by'] ? ($userMap[$rg['created_by']] ?? null) : null]);
+                    restoreTrack('residency_guests', $rg['id'] ?? null, $pdo);
                 }
             } catch (PDOException $e) { /* table not migrated yet */ }
 
@@ -748,6 +792,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     if (!$newCreatedBy) continue;
                     $ins = $pdo->prepare("INSERT INTO announcements (organization_id, title, content, priority, target_scope, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)");
                     $ins->execute([$orgId, $an['title'], $an['content'], $an['priority'], $an['target_scope'], $newCreatedBy, $an['created_at']]);
+                    restoreTrack('announcements', $an['id'] ?? null, $pdo);
                     $announcementMap[$an['id']] = $pdo->lastInsertId();
                 }
                 foreach ($data['announcement_departments'] ?? [] as $ad) {
@@ -755,12 +800,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     $newDeptId2 = $deptMap[$ad['department_id']] ?? null;
                     if (!$newAnnId || !$newDeptId2) continue;
                     $pdo->prepare("INSERT INTO announcement_departments (announcement_id, department_id) VALUES (?, ?)")->execute([$newAnnId, $newDeptId2]);
+                    restoreTrack('announcement_departments', $ad['id'] ?? null, $pdo);
                 }
                 foreach ($data['announcement_reads'] ?? [] as $ar) {
                     $newAnnId = $announcementMap[$ar['announcement_id']] ?? null;
                     $newUserId = $userMap[$ar['user_id']] ?? null;
                     if (!$newAnnId || !$newUserId) continue;
                     $pdo->prepare("INSERT IGNORE INTO announcement_reads (announcement_id, user_id, read_at) VALUES (?, ?, ?)")->execute([$newAnnId, $newUserId, $ar['read_at']]);
+                    restoreTrack('announcement_reads', $ar['id'] ?? null, $pdo);
                 }
             } catch (PDOException $e) { /* table not migrated yet */ }
 
@@ -772,6 +819,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     $newDeptId3 = !empty($doc['department_id']) ? ($deptMap[$doc['department_id']] ?? null) : null;
                     $pdo->prepare("INSERT INTO documents (organization_id, title, description, category, file_path, original_filename, department_id, uploaded_by, uploaded_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
                         ->execute([$orgId, $doc['title'], $doc['description'], $doc['category'], $doc['file_path'], $doc['original_filename'], $newDeptId3, $newUploadedBy, $doc['uploaded_at']]);
+                    restoreTrack('documents', $doc['id'] ?? null, $pdo);
                 }
             } catch (PDOException $e) { /* table not migrated yet */ }
 
@@ -782,6 +830,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     if (!$newTriggeredBy) continue;
                     $pdo->prepare("INSERT INTO emergency_alerts (organization_id, triggered_by, alert_type, location, message, status, resolved_by, resolved_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
                         ->execute([$orgId, $newTriggeredBy, $ea['alert_type'], $ea['location'], $ea['message'], $ea['status'], $ea['resolved_by'] ? ($userMap[$ea['resolved_by']] ?? null) : null, $ea['resolved_at'], $ea['created_at']]);
+                    restoreTrack('emergency_alerts', $ea['id'] ?? null, $pdo);
                 }
             } catch (PDOException $e) { /* table not migrated yet */ }
 
@@ -793,6 +842,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     $newHolderId = !empty($mi['current_holder_id']) ? ($userMap[$mi['current_holder_id']] ?? null) : null;
                     $ins = $pdo->prepare("INSERT INTO music_instruments (organization_id, department_id, instrument_name, instrument_type, brand_model, purchase_date, purchase_cost, condition_status, last_tuned_date, current_holder_id, remarks, is_active, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
                     $ins->execute([$orgId, $newDeptId5, $mi['instrument_name'], $mi['instrument_type'], $mi['brand_model'], $mi['purchase_date'], $mi['purchase_cost'], $mi['condition_status'], $mi['last_tuned_date'], $newHolderId, $mi['remarks'], $mi['is_active'], $mi['created_by'] ? ($userMap[$mi['created_by']] ?? null) : null, $mi['created_at']]);
+                    restoreTrack('music_instruments', $mi['id'] ?? null, $pdo);
                     $instrumentMap[$mi['id']] = $pdo->lastInsertId();
                 }
                 foreach ($data['music_instrument_log'] ?? [] as $mil) {
@@ -800,6 +850,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     if (!$newInstId) continue;
                     $pdo->prepare("INSERT INTO music_instrument_log (instrument_id, action_type, holder_name, remarks, logged_by, logged_at) VALUES (?, ?, ?, ?, ?, ?)")
                         ->execute([$newInstId, $mil['action_type'], $mil['holder_name'], $mil['remarks'], $mil['logged_by'] ? ($userMap[$mil['logged_by']] ?? null) : null, $mil['logged_at']]);
+                    restoreTrack('music_instrument_log', $mil['id'] ?? null, $pdo);
                 }
 
                 foreach ($data['music_room_bookings'] ?? [] as $mrb) {
@@ -808,12 +859,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     if (!$newLocId2 || !$newBookedBy) continue;
                     $pdo->prepare("INSERT INTO music_room_bookings (organization_id, location_id, booked_by, booking_date, start_time, end_time, purpose, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
                         ->execute([$orgId, $newLocId2, $newBookedBy, $mrb['booking_date'], $mrb['start_time'], $mrb['end_time'], $mrb['purpose'], $mrb['status'], $mrb['created_at']]);
+                    restoreTrack('music_room_bookings', $mrb['id'] ?? null, $pdo);
                 }
 
                 $musicStudentMap = [];
                 foreach ($data['music_students'] ?? [] as $ms) {
                     $ins = $pdo->prepare("INSERT INTO music_students (organization_id, name, contact, guardian_name, admission_date, is_active, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
                     $ins->execute([$orgId, $ms['name'], $ms['contact'], $ms['guardian_name'], $ms['admission_date'], $ms['is_active'], $ms['created_by'] ? ($userMap[$ms['created_by']] ?? null) : null, $ms['created_at']]);
+                    restoreTrack('music_students', $ms['id'] ?? null, $pdo);
                     $musicStudentMap[$ms['id']] = $pdo->lastInsertId();
                 }
                 $enrollmentMap = [];
@@ -823,6 +876,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     $newTeacherId = !empty($me['teacher_id']) ? ($userMap[$me['teacher_id']] ?? null) : null;
                     $ins = $pdo->prepare("INSERT INTO music_enrollments (student_id, subject, teacher_id, start_date, status, created_at) VALUES (?, ?, ?, ?, ?, ?)");
                     $ins->execute([$newStudId, $me['subject'], $newTeacherId, $me['start_date'], $me['status'], $me['created_at']]);
+                    restoreTrack('music_enrollments', $me['id'] ?? null, $pdo);
                     $enrollmentMap[$me['id']] = $pdo->lastInsertId();
                 }
                 foreach ($data['music_attendance'] ?? [] as $ma) {
@@ -830,18 +884,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     if (!$newEnrollId) continue;
                     $pdo->prepare("INSERT IGNORE INTO music_attendance (enrollment_id, attendance_date, status, marked_by, created_at) VALUES (?, ?, ?, ?, ?)")
                         ->execute([$newEnrollId, $ma['attendance_date'], $ma['status'], $ma['marked_by'] ? ($userMap[$ma['marked_by']] ?? null) : null, $ma['created_at']]);
+                    restoreTrack('music_attendance', $ma['id'] ?? null, $pdo);
                 }
                 foreach ($data['music_exams'] ?? [] as $mex) {
                     $newStudId2 = $musicStudentMap[$mex['student_id']] ?? null;
                     if (!$newStudId2) continue;
                     $pdo->prepare("INSERT INTO music_exams (student_id, exam_board, grade_level, subject, exam_date, result, marks, certificate_path, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
                         ->execute([$newStudId2, $mex['exam_board'], $mex['grade_level'], $mex['subject'], $mex['exam_date'], $mex['result'], $mex['marks'], $mex['certificate_path'], $mex['created_by'] ? ($userMap[$mex['created_by']] ?? null) : null, $mex['created_at']]);
+                    restoreTrack('music_exams', $mex['id'] ?? null, $pdo);
                 }
 
                 $eventMap = [];
                 foreach ($data['music_events'] ?? [] as $mev) {
                     $ins = $pdo->prepare("INSERT INTO music_events (organization_id, title, event_type, event_date, venue, description, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
                     $ins->execute([$orgId, $mev['title'], $mev['event_type'], $mev['event_date'], $mev['venue'], $mev['description'], $mev['created_by'] ? ($userMap[$mev['created_by']] ?? null) : null, $mev['created_at']]);
+                    restoreTrack('music_events', $mev['id'] ?? null, $pdo);
                     $eventMap[$mev['id']] = $pdo->lastInsertId();
                 }
                 foreach ($data['music_event_participants'] ?? [] as $mep) {
@@ -850,12 +907,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     if (!$newEventId || !$newStudId3) continue;
                     $pdo->prepare("INSERT INTO music_event_participants (event_id, student_id, performance_item, result) VALUES (?, ?, ?, ?)")
                         ->execute([$newEventId, $newStudId3, $mep['performance_item'], $mep['result']]);
+                    restoreTrack('music_event_participants', $mep['id'] ?? null, $pdo);
                 }
 
                 foreach ($data['music_sheet_library'] ?? [] as $msl) {
                     $newUploadedBy = $msl['uploaded_by'] ? ($userMap[$msl['uploaded_by']] ?? null) : null;
                     $pdo->prepare("INSERT INTO music_sheet_library (organization_id, title, raga_or_type, instrument, composer, file_path, uploaded_by, uploaded_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
                         ->execute([$orgId, $msl['title'], $msl['raga_or_type'], $msl['instrument'], $msl['composer'], $msl['file_path'], $newUploadedBy, $msl['uploaded_at']]);
+                    restoreTrack('music_sheet_library', $msl['id'] ?? null, $pdo);
                 }
             } catch (PDOException $e) { /* table not migrated yet */ }
 
@@ -867,6 +926,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     if (!$newUserId2 || !$newDeptId6) continue;
                     $pdo->prepare("INSERT IGNORE INTO user_extra_department_access (user_id, department_id, granted_by, granted_at) VALUES (?, ?, ?, ?)")
                         ->execute([$newUserId2, $newDeptId6, $uda['granted_by'] ? ($userMap[$uda['granted_by']] ?? null) : null, $uda['granted_at']]);
+                    restoreTrack('user_extra_department_access', $uda['id'] ?? null, $pdo);
                 }
             } catch (PDOException $e) { /* table not migrated yet */ }
 
@@ -878,6 +938,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     if (!$newUserId3 || !$newCampusId8) continue;
                     $pdo->prepare("INSERT IGNORE INTO user_extra_campus_access (user_id, campus_id, granted_by, granted_at) VALUES (?, ?, ?, ?)")
                         ->execute([$newUserId3, $newCampusId8, $uca['granted_by'] ? ($userMap[$uca['granted_by']] ?? null) : null, $uca['granted_at']]);
+                    restoreTrack('user_extra_campus_access', $uca['id'] ?? null, $pdo);
                 }
             } catch (PDOException $e) { /* table not migrated yet */ }
 
@@ -888,6 +949,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     if (!$newUserIdUp) continue;
                     $pdo->prepare("INSERT IGNORE INTO user_permissions (user_id, permission_key, mode, expires_on, note, granted_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)")
                         ->execute([$newUserIdUp, $up['permission_key'], $up['mode'], $up['expires_on'], $up['note'], $up['granted_by'] ? ($userMap[$up['granted_by']] ?? null) : null, $up['created_at']]);
+                    restoreTrack('user_permissions', $up['id'] ?? null, $pdo);
                 }
             } catch (PDOException $e) { /* table not migrated yet */ }
 
@@ -900,6 +962,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     $newOrgDeptIdSe = !empty($se['organizing_department_id']) ? ($deptMap[$se['organizing_department_id']] ?? null) : null;
                     $ins = $pdo->prepare("INSERT INTO satsang_events (organization_id, campus_id, event_date, organizing_department_id, theme, notes, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
                     $ins->execute([$orgId, $newCampusIdSe, $se['event_date'], $newOrgDeptIdSe, $se['theme'], $se['notes'], $newCreatedBySe, $se['created_at']]);
+                    restoreTrack('satsang_events', $se['id'] ?? null, $pdo);
                     $satsangEventMap[$se['id']] = $pdo->lastInsertId();
                 }
                 foreach ($data['satsang_duties'] ?? [] as $sd) {
@@ -908,6 +971,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     if (!$newSeId || !$newAssignedTo) continue;
                     $pdo->prepare("INSERT INTO satsang_duties (satsang_event_id, assigned_to, duty_description, status, created_at) VALUES (?, ?, ?, ?, ?)")
                         ->execute([$newSeId, $newAssignedTo, $sd['duty_description'], $sd['status'], $sd['created_at']]);
+                    restoreTrack('satsang_duties', $sd['id'] ?? null, $pdo);
                 }
                 foreach ($data['satsang_attendance'] ?? [] as $sa) {
                     $newSeId2 = $satsangEventMap[$sa['satsang_event_id']] ?? null;
@@ -917,10 +981,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                         INSERT IGNORE INTO satsang_attendance (satsang_event_id, user_id, status, remark, marked_by, marked_at)
                         VALUES (?, ?, ?, ?, ?, ?)
                     ")->execute([$newSeId2, $newAttUserId, $sa['status'], $sa['remark'], $sa['marked_by'] ? ($userMap[$sa['marked_by']] ?? null) : null, $sa['marked_at']]);
+                    restoreTrack('satsang_attendance', $sa['id'] ?? null, $pdo);
                 }
                 foreach ($data['meditation_quotes'] ?? [] as $mq) {
                     $pdo->prepare("INSERT INTO meditation_quotes (organization_id, quote_text, author, is_active, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?)")
                         ->execute([$orgId, $mq['quote_text'], $mq['author'], $mq['is_active'], $mq['created_by'] ? ($userMap[$mq['created_by']] ?? null) : null, $mq['created_at']]);
+                    restoreTrack('meditation_quotes', $mq['id'] ?? null, $pdo);
                 }
             } catch (PDOException $e) { /* table not migrated yet */ }
 
@@ -931,6 +997,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     if (!$newUserIdEfm) continue;
                     $pdo->prepare("INSERT INTO employee_family_members (user_id, name, relation, resides_in_ashram, created_at) VALUES (?, ?, ?, ?, ?)")
                         ->execute([$newUserIdEfm, $efm['name'], $efm['relation'], $efm['resides_in_ashram'], $efm['created_at']]);
+                    restoreTrack('employee_family_members', $efm['id'] ?? null, $pdo);
                 }
             } catch (PDOException $e) { /* table not migrated yet */ }
 
@@ -942,6 +1009,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     if (!$newTargetId || !$newPostedBy) continue;
                     $pdo->prepare("INSERT IGNORE INTO birthday_wishes (organization_id, target_user_id, wish_date, wish_type, wish_text, posted_by, posted_at) VALUES (?, ?, ?, ?, ?, ?, ?)")
                         ->execute([$orgId, $newTargetId, $bw['wish_date'], $bw['wish_type'], $bw['wish_text'], $newPostedBy, $bw['posted_at']]);
+                    restoreTrack('birthday_wishes', $bw['id'] ?? null, $pdo);
                 }
             } catch (PDOException $e) { /* table not migrated yet */ }
 
@@ -952,6 +1020,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     if (!$newDocUserId) continue;
                     $pdo->prepare("INSERT INTO staff_documents (user_id, document_type, file_path, original_filename, uploaded_at) VALUES (?, ?, ?, ?, ?)")
                         ->execute([$newDocUserId, $sd['document_type'], $sd['file_path'], $sd['original_filename'], $sd['uploaded_at']]);
+                    restoreTrack('staff_documents', $sd['id'] ?? null, $pdo);
                 }
                 foreach ($data['staff_achievements'] ?? [] as $sa) {
                     $newAchUserId = $userMap[$sa['user_id']] ?? null;
@@ -959,6 +1028,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     if (!$newAchUserId || !$newAddedBy) continue;
                     $pdo->prepare("INSERT INTO staff_achievements (user_id, title, description, achievement_date, added_by, created_at) VALUES (?, ?, ?, ?, ?, ?)")
                         ->execute([$newAchUserId, $sa['title'], $sa['description'], $sa['achievement_date'], $newAddedBy, $sa['created_at']]);
+                    restoreTrack('staff_achievements', $sa['id'] ?? null, $pdo);
                 }
             } catch (PDOException $e) { /* table not migrated yet */ }
 
@@ -974,6 +1044,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     if ($existing) { $deviceMap[$bd['id']] = $existing['id']; continue; }
                     $pdo->prepare("INSERT INTO biometric_devices (organization_id, campus_id, serial_number, device_name, last_seen_at, is_active, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)")
                         ->execute([$orgId, $newCampusId4, $bd['serial_number'], $bd['device_name'], $bd['last_seen_at'], $bd['is_active'], $bd['created_at']]);
+                    restoreTrack('biometric_devices', $bd['id'] ?? null, $pdo);
                     $deviceMap[$bd['id']] = $pdo->lastInsertId();
                 }
                 foreach ($data['staff_attendance'] ?? [] as $sa) {
@@ -981,23 +1052,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     if (!$newUserId3) continue;
                     $pdo->prepare("INSERT IGNORE INTO staff_attendance (organization_id, user_id, attendance_date, first_punch_time, last_punch_time, total_punches, status, is_late, is_early_leave, source, remarks, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
                         ->execute([$orgId, $newUserId3, $sa['attendance_date'], $sa['first_punch_time'], $sa['last_punch_time'], $sa['total_punches'], $sa['status'], $sa['is_late'] ?? 0, $sa['is_early_leave'] ?? 0, $sa['source'], $sa['remarks'] ?? null, $sa['created_at']]);
+                    restoreTrack('staff_attendance', $sa['id'] ?? null, $pdo);
                 }
                 foreach ($data['staff_shift_settings'] ?? [] as $ss) {
                     $newUserId4 = $userMap[$ss['user_id']] ?? null;
                     if (!$newUserId4) continue;
                     $pdo->prepare("INSERT IGNORE INTO staff_shift_settings (user_id, shift_start, shift_end, grace_minutes, half_day_hours, weekly_off_1, weekly_off_2, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
                         ->execute([$newUserId4, $ss['shift_start'], $ss['shift_end'], $ss['grace_minutes'], $ss['half_day_hours'], $ss['weekly_off_1'], $ss['weekly_off_2'], $ss['updated_at']]);
+                    restoreTrack('staff_shift_settings', $ss['id'] ?? null, $pdo);
                 }
                 foreach ($data['holidays'] ?? [] as $hol) {
                     $newCampusId5 = !empty($hol['campus_id']) ? ($campusMap[$hol['campus_id']] ?? null) : null;
                     $pdo->prepare("INSERT IGNORE INTO holidays (organization_id, campus_id, holiday_date, name, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?)")
                         ->execute([$orgId, $newCampusId5, $hol['holiday_date'], $hol['name'], $hol['created_by'] ? ($userMap[$hol['created_by']] ?? null) : null, $hol['created_at']]);
+                    restoreTrack('holidays', $hol['id'] ?? null, $pdo);
                 }
                 foreach ($data['attendance_regularization_requests'] ?? [] as $arr) {
                     $newUserId5 = $userMap[$arr['user_id']] ?? null;
                     if (!$newUserId5) continue;
                     $pdo->prepare("INSERT INTO attendance_regularization_requests (organization_id, user_id, attendance_date, requested_status, reason, status, approved_by, approved_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
                         ->execute([$orgId, $newUserId5, $arr['attendance_date'], $arr['requested_status'], $arr['reason'], $arr['status'], $arr['approved_by'] ? ($userMap[$arr['approved_by']] ?? null) : null, $arr['approved_at'], $arr['created_at']]);
+                    restoreTrack('attendance_regularization_requests', $arr['id'] ?? null, $pdo);
                 }
             } catch (PDOException $e) { /* table not migrated yet */ }
 
@@ -1007,6 +1082,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                 foreach ($data['leave_types'] ?? [] as $lt) {
                     $ins = $pdo->prepare("INSERT INTO leave_types (organization_id, name, name_local, annual_quota, is_paid, is_active, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)");
                     $ins->execute([$orgId, $lt['name'], $lt['name_local'], $lt['annual_quota'], $lt['is_paid'], $lt['is_active'], $lt['created_at']]);
+                    restoreTrack('leave_types', $lt['id'] ?? null, $pdo);
                     $leaveTypeMap[$lt['id']] = $pdo->lastInsertId();
                 }
                 foreach ($data['leave_balances'] ?? [] as $lb) {
@@ -1015,6 +1091,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     if (!$newUserId6 || !$newLeaveTypeId) continue;
                     $pdo->prepare("INSERT IGNORE INTO leave_balances (user_id, leave_type_id, year, allocated_days, used_days) VALUES (?, ?, ?, ?, ?)")
                         ->execute([$newUserId6, $newLeaveTypeId, $lb['year'], $lb['allocated_days'], $lb['used_days']]);
+                    restoreTrack('leave_balances', $lb['id'] ?? null, $pdo);
                 }
                 foreach ($data['leave_applications'] ?? [] as $la) {
                     $newUserId7 = $userMap[$la['user_id']] ?? null;
@@ -1022,6 +1099,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     if (!$newUserId7 || !$newLeaveTypeId2) continue;
                     $pdo->prepare("INSERT INTO leave_applications (organization_id, user_id, leave_type_id, start_date, end_date, total_days, reason, status, approved_by, approved_at, rejection_reason, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
                         ->execute([$orgId, $newUserId7, $newLeaveTypeId2, $la['start_date'], $la['end_date'], $la['total_days'], $la['reason'], $la['status'], $la['approved_by'] ? ($userMap[$la['approved_by']] ?? null) : null, $la['approved_at'], $la['rejection_reason'], $la['created_at']]);
+                    restoreTrack('leave_applications', $la['id'] ?? null, $pdo);
                 }
             } catch (PDOException $e) { /* table not migrated yet */ }
 
@@ -1038,6 +1116,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         ");
                         $ins->execute([$orgId, $newCampusId6, $newDeptId2, $st['roll_no'], $st['admission_no'], $st['name'], $st['year_of_study'], $st['academic_year'], $st['mobile'], $st['parent_mobile'], $st['email'], $st['password_hash'], $st['must_change_password'], $st['is_active'], $st['created_by'] ? ($userMap[$st['created_by']] ?? null) : null, $st['created_at']]);
+                        restoreTrack('students', $st['id'] ?? null, $pdo);
                         $studentMap[$st['id']] = $pdo->lastInsertId();
                     } catch (PDOException $e) { /* Duplicate Admission No — वगळतो */ }
                 }
@@ -1050,6 +1129,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     if (!$newCampusId7 || !$newDeptId3 || !$newCreatedBy2) continue;
                     $ins = $pdo->prepare("INSERT INTO virtual_classrooms (organization_id, campus_id, department_id, name, year_of_study, academic_year, is_active, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
                     $ins->execute([$orgId, $newCampusId7, $newDeptId3, $vc['name'], $vc['year_of_study'], $vc['academic_year'], $vc['is_active'], $newCreatedBy2, $vc['created_at']]);
+                    restoreTrack('virtual_classrooms', $vc['id'] ?? null, $pdo);
                     $classroomMap[$vc['id']] = $pdo->lastInsertId();
                 }
 
@@ -1059,6 +1139,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     if (!$newClassroomId || !$newStudentId) continue;
                     $pdo->prepare("INSERT IGNORE INTO classroom_students (classroom_id, student_id, allocated_by, allocated_at) VALUES (?, ?, ?, ?)")
                         ->execute([$newClassroomId, $newStudentId, $cs['allocated_by'] ? ($userMap[$cs['allocated_by']] ?? null) : null, $cs['allocated_at']]);
+                    restoreTrack('classroom_students', $cs['id'] ?? null, $pdo);
                 }
 
                 $classroomStaffMap = [];
@@ -1068,6 +1149,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     if (!$newClassroomId2 || !$newTeacherId) continue;
                     $ins = $pdo->prepare("INSERT INTO classroom_staff (classroom_id, user_id, subject_name, assigned_by, assigned_at) VALUES (?, ?, ?, ?, ?)");
                     $ins->execute([$newClassroomId2, $newTeacherId, $cst['subject_name'], $cst['assigned_by'] ? ($userMap[$cst['assigned_by']] ?? null) : null, $cst['assigned_at']]);
+                    restoreTrack('classroom_staff', $cst['id'] ?? null, $pdo);
                     $classroomStaffMap[$cst['id']] = $pdo->lastInsertId();
                 }
 
@@ -1077,6 +1159,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     if (!$newClassroomId3 || !$newUploader) continue;
                     $pdo->prepare("INSERT INTO classroom_materials (classroom_id, uploaded_by, subject_name, title, description, file_path, original_filename, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
                         ->execute([$newClassroomId3, $newUploader, $cm['subject_name'], $cm['title'], $cm['description'], $cm['file_path'], $cm['original_filename'], $cm['created_at']]);
+                    restoreTrack('classroom_materials', $cm['id'] ?? null, $pdo);
                 }
 
                 $assignmentMap = [];
@@ -1086,6 +1169,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     if (!$newClassroomId4 || !$newCreatedBy3) continue;
                     $ins = $pdo->prepare("INSERT INTO classroom_assignments (classroom_id, created_by, subject_name, title, description, attachment_path, due_date, max_marks, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
                     $ins->execute([$newClassroomId4, $newCreatedBy3, $ca['subject_name'], $ca['title'], $ca['description'], $ca['attachment_path'], $ca['due_date'], $ca['max_marks'], $ca['created_at']]);
+                    restoreTrack('classroom_assignments', $ca['id'] ?? null, $pdo);
                     $assignmentMap[$ca['id']] = $pdo->lastInsertId();
                 }
 
@@ -1097,6 +1181,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                         INSERT IGNORE INTO classroom_assignment_submissions (assignment_id, student_id, file_path, original_filename, submission_note, submitted_at, marks_obtained, feedback, graded_by, graded_at)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ")->execute([$newAssignmentId, $newStudentId2, $sub['file_path'], $sub['original_filename'], $sub['submission_note'], $sub['submitted_at'], $sub['marks_obtained'], $sub['feedback'], $sub['graded_by'] ? ($userMap[$sub['graded_by']] ?? null) : null, $sub['graded_at']]);
+                    restoreTrack('classroom_assignment_submissions', $sub['id'] ?? null, $pdo);
                 }
 
                 foreach ($data['classroom_announcements'] ?? [] as $ann) {
@@ -1105,6 +1190,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     if (!$newClassroomId5 || !$newCreatedBy5) continue;
                     $pdo->prepare("INSERT INTO classroom_announcements (classroom_id, created_by, title, message, created_at) VALUES (?, ?, ?, ?, ?)")
                         ->execute([$newClassroomId5, $newCreatedBy5, $ann['title'], $ann['message'], $ann['created_at']]);
+                    restoreTrack('classroom_announcements', $ann['id'] ?? null, $pdo);
                 }
 
                 foreach ($data['classroom_attendance'] ?? [] as $catt) {
@@ -1116,6 +1202,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                         INSERT IGNORE INTO classroom_attendance (classroom_id, student_id, attendance_date, subject_name, status, marked_by, created_at)
                         VALUES (?, ?, ?, ?, ?, ?, ?)
                     ")->execute([$newClassroomId6, $newStudentId3, $catt['attendance_date'], $catt['subject_name'], $catt['status'], $newMarkedBy, $catt['created_at']]);
+                    restoreTrack('classroom_attendance', $catt['id'] ?? null, $pdo);
                 }
 
                 $examMap = [];
@@ -1125,6 +1212,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     if (!$newClassroomId7 || !$newCreatedBy6) continue;
                     $ins = $pdo->prepare("INSERT INTO classroom_exams (classroom_id, name, subject_name, max_marks, exam_date, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)");
                     $ins->execute([$newClassroomId7, $cex['name'], $cex['subject_name'], $cex['max_marks'], $cex['exam_date'], $newCreatedBy6, $cex['created_at']]);
+                    restoreTrack('classroom_exams', $cex['id'] ?? null, $pdo);
                     $examMap[$cex['id']] = $pdo->lastInsertId();
                 }
 
@@ -1136,6 +1224,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                         INSERT IGNORE INTO classroom_exam_marks (exam_id, student_id, marks_obtained, remarks, entered_by, updated_at)
                         VALUES (?, ?, ?, ?, ?, ?)
                     ")->execute([$newExamId, $newStudentId4, $cem['marks_obtained'], $cem['remarks'], $cem['entered_by'] ? ($userMap[$cem['entered_by']] ?? null) : null, $cem['updated_at']]);
+                    restoreTrack('classroom_exam_marks', $cem['id'] ?? null, $pdo);
                 }
 
                 foreach ($data['classroom_timetable'] ?? [] as $ctt) {
@@ -1145,6 +1234,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                         INSERT IGNORE INTO classroom_timetable (classroom_id, day_of_week, period_no, start_time, end_time, subject_name, teacher_id)
                         VALUES (?, ?, ?, ?, ?, ?, ?)
                     ")->execute([$newClassroomId8, $ctt['day_of_week'], $ctt['period_no'], $ctt['start_time'], $ctt['end_time'], $ctt['subject_name'], $ctt['teacher_id'] ? ($userMap[$ctt['teacher_id']] ?? null) : null]);
+                    restoreTrack('classroom_timetable', $ctt['id'] ?? null, $pdo);
                 }
 
                 $questionMap = [];
@@ -1154,6 +1244,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     if (!$newClassroomId9 || !$newStudentId5) continue;
                     $ins = $pdo->prepare("INSERT INTO classroom_questions (classroom_id, student_id, subject_name, question_text, status, created_at) VALUES (?, ?, ?, ?, ?, ?)");
                     $ins->execute([$newClassroomId9, $newStudentId5, $cq['subject_name'], $cq['question_text'], $cq['status'], $cq['created_at']]);
+                    restoreTrack('classroom_questions', $cq['id'] ?? null, $pdo);
                     $questionMap[$cq['id']] = $pdo->lastInsertId();
                 }
 
@@ -1163,6 +1254,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     if (!$newQuestionId || !$newRepliedBy) continue;
                     $pdo->prepare("INSERT INTO classroom_question_replies (question_id, replied_by, reply_text, created_at) VALUES (?, ?, ?, ?)")
                         ->execute([$newQuestionId, $newRepliedBy, $cqr['reply_text'], $cqr['created_at']]);
+                    restoreTrack('classroom_question_replies', $cqr['id'] ?? null, $pdo);
                 }
 
                 foreach ($data['student_notifications'] ?? [] as $sn) {
@@ -1170,6 +1262,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     if (!$newStudentId6) continue;
                     $pdo->prepare("INSERT INTO student_notifications (student_id, title, message, link, is_read, created_at) VALUES (?, ?, ?, ?, ?, ?)")
                         ->execute([$newStudentId6, $sn['title'], $sn['message'], $sn['link'], $sn['is_read'], $sn['created_at']]);
+                    restoreTrack('student_notifications', $sn['id'] ?? null, $pdo);
                 }
             } catch (PDOException $e) { /* table not migrated yet */ }
 
@@ -1186,6 +1279,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ");
                     $ins->execute([$orgId, $newCampusId9, $ev['name'], $ev['description'], $ev['event_date'], $ev['start_time'], $ev['end_time'], $ev['venue'], $newRespUserId, $ev['status'], $ev['budget_estimated'], $ev['budget_actual'], $newCreatedBy5, $ev['created_at']]);
+                    restoreTrack('events', $ev['id'] ?? null, $pdo);
                     $orgEventMap[$ev['id']] = $pdo->lastInsertId();
                 }
 
@@ -1194,6 +1288,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     if (!$newEventId2) continue;
                     $pdo->prepare("INSERT INTO event_tasks (event_id, title, assigned_to, due_date, status, created_at) VALUES (?, ?, ?, ?, ?, ?)")
                         ->execute([$newEventId2, $et['title'], $et['assigned_to'] ? ($userMap[$et['assigned_to']] ?? null) : null, $et['due_date'], $et['status'], $et['created_at']]);
+                    restoreTrack('event_tasks', $et['id'] ?? null, $pdo);
                 }
 
                 foreach ($data['event_budget_items'] ?? [] as $ebi) {
@@ -1201,6 +1296,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     if (!$newEventId3) continue;
                     $pdo->prepare("INSERT INTO event_budget_items (event_id, item_description, estimated_amount, actual_amount, created_at) VALUES (?, ?, ?, ?, ?)")
                         ->execute([$newEventId3, $ebi['item_description'], $ebi['estimated_amount'], $ebi['actual_amount'], $ebi['created_at']]);
+                    restoreTrack('event_budget_items', $ebi['id'] ?? null, $pdo);
                 }
 
                 foreach ($data['event_photos'] ?? [] as $ep) {
@@ -1209,6 +1305,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     if (!$newEventId4 || !$newUploader2) continue;
                     $pdo->prepare("INSERT INTO event_photos (event_id, file_path, caption, uploaded_by, created_at) VALUES (?, ?, ?, ?, ?)")
                         ->execute([$newEventId4, $ep['file_path'], $ep['caption'], $newUploader2, $ep['created_at']]);
+                    restoreTrack('event_photos', $ep['id'] ?? null, $pdo);
                 }
             } catch (PDOException $e) { /* table not migrated yet */ }
 
@@ -1222,6 +1319,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                         INSERT INTO teacher_feedback (teacher_id, student_id, academic_year, rating, comment, submitted_by_type, submitted_at)
                         VALUES (?, ?, ?, ?, ?, ?, ?)
                     ")->execute([$newTeacherId6, $newFbStudentId, $tf['academic_year'], $tf['rating'], $tf['comment'], $tf['submitted_by_type'], $tf['submitted_at']]);
+                    restoreTrack('teacher_feedback', $tf['id'] ?? null, $pdo);
                 }
             } catch (PDOException $e) { /* table not migrated yet */ }
 
@@ -1237,6 +1335,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         ");
                         $ins->execute([$orgId, $newCampusId11, $pr['name'], $pr['mobile'], $pr['guest_organization'], $pr['purpose'], $newMeetingWith2, $pr['expected_date'], $pr['registration_code'], $pr['status'], $pr['created_at']]);
+                        restoreTrack('guest_pre_registrations', $pr['id'] ?? null, $pdo);
                         $preRegMap[$pr['id']] = $pdo->lastInsertId();
                     } catch (PDOException $e) { /* Duplicate Registration Code — वगळतो */ }
                 }
@@ -1254,6 +1353,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                         INSERT INTO guests (organization_id, campus_id, name, mobile, guest_organization, purpose, meeting_with, check_in_time, check_out_time, pass_code, photo_path, pre_registration_id, created_by, created_at)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ")->execute([$orgId, $newCampusId10, $g['name'], $g['mobile'], $g['guest_organization'], $g['purpose'], $newMeetingWith, $g['check_in_time'], $g['check_out_time'], $g['pass_code'], $g['photo_path'] ?? null, $newPreRegId, $newCreatedBy6, $g['created_at']]);
+                    restoreTrack('guests', $g['id'] ?? null, $pdo);
                 }
             } catch (PDOException $e) { /* table not migrated yet */ }
 
@@ -1266,6 +1366,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     $newCampusIdCi = !empty($ci['campus_id']) ? ($campusMap[$ci['campus_id']] ?? null) : null;
                     $ins = $pdo->prepare("INSERT INTO checkout_items (organization_id, campus_id, name, category, default_location, is_active, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
                     $ins->execute([$orgId, $newCampusIdCi, $ci['name'], $ci['category'], $ci['default_location'], $ci['is_active'], $newCreatedByCi, $ci['created_at']]);
+                    restoreTrack('checkout_items', $ci['id'] ?? null, $pdo);
                     $checkoutItemMap[$ci['id']] = $pdo->lastInsertId();
                 }
                 foreach ($data['checkout_logs'] ?? [] as $cl) {
@@ -1277,6 +1378,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                         INSERT INTO checkout_logs (item_id, borrowed_by, issued_by, purpose, checkout_at, expected_return_at, actual_return_at, returned_to, remarks)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ")->execute([$newItemId, $newBorrowedBy, $newIssuedBy, $cl['purpose'], $cl['checkout_at'], $cl['expected_return_at'], $cl['actual_return_at'], $cl['returned_to'] ? ($userMap[$cl['returned_to']] ?? null) : null, $cl['remarks']]);
+                    restoreTrack('checkout_logs', $cl['id'] ?? null, $pdo);
                 }
             } catch (PDOException $e) { /* table not migrated yet */ }
 
@@ -1288,6 +1390,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     if (!$newCreatedByAt) continue;
                     $ins = $pdo->prepare("INSERT INTO asset_allocation_types (organization_id, name, icon, is_active, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?)");
                     $ins->execute([$orgId, $at['name'], $at['icon'], $at['is_active'], $newCreatedByAt, $at['created_at']]);
+                    restoreTrack('asset_allocation_types', $at['id'] ?? null, $pdo);
                     $allocTypeMap[$at['id']] = $pdo->lastInsertId();
                 }
                 $allocFieldMap = [];
@@ -1296,6 +1399,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     if (!$newTypeIdAf) continue;
                     $ins = $pdo->prepare("INSERT INTO asset_allocation_fields (type_id, field_label, field_key, field_type, field_options, is_required, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?)");
                     $ins->execute([$newTypeIdAf, $af['field_label'], $af['field_key'], $af['field_type'], $af['field_options'], $af['is_required'], $af['sort_order']]);
+                    restoreTrack('asset_allocation_fields', $af['id'] ?? null, $pdo);
                     $allocFieldMap[$af['id']] = $pdo->lastInsertId();
                 }
                 foreach ($data['asset_allocations'] ?? [] as $aa) {
@@ -1303,11 +1407,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     $newCampusIdAa = $campusMap[$aa['campus_id']] ?? null;
                     $newUserIdAa = $userMap[$aa['user_id']] ?? null;
                     $newAllocatedByAa = $userMap[$aa['allocated_by']] ?? null;
-                    if (!$newTypeIdAa || !$newCampusIdAa || !$newUserIdAa || !$newAllocatedByAa) continue;
+                    if (!$newTypeIdAa || (!$newCampusIdAa && !empty($aa['campus_id'])) || !$newUserIdAa || !$newAllocatedByAa) continue;
                     $pdo->prepare("
                         INSERT INTO asset_allocations (organization_id, type_id, campus_id, user_id, asset_label, custom_data, allocated_date, unallocated_date, unallocated_reason, allocated_by, created_at)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ")->execute([$orgId, $newTypeIdAa, $newCampusIdAa, $newUserIdAa, $aa['asset_label'], $aa['custom_data'], $aa['allocated_date'], $aa['unallocated_date'], $aa['unallocated_reason'], $newAllocatedByAa, $aa['created_at']]);
+                    restoreTrack('asset_allocations', $aa['id'] ?? null, $pdo);
                 }
             } catch (PDOException $e) { /* table not migrated yet */ }
 
@@ -1320,6 +1425,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     if (!$newCreatedByBr || !$newCampusIdBr) continue;
                     $ins = $pdo->prepare("INSERT INTO bookable_rooms (organization_id, campus_id, name, room_type, capacity, is_active, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
                     $ins->execute([$orgId, $newCampusIdBr, $br['name'], $br['room_type'], $br['capacity'], $br['is_active'], $newCreatedByBr, $br['created_at']]);
+                    restoreTrack('bookable_rooms', $br['id'] ?? null, $pdo);
                     $roomMap[$br['id']] = $pdo->lastInsertId();
                 }
                 foreach ($data['room_bookings'] ?? [] as $rb) {
@@ -1328,6 +1434,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     if (!$newRoomId || !$newBookedBy) continue;
                     $pdo->prepare("INSERT INTO room_bookings (room_id, booked_by, purpose, start_time, end_time, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)")
                         ->execute([$newRoomId, $newBookedBy, $rb['purpose'], $rb['start_time'], $rb['end_time'], $rb['status'], $rb['created_at']]);
+                    restoreTrack('room_bookings', $rb['id'] ?? null, $pdo);
                 }
             } catch (PDOException $e) { /* table not migrated yet */ }
 
@@ -1339,6 +1446,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     if (!$newSenderId || !$newRecipientId) continue;
                     $pdo->prepare("INSERT INTO staff_messages (sender_id, recipient_id, message_text, is_read, created_at) VALUES (?, ?, ?, ?, ?)")
                         ->execute([$newSenderId, $newRecipientId, $sm['message_text'], $sm['is_read'], $sm['created_at']]);
+                    restoreTrack('staff_messages', $sm['id'] ?? null, $pdo);
                 }
             } catch (PDOException $e) { /* table not migrated yet */ }
 
@@ -1352,6 +1460,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                         INSERT INTO grievances (organization_id, submitted_by, category, description, is_anonymous, status, assigned_to, resolution, sla_deadline, resolved_at, created_at)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ")->execute([$orgId, $newSubmittedBy2, $gr['category'], $gr['description'], $gr['is_anonymous'], $gr['status'], $newAssignedTo2, $gr['resolution'], $gr['sla_deadline'], $gr['resolved_at'], $gr['created_at']]);
+                    restoreTrack('grievances', $gr['id'] ?? null, $pdo);
                 }
             } catch (PDOException $e) { /* table not migrated yet */ }
 
@@ -1368,6 +1477,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ");
                     $ins->execute([$orgId, $newCampusIdDmp, $newDeptIdDmp, $dmp['material_name'], $dmp['vendor_name'], $dmp['vendor_contact'], $dmp['quantity'], $dmp['unit'], $dmp['rate'], $dmp['base_amount'], $dmp['transport_cost'], $dmp['gst_percent'], $dmp['gst_amount'], $dmp['total_amount'], $dmp['purchase_date'], $dmp['remarks'], $newCreatedByDmp, $dmp['created_at']]);
+                    restoreTrack('dept_material_purchases', $dmp['id'] ?? null, $pdo);
                     $materialPurchaseMap[$dmp['id']] = $pdo->lastInsertId();
                 }
 
@@ -1389,6 +1499,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                         INSERT INTO dept_payment_ledger (organization_id, department_id, source_type, source_id, amount, payment_date, payment_type, payment_mode, for_month, remarks, recorded_by, created_at)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ")->execute([$orgId, $newDeptIdDpl, $dpl['source_type'], $newSourceId, $dpl['amount'], $dpl['payment_date'], $dpl['payment_type'], $dpl['payment_mode'], $dpl['for_month'] ?? null, $dpl['remarks'], $newRecordedBy, $dpl['created_at']]);
+                    restoreTrack('dept_payment_ledger', $dpl['id'] ?? null, $pdo);
                 }
             } catch (PDOException $e) { /* table not migrated yet */ }
 
@@ -1414,6 +1525,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         ");
                         $ins->execute([$orgId, $newCampusIdGc, $gc['tag_number'], $gc['name'], $gc['breed'], $gc['gender'], $gc['color'], $gc['date_of_birth'], $gc['acquisition_type'], $gc['acquisition_date'], $gc['source_details'], $newCaretakerId, $gc['photo_path'], $gc['status'], $gc['status_date'], $gc['status_remarks'], $newCreatedByGc, $gc['created_at'], $gc['animal_category'] ?? (($gc['gender'] ?? '') === 'Male' ? 'Bull/Ox' : 'Cow'), $gc['approx_age_months'] ?? null]);
+                        restoreTrack('gaushala_cattle', $gc['id'] ?? null, $pdo);
                         $cattleMap[$gc['id']] = $pdo->lastInsertId();
                     } catch (PDOException $e2) { /* Duplicate Tag Number — वगळतो */ }
                 }
@@ -1432,6 +1544,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                         INSERT INTO gaushala_health_records (cattle_id, record_type, description, vet_name, record_date, next_due_date, cost, recorded_by, created_at)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ")->execute([$newCattleId1, $gh['record_type'], $gh['description'], $gh['vet_name'], $gh['record_date'], $gh['next_due_date'], $gh['cost'], $newRecordedBy1, $gh['created_at']]);
+                    restoreTrack('gaushala_health_records', $gh['id'] ?? null, $pdo);
                 }
 
                 foreach ($data['gaushala_milk_records'] ?? [] as $gm) {
@@ -1441,6 +1554,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     try {
                         $pdo->prepare("INSERT INTO gaushala_milk_records (cattle_id, record_date, session, quantity_liters, recorded_by, created_at) VALUES (?, ?, ?, ?, ?, ?)")
                             ->execute([$newCattleId2, $gm['record_date'], $gm['session'], $gm['quantity_liters'], $newRecordedBy2, $gm['created_at']]);
+                        restoreTrack('gaushala_milk_records', $gm['id'] ?? null, $pdo);
                     } catch (PDOException $e3) { /* Duplicate (cattle+date+session) — वगळतो */ }
                 }
 
@@ -1451,6 +1565,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     if (!$newCreatedByGf || !$newCampusIdGf) continue;
                     $ins = $pdo->prepare("INSERT INTO gaushala_fodder_types (organization_id, campus_id, name, unit, current_stock, reorder_level, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
                     $ins->execute([$orgId, $newCampusIdGf, $gf['name'], $gf['unit'], $gf['current_stock'], $gf['reorder_level'], $newCreatedByGf, $gf['created_at']]);
+                    restoreTrack('gaushala_fodder_types', $gf['id'] ?? null, $pdo);
                     $fodderTypeMap[$gf['id']] = $pdo->lastInsertId();
                 }
                 foreach ($data['gaushala_fodder_transactions'] ?? [] as $gft) {
@@ -1459,6 +1574,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     if (!$newFodderTypeId || !$newRecordedBy3) continue;
                     $pdo->prepare("INSERT INTO gaushala_fodder_transactions (fodder_type_id, transaction_type, quantity, transaction_date, remarks, recorded_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)")
                         ->execute([$newFodderTypeId, $gft['transaction_type'], $gft['quantity'], $gft['transaction_date'], $gft['remarks'], $newRecordedBy3, $gft['created_at']]);
+                    restoreTrack('gaushala_fodder_transactions', $gft['id'] ?? null, $pdo);
                 }
 
                 foreach ($data['gaushala_breeding_records'] ?? [] as $gb) {
@@ -1470,6 +1586,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                         INSERT INTO gaushala_breeding_records (cattle_id, breeding_date, breeding_method, expected_calving_date, actual_calving_date, calf_cattle_id, status, remarks, recorded_by, created_at)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ")->execute([$newCattleId3, $gb['breeding_date'], $gb['breeding_method'], $gb['expected_calving_date'], $gb['actual_calving_date'], $newCalfId, $gb['status'], $gb['remarks'], $newRecordedBy4, $gb['created_at']]);
+                    restoreTrack('gaushala_breeding_records', $gb['id'] ?? null, $pdo);
                 }
 
                 foreach ($data['gaushala_sponsorships'] ?? [] as $gs) {
@@ -1480,6 +1597,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                         INSERT INTO gaushala_sponsorships (cattle_id, organization_id, donor_name, donor_contact, amount, sponsorship_period, start_date, end_date, status, remarks, recorded_by, created_at)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ")->execute([$newCattleId4, $orgId, $gs['donor_name'], $gs['donor_contact'], $gs['amount'], $gs['sponsorship_period'], $gs['start_date'], $gs['end_date'], $gs['status'], $gs['remarks'], $newRecordedBy5, $gs['created_at']]);
+                    restoreTrack('gaushala_sponsorships', $gs['id'] ?? null, $pdo);
                 }
             } catch (PDOException $e) { /* table not migrated yet */ }
 
@@ -1493,6 +1611,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     $newAttStudentId = !empty($ea['student_id']) ? ($studentMap[$ea['student_id']] ?? null) : null;
                     $pdo->prepare("INSERT IGNORE INTO event_attendance (event_id, attendee_type, user_id, student_id, guest_name, marked_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)")
                         ->execute([$newEventId5, $ea['attendee_type'], $newAttUserId, $newAttStudentId, $ea['guest_name'], $newMarkedBy, $ea['created_at']]);
+                    restoreTrack('event_attendance', $ea['id'] ?? null, $pdo);
                 }
             } catch (PDOException $e) { /* table not migrated yet */ }
 
@@ -1507,6 +1626,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     $newResolvedBy2 = !empty($igr['resolved_by']) ? ($userMap[$igr['resolved_by']] ?? null) : null;
                     $ins = $pdo->prepare("INSERT INTO it_general_requests (organization_id, department_id, request_code, category, priority, title, description, location, status, assigned_to, resolution_notes, requested_by, resolved_by, resolved_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
                     $ins->execute([$orgId, $newDeptId7, $igr['request_code'], $igr['category'], $igr['priority'], $igr['title'], $igr['description'], $igr['location'], $igr['status'], $newAssignedTo, $igr['resolution_notes'], $newRequestedBy2, $newResolvedBy2, $igr['resolved_at'], $igr['created_at']]);
+                    restoreTrack('it_general_requests', $igr['id'] ?? null, $pdo);
                     $itReqMap[$igr['id']] = $pdo->lastInsertId();
                 }
                 foreach ($data['it_general_request_comments'] ?? [] as $igrc) {
@@ -1515,6 +1635,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     if (!$newReqId || !$newCommentedBy) continue;
                     $pdo->prepare("INSERT INTO it_general_request_comments (request_id, comment, commented_by, created_at) VALUES (?, ?, ?, ?)")
                         ->execute([$newReqId, $igrc['comment'], $newCommentedBy, $igrc['created_at']]);
+                    restoreTrack('it_general_request_comments', $igrc['id'] ?? null, $pdo);
                 }
             } catch (PDOException $e) { /* table not migrated yet */ }
 
@@ -1532,6 +1653,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                 }
                 $ins = $pdo->prepare("INSERT INTO dead_stock_item_master (organization_id, item_name, category, created_by) VALUES (?, ?, ?, ?)");
                 $ins->execute([$orgId, $im['item_name'], $im['category'], $userMap[$im['created_by']] ?? null]);
+                restoreTrack('dead_stock_item_master', $im['id'] ?? null, $pdo);
                 $itemMasterMap[$im['id']] = $pdo->lastInsertId();
                 $existingItemMasterByName[$nameKey] = $itemMasterMap[$im['id']];
             }
@@ -1548,6 +1670,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                 $itemCode = $di['item_code'] . '-R' . substr(uniqid(), -4);
                 $ins = $pdo->prepare("INSERT INTO dead_stock_items (organization_id, department_id, item_master_id, item_code, item_name, category, quantity, unit, purchase_date, purchase_cost, is_new_purchase, `condition`, location, remarks, added_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
                 $ins->execute([$orgId, $newDeptId, $di['item_master_id'] ? ($itemMasterMap[$di['item_master_id']] ?? null) : null, $itemCode, $di['item_name'], $di['category'], $di['quantity'], $di['unit'], $di['purchase_date'], $di['purchase_cost'], $di['is_new_purchase'], $di['condition'], $di['location'], $di['remarks'], $di['added_by'] ? ($userMap[$di['added_by']] ?? null) : null]);
+                restoreTrack('dead_stock_items', $di['id'] ?? null, $pdo);
                 $existingDsiKeys[$dsiKey] = true;
             }
 
@@ -1569,6 +1692,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                 }
                 $ins = $pdo->prepare("INSERT INTO letter_categories (organization_id, name, name_local, is_active) VALUES (?, ?, ?, ?)");
                 $ins->execute([$orgId, $lc['name'], $lc['name_local'], $lc['is_active']]);
+                restoreTrack('letter_categories', $lc['id'] ?? null, $pdo);
                 $categoryMap[$lc['id']] = $pdo->lastInsertId();
                 $existingCategoryByName[$lcKey] = $categoryMap[$lc['id']];
             }
@@ -1587,6 +1711,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                 }
                 $ins = $pdo->prepare("INSERT INTO workflow_templates (organization_id, name, is_active) VALUES (?, ?, ?)");
                 $ins->execute([$orgId, $wt['name'], $wt['is_active']]);
+                restoreTrack('workflow_templates', $wt['id'] ?? null, $pdo);
                 $workflowMap[$wt['id']] = $pdo->lastInsertId();
                 $existingWfByName[$wfKey] = $workflowMap[$wt['id']];
                 $newlyAddedWorkflows[$wt['id']] = true;
@@ -1598,6 +1723,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                 $newStepUserId = $ws['user_id'] ? ($userMap[$ws['user_id']] ?? null) : null;
                 $newStepDeptId = $ws['department_id'] ? ($deptMap[$ws['department_id']] ?? null) : null;
                 $ins->execute([$newWfId, $ws['step_order'], $ws['step_name'], $ws['approver_type'], $newStepUserId, $newStepDeptId]);
+                restoreTrack('workflow_steps', $ws['id'] ?? null, $pdo);
                 $stepMap[$ws['id']] = $pdo->lastInsertId();
             }
 
@@ -1610,7 +1736,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
             foreach ($data['letters'] ?? [] as $l) {
                 $newDeptId = $deptMap[$l['department_id']] ?? null;
                 $newCreatedBy = $userMap[$l['created_by']] ?? null;
-                if (!$newDeptId || !$newCreatedBy) continue;
+                if ((!$newDeptId && !empty($l['department_id'])) || !$newCreatedBy) continue;
                 $letterKey = $newDeptId . '|' . $newCreatedBy . '|' . mb_strtolower(trim($l['subject']));
                 if (isset($existingLetterKeys[$letterKey])) {
                     $letterMap[$l['id']] = $existingLetterKeys[$letterKey];
@@ -1627,6 +1753,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     $l['workflow_template_id'] ? ($workflowMap[$l['workflow_template_id']] ?? null) : null, $l['current_step_order'] ?? 0,
                     $newCreatedBy, $l['is_budget_expense'] ?? 0, $l['budget_category'], $l['requested_amount'], $l['approved_amount'], $l['budget_deducted'] ?? 0,
                 ]);
+                restoreTrack('letters', $l['id'] ?? null, $pdo);
                 $letterMap[$l['id']] = $pdo->lastInsertId();
                 $existingLetterKeys[$letterKey] = $letterMap[$l['id']];
                 $newlyAddedLetters[$l['id']] = true;
@@ -1641,6 +1768,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                 if (!$newLetterId || !$newFromId) continue;
                 $ins = $pdo->prepare("INSERT INTO letter_actions (letter_id, action_type, from_user_id, to_user_id, remark) VALUES (?, ?, ?, ?, ?)");
                 $ins->execute([$newLetterId, $la['action_type'], $newFromId, $la['to_user_id'] ? ($userMap[$la['to_user_id']] ?? null) : null, $la['remark']]);
+                restoreTrack('letter_actions', $la['id'] ?? null, $pdo);
             }
             foreach ($data['letter_signatures'] ?? [] as $ls) {
                 if (empty($newlyAddedLetters[$ls['letter_id']])) continue;
@@ -1649,6 +1777,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                 $newCode = $ls['verification_code'] . 'R' . substr(uniqid(), -4);
                 $ins = $pdo->prepare("INSERT INTO letter_signatures (letter_id, signed_by, signer_name, signer_designation, action_type, verification_method, verification_code, signed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
                 $ins->execute([$newLetterId, $ls['signed_by'] ? ($userMap[$ls['signed_by']] ?? null) : null, $ls['signer_name'], $ls['signer_designation'], $ls['action_type'], $ls['verification_method'], $newCode, $ls['signed_at']]);
+                restoreTrack('letter_signatures', $ls['id'] ?? null, $pdo);
             }
             $letterAttachmentMap = [];
             foreach ($data['letter_attachments'] ?? [] as $latt) {
@@ -1657,6 +1786,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                 if (!$newLetterId) continue;
                 $insAtt = $pdo->prepare("INSERT INTO letter_attachments (letter_id, file_path, original_name, uploaded_by, uploaded_at) VALUES (?, ?, ?, ?, ?)");
                 $insAtt->execute([$newLetterId, $latt['file_path'], $latt['original_name'], $latt['uploaded_by'] ? ($userMap[$latt['uploaded_by']] ?? null) : null, $latt['uploaded_at']]);
+                restoreTrack('letter_attachments', $latt['id'] ?? null, $pdo);
                 $letterAttachmentMap[$latt['id']] = $pdo->lastInsertId();
             }
             foreach ($data['letter_inward_numbers'] ?? [] as $lin) {
@@ -1667,6 +1797,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                 try {
                     $pdo->prepare("INSERT INTO letter_inward_numbers (letter_id, department_id, inward_no, year, sequence_no, created_at) VALUES (?, ?, ?, ?, ?, ?)")
                         ->execute([$newLetterId, $newDeptIdForInward, $lin['inward_no'], $lin['year'], $lin['sequence_no'], $lin['created_at']]);
+                    restoreTrack('letter_inward_numbers', $lin['id'] ?? null, $pdo);
                 } catch (PDOException $e) { /* Duplicate Inward Number — वगळतो */ }
             }
 
@@ -1683,6 +1814,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                 if (isset($existingDbKeys[$dbKey])) { continue; }
                 $ins = $pdo->prepare("INSERT INTO department_budgets (organization_id, department_id, financial_year, allocated_amount) VALUES (?, ?, ?, ?)");
                 $ins->execute([$orgId, $newDeptId, $db['financial_year'], $db['allocated_amount']]);
+                restoreTrack('department_budgets', $db['id'] ?? null, $pdo);
                 $existingDbKeys[$dbKey] = true;
             }
             $existingBtStmt = $pdo->prepare("SELECT department_id, financial_year, amount, category, description FROM budget_transactions WHERE organization_id = ?");
@@ -1697,6 +1829,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                 if (isset($existingBtKeys[$btKey])) { continue; }
                 $ins = $pdo->prepare("INSERT INTO budget_transactions (organization_id, department_id, financial_year, amount, category, source_module, reference_id, description, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
                 $ins->execute([$orgId, $newDeptId, $bt['financial_year'], $bt['amount'], $bt['category'], $bt['source_module'], null, $bt['description'], $userMap[$bt['created_by']] ?? null]);
+                restoreTrack('budget_transactions', $bt['id'] ?? null, $pdo);
                 $existingBtKeys[$btKey] = true;
             }
 
@@ -1717,6 +1850,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                 }
                 $ins = $pdo->prepare("INSERT INTO sops (organization_id, title, description, created_by, is_active) VALUES (?, ?, ?, ?, ?)");
                 $ins->execute([$orgId, $s['title'], $s['description'], $userMap[$s['created_by']] ?? null, $s['is_active']]);
+                restoreTrack('sops', $s['id'] ?? null, $pdo);
                 $sopMap[$s['id']] = $pdo->lastInsertId();
                 $existingSopByTitle[$sopKey] = $sopMap[$s['id']];
                 $newlyAddedSops[$s['id']] = true;
@@ -1726,13 +1860,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                 if (!$newSopId || empty($newlyAddedSops[$ss['sop_id']])) continue;
                 $ins = $pdo->prepare("INSERT INTO sop_steps (sop_id, step_order, step_description, frequency, detection_type, auto_source_module) VALUES (?, ?, ?, ?, ?, ?)");
                 $ins->execute([$newSopId, $ss['step_order'], $ss['step_description'], $ss['frequency'], $ss['detection_type'], $ss['auto_source_module']]);
+                restoreTrack('sop_steps', $ss['id'] ?? null, $pdo);
                 $sopStepMap[$ss['id']] = $pdo->lastInsertId();
             }
             foreach ($data['sop_department_assignments'] ?? [] as $sda) {
                 $newSopId = $sopMap[$sda['sop_id']] ?? null;
                 $newDeptId = $deptMap[$sda['department_id']] ?? null;
                 if (!$newSopId || !$newDeptId) continue;
-                try { $pdo->prepare("INSERT INTO sop_department_assignments (sop_id, department_id, assigned_by) VALUES (?, ?, ?)")->execute([$newSopId, $newDeptId, $userMap[$sda['assigned_by']] ?? null]); } catch (PDOException $e) {}
+                try { $pdo->prepare("INSERT INTO sop_department_assignments (sop_id, department_id, assigned_by) VALUES (?, ?, ?)")->execute([$newSopId, $newDeptId, $userMap[$sda['assigned_by']] ?? null]); restoreTrack('sop_department_assignments', $sda['id'] ?? null, $pdo); } catch (PDOException $e) {}
             }
             foreach ($data['sop_compliance_logs'] ?? [] as $scl) {
                 $newStepId = $sopStepMap[$scl['sop_step_id']] ?? null;
@@ -1741,6 +1876,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                 try {
                     $pdo->prepare("INSERT INTO sop_compliance_logs (sop_step_id, department_id, log_date, status, completed_by) VALUES (?, ?, ?, ?, ?)")
                         ->execute([$newStepId, $newDeptId, $scl['log_date'], $scl['status'], $scl['completed_by'] ? ($userMap[$scl['completed_by']] ?? null) : null]);
+                    restoreTrack('sop_compliance_logs', $scl['id'] ?? null, $pdo);
                 } catch (PDOException $e) {}
             }
 
@@ -1759,6 +1895,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                 }
                 $ins = $pdo->prepare("INSERT INTO store_items (organization_id, item_name, category, department_id, unit, reorder_level, is_active, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
                 $ins->execute([$orgId, $si['item_name'], $si['category'], !empty($si['department_id']) ? ($deptMap[$si['department_id']] ?? null) : null, $si['unit'], $si['reorder_level'], $si['is_active'], $userMap[$si['created_by']] ?? null]);
+                restoreTrack('store_items', $si['id'] ?? null, $pdo);
                 $storeItemMap[$si['id']] = $pdo->lastInsertId();
                 $existingStoreItemByName[$nameKey] = $storeItemMap[$si['id']];
             }
@@ -1773,6 +1910,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     if ($wrmDupStmt->fetch()) continue;
                     $pdo->prepare("INSERT INTO work_record_materials (work_record_id, item_id, quantity_used) VALUES (?, ?, ?)")
                         ->execute([$newWrId, $newItemId2, $wrm['quantity_used']]);
+                    restoreTrack('work_record_materials', $wrm['id'] ?? null, $pdo);
                 }
             } catch (PDOException $e) { /* table not migrated yet */ }
 
@@ -1787,6 +1925,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                 if (isset($existingAsKeys[$asKey])) { continue; }
                 $ins = $pdo->prepare("INSERT INTO about_sections (organization_id, section_type, title, description, photo_path) VALUES (?, ?, ?, ?, ?)");
                 $ins->execute([$orgId, $as['section_type'], $as['title'], $as['description'], $as['photo_path']]);
+                restoreTrack('about_sections', $as['id'] ?? null, $pdo);
                 $existingAsKeys[$asKey] = true;
             }
             $existingAcStmt = $pdo->prepare("SELECT name FROM about_contributors WHERE organization_id = ?");
@@ -1798,6 +1937,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                 if (isset($existingAcNames[$acKey])) { continue; }
                 $ins = $pdo->prepare("INSERT INTO about_contributors (organization_id, name, contribution, bio, photo_path) VALUES (?, ?, ?, ?, ?)");
                 $ins->execute([$orgId, $ac['name'], $ac['contribution'], $ac['bio'], $ac['photo_path']]);
+                restoreTrack('about_contributors', $ac['id'] ?? null, $pdo);
                 $existingAcNames[$acKey] = true;
             }
 
@@ -1817,6 +1957,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                 $newDeptId = $dvr['department_id'] ? ($deptMap[$dvr['department_id']] ?? null) : null;
                 $ins = $pdo->prepare("INSERT INTO cctv_dvrs (organization_id, department_id, dvr_name, location, channel_capacity, storage_capacity_tb, installed_date, is_active, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
                 $ins->execute([$orgId, $newDeptId, $dvr['dvr_name'], $dvr['location'], $dvr['channel_capacity'], $dvr['storage_capacity_tb'], $dvr['installed_date'], $dvr['is_active'], $dvr['created_by'] ? ($userMap[$dvr['created_by']] ?? null) : null]);
+                restoreTrack('cctv_dvrs', $dvr['id'] ?? null, $pdo);
                 $dvrMap[$dvr['id']] = $pdo->lastInsertId();
                 $existingDvrByName[$nameKey] = $dvrMap[$dvr['id']];
             }
@@ -1838,6 +1979,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                 }
                 $ins = $pdo->prepare("INSERT INTO cctv_cameras (organization_id, dvr_id, camera_name, location, camera_type, is_active) VALUES (?, ?, ?, ?, ?, ?)");
                 $ins->execute([$orgId, $newDvrId, $cam['camera_name'], $cam['location'], $cam['camera_type'], $cam['is_active']]);
+                restoreTrack('cctv_cameras', $cam['id'] ?? null, $pdo);
                 $cameraMap[$cam['id']] = $pdo->lastInsertId();
                 $existingCamKeys[$camKey] = $cameraMap[$cam['id']];
             }
@@ -1849,6 +1991,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                 try {
                     $ins = $pdo->prepare("INSERT INTO cctv_checkups (organization_id, dvr_id, checkup_date, storage_used_percent, footage_days_available, backup_done, backup_location, remarks, checked_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
                     $ins->execute([$orgId, $newDvrId, $ck['checkup_date'], $ck['storage_used_percent'], $ck['footage_days_available'], $ck['backup_done'], $ck['backup_location'], $ck['remarks'], $newCheckedBy]);
+                    restoreTrack('cctv_checkups', $ck['id'] ?? null, $pdo);
                     $checkupMap[$ck['id']] = $pdo->lastInsertId();
                 } catch (PDOException $e) { /* त्याच DVR-दिवसाची नोंद आधीच असेल तर वगळा */ }
             }
@@ -1859,6 +2002,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                 try {
                     $pdo->prepare("INSERT INTO cctv_camera_status (checkup_id, camera_id, status, remarks) VALUES (?, ?, ?, ?)")
                         ->execute([$newCheckupId, $newCameraId, $cs['status'], $cs['remarks']]);
+                    restoreTrack('cctv_camera_status', $cs['id'] ?? null, $pdo);
                 } catch (PDOException $e) {}
             }
 
@@ -1878,6 +2022,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                 $newDeptId = $lab['department_id'] ? ($deptMap[$lab['department_id']] ?? null) : null;
                 $ins = $pdo->prepare("INSERT INTO it_labs (organization_id, department_id, lab_name, location, capacity, assistant_id, is_active) VALUES (?, ?, ?, ?, ?, ?, ?)");
                 $ins->execute([$orgId, $newDeptId, $lab['lab_name'], $lab['location'], $lab['capacity'], $lab['assistant_id'] ? ($userMap[$lab['assistant_id']] ?? null) : null, $lab['is_active']]);
+                restoreTrack('it_labs', $lab['id'] ?? null, $pdo);
                 $labMap[$lab['id']] = $pdo->lastInsertId();
                 $existingLabByName[$nameKey] = $labMap[$lab['id']];
             }
@@ -1911,6 +2056,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     !empty($ia['power_status_updated_by']) ? ($userMap[$ia['power_status_updated_by']] ?? null) : null,
                     $ia['remarks'], $ia['added_by'] ? ($userMap[$ia['added_by']] ?? null) : null,
                 ]);
+                restoreTrack('it_assets', $ia['id'] ?? null, $pdo);
                 $itAssetMap[$ia['id']] = $pdo->lastInsertId();
                 $existingItAssetKeys[$iaKey] = $itAssetMap[$ia['id']];
                 $newlyAddedItAssets[$ia['id']] = true;
@@ -1922,6 +2068,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                 if (!$newAssetId || !$newToLabId) continue;
                 $ins = $pdo->prepare("INSERT INTO it_asset_transfers (asset_id, from_lab_id, to_lab_id, transferred_by, remarks) VALUES (?, ?, ?, ?, ?)");
                 $ins->execute([$newAssetId, $trf['from_lab_id'] ? ($labMap[$trf['from_lab_id']] ?? null) : null, $newToLabId, $trf['transferred_by'] ? ($userMap[$trf['transferred_by']] ?? null) : null, $trf['remarks']]);
+                restoreTrack('it_asset_transfers', $trf['id'] ?? null, $pdo);
             }
             foreach ($data['it_repair_tickets'] ?? [] as $rt) {
                 if (empty($newlyAddedItAssets[$rt['asset_id']])) continue;
@@ -1931,6 +2078,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                 if (!$newAssetId || !$newLabId || !$newReportedBy) continue;
                 $ins = $pdo->prepare("INSERT INTO it_repair_tickets (organization_id, asset_id, lab_id, issue_description, status, resolution_notes, reported_by, resolved_by, resolved_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
                 $ins->execute([$orgId, $newAssetId, $newLabId, $rt['issue_description'], $rt['status'], $rt['resolution_notes'], $newReportedBy, $rt['resolved_by'] ? ($userMap[$rt['resolved_by']] ?? null) : null, $rt['resolved_at']]);
+                restoreTrack('it_repair_tickets', $rt['id'] ?? null, $pdo);
             }
 
             // ---------------- संस्थेचं स्वतःचं Logo/Welcome Music ----------------
@@ -1953,6 +2101,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
                     $pdo->prepare($brandSql)->execute($brandParams);
                 }
             }
+
+            // ---------------- आधी Restore न होणारे / नवीन Tables (Store Stock, E-Campus, टिप्पण्या, …) ----------------
+            restoreRegisterMaps([
+                'users' => $userMap, 'departments' => $deptMap, 'campuses' => $campusMap, 'store_items' => $storeItemMap ?? [],
+                'vehicles' => $vehicleMap ?? [], 'work_requests' => $workRequestMap ?? [], 'work_records' => $workRecordMap ?? [],
+                'renewal_items' => $renewalItemMap ?? [], 'asset_allocation_types' => $allocTypeMap ?? [],
+            ]);
+            $restoreNew = [];
+            $restoreNew['store_vendors'] = restoreInsertRows($pdo, $data['store_vendors'] ?? [], 'store_vendors', $orgId, ['organization_id', 'name']);
+            $restoreNew['store_stock_moves'] = restoreInsertRows($pdo, $data['store_stock_moves'] ?? [], 'store_stock_moves', $orgId,
+                ['organization_id', 'item_id', 'move_type', 'quantity', 'move_date', 'created_at']);
+            $restoreNew['asset_items'] = restoreInsertRows($pdo, $data['asset_items'] ?? [], 'asset_items', $orgId, ['organization_id', 'type_id', 'name']);
+            $restoreNew['campus_heads'] = restoreInsertRows($pdo, $data['campus_heads'] ?? [], 'campus_heads', $orgId);
+            $restoreNew['ecampus_tasks'] = restoreInsertRows($pdo, $data['ecampus_tasks'] ?? [], 'ecampus_tasks', $orgId, ['organization_id', 'user_id', 'wing', 'section', 'task_description']);
+            $restoreNew['ecampus_progress'] = restoreInsertRows($pdo, $data['ecampus_progress'] ?? [], 'ecampus_progress', $orgId);
+            $restoreNew['ecampus_updates'] = restoreInsertRows($pdo, $data['ecampus_updates'] ?? [], 'ecampus_updates', $orgId, ['task_id', 'created_at', 'percent']);
+            $restoreNew['org_settings'] = restoreInsertRows($pdo, $data['org_settings'] ?? [], 'org_settings', $orgId);   // सध्याची सेटिंग असेल तर ती तशीच (INSERT IGNORE)
+            $restoreNew['grievance_comments'] = restoreInsertRows($pdo, $data['grievance_comments'] ?? [], 'grievance_comments', $orgId, ['grievance_id', 'comment', 'created_at']);
+            $restoreNew['work_request_comments'] = restoreInsertRows($pdo, $data['work_request_comments'] ?? [], 'work_request_comments', $orgId, ['request_id', 'comment', 'created_at']);
+            $restoreNew['work_request_views'] = restoreInsertRows($pdo, $data['work_request_views'] ?? [], 'work_request_views', $orgId, ['request_id', 'user_id']);
+            $restoreNew['emergency_alert_recipients'] = restoreInsertRows($pdo, $data['emergency_alert_recipients'] ?? [], 'emergency_alert_recipients', $orgId);
+            $restoreNew['emergency_alert_responses'] = restoreInsertRows($pdo, $data['emergency_alert_responses'] ?? [], 'emergency_alert_responses', $orgId, ['alert_id', 'user_id']);
+            $restoreNew['renewal_attachments'] = restoreInsertRows($pdo, $data['renewal_attachments'] ?? [], 'renewal_attachments', $orgId, ['renewal_item_id', 'file_path']);
+            $vcrTables = ['trip' => 'vehicle_trips', 'fuel' => 'vehicle_fuel_log', 'maintenance' => 'vehicle_maintenance'];
+            $restoreNew['vehicle_correction_requests'] = restoreInsertRows($pdo, $data['vehicle_correction_requests'] ?? [], 'vehicle_correction_requests', $orgId,
+                ['vehicle_id', 'entry_type', 'entry_id', 'created_at'],
+                ['entry_id' => fn($r) => $GLOBALS['restoreTracked'][$vcrTables[$r['entry_type']] ?? ''][(string)$r['entry_id']] ?? false]);
+            foreach ($restoreNew as $rk => $rn) { if ($rn) { $counts[$rk] = $rn; } }
+
+            // ♻️ INSERT मध्ये नसलेले Columns (उदा. कर्मचाऱ्याचा पगार/बँक, विनंतीचं शीर्षक, मूळ तारखा) नव्या नोंदींत भरतो
+            $filledRows = restoreFillMissingColumns($pdo, $data, $restoreMaxBefore, [
+                'users' => $userMap, 'departments' => $deptMap, 'campuses' => $campusMap,
+            ], __FILE__);
+            if ($filledRows) { $counts['completed_rows'] = $filledRows; }
 
             $pdo->commit();
             if ($restoredFileCount > 0) { $counts['restored_files'] = $restoredFileCount; }
@@ -1998,6 +2180,17 @@ require_once __DIR__ . '/../includes/header.php';
         <?php if (!empty($successSummary['skipped_users'])): ?>
           <li style="color:var(--danger,#c0392b);">⚠️ <?= (int)$successSummary['skipped_users'] ?> कर्मचारी वगळले — त्यांचा Email दुसऱ्या संस्थेत आधीच वापरात आहे (त्यांच्याशी संबंधित नोंदीही वगळल्या)</li>
         <?php endif; ?>
+        <?php
+          $extraLabels = ['store_vendors' => 'भांडार Vendor', 'store_stock_moves' => 'Stock आवक/जावक नोंदी', 'asset_items' => 'Issue/Return साहित्य',
+              'campus_heads' => 'Campus प्रमुख', 'ecampus_tasks' => 'E-Campus कामे', 'ecampus_progress' => 'E-Campus प्रगती नोंदी',
+              'ecampus_updates' => 'E-Campus बदल-इतिहास', 'org_settings' => 'संस्था सेटिंग्ज', 'grievance_comments' => 'तक्रार टिप्पण्या',
+              'work_request_comments' => 'विनंती टिप्पण्या', 'work_request_views' => 'विनंती पाहिल्याच्या नोंदी',
+              'emergency_alert_recipients' => 'SOS सूचना-प्राप्तकर्ते', 'emergency_alert_responses' => 'SOS प्रतिसाद',
+              'renewal_attachments' => 'नूतनीकरण Attachments', 'vehicle_correction_requests' => 'वाहन दुरुस्ती-विनंत्या',
+              'completed_rows' => 'नोंदींचे बाकी तपशील पूर्ण भरले (पगार, बँक, शीर्षक, मूळ तारखा इ.)'];
+          foreach ($extraLabels as $ek => $el): if (!empty($successSummary[$ek])): ?>
+          <li><?= (int)$successSummary[$ek] ?> <?= h($el) ?></li>
+        <?php endif; endforeach; ?>
         <?php if (!empty($successSummary['restored_files'])): ?>
           <li>📎 <?= $successSummary['restored_files'] ?> Uploaded Files (Logo/Attachments/Photos) परत ठेवल्या गेल्या</li>
         <?php endif; ?>

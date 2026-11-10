@@ -4,6 +4,8 @@
 -- database named `eowms`.
 -- ============================================================
 
+SET NAMES utf8mb4;
+
 CREATE DATABASE IF NOT EXISTS eowms CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE eowms;
 
@@ -3019,3 +3021,138 @@ CREATE TABLE user_permissions (
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   FOREIGN KEY (granted_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+-- ============================================================
+-- नवीन Install साठी — RUN-ALL-MIGRATIONS.sql मध्ये नंतर आलेले Tables/Columns
+-- (आधीच्या Install वर System Update → Database Update हे आपोआप करतो)
+-- ============================================================
+ALTER TABLE users
+  ADD COLUMN preferred_language VARCHAR(5) NULL;
+
+-- ---------------- 🌐 भाषांतर ----------------
+CREATE TABLE translation_overrides (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  lang VARCHAR(5) NOT NULL,
+  source_hash CHAR(40) NOT NULL,
+  source_text TEXT NOT NULL,
+  translated_text TEXT NOT NULL,
+  updated_by INT NULL,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_lang_src (lang, source_hash)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- पानांवर दिसलेली पण भाषांतर नसलेली वाक्यं — Admin ला प्राधान्याने दाखवण्यासाठी
+CREATE TABLE translation_misses (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  lang VARCHAR(5) NOT NULL,
+  source_hash CHAR(40) NOT NULL,
+  source_text TEXT NOT NULL,
+  page VARCHAR(190) NULL,
+  hits INT NOT NULL DEFAULT 1,
+  last_seen DATETIME NULL,
+  UNIQUE KEY uniq_lang_src (lang, source_hash)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ---------------- 🔐 2-Step Login ----------------
+-- tfa_secret = Authenticator Key (config/app-secret.php ने Encrypt केलेली)
+-- tfa_recovery = Recovery Codes चे Hash (JSON) · tfa_last_step = एकच Code दोनदा वापरू नये म्हणून
+ALTER TABLE users
+  ADD COLUMN tfa_method VARCHAR(10) NULL,
+  ADD COLUMN tfa_secret VARCHAR(255) NULL,
+  ADD COLUMN tfa_recovery TEXT NULL,
+  ADD COLUMN tfa_last_step BIGINT NULL,
+  ADD COLUMN tfa_enabled_at DATETIME NULL;
+
+-- "हा Device 30 दिवस लक्षात ठेवा" — Browser Cookie चा फक्त Hash
+CREATE TABLE user_trusted_devices (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  token_hash CHAR(64) NOT NULL,
+  label VARCHAR(120) NULL,
+  ip VARCHAR(45) NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  last_used_at DATETIME NULL,
+  expires_at DATETIME NOT NULL,
+  UNIQUE KEY uniq_token (token_hash),
+  INDEX idx_user (user_id),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ---------------- ⚙️ संस्था-स्तरीय सेटिंग्ज (साप्ताहिक अहवाल, दुसऱ्या ठिकाणी Backup, 2-Step धोरण) ----------------
+CREATE TABLE org_settings (
+  organization_id INT NOT NULL,
+  setting_key VARCHAR(60) NOT NULL,
+  setting_value TEXT NULL,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (organization_id, setting_key),
+  FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ---------------- 🎓 E-Campus नोंदी व अहवाल ----------------
+-- Super Admin प्रत्येक कर्मचाऱ्याला E-Campus चं काम नेमतो; तोच कर्मचारी दर महिन्याची प्रगती (% + नोंद) भरतो
+CREATE TABLE ecampus_tasks (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  organization_id INT NOT NULL,
+  wing VARCHAR(120) NOT NULL,
+  section VARCHAR(160) NOT NULL,
+  user_id INT NOT NULL,
+  designation VARCHAR(160) NULL,
+  task_description TEXT NOT NULL,
+  task_type ENUM('monthly','one_time') NOT NULL DEFAULT 'monthly',
+  access_type ENUM('work','view_only') NOT NULL DEFAULT 'work',
+  sort_order INT NOT NULL DEFAULT 0,
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  created_by INT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_org (organization_id, is_active),
+  INDEX idx_user (user_id),
+  FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- महिन्यानुसार प्रगती (period = YYYY-MM)
+CREATE TABLE ecampus_progress (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  task_id INT NOT NULL,
+  period CHAR(7) NOT NULL,
+  percent TINYINT UNSIGNED NOT NULL DEFAULT 0,
+  notes TEXT NULL,
+  updated_by INT NULL,
+  updated_at DATETIME NULL,
+  UNIQUE KEY uniq_task_period (task_id, period),
+  INDEX idx_period (period),
+  FOREIGN KEY (task_id) REFERENCES ecampus_tasks(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- प्रत्येक बदलाचा इतिहास — दिवसागणिक प्रगतीचा Chart आणि "कोणी, कधी" यासाठी
+CREATE TABLE ecampus_updates (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  task_id INT NOT NULL,
+  period CHAR(7) NOT NULL,
+  percent TINYINT UNSIGNED NOT NULL,
+  notes TEXT NULL,
+  user_id INT NULL,
+  created_at DATETIME NOT NULL,
+  INDEX idx_task (task_id, created_at),
+  INDEX idx_period (period, created_at),
+  FOREIGN KEY (task_id) REFERENCES ecampus_tasks(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ---------------- 🏛️ Campus प्रमुख (Principal / Manager) ----------------
+-- campus_id = NULL → सर्व Campus चे केंद्रीय प्रमुख (Centralized Head)
+-- Campus प्रमुखाला त्याच्या Campus चा Dashboard आणि त्या Campus चे सगळे विभाग दिसतात
+CREATE TABLE campus_heads (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  organization_id INT NOT NULL,
+  campus_id INT NULL,
+  user_id INT NOT NULL,
+  title VARCHAR(100) NULL,
+  assigned_by INT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_head (organization_id, campus_id, user_id),
+  INDEX idx_user (user_id),
+  FOREIGN KEY (campus_id) REFERENCES campuses(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

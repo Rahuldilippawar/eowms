@@ -118,7 +118,7 @@ if ($y) {
               <span class="status-chip overdue">🔴 सक्रिय</span>
             <?php else: ?>
               <span class="status-chip done">✅ Resolved</span>
-              <div style="font-size:10px;color:var(--text-dim);"><?= h($a['resolved_by_name']) ?> — <?= date('d M, h:i A', strtotime($a['resolved_at'])) ?><?= !empty($a['resolution_remark']) ? '<br>' . h($a['resolution_remark']) : '' ?></div>
+              <div style="font-size:10px;color:var(--text-dim);"><?= h($a['resolved_by_name'] ?? '') ?><?= !empty($a['resolved_at']) ? ' — ' . date('d M, h:i A', strtotime($a['resolved_at'])) : '' ?><?= !empty($a['resolution_remark']) ? '<br>' . h($a['resolution_remark']) : '' ?></div>
             <?php endif; ?>
           </td>
           <td>

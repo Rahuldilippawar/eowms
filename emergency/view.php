@@ -97,7 +97,7 @@ $hasGeo = !empty($alert['latitude']) && !empty($alert['longitude']);
           <?php endif; ?>
           <?php if ($alert['message']): ?><div>📝 <?= h($alert['message']) ?></div><?php endif; ?>
           <div>🕒 <?= date('d M Y, h:i:s A', strtotime($alert['created_at'])) ?></div>
-          <div id="sosResolvedInfo"><?php if ($alert['status'] === 'resolved'): ?>✅ <?= h($alert['resolved_by_name']) ?> — <?= date('h:i A', strtotime($alert['resolved_at'])) ?><?= !empty($alert['resolution_remark']) ? ' — ' . h($alert['resolution_remark']) : '' ?><?php endif; ?></div>
+          <div id="sosResolvedInfo"><?php if ($alert['status'] === 'resolved'): ?>✅ <?= h($alert['resolved_by_name'] ?? '') ?><?= !empty($alert['resolved_at']) ? ' — ' . date('h:i A', strtotime($alert['resolved_at'])) : '' ?><?= !empty($alert['resolution_remark']) ? ' — ' . h($alert['resolution_remark']) : '' ?><?php endif; ?></div>
         </div>
 
         <?php if ($alert['status'] === 'active'): ?>

@@ -170,7 +170,7 @@ function buildOrgBackup($pdo, $orgId) {
         'staff_messages' => safeFetchAll($pdo, "
             SELECT sm.* FROM staff_messages sm JOIN users u ON u.id = sm.sender_id WHERE u.organization_id = ?", [$orgId]),
         // गुप्त तक्रार — तक्रारदाराची ओळख (submitted_by / submitter_hash) Backup मध्ये कधीही नाही
-        'grievances' => safeFetchAll($pdo, "SELECT id, organization_id, IF(is_anonymous = 1, NULL, submitted_by) AS submitted_by, category, description, is_anonymous, status, assigned_to, resolution, sla_deadline, resolved_at, created_at FROM grievances WHERE organization_id = ?", [$orgId]),
+        'grievances' => safeFetchAll($pdo, "SELECT id, organization_id, IF(is_anonymous = 1, NULL, submitted_by) AS submitted_by, category, description, is_anonymous, status, assigned_to, resolution, sla_deadline, resolved_at, escalated_at, reopened_count, created_at FROM grievances WHERE organization_id = ?", [$orgId]),
         'dept_material_purchases' => safeFetchAll($pdo, "SELECT * FROM dept_material_purchases WHERE organization_id = ?", [$orgId]),
         'dept_payment_ledger' => safeFetchAll($pdo, "SELECT * FROM dept_payment_ledger WHERE organization_id = ?", [$orgId]),
         'gaushala_cattle' => safeFetchAll($pdo, "SELECT * FROM gaushala_cattle WHERE organization_id = ?", [$orgId]),
@@ -304,6 +304,25 @@ function buildOrgBackup($pdo, $orgId) {
         'store_items' => safeFetchAll($pdo, "SELECT * FROM store_items WHERE organization_id = ?", [$orgId]),
         'store_vendors' => safeFetchAll($pdo, "SELECT * FROM store_vendors WHERE organization_id = ?", [$orgId]),
         'store_stock_moves' => safeFetchAll($pdo, "SELECT * FROM store_stock_moves WHERE organization_id = ?", [$orgId]),
+        // ---- आधी Backup मध्ये नसलेले ----
+        'asset_items' => safeFetchAll($pdo, "SELECT * FROM asset_items WHERE organization_id = ?", [$orgId]),
+        'campus_heads' => safeFetchAll($pdo, "SELECT * FROM campus_heads WHERE organization_id = ?", [$orgId]),
+        'ecampus_tasks' => safeFetchAll($pdo, "SELECT * FROM ecampus_tasks WHERE organization_id = ?", [$orgId]),
+        'ecampus_progress' => safeFetchAll($pdo, "
+            SELECT p.* FROM ecampus_progress p JOIN ecampus_tasks t ON t.id = p.task_id WHERE t.organization_id = ?", [$orgId]),
+        'ecampus_updates' => safeFetchAll($pdo, "
+            SELECT u.* FROM ecampus_updates u JOIN ecampus_tasks t ON t.id = u.task_id WHERE t.organization_id = ?", [$orgId]),
+        // संस्था-सेटिंग्ज — Password व "शेवटचं पाठवलं" सारख्या स्थिती वगळून
+        'org_settings' => safeFetchAll($pdo, "SELECT * FROM org_settings WHERE organization_id = ? AND setting_key NOT LIKE '%password%' AND setting_key NOT LIKE '%\\_last\\_%'", [$orgId]),
+        'grievance_comments' => safeFetchAll($pdo, "
+            SELECT gc.* FROM grievance_comments gc JOIN grievances g ON g.id = gc.grievance_id WHERE g.organization_id = ?", [$orgId]),
+        'work_request_comments' => safeFetchAll($pdo, "
+            SELECT c.* FROM work_request_comments c JOIN work_requests wr ON wr.id = c.request_id WHERE wr.organization_id = ?", [$orgId]),
+        'emergency_alert_recipients' => safeFetchAll($pdo, "
+            SELECT r.* FROM emergency_alert_recipients r JOIN emergency_alerts a ON a.id = r.alert_id WHERE a.organization_id = ?", [$orgId]),
+        'emergency_alert_responses' => safeFetchAll($pdo, "
+            SELECT r.* FROM emergency_alert_responses r JOIN emergency_alerts a ON a.id = r.alert_id WHERE a.organization_id = ?", [$orgId]),
+        'renewal_attachments' => safeFetchAll($pdo, "SELECT * FROM renewal_attachments WHERE organization_id = ?", [$orgId]),
 
         // ---------------- CCTV विभाग ----------------
         'cctv_dvrs' => safeFetchAll($pdo, "SELECT * FROM cctv_dvrs WHERE organization_id = ?", [$orgId]),
