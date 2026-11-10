@@ -172,6 +172,7 @@ foreach ($employeeIds as $eid) {
     $teamInsert->execute([$newWorkRecordId, $eid]);
 }
 
+require_once __DIR__ . '/../includes/store-helpers.php';
 // या कामासाठी Store मधून वापरलेलं साहित्य (उदा. Light, Fan, इ.) — असल्यास नोंदवतो
 try {
     $materialItemIds = $_POST['material_item_id'] ?? [];
@@ -186,6 +187,7 @@ try {
         $qty = isset($materialQuantities[$idx]) && is_numeric($materialQuantities[$idx]) ? (float)$materialQuantities[$idx] : 0;
         if ($itemId && $qty > 0 && in_array($itemId, $orgItemIds, true)) {
             $matInsert->execute([$newWorkRecordId, $itemId, $qty]);
+            storeRecordWorkUsage($pdo, (int)$department['organization_id'], $newWorkRecordId, $itemId, $qty, $workDate, (int)$department['id'], (int)$user['id']);   // 📦 Stock मधून वजा
         }
     }
 } catch (PDOException $e) { /* work_record_materials table not migrated yet — काम-नोंद आधीच Save झालेली आहे */ }

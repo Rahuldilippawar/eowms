@@ -300,6 +300,8 @@ function buildOrgBackup($pdo, $orgId) {
 
         // ---------------- भांडार Material-यादी (Daily-Work साठी) ----------------
         'store_items' => safeFetchAll($pdo, "SELECT * FROM store_items WHERE organization_id = ?", [$orgId]),
+        'store_vendors' => safeFetchAll($pdo, "SELECT * FROM store_vendors WHERE organization_id = ?", [$orgId]),
+        'store_stock_moves' => safeFetchAll($pdo, "SELECT * FROM store_stock_moves WHERE organization_id = ?", [$orgId]),
 
         // ---------------- CCTV विभाग ----------------
         'cctv_dvrs' => safeFetchAll($pdo, "SELECT * FROM cctv_dvrs WHERE organization_id = ?", [$orgId]),
