@@ -43,7 +43,7 @@ $wings = array_keys($S['wings']);
 sort($wings);
 $col = ['good' => '#16A34A', 'warn' => '#F59E0B', 'bad' => '#DC2626'];
 $barCol = fn($p) => $p >= 100 ? '#16A34A' : ($p >= 75 ? '#65A30D' : ($p >= 50 ? '#F59E0B' : '#DC2626'));
-$canEdit = fn($r) => $isCurrent && $r['access_type'] === 'work' && ((int)$r['user_id'] === (int)$me['id'] || $isSA);
+$canEdit = fn($r) => ecampusEditablePeriod($period) && $r['access_type'] === 'work' && ((int)$r['user_id'] === (int)$me['id'] || $isSA);
 
 $pageTitle = 'E-Campus Dashboard';
 $rootPath = '../';
@@ -194,7 +194,7 @@ require_once __DIR__ . '/../includes/header.php';
     <div class="es-hero-t">
       <div class="es-eyebrow">🎓 E-CAMPUS · <?= h(activeOrgName()) ?></div>
       <h1>MONTHLY E-CAMPUS REPORT <span>— <?= date('m/Y', strtotime($period . '-01')) ?></span></h1>
-      <p><?= $isCurrent ? ($viewAll ? 'Progress Notes आणि % Complete थेट तक्त्यात भरा — आपोआप जतन होतं, Status आपोआप बदलतो.' : 'तुमच्या कामांची Progress Notes आणि % Complete इथे भरा — आपोआप जतन होतं.') : ecampusPeriodLabel($period) . ' — मागचा महिना (फक्त पाहण्यासाठी)' ?></p>
+      <p><?= $isCurrent ? ($viewAll ? 'Progress Notes आणि % Complete थेट तक्त्यात भरा — आपोआप जतन होतं, Status आपोआप बदलतो.' : 'तुमच्या कामांची Progress Notes आणि % Complete इथे भरा — आपोआप जतन होतं.') : '📅 ' . ecampusPeriodLabel($period) . ' — मागचा महिना: त्या महिन्यात झालेलं काम पाहून % आणि नोंद भरा (आपोआप जतन).' ?></p>
     </div>
     <div class="es-actions no-print">
       <form method="GET"><select name="month" class="es-hsel" onchange="this.form.submit()" aria-label="महिना"><?php foreach ($months as $m): ?><option value="<?= $m ?>" <?= $m === $period ? 'selected' : '' ?>><?= h(ecampusPeriodLabel($m)) ?></option><?php endforeach; ?></select></form>

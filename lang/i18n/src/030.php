@@ -853,4 +853,13 @@ return [
     "वेळा चुकीचा" => ["बार गलत", "times wrong"],
     "सुरक्षा इशारे पानावरून Unlock करता येईल." => ["सुरक्षा चेतावनी पेज से Unlock कर सकते हैं।", "Can be unlocked from the Security Alerts page."],
     "सुरक्षिततेसाठी Super Admin ने तुमचं हे Login बंद केलं आहे. कृपया परत Login करा." => ["सुरक्षा के लिए Super Admin ने आपका यह Login बंद किया है। कृपया फिर से Login करें।", "For security, the Super Admin has ended this login. Please log in again."],
+    "मागचा महिना: त्या महिन्यात झालेलं काम पाहून % आणि नोंद भरा (आपोआप जतन)." => ["पिछला महीना: उस महीने में हुआ काम देखकर % और टिप्पणी भरें (अपने-आप सहेजा जाता है)।", "previous month: fill % and notes for the work done that month (auto-saved)."],
+    "फक्त चालू आणि मागच्या" => ["केवल चालू और पिछले", "Only the current and previous"],
+    "महिन्यांची नोंद भरता येते" => ["महीनों की प्रविष्टि भरी जा सकती है", "months can be filled"],
+    "(चालू)" => ["(चालू)", "(current)"],
+    "(मागचा महिना) भरत आहात — त्या महिन्यात झालेलं काम पाहून % आणि नोंद भरा." => ["(पिछला महीना) भर रहे हैं — उस महीने में हुआ काम देखकर % और टिप्पणी भरें।", "(previous month) — fill % and notes for the work done that month."],
+    "चालू महिन्याकडे →" => ["चालू महीने पर →", "Back to current month →"],
+    "जतन झालं (" => ["सहेजा गया (", "Saved ("],
+    "(आधीच्या महिन्यात {n}% पूर्ण)" => ["(पिछले महीने में {n}% पूर्ण)", "({n}% done in an earlier month)"],
+    "एकदाच (दर महिना {n}% पासून; {n}% झाल्यावर \"पूर्ण\"च राहतं)" => ["एक बार (हर महीना {n}% से; {n}% होने पर \"पूर्ण\" ही रहता है)", "One-time (starts at {n}% each month; stays \"done\" once {n}%)"],
 ];

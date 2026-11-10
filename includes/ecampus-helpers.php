@@ -4,7 +4,8 @@
  *  - Super Admin कर्मचाऱ्यांना E-Campus चं काम नेमतो (Wing → Section → कर्मचारी → काम)
  *  - फक्त नेमलेला कर्मचारी आपल्या कामाची महिन्याची प्रगती (% + नोंद) भरतो
  *  - Dashboard / मासिक अहवाल / दैनिक-साप्ताहिक अहवाल — सगळे इथूनच Data घेतात
- * "दरमहा" काम दर महिन्याला 0% पासून; "एकदाच" काम मागच्या महिन्याची प्रगती पुढे नेतं.
+ * नवीन महिना लागला की सगळी कामं 0% पासून — त्या महिन्याचं काम पाहून % भरायचे (मागचे 12 महिनेही भरता येतात).
+ * अपवाद: "एकदाच" काम आधीच्या महिन्यात 100% पूर्ण झालं असेल तर ते "पूर्ण"च दिसतं (परत करायची गरज नाही).
  * "फक्त पाहण्याचा Access" ओळी पूर्ण धरल्या जातात, पण एकूण % मध्ये मोजल्या जात नाहीत.
  */
 
@@ -18,6 +19,23 @@ function ecampusReady(PDO $pdo) {
 function ecampusPeriod($ym = null) {
     if (is_string($ym) && preg_match('/^(\d{4})-(\d{2})$/', $ym, $m) && (int)$m[2] >= 1 && (int)$m[2] <= 12 && $ym <= date('Y-m') && $ym >= '2020-01') { return $ym; }
     return date('Y-m');
+}
+
+/** किती मागचे महिने भरता / बदलता येतात */
+const ECAMPUS_EDIT_MONTHS = 12;
+
+/** हा महिना भरता येतो का — चालू किंवा मागच्या 12 महिन्यांपैकी */
+function ecampusEditablePeriod($ym) {
+    if (!is_string($ym) || !preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $ym)) { return false; }
+    $oldest = date('Y-m', strtotime(date('Y-m-01') . ' -' . (ECAMPUS_EDIT_MONTHS - 1) . ' month'));
+    return $ym <= date('Y-m') && $ym >= $oldest;
+}
+
+/** महिना-निवडीसाठी यादी — चालू महिना आधी */
+function ecampusEditableMonths() {
+    $m = [];
+    for ($i = 0; $i < ECAMPUS_EDIT_MONTHS; $i++) { $m[] = date('Y-m', strtotime(date('Y-m-01') . " -$i month")); }
+    return $m;
 }
 
 function ecampusPeriodLabel($ym) {
@@ -68,22 +86,21 @@ function ecampusStatus($percent, $access = 'work') {
  * $userId दिला तर फक्त त्या कर्मचाऱ्याच्या.
  */
 function ecampusRows(PDO $pdo, $orgId, $period, $userId = null) {
-    $end = date('Y-m-t 23:59:59', strtotime($period . '-01'));
     $sql = "SELECT t.*, u.name AS staff_name, u.designation AS user_designation, u.is_active AS user_active,
                    p.percent, p.notes, p.updated_at, p.updated_by, ub.name AS updated_by_name
             FROM ecampus_tasks t JOIN users u ON u.id = t.user_id
             LEFT JOIN ecampus_progress p ON p.task_id = t.id AND p.period = ?
             LEFT JOIN users ub ON ub.id = p.updated_by
-            WHERE t.organization_id = ? AND t.is_active = 1 AND t.created_at <= ?";
-    $params = [$period, (int)$orgId, $end];
+            WHERE t.organization_id = ? AND t.is_active = 1";   // नंतर नेमलेलं काम मागच्या महिन्यांतही दिसतं — मागचे महिने भरता यावेत म्हणून
+    $params = [$period, (int)$orgId];
     if ($userId) { $sql .= " AND t.user_id = ?"; $params[] = (int)$userId; }
     $sql .= " ORDER BY t.sort_order, t.wing, t.section, u.name, t.id";
     $st = $pdo->prepare($sql);
     $st->execute($params);
     $rows = $st->fetchAll();
 
-    // "एकदाच" काम — या महिन्यात नोंद नसेल तर मागची शेवटची प्रगती पुढे
-    $carry = $pdo->prepare("SELECT percent, notes, updated_at FROM ecampus_progress WHERE task_id = ? AND period < ? ORDER BY period DESC LIMIT 1");
+    // नवीन महिना = 0% पासून. फक्त "एकदाच" काम आधी 100% पूर्ण झालं असेल तर ते "पूर्ण"च दिसतं
+    $carry = $pdo->prepare("SELECT percent, notes, updated_at FROM ecampus_progress WHERE task_id = ? AND period < ? AND percent >= 100 ORDER BY period DESC LIMIT 1");
     foreach ($rows as &$r) {
         $r['carried'] = false;
         if ($r['percent'] === null && $r['task_type'] === 'one_time') {
