@@ -283,6 +283,13 @@ function honeypotTripped() {
     return trim((string)($_POST['website'] ?? '')) !== '';
 }
 
+// कर्मचाऱ्याचं नाव — प्रत्येक शब्दाचं पहिलं अक्षर Capital (rahul pawar → Rahul Pawar).
+// बाकी अक्षरं जशी टाइप केली तशीच (MR. → MR.); मराठी / देवनागरी नावांवर परिणाम नाही.
+function nameCase($s) {
+    $s = preg_replace('/\s+/u', ' ', trim((string)$s));
+    return preg_replace_callback('/(^|[\s.\-\'(])(\p{Ll})/u', fn($m) => $m[1] . mb_strtoupper($m[2], 'UTF-8'), $s);
+}
+
 // Escapes output for safe HTML display
 function h($str) {
     return htmlspecialchars($str ?? '', ENT_QUOTES, 'UTF-8');

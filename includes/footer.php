@@ -74,7 +74,7 @@
 <script src="<?= $rootPath ?? '' ?>assets/js/eowms-advance.js?v=2"></script>
 <script src="<?= $rootPath ?? '' ?>assets/js/eowms-theme.js?v=3"></script>
 <script src="<?= $rootPath ?? '' ?>assets/js/eowms-mobile.js?v=3"></script>
-<script src="<?= $rootPath ?? '' ?>assets/js/eowms-ui.js?v=2"></script>
+<script src="<?= $rootPath ?? '' ?>assets/js/eowms-ui.js?v=3"></script>
 <?php // 🏛️ विभाग-Dropdown — संस्था / College / School नुसार गटवार (सगळ्या Modules मध्ये)
 if (isset($pdo) && $pdo instanceof PDO && function_exists('currentUser') && currentUser()) { require_once __DIR__ . '/dept-groups.php'; echo deptGroupsScript($pdo, activeOrgId()); } ?>
 <script src="<?= $rootPath ?? '' ?>assets/js/dept-groups.js?v=1"></script>

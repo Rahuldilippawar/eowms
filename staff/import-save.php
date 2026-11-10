@@ -115,7 +115,7 @@ while (($row = fgetcsv($handle)) !== false) {
     try {
         $insertStmt->execute([
             $orgId, $department['campus_id'] ?: $fallbackCampusId, $department['id'],
-            trim($data['name']), $email, $mobile, trim($data['designation']), $salary, $joiningDate, $dateOfBirth,
+            nameCase($data['name']), $email, $mobile, trim($data['designation']), $salary, $joiningDate, $dateOfBirth,
             password_hash($plainPassword, PASSWORD_DEFAULT),
         ]);
     } catch (PDOException $e) {
@@ -127,10 +127,10 @@ while (($row = fgetcsv($handle)) !== false) {
     }
     $created++;
 
-    sendWelcomeEmail($email, trim($data['name']), $email, $plainPassword, activeOrgName(), 'staff', $loginUrl);
+    sendWelcomeEmail($email, nameCase($data['name']), $email, $plainPassword, activeOrgName(), 'staff', $loginUrl);
 
     $credentials[] = [
-        'name' => trim($data['name']),
+        'name' => nameCase($data['name']),
         'department' => $department['name_local'] ?: $department['name'],
         'email' => $email,
         'password' => $plainPassword,

@@ -10,7 +10,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 $id = (int)($_POST['id'] ?? 0);
-$name = trim($_POST['name'] ?? '');
+$name = nameCase($_POST['name'] ?? '');
 $email = strtolower(trim($_POST['email'] ?? ''));
 $designation = trim($_POST['designation'] ?? '');
 $teachingMode = in_array($_POST['teaching_mode'] ?? '', ['Teaching', 'Non Teaching', 'Other'], true) ? $_POST['teaching_mode'] : 'Non Teaching';

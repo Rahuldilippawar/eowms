@@ -51,7 +51,7 @@ if ($staffMember['role'] !== 'super_admin' && superAdminExistsOtherThan($pdo, (i
     <div class="row g-3">
       <div class="col-md-6">
         <label class="form-label-custom"><?= h(t('s15')) ?></label>
-        <input type="text" name="name" class="form-control-custom" value="<?= h($staffMember['name']) ?>" required>
+        <input type="text" name="name" class="form-control-custom" value="<?= h($staffMember['name']) ?>" data-capname autocapitalize="words" required>
       </div>
       <div class="col-md-6">
         <label class="form-label-custom">जन्मतारीख (वाढदिवस शुभेच्छांसाठी)</label>
