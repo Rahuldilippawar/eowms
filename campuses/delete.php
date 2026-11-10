@@ -42,6 +42,7 @@ if ((int)$cnt['users_count'] > 0 || (int)$cnt['depts_count'] > 0) {
     exit;
 }
 
+recycleCapture($pdo, 'campuses', $id);   // 🗑️ Recycle Bin — 30 दिवस परत आणता येतं
 $pdo->prepare("DELETE FROM campuses WHERE id = ?")->execute([$id]);
 
 logActivity('कॅम्पस कायमचा डिलीट केला', 'campus', $id, $campus['name']);

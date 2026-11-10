@@ -4486,3 +4486,71 @@ CREATE TABLE IF NOT EXISTS user_permissions (
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   FOREIGN KEY (granted_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- FROM: migration-superadmin-tools.sql
+-- ---------------- 🛡️ Super Admin — Sessions, Module वापर, Broadcast, Recycle Bin ----------------
+-- कोण कुठे Login आहे (Force Logout साठी) — session_hash = Session ID चा SHA-256 (मूळ ID कधीच साठवत नाही)
+CREATE TABLE user_sessions (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  organization_id INT NULL,
+  session_hash CHAR(64) NOT NULL,
+  ip VARCHAR(45) NULL,
+  user_agent VARCHAR(255) NULL,
+  created_at DATETIME NOT NULL,
+  last_seen DATETIME NOT NULL,
+  ended_at DATETIME NULL,
+  revoked_by INT NULL,
+  UNIQUE KEY uniq_hash (session_hash),
+  INDEX idx_user (user_id, ended_at),
+  INDEX idx_org_seen (organization_id, last_seen),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- कोणता Module किती वापरला — दिवसागणिक (प्रत्येक पान उघडल्यावर +1)
+CREATE TABLE module_usage_daily (
+  user_id INT NOT NULL,
+  organization_id INT NOT NULL,
+  module VARCHAR(40) NOT NULL,
+  day DATE NOT NULL,
+  hits INT NOT NULL DEFAULT 1,
+  PRIMARY KEY (user_id, module, day),
+  INDEX idx_org_day (organization_id, day),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- सगळ्यांना / Campus / विभाग / पदाला एकदम सूचना
+CREATE TABLE broadcasts (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  organization_id INT NOT NULL,
+  title VARCHAR(200) NOT NULL,
+  message TEXT NULL,
+  link VARCHAR(255) NULL,
+  audience VARCHAR(20) NOT NULL DEFAULT 'all',
+  audience_value VARCHAR(100) NULL,
+  audience_label VARCHAR(200) NULL,
+  recipients INT NOT NULL DEFAULT 0,
+  sent_by INT NULL,
+  created_at DATETIME NOT NULL,
+  INDEX idx_org (organization_id, created_at),
+  FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+ALTER TABLE notifications
+  ADD COLUMN broadcast_id INT NULL,
+  ADD INDEX idx_broadcast (broadcast_id);
+
+-- चुकून हटवलेली नोंद 30 दिवस परत आणता यावी — मूळ Row + थेट जोडलेल्या (Cascade) नोंदी JSON मध्ये
+CREATE TABLE recycle_bin (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  organization_id INT NULL,
+  entity_table VARCHAR(64) NOT NULL,
+  entity_id INT NOT NULL,
+  label VARCHAR(255) NULL,
+  payload LONGTEXT NOT NULL,
+  deleted_by INT NULL,
+  deleted_at DATETIME NOT NULL,
+  restored_at DATETIME NULL,
+  restored_by INT NULL,
+  INDEX idx_org (organization_id, deleted_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

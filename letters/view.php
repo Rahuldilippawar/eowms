@@ -48,7 +48,7 @@ $atFinalWorkflowStep = $hasWorkflow && (int)$letter['current_step_order'] > 0 &&
 $canSign = $isHolder && (!$hasWorkflow || $atFinalWorkflowStep);
 $canForward = $isHolder && !$atFinalWorkflowStep;
 
-if ($isHolder && empty($letter['current_holder_seen_at'])) {
+if ($isHolder && empty($letter['current_holder_seen_at']) && !saViewingAs()) {   // View as मध्ये "पाहिलं" नोंद नको
     $pdo->prepare("UPDATE letters SET current_holder_seen_at = NOW() WHERE id = ?")->execute([$letterId]);
     $letter['current_holder_seen_at'] = date('Y-m-d H:i:s');
 }

@@ -111,7 +111,7 @@ if ($dbNotReady) {
 
 // Record that this staff member has now "seen" each of these requests —
 // visible later to the external requester via track-request.php
-if (!empty($requests)) {
+if (!empty($requests) && !saViewingAs()) {
     try {
         $viewUpsert = $pdo->prepare("INSERT INTO work_request_views (request_id, user_id) VALUES (?, ?) ON DUPLICATE KEY UPDATE viewed_at = NOW()");
         foreach ($requests as $req) { $viewUpsert->execute([$req['id'], $user['id']]); }

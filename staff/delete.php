@@ -43,6 +43,8 @@ if ($norm($confirmText) !== $norm($target['name']) && !in_array($norm($confirmTe
 //  2) FK नसलेल्या ठिकाणच्या त्याच्या स्वतःच्या नोंदी (E-Campus इतिहास, Campus प्रमुख)
 //  3) users मधून हटवा — बाकीचं (हजेरी, कामं, Tasks, रजा, 2-Step, …) ON DELETE CASCADE / SET NULL ने आपोआप
 $removedRefs = 0;
+// 🗑️ Recycle Bin — खातं व त्याच्या थेट नोंदी (हजेरी, रजा इ.) 30 दिवस परत आणता येतात
+recycleCapture($pdo, 'users', $id, null, activeOrgId());
 try {
     $pdo->beginTransaction();
     $fk = $pdo->query("SELECT k.TABLE_NAME t, k.COLUMN_NAME c, col.IS_NULLABLE n

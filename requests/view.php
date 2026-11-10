@@ -138,7 +138,7 @@ try {
     $actions = $aStmt->fetchAll();
 } catch (PDOException $e) {}
 
-if ($canManage) {
+if ($canManage && !saViewingAs()) {
     try {
         $pdo->prepare("INSERT INTO work_request_views (request_id, user_id) VALUES (?, ?) ON DUPLICATE KEY UPDATE viewed_at = NOW()")->execute([$id, $user['id']]);
     } catch (PDOException $e) {}

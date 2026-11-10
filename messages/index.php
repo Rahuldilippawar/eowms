@@ -77,7 +77,7 @@ if (!empty($_GET['poll'])) {
         $q = $pdo->prepare("SELECT * FROM staff_messages WHERE id > ? AND ((sender_id = ? AND recipient_id = ?) OR (sender_id = ? AND recipient_id = ?)) ORDER BY id LIMIT 100");
         $q->execute([$after, $withUserId, $me, $me, $withUserId]);
         $out['msgs'] = array_map($msgRow, $q->fetchAll());
-        $pdo->prepare("UPDATE staff_messages SET is_read = 1 WHERE sender_id = ? AND recipient_id = ? AND is_read = 0")->execute([$withUserId, $me]);
+        if (!saViewingAs()) $pdo->prepare("UPDATE staff_messages SET is_read = 1 WHERE sender_id = ? AND recipient_id = ? AND is_read = 0")->execute([$withUserId, $me]);
         $r = $pdo->prepare("SELECT id FROM staff_messages WHERE sender_id = ? AND recipient_id = ? AND is_read = 1 ORDER BY id DESC LIMIT 60");
         $r->execute([$me, $withUserId]);
         $out['read'] = array_map('intval', $r->fetchAll(PDO::FETCH_COLUMN));
@@ -110,7 +110,7 @@ if ($withUserId) {
         $mq = $pdo->prepare("SELECT * FROM (SELECT * FROM staff_messages WHERE (sender_id = ? AND recipient_id = ?) OR (sender_id = ? AND recipient_id = ?) ORDER BY id DESC LIMIT 300) t ORDER BY id");
         $mq->execute([$me, $withUserId, $withUserId, $me]);
         $messages = $mq->fetchAll();
-        $pdo->prepare("UPDATE staff_messages SET is_read = 1 WHERE sender_id = ? AND recipient_id = ? AND is_read = 0")->execute([$withUserId, $me]);
+        if (!saViewingAs()) $pdo->prepare("UPDATE staff_messages SET is_read = 1 WHERE sender_id = ? AND recipient_id = ? AND is_read = 0")->execute([$withUserId, $me]);
     }
 }
 

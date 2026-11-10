@@ -15,6 +15,7 @@ if ($id) {
     $stmt->execute([$id, $orgId]);
     $q = $stmt->fetch();
     if ($q) {
+        recycleCapture($pdo, 'meditation_quotes', $id, null, $orgId);   // 🗑️ Recycle Bin
         $pdo->prepare("DELETE FROM meditation_quotes WHERE id = ? AND organization_id = ?")->execute([$id, $orgId]);
         logActivity('सुविचार डिलीट केला', 'meditation_quote', $id, $q['quote_text']);
         $_SESSION['flash'] = t('s638');

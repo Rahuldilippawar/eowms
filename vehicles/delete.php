@@ -31,6 +31,7 @@ if ($confirmText !== $vehicle['vehicle_number']) {
 
 // FK cascades (ON DELETE CASCADE) remove all trips, fuel logs, and
 // maintenance records for this vehicle automatically.
+recycleCapture($pdo, 'vehicles', $id);   // 🗑️ Recycle Bin — फेऱ्या, इंधन, देखभाल नोंदींसकट
 $pdo->prepare("DELETE FROM vehicles WHERE id = ?")->execute([$id]);
 
 logActivity('वाहन कायमचे डिलीट केले', 'vehicle', $id, $vehicle['vehicle_number']);

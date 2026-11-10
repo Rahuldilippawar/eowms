@@ -18,6 +18,7 @@ $stmt->execute([$id, $orgId]);
 $item = $stmt->fetch();
 
 if ($item) {
+    recycleCapture($pdo, 'dead_stock_items', $id);   // 🗑️ Recycle Bin
     $pdo->prepare("DELETE FROM dead_stock_items WHERE id = ?")->execute([$id]);
     // या वस्तूच्या खरेदीचा खर्च Budget मधून परत (Reverse)
     reverseBudgetTransaction($pdo, 'dead_stock', $id);
