@@ -82,7 +82,7 @@ require_once __DIR__ . '/../includes/smart-insights.php';
 
 <div class="page-eyebrow"><?= h(activeOrgName()) ?></div>
 <div class="d-flex justify-content-between align-items-start mb-2">
-  <div class="page-title mb-0">📅 दैनिक अहवाल</div>
+  <div class="page-title mb-0">📰 दैनिक अहवाल</div>
   <form method="GET" class="d-flex gap-2 align-items-center">
     <input type="date" name="date" class="form-control-custom" value="<?= h($date) ?>" max="<?= date('Y-m-d') ?>" min="<?= date('Y-m-d', strtotime('-90 days')) ?>" onchange="this.form.submit()" style="max-width:180px;">
   </form>
