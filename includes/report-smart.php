@@ -73,6 +73,10 @@ function mgmtReportDecorate($html, array $o = []) {
     $qr = mgmtReportQrImg($o['link'] ?? '', $mm);
     if ($qr) { $side .= $qr; }
     if ($side && $hdrEnd !== null) {
+        // नाव Logo/QR खाली जाऊन कापू नये — Header मध्ये उजवीकडे तेवढी जागा राखून ठेवतो (लांब नाव पुढच्या ओळीत जातं)
+        $reserve = (!empty($o['logo']) ? 34 : 0) + ($qr ? $mm + 3 : 0) + 4;
+        $html = preg_replace('/<div class="hdr">/', '<div class="hdr" style="padding-right:' . $reserve . 'mm;">', $html, 1, $cnt);
+        if ($cnt) { $hdrEnd += strlen(' style="padding-right:' . $reserve . 'mm;"'); }
         $box = '<div style="position:absolute;top:' . ($mm >= 16 ? 11 : 10.6) . 'mm;right:13mm;text-align:right;">' . $side
             . ($qr && $mm >= 16 ? '<div style="font-size:6.5pt;color:#C9CCE0;text-align:right;margin-top:0.5mm;">Scan → Online अहवाल</div>' : '') . '</div>';
         $html = substr($html, 0, $hdrEnd) . $box . substr($html, $hdrEnd);
