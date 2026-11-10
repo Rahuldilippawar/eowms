@@ -509,7 +509,7 @@ function ecampusRangeReportPdf(PDO $pdo, $orgId, array $months, $orgName, $withD
         . $kpi('कालावधीची सरासरी प्रगती', $avg === null ? '—' : $avg . '%', count($overalls) . ' महिन्यांची नोंद', $avg === null ? '#8A90AC' : $bc($avg))
         . $kpi('सर्वोत्तम महिना', $best ? $h(ecampusPeriodLabel($best)) : '—', $best ? $overalls[$best] . '%' : '', '#137A4B')
         . $kpi('सर्वात कमी', $worst ? $h(ecampusPeriodLabel($worst)) : '—', $worst ? $overalls[$worst] . '%' : '', '#B42318')
-        . $kpi('कर्मचारी / कामं', count($D['staff']) . ' / ' . count($D['tasks']), 'या कालावधीत') . '</tr></table>';
+        . $kpi('कामं / कर्मचारी', count($D['tasks']) . ' / ' . count($D['staff']), 'या कालावधीत') . '</tr></table>';
 
     // 1) महिनावार एकूण
     $html .= '<h2>महिनावार एकूण प्रगती</h2><table class="g"><thead><tr><th style="width:18%;">महिना</th><th style="width:44%;"></th><th class="num-r">एकूण %</th><th class="num-r">पूर्ण</th><th class="num-r">सुरू</th><th class="num-r">सुरू नाही</th><th class="num-r">नोंद नाही</th></tr></thead><tbody>';
@@ -523,29 +523,23 @@ function ecampusRangeReportPdf(PDO $pdo, $orgId, array $months, $orgName, $withD
     }
     $html .= '</tbody></table>';
 
-    // 2) कर्मचारी × महिने
-    if ($D['staff']) {
-        $html .= '<h2>कर्मचारीनिहाय — महिनावार सरासरी % <span class="h2s">हिरवा = 100% · पिवळा = 50–74% · लाल = 50% पेक्षा कमी · — = नोंद भरलेली नाही</span></h2>'
-            . '<table class="g"><thead><tr><th style="width:18%;">कर्मचारी</th><th style="width:12%;">पद</th>' . $mh . '<th class="mc">सरासरी</th></tr></thead><tbody>';
-        foreach ($D['staff'] as $st) {
-            $vals = array_values($st['m']);
-            $a = $vals ? (int)round(array_sum($vals) / count($vals)) : null;
-            $html .= '<tr><td><b>' . $h($st['name']) . '</b></td><td>' . $h($st['desig']) . '</td>';
-            foreach ($months as $p) { $html .= $cell($st['m'][$p] ?? null); }
-            $html .= $cell($a) . '</tr>';
-        }
-        $html .= '</tbody></table>';
-    }
-
-    // 3) काम × महिने
+    // 2) कामनिहाय — Wing → Section गटांत, प्रत्येक कामाचा महिनावार % व सरासरी
     if ($D['tasks']) {
-        $html .= '<h2>कामनिहाय — महिनावार % <span class="h2s">— = त्या महिन्याची नोंद भरलेली नाही</span></h2>'
-            . '<table class="g"><thead><tr><th style="width:12%;">Wing / Section</th><th style="width:11%;">कर्मचारी</th><th style="width:20%;">काम</th>' . $mh . '</tr></thead><tbody>';
+        $html .= '<h2>कामनिहाय प्रगती — महिनावार % <span class="h2s">हिरवा = 100% · पिवळा = 50–74% · लाल = 50% पेक्षा कमी · — = त्या महिन्याची नोंद भरलेली नाही</span></h2>'
+            . '<table class="g"><thead><tr><th style="width:3%;">#</th><th style="width:13%;">कर्मचारी</th><th style="width:' . max(16, 40 - count($months) * 2) . '%;">काम</th>' . $mh . '<th class="mc">सरासरी</th></tr></thead><tbody>';
+        $grp = null; $sr = 0; $ncol = count($months) + 4;
         foreach ($D['tasks'] as $t) {
             $r = $t['row'];
-            $html .= '<tr><td>' . $h($r['wing']) . '<div class="muted">' . $h($r['section']) . '</div></td><td>' . $h($r['staff_name']) . '</td><td>' . $h(mb_strimwidth((string)$r['task_description'], 0, 90, '…')) . '</td>';
+            $g = $r['wing'] . ' — ' . $r['section'];
+            if ($g !== $grp) {
+                $grp = $g;
+                $html .= '<tr><td colspan="' . $ncol . '" style="background:#191C3A;color:#fff;font-weight:bold;padding:4px 6px;">' . $h($r['wing']) . ' <span style="color:#FDBA8C;font-weight:normal;">· ' . $h($r['section']) . '</span></td></tr>';
+            }
+            $vals = array_values(array_filter($t['m'], fn($v) => $v !== null));
+            $a = $vals ? (int)round(array_sum($vals) / count($vals)) : null;
+            $html .= '<tr><td>' . (++$sr) . '</td><td><b>' . $h($r['staff_name']) . '</b><div class="muted">' . $h($r['designation_show']) . '</div></td><td>' . $h(mb_strimwidth((string)$r['task_description'], 0, 160, '…')) . '</td>';
             foreach ($months as $p) { $html .= $cell(array_key_exists($p, $t['m']) ? $t['m'][$p] : null); }
-            $html .= '</tr>';
+            $html .= $cell($a) . '</tr>';
         }
         $html .= '</tbody></table>';
     }
