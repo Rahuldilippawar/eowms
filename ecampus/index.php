@@ -203,6 +203,7 @@ require_once __DIR__ . '/../includes/header.php';
         <a href="report.php?month=<?= h($period) ?>&pdf=1&v=<?= time() ?>" target="_blank" class="es-hbtn" title="PDF"><i class="fa-solid fa-file-pdf"></i><span>PDF</span></a>
         <a href="report.php?month=<?= h($period) ?>&pdf=dl&v=<?= time() ?>" class="es-hbtn" title="Download"><i class="fa-solid fa-download"></i><span>Download</span></a>
         <a href="report.php?month=<?= h($period) ?>&csv=1" class="es-hbtn" title="Excel"><i class="fa-solid fa-file-excel"></i><span>Excel</span></a>
+        <a href="report.php?month=<?= h($period) ?>#range" class="es-hbtn" title="अनेक महिन्यांचा / वार्षिक अहवाल"><i class="fa-solid fa-calendar-days"></i><span>वार्षिक अहवाल</span></a>
       <?php endif; ?>
       <?php if ($isSA): ?><a href="manage.php" class="es-hbtn pri"><i class="fa-solid fa-user-gear"></i><span>कामांचं वाटप</span></a><?php endif; ?>
     </div>
