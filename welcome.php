@@ -239,6 +239,11 @@ $todayLabel = $marathiDays[(int)date('w')] . ', ' . (int)date('j') . ' ' . $mara
   .med-art{display:block;width:100%;height:auto;overflow:visible;}
   .med-aura{transform-origin:150px 150px;transform-box:view-box;animation:med-breathe 8s ease-in-out infinite;}
   .med-figure{transform-box:view-box;transform-origin:150px 220px;animation:med-rise 8s ease-in-out infinite;}
+  .med-petals .ptl{transform-origin:0 0;animation:med-bloom 1.1s cubic-bezier(.2,.8,.2,1) both, med-sway 7s ease-in-out infinite alternate;}
+  .med-petals{transform-box:view-box;transform-origin:150px 222px;animation:med-breathe-p 8s ease-in-out infinite;}
+  @keyframes med-bloom{from{transform:scale(.15) rotate(0deg);opacity:0;}to{transform:scale(1) rotate(0deg);opacity:.96;}}
+  @keyframes med-sway{from{transform:scale(1) rotate(-2.5deg);opacity:.96;}to{transform:scale(1) rotate(2.5deg);opacity:.96;}}
+  @keyframes med-breathe-p{0%,100%{transform:scale(.97);}50%{transform:scale(1.03);}}
   .med-mandala{transform-box:view-box;transform-origin:150px 150px;animation:med-spin 60s linear infinite;}
   .med-mandala.rev{animation-duration:90s;animation-direction:reverse;}
   .med-chakras circle{transform-box:fill-box;transform-origin:center;animation:med-pulse 3.85s ease-in-out infinite;}
@@ -366,7 +371,7 @@ $todayLabel = $marathiDays[(int)date('w')] . ', ' . (int)date('j') . ' ' . $mara
   footer{text-align:center;padding:26px;font-size:12px;color:#8A90AC;}
 
   @media (prefers-reduced-motion: reduce){
-    .med-aura,.med-figure,.med-mandala,.med-chakras circle,.med-crown,.med-lotus,.med-sparks circle,.med-breath .in,.hero::before,.hero::after,.quote-om,.mark,.hero h1,.hero p,.quote-card,.action-row,.birthday-wrap,.sacred-ring,.yantra,.hero-eyebrow,.today-strip,.content-eyebrow,.content-title,.content-glyph{animation:none;opacity:1;}
+    .med-aura,.med-figure,.med-mandala,.med-petals,.med-petals .ptl,.med-chakras circle,.med-crown,.med-lotus,.med-sparks circle,.med-breath .in,.hero::before,.hero::after,.quote-om,.mark,.hero h1,.hero p,.quote-card,.action-row,.birthday-wrap,.sacred-ring,.yantra,.hero-eyebrow,.today-strip,.content-eyebrow,.content-title,.content-glyph{animation:none;opacity:1;}
   }
 </style>
 </head>
@@ -386,49 +391,51 @@ $todayLabel = $marathiDays[(int)date('w')] . ', ' . (int)date('j') . ' ' . $mara
   <!-- 🧘 ध्यान — Animation (SVG, बाहेरचं चित्र नाही) -->
   <div class="med-wrap" aria-hidden="true">
     <svg class="med-art" viewBox="0 0 300 300" role="img" aria-label="ध्यान">
+      <!-- आत्मा मालिक ध्यानपीठ शैली: इंद्रधनुषी कमळ-पाकळ्या + पांढरी ध्यानस्थ आकृती (स्वतः काढलेलं SVG) -->
       <defs>
-        <radialGradient id="medAura" cx="50%" cy="48%" r="50%"><stop offset="0%" stop-color="#FDBA74" stop-opacity=".55"/><stop offset="45%" stop-color="#F59E0B" stop-opacity=".18"/><stop offset="100%" stop-color="#F59E0B" stop-opacity="0"/></radialGradient>
-        <linearGradient id="medBody" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#FDBA8C"/><stop offset="55%" stop-color="#F97316"/><stop offset="100%" stop-color="#C2410C"/></linearGradient>
-        <linearGradient id="medLotus" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#FBCFE8"/><stop offset="100%" stop-color="#DB2777"/></linearGradient>
-        <filter id="medGlow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        <radialGradient id="medAura" cx="50%" cy="60%" r="50%"><stop offset="0%" stop-color="#FFFFFF" stop-opacity=".35"/><stop offset="60%" stop-color="#FDE68A" stop-opacity=".08"/><stop offset="100%" stop-color="#FDE68A" stop-opacity="0"/></radialGradient>
+        <filter id="medGlow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="4" result="b"/><feFlood flood-color="#FFFFFF" flood-opacity=".55"/><feComposite in2="b" operator="in" result="g"/><feMerge><feMergeNode in="g"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
       </defs>
-      <!-- प्रकाशवलय — श्वासासोबत -->
-      <circle class="med-aura" cx="150" cy="150" r="140" fill="url(#medAura)"/>
-      <!-- फिरणारं मंडल -->
-      <g class="med-mandala" fill="none" stroke="#FDBA74">
-        <circle cx="150" cy="150" r="132" stroke-opacity=".22" stroke-dasharray="2 7"/>
-        <circle cx="150" cy="150" r="118" stroke-opacity=".14"/>
-        <?php for ($i = 0; $i < 16; $i++): ?><ellipse cx="150" cy="30" rx="7" ry="16" stroke-opacity=".28" transform="rotate(<?= $i * 22.5 ?> 150 150)"/><?php endfor; ?>
+      <circle class="med-aura" cx="150" cy="160" r="140" fill="url(#medAura)"/>
+      <!-- कमळ-पाकळ्या — उमलतात, मग हलकेच डोलतात -->
+      <g class="med-petals">
+        <g transform="translate(150 222) rotate(-76)"><g class="ptl" style="animation-delay:0.00s,1.20s">
+          <path d="M0 0 C-62 -58 -60 -168 0 -218 C60 -168 62 -58 0 0 Z" fill="#F87171"/><path d="M0 0 C-62 -58 -60 -168 0 -218 C60 -168 62 -58 0 0 Z" fill="#DC2626" transform="scale(.72)"/><path d="M0 0 C-62 -58 -60 -168 0 -218 C60 -168 62 -58 0 0 Z" fill="#7F1D1D" transform="scale(.44)" opacity=".95"/>
+        </g></g>
+        <g transform="translate(150 222) rotate(-50)"><g class="ptl" style="animation-delay:0.12s,1.32s">
+          <path d="M0 0 C-62 -58 -60 -168 0 -218 C60 -168 62 -58 0 0 Z" fill="#FB923C"/><path d="M0 0 C-62 -58 -60 -168 0 -218 C60 -168 62 -58 0 0 Z" fill="#F97316" transform="scale(.72)"/><path d="M0 0 C-62 -58 -60 -168 0 -218 C60 -168 62 -58 0 0 Z" fill="#9A3412" transform="scale(.44)" opacity=".95"/>
+        </g></g>
+        <g transform="translate(150 222) rotate(-22)"><g class="ptl" style="animation-delay:0.24s,1.44s">
+          <path d="M0 0 C-62 -58 -60 -168 0 -218 C60 -168 62 -58 0 0 Z" fill="#FDE047"/><path d="M0 0 C-62 -58 -60 -168 0 -218 C60 -168 62 -58 0 0 Z" fill="#FACC15" transform="scale(.72)"/><path d="M0 0 C-62 -58 -60 -168 0 -218 C60 -168 62 -58 0 0 Z" fill="#CA8A04" transform="scale(.44)" opacity=".95"/>
+        </g></g>
+        <g transform="translate(150 222) rotate(22)"><g class="ptl" style="animation-delay:0.36s,1.56s">
+          <path d="M0 0 C-62 -58 -60 -168 0 -218 C60 -168 62 -58 0 0 Z" fill="#A3E635"/><path d="M0 0 C-62 -58 -60 -168 0 -218 C60 -168 62 -58 0 0 Z" fill="#84CC16" transform="scale(.72)"/><path d="M0 0 C-62 -58 -60 -168 0 -218 C60 -168 62 -58 0 0 Z" fill="#3F6212" transform="scale(.44)" opacity=".95"/>
+        </g></g>
+        <g transform="translate(150 222) rotate(50)"><g class="ptl" style="animation-delay:0.48s,1.68s">
+          <path d="M0 0 C-62 -58 -60 -168 0 -218 C60 -168 62 -58 0 0 Z" fill="#22D3EE"/><path d="M0 0 C-62 -58 -60 -168 0 -218 C60 -168 62 -58 0 0 Z" fill="#06B6D4" transform="scale(.72)"/><path d="M0 0 C-62 -58 -60 -168 0 -218 C60 -168 62 -58 0 0 Z" fill="#155E75" transform="scale(.44)" opacity=".95"/>
+        </g></g>
+        <g transform="translate(150 222) rotate(76)"><g class="ptl" style="animation-delay:0.60s,1.80s">
+          <path d="M0 0 C-62 -58 -60 -168 0 -218 C60 -168 62 -58 0 0 Z" fill="#60A5FA"/><path d="M0 0 C-62 -58 -60 -168 0 -218 C60 -168 62 -58 0 0 Z" fill="#2563EB" transform="scale(.72)"/><path d="M0 0 C-62 -58 -60 -168 0 -218 C60 -168 62 -58 0 0 Z" fill="#1E3A8A" transform="scale(.44)" opacity=".95"/>
+        </g></g>
       </g>
-      <g class="med-mandala rev" fill="none" stroke="#FDE68A" stroke-opacity=".18">
-        <?php for ($i = 0; $i < 8; $i++): ?><path d="M150 46 L158 62 L150 78 L142 62 Z" transform="rotate(<?= $i * 45 ?> 150 150)"/><?php endfor; ?>
+      <!-- पांढरी ध्यानस्थ आकृती (ज्ञानमुद्रा) -->
+      <g class="med-figure" filter="url(#medGlow)" fill="#FFFFFF">
+        <ellipse cx="150" cy="70" rx="16" ry="19"/>
+        <path d="M143 86 h14 v12 h-14 Z"/>
+        <path d="M150 96 C131 96 118 101 112 113 C106 126 105 142 105 160 C102 176 90 190 72 201 L68 205 C82 208 98 204 110 196 C116 190 119 180 121 168 C123 181 123 193 121 202 C100 207 74 213 58 224 C82 238 120 242 150 242 C180 242 218 238 242 224 C226 213 200 207 179 202 C177 193 177 181 179 168 C181 180 184 190 190 196 C202 204 218 208 232 205 L228 201 C210 190 198 176 195 160 C195 142 194 126 188 113 C182 101 169 96 150 96 Z"/>
+        <circle cx="65" cy="204" r="6"/><circle cx="235" cy="204" r="6"/>
       </g>
-      <!-- ध्यानस्थ आकृती -->
-      <g class="med-figure" filter="url(#medGlow)">
-        <path d="M84 216 C108 194 192 194 216 216 C200 236 100 236 84 216 Z" fill="url(#medBody)" opacity=".95"/>
-        <path d="M150 110 C127 110 115 121 113 140 L123 196 L177 196 L187 140 C185 121 173 110 150 110 Z" fill="url(#medBody)"/>
-        <path d="M117 134 C99 150 93 170 101 200" stroke="url(#medBody)" stroke-width="14" stroke-linecap="round" fill="none"/>
-        <path d="M183 134 C201 150 207 170 199 200" stroke="url(#medBody)" stroke-width="14" stroke-linecap="round" fill="none"/>
-        <circle cx="103" cy="204" r="8" fill="#FDBA8C"/><circle cx="197" cy="204" r="8" fill="#FDBA8C"/>
-        <rect x="143" y="100" width="14" height="14" rx="5" fill="#FDBA8C"/>
-        <circle cx="150" cy="86" r="21" fill="url(#medBody)"/>
-      </g>
-      <!-- सप्तचक्र -->
+      <g fill="none" stroke="#C2410C" stroke-width="1.6" opacity=".55"><circle cx="62" cy="200" r="3.2"/><circle cx="238" cy="200" r="3.2"/></g>
+      <!-- सप्तचक्र — आकृतीत क्रमाने उजळतात -->
       <g class="med-chakras">
-        <?php foreach ([[206, '#EF4444'], [190, '#F97316'], [174, '#FACC15'], [156, '#22C55E'], [137, '#38BDF8'], [120, '#6366F1'], [84, '#A855F7']] as $ci => [$cy, $cc]): ?>
-          <circle cx="150" cy="<?= $cy ?>" r="<?= $ci === 6 ? 3.4 : 4 ?>" fill="<?= $cc ?>" style="animation-delay:<?= $ci * .55 ?>s"/>
+        <?php foreach ([[214, '#EF4444'], [198, '#F97316'], [180, '#EAB308'], [158, '#22C55E'], [136, '#06B6D4'], [106, '#6366F1'], [66, '#A855F7']] as $ci => [$cy, $cc]): ?>
+          <circle cx="150" cy="<?= $cy ?>" r="<?= $ci === 6 ? 3.6 : 4.6 ?>" fill="<?= $cc ?>" style="animation-delay:<?= $ci * .55 ?>s"/>
         <?php endforeach; ?>
-        <circle class="med-crown" cx="150" cy="58" r="5" fill="#F5F3FF"/>
+        <circle class="med-crown" cx="150" cy="44" r="5" fill="#FFFFFF"/>
       </g>
-      <!-- कमळ -->
-      <g class="med-lotus" transform="translate(150 244)">
-        <?php foreach ([-60, -35, -12, 12, 35, 60] as $a): ?><path d="M0 0 C-10 -14 -8 -30 0 -38 C8 -30 10 -14 0 0 Z" fill="url(#medLotus)" opacity=".85" transform="rotate(<?= $a ?>)"/><?php endforeach; ?>
-        <path d="M0 0 C-12 -16 -9 -36 0 -46 C9 -36 12 -16 0 0 Z" fill="url(#medLotus)"/>
-        <ellipse cx="0" cy="4" rx="58" ry="6" fill="#0F766E" opacity=".55"/>
-      </g>
-      <!-- तरंगणारे प्रकाशकण -->
+      <!-- प्रकाशकण -->
       <g class="med-sparks" fill="#FDE68A">
-        <?php foreach ([[62, 220, 0], [238, 210, 1.2], [84, 120, 2.4], [222, 112, .6], [46, 160, 3.1], [258, 166, 1.8], [118, 52, 2.8], [190, 48, .3]] as [$x, $y, $d]): ?><circle cx="<?= $x ?>" cy="<?= $y ?>" r="2.2" style="animation-delay:<?= $d ?>s"/><?php endforeach; ?>
+        <?php foreach ([[40, 200, 0], [260, 196, 1.2], [70, 96, 2.4], [232, 92, .6], [30, 140, 3.1], [270, 146, 1.8], [118, 30, 2.8], [184, 26, .3]] as [$x, $y, $d]): ?><circle cx="<?= $x ?>" cy="<?= $y ?>" r="2.2" style="animation-delay:<?= $d ?>s"/><?php endforeach; ?>
       </g>
     </svg>
     <?php if (!empty($org['logo_path'])): ?>
