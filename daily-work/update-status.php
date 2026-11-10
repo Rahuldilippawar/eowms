@@ -53,6 +53,8 @@ $update->execute([$status, $remarks, $completionDate, $id]);
 
 logActivity('कामाची स्थिती अपडेट केली', 'work_record', $id, "{$record['work_code']} → $status");
 
-$_SESSION['flash'] = $status === 'completed' ? 'काम पूर्ण झाले म्हणून चिन्हांकित केले.' : 'स्थिती व टिप्पणी अपडेट झाली.';
-header('Location: my-work.php');
+$_SESSION['flash'] = $status === 'completed' ? 'काम पूर्ण झाले म्हणून चिन्हांकित केले.' : ($status === 'in_progress' && $record['status'] === 'pending' ? 'काम सुरू झालं म्हणून नोंदवलं.' : 'स्थिती व टिप्पणी अपडेट झाली.');
+// परत त्याच Filter/Tab वर (फक्त my-work.php — बाहेरचा पत्ता नाही)
+$back = (string)($_POST['back'] ?? '');
+header('Location: ' . (preg_match('#^my-work\.php(\?[A-Za-z0-9_\-=&%.+]*)?$#', $back) ? $back : 'my-work.php'));
 exit;
