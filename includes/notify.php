@@ -80,7 +80,7 @@ function notifyEnqueuePush($userId, $orgId, $title, $message, $link, $notificati
         $pdo->prepare("INSERT INTO notification_push_queue (organization_id, user_id, notification_id, title, message, link, is_urgent) VALUES (?, ?, ?, ?, ?, ?, ?)")
             ->execute([$orgId, $userId, $notificationId, mb_substr((string)$title, 0, 255), $message, $link, $urgent ? 1 : 0]);
         $queueId = (int)$pdo->lastInsertId();
-        notifyScheduleFlush();
+        notifyScheduleFlush($queueId);
         return $queueId;
     } catch (PDOException $e) {
         // Queue Table अजून Migrate झालेली नाही — जुन्या पद्धतीने लगेच पाठवा
@@ -126,17 +126,27 @@ function notifyDepartment($departmentId, $orgId, $title, $message = null, $link 
 }
 
 /** Response पाठवून झाल्यावर Queue चा छोटा Batch पाठवण्यासाठी — एकदाच Register */
-function notifyScheduleFlush() {
+function notifyScheduleFlush($queueId = null) {
     static $registered = false;
+    static $mine = [];   // या Request मध्ये रांगेत टाकलेले Push
+    if ($queueId) { $mine[] = (int)$queueId; }
     if ($registered || PHP_SAPI === 'cli') { return; }
     $registered = true;
-    register_shutdown_function(function () {
-        // PHP-FPM नसेल (उदा. mod_php) तर Visitor ला थांबवायचं नाही — Cron पाठवेल
-        if (!function_exists('fastcgi_finish_request')) { return; }
+    register_shutdown_function(function () use (&$mine) {
         if (session_status() === PHP_SESSION_ACTIVE) { session_write_close(); }
-        fastcgi_finish_request();
         ignore_user_abort(true);
-        notifyDeliverPushQueue(NOTIFY_PUSH_BATCH, 15);
+        // PHP-FPM / LiteSpeed (Hostinger) — Response पाठवून मग Push (Visitor थांबत नाही)
+        $finish = function_exists('fastcgi_finish_request') ? 'fastcgi_finish_request' : (function_exists('litespeed_finish_request') ? 'litespeed_finish_request' : null);
+        if ($finish) {
+            $finish();
+            notifyDeliverPushQueue(NOTIFY_PUSH_BATCH, 15);
+            return;
+        }
+        // दोन्ही नसेल — Cron चालू नसला तरी सूचना अडकू नये (App बंद असलेल्यांनाही):
+        // या Request च्या पहिल्या काही सूचना इथेच पाठवतो (थोडक्या वेळेत); उरलेल्या Cron / पुढचं पान पाठवेल
+        while (ob_get_level() > 0) { @ob_end_flush(); }
+        @flush();
+        if ($mine) { notifyDeliverPushQueue(10, 6, array_slice($mine, 0, 10), 4); }
     });
 }
 
@@ -195,7 +205,8 @@ function notifyDeliverOne(array $row, $timeout = null) {
     try {
         // Push वर Click केल्यावर — ती सूचना "वाचली" म्हणून नोंदवून मूळ पानावर
         $webLink = !empty($row['notification_id']) ? 'notifications/open.php?id=' . (int)$row['notification_id'] : $row['link'];
-        sendPushNotification($row['user_id'], $row['organization_id'], $row['title'], $row['message'], $webLink, $timeout);
+        sendPushNotification($row['user_id'], $row['organization_id'], $row['title'], $row['message'], $webLink, $timeout,
+            ['nid' => (int)($row['notification_id'] ?? 0), 'urgent' => !empty($row['is_urgent']), 'link' => $row['link'] ?? null]);
         require_once __DIR__ . '/fcm.php';
         sendFcmToUser($row['user_id'], $row['title'], $row['message'] ?? '', $row['link'], $timeout);
         return true;
@@ -205,7 +216,7 @@ function notifyDeliverOne(array $row, $timeout = null) {
 }
 
 /** App बंद असतानाही Mobile वर थेट सूचना पाठवण्यासाठी (Web Push). */
-function sendPushNotification($userId, $orgId, $title, $message = null, $link = null, $timeout = null) {
+function sendPushNotification($userId, $orgId, $title, $message = null, $link = null, $timeout = null, array $extra = []) {
     global $pdo;
     try {
         $orgStmt = $pdo->prepare("SELECT vapid_public_key, vapid_private_key FROM organizations WHERE id = ?");
@@ -224,12 +235,23 @@ function sendPushNotification($userId, $orgId, $title, $message = null, $link = 
         $webPush = new WebPush($org['vapid_public_key'], $org['vapid_private_key'], 'mailto:admin@eowms.local');
         if ($timeout) { $webPush->timeout = (int)$timeout; }
 
+        // App-Icon वरचा आकडा (Badge) — न वाचलेल्या सूचना
+        $unread = 0;
+        try { $uc = $pdo->prepare("SELECT COUNT(*) FROM notifications WHERE user_id = ? AND is_read = 0"); $uc->execute([$userId]); $unread = (int)$uc->fetchColumn(); } catch (PDOException $e) {}
+        // एकाच विषयाच्या (उदा. एकाच व्यक्तीचे Messages) सूचना एकत्र — Mobile वर ढीग होत नाही
+        $tagBase = notifyNormalizeLink($extra['link'] ?? $link) ?? 'general';
+        $payload = [
+            'title' => $title,
+            'body' => $message ?: '',
+            'url' => $link ? (defined('APP_ROOT_URL') ? APP_ROOT_URL . $link : $link) : '/',
+            'tag' => 'eowms-' . substr(md5($tagBase), 0, 12),
+            'nid' => (int)($extra['nid'] ?? 0),
+            'urgent' => !empty($extra['urgent']),
+            'unread' => $unread,
+            'ts' => time() * 1000,
+        ];
         foreach ($subscriptions as $sub) {
-            $result = $webPush->send($sub['endpoint'], $sub['p256dh'], $sub['auth'], [
-                'title' => $title,
-                'body' => $message ?: '',
-                'url' => $link ? (defined('APP_ROOT_URL') ? APP_ROOT_URL . $link : $link) : '/',
-            ]);
+            $result = $webPush->send($sub['endpoint'], $sub['p256dh'], $sub['auth'], $payload);
             if ($result['should_delete']) {
                 $pdo->prepare("DELETE FROM push_subscriptions WHERE id = ?")->execute([$sub['id']]);
             }
