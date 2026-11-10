@@ -44,6 +44,7 @@ $flaggedCount = count(array_filter($locations, fn($l) => $l['recent_issue_count'
       <a href="settings.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13.5px;padding:9px 18px;"><i class="fa-solid fa-sliders me-1"></i>विभाग सेटिंग्ज</a>
       <a href="locations.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13.5px;padding:9px 18px;"><i class="fa-solid fa-map-location-dot me-1"></i>इमारत/खोली यादी</a>
     <?php endif; ?>
+    <a href="export.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13.5px;padding:9px 14px;" title="या आर्थिक वर्षातल्या सगळ्या नोंदी">📊 Excel</a>
     <?php if ($canLog): ?>
       <a href="create.php" class="btn" style="background:var(--rail);color:#fff;border-radius:9px;font-size:13.5px;padding:9px 18px;font-weight:600;"><i class="fa-solid fa-plus me-1"></i>नवीन नोंद</a>
     <?php endif; ?>
@@ -61,7 +62,9 @@ $flaggedCount = count(array_filter($locations, fn($l) => $l['recent_issue_count'
   </div>
 <?php endif; ?>
 
-<div class="row g-3">
+<?php require __DIR__ . '/../includes/insights/maintenance.php'; ?>
+
+<div class="row g-3" data-card-filter="जागा शोधा — नाव, कोड, College…">
   <?php if (empty($locations)): ?>
     <div class="col-12"><div class="panel" style="padding:30px;text-align:center;color:var(--text-dim);">अजून कोणतीही जागा जोडलेली नाही<?php if (hasRole('super_admin')): ?> — <a href="locations.php">इथून जोडा</a><?php endif; ?></div></div>
   <?php endif; ?>

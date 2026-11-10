@@ -233,3 +233,14 @@ function sopGetComplianceScore($pdo, $sopId, $departmentId, $days = 30) {
     if ($totalChecks === 0) { return null; }
     return round(($doneChecks / $totalChecks) * 100);
 }
+
+/** सगळ्या सक्रिय SOP × नेमलेल्या विभागांचा 30 दिवसांचा Compliance — [['sop_id','title','dept_id','dept','score'], …] */
+function sopAllScores($pdo, $orgId, $days = 30) {
+    $st = $pdo->prepare("SELECT s.id sop_id, s.title, d.id dept_id, COALESCE(d.name_local, d.name) dept
+        FROM sops s JOIN sop_department_assignments sda ON sda.sop_id = s.id JOIN departments d ON d.id = sda.department_id
+        WHERE s.organization_id = ? AND s.is_active = 1 AND d.organization_id = s.organization_id ORDER BY s.title, dept");
+    $st->execute([$orgId]);
+    $out = [];
+    foreach ($st->fetchAll() as $p) { $p['score'] = sopGetComplianceScore($pdo, $p['sop_id'], $p['dept_id'], $days); $out[] = $p; }
+    return $out;
+}

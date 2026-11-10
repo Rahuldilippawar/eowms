@@ -45,6 +45,12 @@ $sopsStmt = $pdo->prepare("
 ");
 $sopsStmt->execute([$orgId]);
 $sops = $sopsStmt->fetchAll();
+// प्रत्येक SOP चं 30 दिवसांचं सरासरी पालन (नेमलेल्या सगळ्या विभागांचं)
+$sopScore = []; $allScores = sopAllScores($pdo, $orgId, 30);
+foreach ($allScores as $r) if ($r['score'] !== null) $sopScore[$r['sop_id']][] = $r['score'];
+$scored = array_filter(array_column($allScores, 'score'), fn($v) => $v !== null);
+$overall = $scored ? (int)round(array_sum($scored) / count($scored)) : null;
+require_once __DIR__ . '/../includes/smart-insights.php';
 ?>
 
 <div class="page-eyebrow"><?= h(activeOrgName()) ?></div>
@@ -60,6 +66,13 @@ $sops = $sopsStmt->fetchAll();
   <div class="alert alert-success" style="border-radius:10px;font-size:13px;"><?= h($_SESSION['flash']) ?></div>
   <?php unset($_SESSION['flash']); ?>
 <?php endif; ?>
+
+<?php smartTiles([
+    ['label' => 'सक्रिय SOP', 'value' => count(array_filter($sops, fn($s) => $s['is_active'])), 'sub' => count($sops) . ' एकूण'],
+    ['label' => 'सरासरी पालन (30 दिवस)', 'value' => $overall === null ? '—' : $overall . '%', 'tone' => $overall === null ? '' : ($overall >= 80 ? 'ok' : ($overall >= 50 ? 'warn' : 'bad')), 'href' => 'compliance-report.php'],
+    ['label' => '50% पेक्षा कमी पालन', 'value' => count(array_filter($scored, fn($v) => $v < 50)), 'sub' => 'SOP × विभाग', 'tone' => count(array_filter($scored, fn($v) => $v < 50)) ? 'bad' : '', 'href' => 'compliance-report.php'],
+    ['label' => 'विभाग न जोडलेले SOP', 'value' => count(array_filter($sops, fn($s) => $s['is_active'] && !(int)$s['dept_count'])), 'tone' => count(array_filter($sops, fn($s) => $s['is_active'] && !(int)$s['dept_count'])) ? 'warn' : ''],
+]); ?>
 
 <div class="panel mb-3">
   <div class="panel-head"><div class="title">नवीन SOP तयार करा</div></div>
@@ -83,14 +96,16 @@ $sops = $sopsStmt->fetchAll();
 
 <div class="panel">
   <table class="rtable">
-    <thead><tr><th>SOP</th><th>पायऱ्या</th><th>जोडलेले विभाग</th><th>स्थिती</th><th></th></tr></thead>
+    <thead><tr><th>SOP</th><th>पायऱ्या</th><th>जोडलेले विभाग</th><th>पालन (30 दिवस)</th><th>स्थिती</th><th></th></tr></thead>
     <tbody>
-      <?php if (empty($sops)): ?><tr><td colspan="5" style="text-align:center;color:var(--text-dim);padding:24px;">अजून कोणतंही SOP नाही</td></tr><?php endif; ?>
+      <?php if (empty($sops)): ?><tr><td colspan="6" style="text-align:center;color:var(--text-dim);padding:24px;">अजून कोणतंही SOP नाही</td></tr><?php endif; ?>
       <?php foreach ($sops as $s): ?>
         <tr>
           <td style="font-weight:500;"><a href="edit.php?id=<?= $s['id'] ?>" style="color:var(--rail);text-decoration:none;"><?= h($s['title']) ?></a><div style="font-size:11px;color:var(--text-dim);"><?= h($s['description']) ?></div></td>
           <td><?= $s['step_count'] ?></td>
           <td><?= $s['dept_count'] ?></td>
+          <?php $sc = !empty($sopScore[$s['id']]) ? (int)round(array_sum($sopScore[$s['id']]) / count($sopScore[$s['id']])) : null; ?>
+          <td><?php if ($sc === null): ?><span style="color:var(--text-dim);font-size:12px;">—</span><?php else: ?><div style="display:flex;align-items:center;gap:8px;"><div style="background:var(--canvas);border-radius:8px;height:7px;width:70px;overflow:hidden;"><div style="height:100%;width:<?= $sc ?>%;background:<?= $sc >= 80 ? 'var(--rail)' : ($sc >= 50 ? 'var(--amber)' : 'var(--rose)') ?>;"></div></div><b style="font-size:12.5px;"><?= $sc ?>%</b></div><?php endif; ?></td>
           <td>
             <form method="POST" style="display:inline;">
               <input type="hidden" name="action" value="toggle_sop">
