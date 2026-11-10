@@ -33,16 +33,13 @@ if (isset($_GET['range_pdf']) || isset($_GET['range_csv'])) {
         fputcsv($f, array_merge(['महिना'], $mLabels));
         fputcsv($f, array_merge(['एकूण प्रगती %'], array_map(fn($p) => $D['sum'][$p]['overall'] ?? '', $rangeMonths)));
         fputcsv($f, []);
-        fputcsv($f, array_merge(['कर्मचारी', 'पद'], $mLabels, ['सरासरी']));
-        foreach ($D['staff'] as $st) {
-            $vals = array_values($st['m']);
-            fputcsv($f, array_merge([$cellX($st['name']), $cellX($st['desig'])], array_map(fn($p) => $st['m'][$p] ?? '', $rangeMonths), [$vals ? (int)round(array_sum($vals) / count($vals)) : '']));
-        }
-        fputcsv($f, []);
-        fputcsv($f, array_merge(['Wing', 'Section', 'कर्मचारी', 'काम'], $mLabels));
+        fputcsv($f, array_merge(['#', 'Wing', 'Section', 'कर्मचारी', 'पद', 'काम'], $mLabels, ['सरासरी']));
+        $sr = 0;
         foreach ($D['tasks'] as $t) {
             $r = $t['row'];
-            fputcsv($f, array_merge([$cellX($r['wing']), $cellX($r['section']), $cellX($r['staff_name']), $cellX($r['task_description'])], array_map(fn($p) => $t['m'][$p] ?? '', $rangeMonths)));
+            $vals = array_values(array_filter($t['m'], fn($v) => $v !== null));
+            fputcsv($f, array_merge([++$sr, $cellX($r['wing']), $cellX($r['section']), $cellX($r['staff_name']), $cellX($r['designation_show']), $cellX($r['task_description'])],
+                array_map(fn($p) => $t['m'][$p] ?? '', $rangeMonths), [$vals ? (int)round(array_sum($vals) / count($vals)) : '']));
         }
         fclose($f);
         exit;
@@ -119,7 +116,7 @@ require_once __DIR__ . '/../includes/header.php';
 </div>
 <?php $allMonths = []; for ($i = 0; $i < 36; $i++) { $allMonths[] = date('Y-m', strtotime(date('Y-m-01') . " -$i month")); } ?>
 <div class="panel mb-3 no-print" id="range">
-  <div class="panel-head"><div class="title">📚 अनेक महिन्यांचा / वार्षिक अहवाल</div><div class="sub">एका PDF मध्ये — महिनावार प्रगती, कर्मचारी × महिने, काम × महिने (जास्तीत जास्त <?= ECAMPUS_RANGE_MAX ?> महिने)</div></div>
+  <div class="panel-head"><div class="title">📚 अनेक महिन्यांचा / वार्षिक अहवाल</div><div class="sub">एका PDF मध्ये — महिनावार एकूण प्रगती आणि कामनिहाय महिनावार % (जास्तीत जास्त <?= ECAMPUS_RANGE_MAX ?> महिने)</div></div>
   <div style="padding:12px 18px 16px;">
     <div class="ecr-pre">
       <?php foreach ($presets as $k => [$lbl, $pf, $pt]): ?><button type="button" data-from="<?= h($pf) ?>" data-to="<?= h($pt) ?>" class="<?= $pf === $rFrom && $pt === $rTo ? 'on' : '' ?>"><?= h($lbl) ?></button><?php endforeach; ?>
