@@ -129,13 +129,19 @@ function bioParseInfo($info) {
     return $out;
 }
 
-/** संस्थेत PIN → कर्मचारी (सक्रिय) */
-function bioUserForPin(PDO $pdo, $orgId, $pin) {
+/**
+ * PIN → कर्मचारी (सक्रिय). Machine ला Campus दिला असेल तर फक्त त्याच Campus चा कर्मचारी —
+ * दुसऱ्या College/School च्या Machine वरचा Punch हजेरीत धरत नाही (user_id NULL राहतो).
+ */
+function bioUserForPin(PDO $pdo, $orgId, $pin, $campusId = null) {
     static $cache = [];
-    $k = (int)$orgId . '|' . $pin;
+    $k = (int)$orgId . '|' . $pin . '|' . (int)$campusId;
     if (array_key_exists($k, $cache)) { return $cache[$k]; }
-    $st = $pdo->prepare("SELECT id FROM users WHERE organization_id = ? AND biometric_pin = ? AND is_active = 1 LIMIT 1");
-    $st->execute([(int)$orgId, (string)$pin]);
+    $sql = "SELECT id FROM users WHERE organization_id = ? AND biometric_pin = ? AND is_active = 1";
+    $p = [(int)$orgId, (string)$pin];
+    if ($campusId) { $sql .= " AND campus_id = ?"; $p[] = (int)$campusId; }
+    $st = $pdo->prepare($sql . " LIMIT 1");
+    $st->execute($p);
     return $cache[$k] = ($st->fetchColumn() ?: null);
 }
 
@@ -164,7 +170,7 @@ function bioIngestAttlog(PDO $pdo, array $dev, $body) {
         $state = isset($parts[2]) && is_numeric(trim($parts[2])) ? (int)trim($parts[2]) : null;
         $verify = isset($parts[3]) && is_numeric(trim($parts[3])) ? (int)trim($parts[3]) : null;
         $work = isset($parts[4]) && trim($parts[4]) !== '' && trim($parts[4]) !== '0' ? mb_substr(trim($parts[4]), 0, 20) : null;
-        $uid = $orgId ? bioUserForPin($pdo, $orgId, $pin) : null;
+        $uid = $orgId ? bioUserForPin($pdo, $orgId, $pin, $dev['campus_id'] ?? null) : null;
         try {
             $ins->execute([(int)$dev['id'], $pin, date('Y-m-d H:i:s', $ts), $state, $verify, $work, $uid]);
             if ($ins->rowCount()) {
@@ -316,7 +322,7 @@ function bioProcessPending(PDO $pdo, $limit = 5000) {
     $res = ['done' => 0, 'unmatched' => 0];
     // कर्मचारी न जोडलेले Punches — PIN Mapping झाला असेल तर आता जोडा
     $pdo->exec("UPDATE bio_punches p JOIN bio_devices d ON d.id = p.device_id AND d.status = 'active'
-        JOIN users u ON u.organization_id = d.organization_id AND u.biometric_pin = p.pin AND u.is_active = 1
+        JOIN users u ON u.organization_id = d.organization_id AND u.biometric_pin = p.pin AND u.is_active = 1 AND (d.campus_id IS NULL OR u.campus_id = d.campus_id)
         SET p.user_id = u.id WHERE p.user_id IS NULL");
     $st = $pdo->prepare("SELECT p.id, d.organization_id org, p.user_id, p.punch_time FROM bio_punches p JOIN bio_devices d ON d.id = p.device_id AND d.status = 'active'
         WHERE p.processed = 0 AND p.user_id IS NOT NULL ORDER BY p.id LIMIT " . (int)$limit);
@@ -390,18 +396,103 @@ function bioQueueCommand(PDO $pdo, $deviceId, $command, $label, $byUserId = null
     return (int)$pdo->lastInsertId();
 }
 
-/** Machine वर कर्मचारी (नाव + PIN) — Machine वरचं नाव इंग्रजी अक्षरांतच नीट दिसतं */
-function bioUserCommand($pin, $name) {
+/** Machine वर कर्मचारी (नाव + PIN) — Machine वरचं नाव इंग्रजी अक्षरांतच नीट दिसतं (मराठी नाव असेल तर कर्मचारी क्रमांक / "Staff PIN") */
+function bioUserCommand($pin, $name, $alt = null) {
     $ascii = trim(preg_replace('/[^A-Za-z0-9 .\-]/', '', (string)$name));
+    if (mb_strlen($ascii) < 3) { $ascii = trim(preg_replace('/[^A-Za-z0-9 .\-]/', '', (string)$alt)); }
     if ($ascii === '') { $ascii = 'Staff ' . $pin; }
     return "DATA UPDATE USERINFO PIN=$pin\tName=" . mb_substr($ascii, 0, 24) . "\tPri=0\tPasswd=\tCard=\tGrp=1\tTZ=0000000100000000\tVerify=0";
 }
 
-/** पुढचा मोकळा PIN — संस्थेतला सर्वात मोठा अंकी PIN + 1 (Machine वरचे PIN पण धरून) */
-function bioNextPin(PDO $pdo, $orgId) {
-    $a = (int)$pdo->query("SELECT COALESCE(MAX(CAST(biometric_pin AS UNSIGNED)), 0) FROM users WHERE organization_id = " . (int)$orgId . " AND biometric_pin REGEXP '^[0-9]+$'")->fetchColumn();
-    $b = (int)$pdo->query("SELECT COALESCE(MAX(CAST(du.pin AS UNSIGNED)), 0) FROM bio_device_users du JOIN bio_devices d ON d.id = du.device_id WHERE d.organization_id = " . (int)$orgId . " AND du.pin REGEXP '^[0-9]+$'")->fetchColumn();
-    return (string)(max($a, $b) + 1);
+/** हा PIN संस्थेत दुसऱ्या कर्मचाऱ्याकडे आहे का (निष्क्रिय धरून) — असेल तर त्याचं नाव */
+function bioPinOwner(PDO $pdo, $orgId, $pin, $exceptUserId = 0) {
+    $st = $pdo->prepare("SELECT name FROM users WHERE organization_id = ? AND biometric_pin = ? AND id <> ? LIMIT 1");
+    $st->execute([(int)$orgId, (string)$pin, (int)$exceptUserId]);
+    return $st->fetchColumn() ?: null;
+}
+
+/**
+ * कर्मचाऱ्याची नोंद बदलली (नवीन / PIN बदलला / सक्रिय-निष्क्रिय) — सगळ्या चालू Machines वर आपोआप:
+ * सक्रिय + PIN → नाव+PIN पाठवतो; जुना PIN बदलला → जुना काढतो; निष्क्रिय → Machine वरून काढतो (सोडून गेलेले Punch करू शकत नाहीत).
+ * परत: किती Machines ना आदेश गेला (0 = Machine नाही / bio Tables नाहीत).
+ */
+function bioSyncStaff(PDO $pdo, $orgId, $userId, $oldPin = null, $byUserId = null, $oldCampusId = null) {
+    if (!bioReady($pdo)) { return 0; }
+    $u = $pdo->prepare("SELECT id, name, employee_code, biometric_pin, is_active, campus_id FROM users WHERE id = ? AND organization_id = ?");
+    $u->execute([(int)$userId, (int)$orgId]);
+    $u = $u->fetch();
+    if (!$u) { return 0; }
+    // Campus बदलला — जुन्या Campus च्या Machines वरून काढतो
+    if ($oldCampusId && (int)$oldCampusId !== (int)$u['campus_id'] && ($oldPin ?: $u['biometric_pin'])) {
+        foreach (bioCampusDevices($pdo, $orgId, $oldCampusId, true) as $did) {
+            bioQueueCommand($pdo, $did, 'DATA DELETE USERINFO PIN=' . ($oldPin ?: $u['biometric_pin']), 'Campus बदलला — PIN काढला', $byUserId);
+        }
+    }
+    $devs = bioCampusDevices($pdo, $orgId, $u['campus_id']);
+    $pin = (string)($u['biometric_pin'] ?? '');
+    $old = (string)($oldPin ?? '');
+    foreach ($devs as $did) {
+        if ($old !== '' && $old !== $pin) { bioQueueCommand($pdo, $did, "DATA DELETE USERINFO PIN=$old", 'जुना PIN काढला — ' . $old, $byUserId); }
+        if ($pin === '') { continue; }
+        if ((int)$u['is_active'] === 1) { bioQueueCommand($pdo, $did, bioUserCommand($pin, $u['name'], $u['employee_code']), 'कर्मचारी पाठवला — PIN ' . $pin, $byUserId); }
+        else { bioQueueCommand($pdo, $did, "DATA DELETE USERINFO PIN=$pin", 'निष्क्रिय कर्मचारी काढला — PIN ' . $pin, $byUserId); }
+    }
+    return count($devs);
+}
+
+/**
+ * Campus च्या Machines — त्या Campus च्या + Campus न दिलेल्या (सगळ्यांसाठीच्या) चालू Machines.
+ * $onlyThatCampus = true → फक्त त्याच Campus च्या (जुन्या Campus वरून काढताना).
+ */
+function bioCampusDevices(PDO $pdo, $orgId, $campusId, $onlyThatCampus = false) {
+    $sql = "SELECT id FROM bio_devices WHERE organization_id = ? AND status = 'active' AND ";
+    if ($onlyThatCampus) { $st = $pdo->prepare($sql . "campus_id = ?"); $st->execute([(int)$orgId, (int)$campusId]); }
+    elseif ($campusId) { $st = $pdo->prepare($sql . "(campus_id IS NULL OR campus_id = ?)"); $st->execute([(int)$orgId, (int)$campusId]); }
+    else { $st = $pdo->prepare($sql . "campus_id IS NULL"); $st->execute([(int)$orgId]); }
+    return array_map('intval', $st->fetchAll(PDO::FETCH_COLUMN));
+}
+
+/**
+ * प्रत्येक College / School ची वेगळी PIN Series — उदा. पहिला Campus 1001…, दुसरा 2001…, Campus नसलेले 9001….
+ * Super Admin बदलू शकतो (org_settings: bio_series_<campus_id>). परत: [campus_id|0 => सुरुवात]
+ */
+function bioSeriesMap(PDO $pdo, $orgId) {
+    static $cache = [];
+    if (isset($cache[$orgId])) { return $cache[$orgId]; }
+    $st = $pdo->prepare("SELECT id FROM campuses WHERE organization_id = ? ORDER BY id");
+    $st->execute([(int)$orgId]);
+    $map = []; $k = 1;
+    foreach ($st->fetchAll(PDO::FETCH_COLUMN) as $cid) {
+        $map[(int)$cid] = (int)(orgSetting($pdo, $orgId, 'bio_series_' . (int)$cid, (string)($k * 1000)) ?: $k * 1000);
+        $k = min($k + 1, 8);
+    }
+    $map[0] = (int)(orgSetting($pdo, $orgId, 'bio_series_0', '9000') ?: 9000);
+    return $cache[$orgId] = $map;
+}
+
+/** PIN कोणत्या Series चा (Campus) — 1000 च्या टप्प्यात; माहीत नसेल तर null */
+function bioSeriesOf(PDO $pdo, $orgId, $pin) {
+    if (!ctype_digit((string)$pin)) { return null; }
+    foreach (bioSeriesMap($pdo, $orgId) as $cid => $start) { if ((int)$pin > $start && (int)$pin < $start + 1000) { return $cid; } }
+    return null;
+}
+
+/**
+ * पुढचा मोकळा PIN — कर्मचाऱ्याच्या Campus च्या Series मधला (उदा. Junior College: 1001, 1002…).
+ * संस्थेत आधीच वापरलेले (कर्मचारी + Machine वरचे) PIN टाळतो; Series भरली (999) तर पुढचा मोकळा कुठलाही.
+ */
+function bioNextPin(PDO $pdo, $orgId, $campusId = null) {
+    $start = bioSeriesMap($pdo, $orgId)[(int)$campusId] ?? bioSeriesMap($pdo, $orgId)[0];
+    $used = [];
+    $st = $pdo->prepare("SELECT biometric_pin FROM users WHERE organization_id = ? AND biometric_pin REGEXP '^[0-9]+$'");
+    $st->execute([(int)$orgId]);
+    foreach ($st->fetchAll(PDO::FETCH_COLUMN) as $x) { $used[(int)$x] = true; }
+    $st = $pdo->prepare("SELECT du.pin FROM bio_device_users du JOIN bio_devices d ON d.id = du.device_id WHERE d.organization_id = ? AND du.pin REGEXP '^[0-9]+$'");
+    try { $st->execute([(int)$orgId]); foreach ($st->fetchAll(PDO::FETCH_COLUMN) as $x) { $used[(int)$x] = true; } } catch (PDOException $e) {}
+    for ($n = $start + 1; $n < $start + 1000; $n++) { if (!isset($used[$n])) { return (string)$n; } }
+    $n = $used ? max(array_keys($used)) + 1 : $start + 1;
+    while (isset($used[$n])) { $n++; }
+    return (string)$n;
 }
 
 /** Machine ची वेळ किती पुढे/मागे — Realtime आलेल्या Punches वरून (आलेली वेळ − Punch ची वेळ), मिनिटांत. null = माहीत नाही */

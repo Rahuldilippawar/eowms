@@ -35,6 +35,13 @@ $alerts = [];
 foreach ($L['devices'] as $d) { if (!bioDeviceOnline($d)) { $alerts[] = ['bad', '🖥️ ' . bioDeviceName($d) . ' Offline — शेवटचा संपर्क ' . bioAgo($d['last_seen_at']), hasRole('super_admin') ? 'devices.php' : '']; } }
 if ($L['pending'] && hasRole('super_admin')) { $alerts[] = ['warn', '🆕 ' . $L['pending'] . ' नवीन Machine मंजुरीसाठी प्रलंबित', 'devices.php']; }
 if ($L['unmapped'] && hasRole('super_admin')) { $alerts[] = ['warn', '🔗 ' . $L['unmapped'] . ' PIN कोणत्याही कर्मचाऱ्याशी जोडलेले नाहीत — त्यांचे Punches हजेरीत जात नाहीत', 'pins.php']; }
+$enP = [(int)$orgId, (int)$orgId]; $enScope = bioScopeSql($enP);
+$en = $pdo->prepare("SELECT COUNT(*) FROM users u WHERE u.organization_id = ? AND u.is_active = 1 AND u.biometric_pin IS NOT NULL AND u.biometric_pin <> ''
+    AND NOT EXISTS (SELECT 1 FROM bio_device_users du JOIN bio_devices bd ON bd.id = du.device_id AND bd.status = 'active' AND bd.organization_id = ? WHERE du.pin = u.biometric_pin AND (du.fp_count > 0 OR du.has_face = 1))
+    AND NOT EXISTS (SELECT 1 FROM bio_punches bp WHERE bp.user_id = u.id)$enScope");
+$en->execute(array_merge([(int)$orgId], array_slice($enP, 1)));
+$enPending = (int)$en->fetchColumn();
+if ($enPending && $L['devices']) { $alerts[] = ['warn', '🧑‍🔧 ' . $enPending . ' कर्मचाऱ्यांची Machine वर बोट-नोंदणी बाकी — Technician Slip', 'enroll.php']; }
 if (!$L['devices'] && hasRole('super_admin')) { $alerts[] = ['info', '⚙️ अजून एकही Machine जोडलेली नाही — Machines पानावर Setup मार्गदर्शन पाहा', 'devices.php']; }
 foreach ($L['devices'] as $d) { $dr = bioClockDrift($pdo, $d['id']); if ($dr !== null && abs($dr) >= 3) { $alerts[] = ['warn', '⏰ ' . bioDeviceName($d) . ' ची वेळ ' . abs($dr) . ' मि. ' . ($dr > 0 ? 'पुढे' : 'मागे') . ' — Restart करा', hasRole('super_admin') ? 'devices.php' : '']; } }
 smartAlerts($alerts);
@@ -48,7 +55,7 @@ smartAlerts($alerts);
         <?php if (!$L['feed']): ?><div class="sm-empty" id="bioEmpty" style="padding:18px;">आज अजून एकही Punch नाही.</div><?php endif; ?>
         <?php foreach ($L['feed'] as $p): ?>
           <div class="bio-row"><b class="t"><?= date('h:i:s A', strtotime($p['punch_time'])) ?></b>
-            <span class="n"><?= $p['name'] ? h($p['name']) : '<span style="color:#B45309;">PIN ' . h($p['pin']) . ' (न जोडलेला)</span>' ?>
+            <span class="n"><?= $p['name'] ? h($p['name']) : '<span style="color:#B45309;">PIN ' . h($p['pin']) . ($p['other_campus'] ? ' — ' . h($p['other_campus']) . ' (दुसऱ्या Campus चा — हजेरीत नाही)' : ' (न जोडलेला)') . '</span>' ?>
               <?php if ($p['punch_state'] !== null): ?><span class="bio-chip" style="background:var(--canvas);"><?= h(bioStateLabel($p['punch_state'])) ?></span><?php endif; ?></span>
             <small><?= h(bioVerifyLabel($p['verify_mode'])) ?> · <?= h($p['device_name'] . ($p['location'] ? ' · ' . $p['location'] : '')) ?></small></div>
         <?php endforeach; ?>

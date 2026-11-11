@@ -23,8 +23,8 @@ $sim = function ($a, $b) use ($norm) {
     return (int)round(max($p, $q));
 };
 
-$staffStmt = $pdo->prepare("SELECT u.id, u.name, u.employee_code, u.biometric_pin, COALESCE(NULLIF(d.name_local,''), d.name) dept
-    FROM users u LEFT JOIN departments d ON d.id = u.department_id WHERE u.organization_id = ? AND u.is_active = 1 ORDER BY u.name");
+$staffStmt = $pdo->prepare("SELECT u.id, u.name, u.employee_code, u.biometric_pin, u.campus_id, c.name campus, COALESCE(NULLIF(d.name_local,''), d.name) dept
+    FROM users u LEFT JOIN departments d ON d.id = u.department_id LEFT JOIN campuses c ON c.id = u.campus_id WHERE u.organization_id = ? AND u.is_active = 1 ORDER BY u.name");
 $staffStmt->execute([$orgId]);
 $staff = $staffStmt->fetchAll();
 $byPin = [];
@@ -89,27 +89,50 @@ if ($ready && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $r = $n ? bioProcessPending($pdo) : ['done' => 0];
         $back($n ? "$n PIN नावावरून आपोआप जोडले (85%+ जुळणारे). {$r['done']} दिवसांची हजेरी भरली — बाकीचे हाताने तपासा." : '85%+ जुळणारी नावं नाहीत — हाताने जोडा.', !$n);
     }
+    if ($action === 'series') {
+        // प्रत्येक Campus ची PIN Series — 1000 च्या पटीत, एकमेकांत न मिसळणाऱ्या
+        $new = []; $seen = [];
+        foreach ((array)($_POST['series'] ?? []) as $cid => $v) {
+            $v = (int)$v;
+            if ($v < 1000 || $v > 9999000 || $v % 1000 !== 0) { $back('Series 1000 च्या पटीत द्या (उदा. 1000, 2000, 3000).', true); }
+            if (isset($seen[$v])) { $back("Series $v दोन Campus ना दिली आहे — प्रत्येकाला वेगळी द्या.", true); }
+            $seen[$v] = true; $new[(int)$cid] = $v;
+        }
+        foreach ($new as $cid => $v) { orgSettingSet($pdo, $orgId, 'bio_series_' . $cid, (string)$v); }
+        logActivity('Biometric PIN Series बदलल्या', 'org', $orgId);
+        $back('PIN Series जतन झाल्या — नवीन कर्मचाऱ्यांना आता या Series मधले PIN मिळतील (आधीचे PIN बदलत नाहीत).');
+    }
     if ($action === 'assign') {
         // PIN नसलेल्यांना पुढचा PIN देऊन सगळ्या चालू Machines वर पाठवतो (बोट/चेहरा Machine वर नोंदवायचा)
         $ids = array_map('intval', (array)($_POST['uids'] ?? []));
         if (!$ids) { $back('कर्मचारी निवडा.', true); }
-        $devs = $pdo->prepare("SELECT id FROM bio_devices WHERE organization_id = ? AND status = 'active'");
-        $devs->execute([$orgId]);
-        $devs = $devs->fetchAll(PDO::FETCH_COLUMN);
-        $n = 0;
+        // प्रत्येकाला त्याच्या Campus च्या Series मधला पुढचा PIN, व त्याच Campus च्या Machines वरच
+        $n = 0; $sent = 0;
         foreach ($freeStaff as $s) {
             if (!in_array((int)$s['id'], $ids, true)) { continue; }
-            $pin = bioNextPin($pdo, $orgId);
+            $pin = bioNextPin($pdo, $orgId, $s['campus_id']);
             $setPin($s['id'], $pin);
-            foreach ($devs as $did) { bioQueueCommand($pdo, $did, bioUserCommand($pin, $s['name']), 'नवीन कर्मचारी — PIN ' . $pin, $user['id']); }
+            $sent += bioSyncStaff($pdo, $orgId, (int)$s['id'], null, $user['id']);
             $n++;
         }
-        $back("$n कर्मचाऱ्यांना PIN दिला" . ($devs ? ' व ' . count($devs) . ' Machine(s) वर पाठवला — आता Machine वर त्यांचं बोट/चेहरा नोंदवा.' : ' (Machine मंजूर झाल्यावर "सगळे कर्मचारी पाठवा" वापरा).'));
+        $back("$n कर्मचाऱ्यांना त्यांच्या Campus च्या Series मधला PIN दिला" . ($sent ? ' व त्यांच्या Campus च्या Machine(s) वर पाठवला — आता Machine वर बोट/चेहरा नोंदवा.' : ' (त्यांच्या Campus ची Machine मंजूर झाल्यावर "सगळे कर्मचारी पाठवा" वापरा).'));
     }
     $back('अवैध कृती.', true);
 }
 
 $mapped = count(array_filter($pins, fn($p, $k) => isset($byPin[$k]), ARRAY_FILTER_USE_BOTH));
+// दुसऱ्या Campus च्या Machine वर केलेले Punches — PIN कोणाचा तरी आहे, पण त्या Machine च्या Campus चा नाही (हजेरीत धरले नाहीत)
+$wrongCampus = [];
+if ($ready) {
+    $st = $pdo->prepare("SELECT p.pin, COUNT(*) n, GROUP_CONCAT(DISTINCT d.device_name SEPARATOR ', ') devs FROM bio_punches p JOIN bio_devices d ON d.id = p.device_id AND d.organization_id = ? AND d.status = 'active'
+        WHERE p.user_id IS NULL GROUP BY p.pin");
+    $st->execute([$orgId]);
+    foreach ($st->fetchAll() as $r) { if (isset($byPin[$r['pin']])) { $wrongCampus[$r['pin']] = $r; } }
+}
+$campusList = $pdo->prepare("SELECT id, name FROM campuses WHERE organization_id = ? ORDER BY id");
+$campusList->execute([$orgId]);
+$campusList = $campusList->fetchAll();
+$seriesMap = bioSeriesMap($pdo, $orgId);
 $pageTitle = 'Biometric PIN जोडणी';
 $rootPath = '../';
 require_once __DIR__ . '/../includes/header.php';
@@ -128,6 +151,26 @@ require_once __DIR__ . '/../includes/smart-insights.php';
     ['label' => 'PIN नसलेले कर्मचारी', 'value' => count($freeStaff), 'sub' => 'सक्रिय', 'tone' => $freeStaff ? 'warn' : 'ok'],
 ]); ?>
 
+<form method="POST" class="panel mb-3">
+  <input type="hidden" name="action" value="series">
+  <div class="panel-head d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div><div class="title">🏫 College / School नुसार PIN Series</div><div class="sub">प्रत्येक Campus ला वेगळे नंबर — PIN पाहताच कळतं कोणत्या संस्थेचा; Machine वर फक्त त्याच Campus चे कर्मचारी व त्यांचीच हजेरी</div></div>
+    <button class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13px;">जतन</button>
+  </div>
+  <div class="table-responsive"><table class="rtable" data-no-filter><thead><tr><th>Campus</th><th>PIN Series</th><th>PIN दिलेले</th><th>पुढचा PIN</th><th>Machines</th></tr></thead><tbody>
+    <?php foreach (array_merge($campusList, [['id' => 0, 'name' => 'Campus नसलेले कर्मचारी']]) as $c):
+      $cid = (int)$c['id']; $start = $seriesMap[$cid] ?? 9000;
+      $cnt = count(array_filter($staff, fn($s) => (int)$s['campus_id'] === $cid && $s['biometric_pin'] !== null && $s['biometric_pin'] !== ''));
+      $dc = $pdo->prepare("SELECT COUNT(*) FROM bio_devices WHERE organization_id = ? AND status = 'active' AND " . ($cid ? 'campus_id = ' . $cid : 'campus_id IS NULL'));
+      $dc->execute([$orgId]); ?>
+      <tr><td><b><?= h($c['name']) ?></b></td>
+        <td><input type="number" name="series[<?= $cid ?>]" value="<?= (int)$start ?>" min="1000" step="1000" class="form-control-custom" style="width:110px;"> <small style="color:var(--text-dim);"><?= $start + 1 ?>–<?= $start + 999 ?></small></td>
+        <td><?= $cnt ?></td><td class="font-mono" style="font-weight:700;color:var(--rail);"><?= h(bioNextPin($pdo, $orgId, $cid ?: null)) ?></td>
+        <td style="font-size:12px;"><?= (int)$dc->fetchColumn() ?: '<span style="color:var(--text-dim);">' . ($cid ? 'नाही' : 'सगळ्यांसाठी') . '</span>' ?></td></tr>
+    <?php endforeach; ?>
+  </tbody></table></div>
+</form>
+
 <div class="panel mb-3">
   <div class="panel-head d-flex justify-content-between align-items-center flex-wrap gap-2">
     <div><div class="title">🖐️ Machine वरचे PIN</div><div class="sub">💡 = नावावरून सुचवलेला कर्मचारी (% जुळणी)</div></div>
@@ -145,7 +188,8 @@ require_once __DIR__ . '/../includes/smart-insights.php';
       <td>
         <?php if ($m): ?>
           <form method="POST" class="d-flex align-items-center gap-2"><input type="hidden" name="action" value="unmap"><input type="hidden" name="user_id" value="<?= (int)$m['id'] ?>">
-            <span style="color:#16A34A;font-weight:600;">✓ <?= h($m['name']) ?></span><small style="color:var(--text-dim);"><?= h($m['dept'] ?: '') ?></small>
+            <span style="color:#16A34A;font-weight:600;">✓ <?= h($m['name']) ?></span><small style="color:var(--text-dim);"><?= h($m['dept'] ?: '') ?><?= $m['campus'] ? ' · 🏫 ' . h($m['campus']) : '' ?></small>
+            <?php if (isset($wrongCampus[$pin])): ?><span class="bio-chip" style="background:#FEF3C7;color:#92400E;" title="<?= h($wrongCampus[$pin]['devs']) ?>">⚠ <?= (int)$wrongCampus[$pin]['n'] ?> Punch दुसऱ्या Campus च्या Machine वर — हजेरीत नाहीत</span><?php endif; ?>
             <button class="btn btn-sm" style="border:1px solid var(--line);border-radius:7px;font-size:11px;padding:2px 8px;" onclick="return confirm('हा PIN जोड काढायचा?');">काढा</button></form>
         <?php else: ?>
           <form method="POST" class="d-flex align-items-center gap-2 flex-wrap"><input type="hidden" name="action" value="map"><input type="hidden" name="pin" value="<?= h($pin) ?>">
@@ -166,12 +210,12 @@ require_once __DIR__ . '/../includes/smart-insights.php';
 <form method="POST" class="panel">
   <input type="hidden" name="action" value="assign">
   <div class="panel-head d-flex justify-content-between align-items-center flex-wrap gap-2">
-    <div><div class="title">👤 PIN नसलेले कर्मचारी (<?= count($freeStaff) ?>)</div><div class="sub">निवडा → पुढचा मोकळा PIN देऊन सगळ्या Machines वर नाव पाठवतो; मग Machine वर बोट/चेहरा नोंदवा</div></div>
+    <div><div class="title">👤 PIN नसलेले कर्मचारी (<?= count($freeStaff) ?>)</div><div class="sub">निवडा → प्रत्येकाला त्याच्या Campus च्या Series मधला पुढचा PIN, व त्याच Campus च्या Machine वर नाव; मग Machine वर बोट/चेहरा नोंदवा</div></div>
     <div class="d-flex gap-2"><label style="font-size:12.5px;"><input type="checkbox" onclick="document.querySelectorAll('.bio-u').forEach(c=>c.checked=this.checked)"> सगळे</label>
       <button class="btn" style="background:var(--rail);color:#fff;border-radius:9px;font-size:13px;">PIN द्या व Machine वर पाठवा</button></div>
   </div>
   <div style="padding:10px 18px 14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:6px;">
-    <?php foreach ($freeStaff as $s): ?><label style="font-size:12.5px;display:flex;gap:6px;align-items:flex-start;"><input type="checkbox" class="bio-u" name="uids[]" value="<?= (int)$s['id'] ?>"><span><?= h($s['name']) ?><br><small style="color:var(--text-dim);"><?= h($s['dept'] ?: '—') ?><?= $s['employee_code'] ? ' · ' . h($s['employee_code']) : '' ?></small></span></label><?php endforeach; ?>
+    <?php foreach ($freeStaff as $s): ?><label style="font-size:12.5px;display:flex;gap:6px;align-items:flex-start;"><input type="checkbox" class="bio-u" name="uids[]" value="<?= (int)$s['id'] ?>"><span><?= h($s['name']) ?><br><small style="color:var(--text-dim);"><?= h($s['dept'] ?: '—') ?><?= $s['campus'] ? ' · 🏫 ' . h($s['campus']) : '' ?><?= $s['employee_code'] ? ' · ' . h($s['employee_code']) : '' ?></small></span></label><?php endforeach; ?>
   </div>
 </form>
 <?php endif; ?>

@@ -9,6 +9,9 @@ function bioTabs($active) {
         $tabs['index'] = ['index.php', '📡 Live'];
         $tabs['punches'] = ['punches.php', '📋 हजेरी अहवाल'];
     }
+    if (hasRole('super_admin') || isManagementOrAbove() || hasPermission('manage_attendance')) {
+        $tabs['enroll'] = ['enroll.php', '🧑‍🔧 नोंदणी बाकी'];
+    }
     if (hasRole('super_admin')) {
         $tabs['devices'] = ['devices.php', '🖥️ Machines'];
         $tabs['pins'] = ['pins.php', '🔗 PIN जोडणी'];
@@ -105,7 +108,8 @@ function bioLiveData(PDO $pdo, $orgId, $afterId = 0) {
     $fp = [(int)$orgId, (int)$afterId]; $fscope = '';
     $ids = getVisibleDepartmentIdsForStaffTracking();
     if ($ids !== null) { $fscope = $ids ? ' AND (u.department_id IN (' . implode(',', array_map('intval', $ids)) . '))' : ' AND 1 = 0'; }
-    $f = $pdo->prepare("SELECT p.id, p.pin, p.punch_time, p.punch_state, p.verify_mode, u.name, d.device_name, d.location
+    $f = $pdo->prepare("SELECT p.id, p.pin, p.punch_time, p.punch_state, p.verify_mode, u.name, d.device_name, d.location,
+            (SELECT ou.name FROM users ou WHERE p.user_id IS NULL AND ou.organization_id = d.organization_id AND ou.biometric_pin = p.pin LIMIT 1) other_campus
         FROM bio_punches p JOIN bio_devices d ON d.id = p.device_id AND d.organization_id = ? AND d.status = 'active'
         LEFT JOIN users u ON u.id = p.user_id
         WHERE p.id > ? AND p.punch_time >= CURDATE()$fscope ORDER BY p.punch_time DESC, p.id DESC LIMIT 40");
