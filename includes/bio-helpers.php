@@ -520,3 +520,106 @@ function bioCheckOffline(PDO $pdo) {
     }
     return $n;
 }
+
+// ---------------- 🔁 जुन्या Software (दुसऱ्या ADMS Server) ला पण पुढे पाठवणे ----------------
+
+const BIO_FWD_TIMEOUT = 5;          // सेकंद — Machine ला उत्तर आधीच गेलेलं असतं, तरी जास्त थांबत नाही
+const BIO_FWD_PING_SECONDS = 60;    // Handshake / getrequest जुन्या Server ला इतक्या सेकंदांनी एकदाच (तो Machine Online दाखवेल)
+const BIO_FWD_KEEP_DAYS = 7;        // न गेलेला Data इतके दिवस रांगेत ठेवून पुन्हा प्रयत्न
+
+/** Machine ला उत्तर लगेच पाठवून connection बंद — मग मागे काम (हिशोब, पुढे पाठवणे) */
+function bioFinishResponse() {
+    if (function_exists('fastcgi_finish_request')) { fastcgi_finish_request(); return; }
+    if (function_exists('litespeed_finish_request')) { litespeed_finish_request(); return; }
+    @ob_end_flush(); @flush();
+}
+
+/** जुन्या Server चा पत्ता वैध व सार्वजनिक आहे का (आतले / Localhost पत्ते नकोत — सुरक्षा) */
+function bioForwardTargetValid($host, $port) {
+    $host = trim((string)$host);
+    if ($host === '' || !preg_match('/^[A-Za-z0-9.-]{1,253}$/', $host) || (int)$port < 1 || (int)$port > 65535) { return false; }
+    $ips = filter_var($host, FILTER_VALIDATE_IP) ? [$host] : (gethostbynamel($host) ?: []);
+    if (!$ips) { return false; }
+    if (getenv('EOWMS_BIO_FWD_ALLOW_PRIVATE') === '1') { return true; } // फक्त Local चाचणीसाठी
+    foreach ($ips as $ip) {
+        if (!filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) { return false; }
+    }
+    return true;
+}
+
+/** एक Request जुन्या Server ला — परत [ok(bool), error(string|null)] */
+function bioForwardSend(array $dev, $path, $query, $body, $method) {
+    if (empty($dev['forward_host']) || empty($dev['forward_port'])) { return [true, null]; }
+    if (!bioForwardTargetValid($dev['forward_host'], $dev['forward_port'])) { return [false, 'पत्ता अवैध / खाजगी']; }
+    $url = 'http://' . $dev['forward_host'] . ':' . (int)$dev['forward_port'] . '/iclock/' . $path . ($query !== '' ? '?' . $query : '');
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_CONNECTTIMEOUT => 3, CURLOPT_TIMEOUT => BIO_FWD_TIMEOUT,
+        CURLOPT_FOLLOWLOCATION => false, CURLOPT_PROTOCOLS => CURLPROTO_HTTP, CURLOPT_HTTPHEADER => ['Content-Type: text/plain', 'User-Agent: iClock Proxy/EOWMS']]);
+    if ($method === 'POST') { curl_setopt($ch, CURLOPT_POST, true); curl_setopt($ch, CURLOPT_POSTFIELDS, (string)$body); }
+    $resp = curl_exec($ch);
+    $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $err = $resp === false ? curl_error($ch) : null;
+    curl_close($ch);
+    if ($resp === false) { return [false, mb_substr($err ?: 'संपर्क नाही', 0, 200)]; }
+    if ($code >= 400) { return [false, 'HTTP ' . $code]; }
+    return [true, null];
+}
+
+/** Machine चा हा Request जुन्या Server ला — POST (Punches / कर्मचारी) न गेला तर रांगेत; Handshake/getrequest मिनिटाला एकदा */
+function bioForward(PDO $pdo, array $dev, $path, $method) {
+    if (empty($dev['forward_host']) || empty($dev['forward_port']) || $dev['status'] === 'disabled') { return; }
+    $query = (string)($_SERVER['QUERY_STRING'] ?? '');
+    $body = $method === 'POST' ? (string)file_get_contents('php://input', false, null, 0, 4 * 1024 * 1024) : '';
+    if ($method !== 'POST') {
+        if (!empty($dev['forward_ping_at']) && strtotime($dev['forward_ping_at']) > time() - BIO_FWD_PING_SECONDS) { return; }
+        $pdo->prepare("UPDATE bio_devices SET forward_ping_at = NOW() WHERE id = ?")->execute([(int)$dev['id']]);
+    }
+    [$ok, $err] = bioForwardSend($dev, $path, $query, $body, $method);
+    if ($ok) {
+        $pdo->prepare("UPDATE bio_devices SET forward_ok_at = NOW(), forward_error = NULL WHERE id = ?")->execute([(int)$dev['id']]);
+    } else {
+        $pdo->prepare("UPDATE bio_devices SET forward_error = ? WHERE id = ?")->execute([mb_substr((string)$err, 0, 250), (int)$dev['id']]);
+        if ($method === 'POST' && $body !== '') {
+            $pdo->prepare("INSERT INTO bio_forward_queue (device_id, path, query_string, body, attempts, last_error, next_try_at, created_at) VALUES (?, ?, ?, ?, 1, ?, NOW() + INTERVAL 2 MINUTE, NOW())")
+                ->execute([(int)$dev['id'], $path, mb_substr($query, 0, 1000), $body, mb_substr((string)$err, 0, 250)]);
+        }
+    }
+}
+
+/** रांगेतला (न गेलेला) Data पुन्हा पाठवतो — Cron मधून. परत: [गेले, बाकी] */
+function bioForwardRetry(PDO $pdo, $limit = 100) {
+    $pdo->exec("DELETE FROM bio_forward_queue WHERE created_at < NOW() - INTERVAL " . BIO_FWD_KEEP_DAYS . " DAY");
+    $st = $pdo->query("SELECT q.*, d.forward_host, d.forward_port, d.status FROM bio_forward_queue q JOIN bio_devices d ON d.id = q.device_id
+        WHERE q.next_try_at <= NOW() ORDER BY q.id LIMIT " . (int)$limit);
+    $sent = 0; $failedHosts = [];
+    foreach ($st->fetchAll() as $q) {
+        if (empty($q['forward_host'])) { $pdo->prepare("DELETE FROM bio_forward_queue WHERE id = ?")->execute([$q['id']]); continue; }
+        $hk = $q['forward_host'] . ':' . $q['forward_port'];
+        if (isset($failedHosts[$hk])) { continue; } // हा Server आत्ता बंद — पुढच्या वेळी
+        [$ok, $err] = bioForwardSend($q, $q['path'], $q['query_string'], $q['body'], 'POST');
+        if ($ok) {
+            $pdo->prepare("DELETE FROM bio_forward_queue WHERE id = ?")->execute([$q['id']]);
+            $pdo->prepare("UPDATE bio_devices SET forward_ok_at = NOW(), forward_error = NULL WHERE id = ?")->execute([$q['device_id']]);
+            $sent++;
+        } else {
+            $failedHosts[$hk] = true;
+            $wait = min(60, 2 * (2 ** min(5, (int)$q['attempts']))); // 4, 8, 16 … 60 मिनिटं
+            $pdo->prepare("UPDATE bio_forward_queue SET attempts = attempts + 1, last_error = ?, next_try_at = NOW() + INTERVAL $wait MINUTE WHERE id = ?")->execute([mb_substr((string)$err, 0, 250), $q['id']]);
+            $pdo->prepare("UPDATE bio_devices SET forward_error = ? WHERE id = ?")->execute([mb_substr((string)$err, 0, 250), $q['device_id']]);
+        }
+    }
+    $left = (int)$pdo->query("SELECT COUNT(*) FROM bio_forward_queue")->fetchColumn();
+    return [$sent, $left];
+}
+
+/** आधीच आलेले (या Machine चे) Punches जुन्या Server साठी रांगेत — forward पहिल्यांदा चालू करताना. परत: किती Punches */
+function bioForwardBackfill(PDO $pdo, array $dev, $sinceDays = 7) {
+    $st = $pdo->prepare("SELECT pin, punch_time, punch_state, verify_mode, work_code FROM bio_punches WHERE device_id = ? AND punch_time >= NOW() - INTERVAL " . (int)$sinceDays . " DAY ORDER BY punch_time");
+    $st->execute([(int)$dev['id']]);
+    $lines = array_map(fn($r) => $r['pin'] . "\t" . $r['punch_time'] . "\t" . (int)$r['punch_state'] . "\t" . (int)$r['verify_mode'] . "\t" . ($r['work_code'] ?? '0') . "\t0\t0\t0\t0\t0", $st->fetchAll());
+    $ins = $pdo->prepare("INSERT INTO bio_forward_queue (device_id, path, query_string, body, attempts, next_try_at, created_at) VALUES (?, 'cdata', ?, ?, 0, NOW(), NOW())");
+    foreach (array_chunk($lines, 300) as $chunk) {
+        $ins->execute([(int)$dev['id'], 'SN=' . rawurlencode($dev['serial_number']) . '&table=ATTLOG&Stamp=' . time(), implode("\n", $chunk) . "\n"]);
+    }
+    return count($lines);
+}

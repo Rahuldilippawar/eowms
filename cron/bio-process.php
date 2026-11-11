@@ -15,6 +15,7 @@ require_once __DIR__ . '/../includes/bio-helpers.php';
 if (!bioReady($pdo)) { exit("bio_* tables नाहीत — System Update → Database Update चालवा.\n"); }
 bioEnsureV2Reset($pdo);
 $r = bioProcessPending($pdo);
+[$fwSent, $fwLeft] = bioForwardRetry($pdo); // 🔁 जुन्या Software ला न गेलेला Data पुन्हा
 $off = bioCheckOffline($pdo);
 $pdo->exec("DELETE FROM bio_commands WHERE status IN ('done','failed') AND created_at < NOW() - INTERVAL 90 DAY");
-echo "Done. {$r['done']} (कर्मचारी+दिवस) हिशोब · {$r['unmatched']} PIN अजून न जोडलेले · {$off} Offline इशारे · " . date('Y-m-d H:i:s') . "\n";
+echo "Done. {$r['done']} (कर्मचारी+दिवस) हिशोब · {$r['unmatched']} PIN अजून न जोडलेले · {$off} Offline इशारे · जुन्या Software ला {$fwSent} पुन्हा पाठवले ({$fwLeft} बाकी) · " . date('Y-m-d H:i:s') . "\n";
