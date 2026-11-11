@@ -9,6 +9,9 @@ function bioTabs($active) {
         $tabs['index'] = ['index.php', '📡 Live'];
         $tabs['punches'] = ['punches.php', '📋 हजेरी अहवाल'];
     }
+    if (hasRole('super_admin') || isManagementOrAbove() || hasPermission('manage_attendance')) {
+        $tabs['enroll'] = ['enroll.php', '🧑‍🔧 नोंदणी बाकी'];
+    }
     if (hasRole('super_admin')) {
         $tabs['devices'] = ['devices.php', '🖥️ Machines'];
         $tabs['pins'] = ['pins.php', '🔗 PIN जोडणी'];
