@@ -281,4 +281,4 @@
 4. **10 Tables जाणूनबुजून Backup च्या बाहेर** — हे System-Wide (Permissions/Roles) किंवा Security-Sensitive (Password-Reset-Codes, WebAuthn) आहेत — प्रत्येक Organization साठी वेगळे नसतात.
 
 ---
-*हा Report Claude ने स्वयंचलितपणे, संपूर्ण `database/schema.sql` Parse करून तयार केला आहे.*
+*हा Report संपूर्ण `database/schema.sql` Parse करून तयार केला आहे.*

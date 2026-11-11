@@ -1130,4 +1130,6 @@ return [
     "जतन व संपर्क तपासा" => ["सहेजें व संपर्क जाँचें", "Save & test connection"],
     "दोन्ही Software चालू — प्रत्येक Punch / कर्मचारी जुन्या Software लाही जातो. रिकामा केलात तर बंद." => ["दोनों Software चालू — हर Punch / कर्मचारी पुराने Software को भी जाता है। खाली करें तो बंद।", "Both systems on — every punch / staff record also goes to the old software. Clear to stop."],
     "जुन्या Software ला" => ["पुराने Software को", "to old software"],
+    "App चे Updates आता आपोआप Live होतात — इथून ZIP Upload करण्याची गरज नाही (ती सुविधा सुरक्षिततेसाठी काढली आहे)." => ["App के Updates अब अपने आप Live होते हैं — यहाँ से ZIP Upload करने की ज़रूरत नहीं (वह सुविधा सुरक्षा के लिए हटाई गई है)।", "App updates now go live automatically — no need to upload a ZIP here (that option was removed for security)."],
+    "नवीन Server असेल तर: आधी App Install करा, मग वरील पायऱ्या." => ["नया Server हो तो: पहले App Install करें, फिर ऊपर के चरण।", "On a new server: install the app first, then follow the steps above."],
 ];

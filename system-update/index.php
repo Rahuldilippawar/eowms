@@ -27,7 +27,7 @@ if (is_dir($backupHistoryDir)) {
     <a href="push-setup.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13px;padding:9px 16px;"><i class="fa-solid fa-bell me-1"></i>📲 Push Notification Setup</a>
   </div>
 </div>
-<p style="font-size:12.5px;color:var(--text-dim);margin-bottom:20px;">App चे Updates आता थेट GitHub वरून आपोआप Live होतात — इथून ZIP Upload करण्याची गरज नाही (ती सुविधा सुरक्षिततेसाठी काढली आहे).</p>
+<p style="font-size:12.5px;color:var(--text-dim);margin-bottom:20px;">App चे Updates आता आपोआप Live होतात — इथून ZIP Upload करण्याची गरज नाही (ती सुविधा सुरक्षिततेसाठी काढली आहे).</p>
 
 <?php if (!empty($_SESSION['flash'])): ?>
   <div class="alert alert-success" style="border-radius:10px;font-size:13px;"><?= h($_SESSION['flash']) ?></div>

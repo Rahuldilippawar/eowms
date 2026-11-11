@@ -166,7 +166,7 @@
     }
   };
 
-  // ---------- 4c. GitHub-Style Heatmap Calendar ----------
+  // ---------- 4c. Heatmap Calendar ----------
   // उदा: eowmsDrawHeatmap('attHeatmap', {'2026-09-01': 3, '2026-09-02': 7, ...})
   // data = { 'YYYY-MM-DD': intensity_value (0 ते जास्त कितीही) }
   window.eowmsDrawHeatmap = function (containerId, data, opts) {

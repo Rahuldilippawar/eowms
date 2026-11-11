@@ -148,7 +148,7 @@ require_once __DIR__ . '/../includes/smart-insights.php';
         <li>Email मधली <b>.eadmin</b> File Download करा.</li>
         <li>E-Admin मध्ये Super Admin ने Login करा → <b>Backup → Restore</b>.</li>
         <li>ती File निवडा, <b>Backup Password</b> टाका → Restore.</li>
-        <li>नवीन Server असेल तर: आधी App Install करा (GitHub वरून), मग वरील पायऱ्या.</li>
+        <li>नवीन Server असेल तर: आधी App Install करा, मग वरील पायऱ्या.</li>
       </ol>
       <div style="padding:0 20px 18px;font-size:12px;color:var(--text-dim);line-height:1.7;">
         🔒 File <b>AES-256</b> ने Encrypt असते — Email खातं कोणी उघडलं तरी कर्मचाऱ्यांची माहिती (आधार, बँक खाते) Password शिवाय वाचता येत नाही.<br>

@@ -120,7 +120,6 @@ return [
   'मधली' => ['में आई', '— the'],
   'मध्ये Super Admin ने Login करा' => ['में Super Admin से Login करें', '— log in as Super Admin'],
   'ती File निवडा' => ['वह File चुनें', 'Choose that file'],
-  'नवीन Server असेल तर: आधी App Install करा (GitHub वरून), मग वरील पायऱ्या.' => ['नया Server हो तो: पहले App Install करें (GitHub से), फिर ऊपर के चरण।', 'On a new server: first install the app (from GitHub), then follow the steps above.'],
   'ने Encrypt असते — Email खातं कोणी उघडलं तरी कर्मचाऱ्यांची माहिती (आधार, बँक खाते) Password शिवाय वाचता येत नाही.' => ['से Encrypt रहती है — Email खाता कोई खोल ले तब भी कर्मचारियों की जानकारी (आधार, बैंक खाता) Password के बिना नहीं पढ़ी जा सकती।', '-encrypted — even if someone opens the email account, staff data (Aadhaar, bank accounts) cannot be read without the password.'],
   'ची मर्यादा' => ['की सीमा', 'limit'],
   'त्याहून मोठा झाला तर इथे सूचना दिसेल.' => ['इससे बड़ा हुआ तो यहाँ सूचना दिखेगी।', 'If it grows larger, a notice will appear here.'],
