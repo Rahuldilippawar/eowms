@@ -4665,3 +4665,10 @@ CREATE TABLE bio_forward_queue (
   INDEX idx_next (next_try_at),
   FOREIGN KEY (device_id) REFERENCES bio_devices(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
+-- FROM: migration-vehicle-smart.sql
+-- ============================================================
+-- 🚐 पुढची सर्व्हिस km नुसार पण (उदा. 45,000 km ला) — Odometer जवळ आला की सूचना
+ALTER TABLE vehicle_maintenance
+  ADD COLUMN next_due_km DECIMAL(10,1) NULL AFTER next_due_date;

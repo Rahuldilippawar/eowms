@@ -22,9 +22,9 @@ if ($vehicles) {
         $st->execute($vIds); $kmMonth = (float)$st->fetchColumn();
         $st = $pdo->prepare("SELECT COALESCE(SUM(cost),0) FROM vehicle_fuel_log WHERE vehicle_id IN ($ph) AND fill_date >= DATE_FORMAT(CURDATE(), '%Y-%m-01')");
         $st->execute($vIds); $fuelCost = (float)$st->fetchColumn();
-        $st = $pdo->prepare("SELECT COUNT(DISTINCT vehicle_id) FROM vehicle_maintenance m WHERE vehicle_id IN ($ph) AND next_due_date <= DATE_ADD(CURDATE(), INTERVAL 7 DAY)
-            AND NOT EXISTS (SELECT 1 FROM vehicle_maintenance m2 WHERE m2.vehicle_id = m.vehicle_id AND m2.maintenance_date > m.maintenance_date)");
-        $st->execute($vIds); $maintDue = (int)$st->fetchColumn();
+        // सर्व्हिस — तारीख (७ दिवस) किंवा km (५०० km) नुसार जवळ / ओलांडलेली
+        require_once __DIR__ . '/../vehicle-helpers.php';
+        $maintDue = count(array_filter(vehicleServiceStatus($pdo, array_filter($vehicles, fn($v) => $v['is_active'])), fn($x) => $x['state'] !== 'ok'));
         // मागील ९० दिवसांची सरासरी — किमी ÷ लिटर
         $st = $pdo->prepare("SELECT v.vehicle_number,
                 (SELECT COALESCE(SUM(distance_km),0) FROM vehicle_trips t WHERE t.vehicle_id = v.id AND t.trip_date >= DATE_SUB(CURDATE(), INTERVAL 90 DAY)) km,
@@ -40,7 +40,7 @@ if ($vehicles) {
         ['label' => 'या महिन्यात प्रवास', 'value' => number_format($kmMonth) . ' किमी'],
         ['label' => 'या महिन्यात इंधन-खर्च', 'value' => '₹' . number_format($fuelCost)],
         ['label' => 'कागदपत्रांची मुदत संपली', 'value' => count($expired), 'tone' => $expired ? 'bad' : 'ok', 'sub' => count($soon) . ' पुढील १५ दिवसांत'],
-        ['label' => 'देखभाल मुदत (७ दिवस)', 'value' => $maintDue, 'tone' => $maintDue ? 'warn' : ''],
+        ['label' => 'सर्व्हिस बाकी / जवळ', 'value' => $maintDue, 'tone' => $maintDue ? 'warn' : '', 'sub' => '७ दिवस किंवा ५०० km आत'],
     ]);
     $al = [];
     foreach (array_slice($expired, 0, 4) as $x) $al[] = ['bad', '⛔ ' . $x . ' — मुदत संपली', ''];
