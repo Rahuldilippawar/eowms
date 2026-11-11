@@ -71,7 +71,7 @@
       fields.push({ name, value }); // value may be a File — IndexedDB stores Blobs/Files natively
     }
     return {
-      action: form.action,
+      action: form.getAttribute('action') || location.href, // form.action नको — name="action" input असेल तर तोच येतो
       queueName: form.dataset.offlineQueue,
       label: form.dataset.offlineLabel || 'नोंद',
       fields,

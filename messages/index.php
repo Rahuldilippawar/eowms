@@ -339,7 +339,7 @@ require_once __DIR__ . '/../includes/header.php';
     var text = ta.value.trim(); if (!text) return;
     var btn = form.querySelector('.ms-go'); btn.disabled = true;
     var fd = new FormData(form); fd.append('ajax', '1');
-    fetch(form.action, { method: 'POST', body: fd }).then(function (r) { return r.json(); }).then(function (j) {
+    fetch(form.getAttribute('action') || location.href, { method: 'POST', body: fd }).then(function (r) { return r.json(); }).then(function (j) {
       btn.disabled = false;
       if (j.ok) { append(j.msg); ta.value = ''; grow(); down(); ta.focus(); } else alert(j.error || 'संदेश पाठवता आला नाही');
     }).catch(function () { btn.disabled = false; form.submit(); });
