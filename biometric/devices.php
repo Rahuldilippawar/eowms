@@ -47,6 +47,24 @@ if ($ready && $_SERVER['REQUEST_METHOD'] === 'POST') {
         case 'save':
             $pdo->prepare("UPDATE bio_devices SET device_name = ?, location = ?, campus_id = ? WHERE id = ?")->execute([$name ?: $dev['device_name'], $loc, $campus, $dev['id']]);
             $back('Machine ची माहिती जतन झाली.');
+        case 'forward_save':
+            // 🔁 जुन्या Software (दुसऱ्या ADMS Server) ला पण — Machine वर आधी असलेला पत्ता/Port
+            $fh = trim((string)($_POST['forward_host'] ?? '')); $fp = (int)($_POST['forward_port'] ?? 0);
+            if ($fh === '') {
+                $pdo->prepare("UPDATE bio_devices SET forward_host = NULL, forward_port = NULL, forward_error = NULL WHERE id = ?")->execute([$dev['id']]);
+                $pdo->prepare("DELETE FROM bio_forward_queue WHERE device_id = ?")->execute([$dev['id']]);
+                $back('जुन्या Software ला पाठवणं बंद केलं.');
+            }
+            if (!bioForwardTargetValid($fh, $fp)) { $back('पत्ता / Port अवैध — सार्वजनिक IP किंवा Domain व 1–65535 Port द्या (उदा. 103.141.53.25 : 25081).', true); }
+            $first = empty($dev['forward_host']);
+            $pdo->prepare("UPDATE bio_devices SET forward_host = ?, forward_port = ?, forward_error = NULL, forward_ping_at = NULL WHERE id = ?")->execute([$fh, $fp, $dev['id']]);
+            $dev['forward_host'] = $fh; $dev['forward_port'] = $fp;
+            $n = $first ? bioForwardBackfill($pdo, $dev) : 0;
+            [$ok, $err] = bioForwardSend($dev, 'cdata', 'SN=' . rawurlencode($dev['serial_number']) . '&options=all', '', 'GET');
+            $pdo->prepare("UPDATE bio_devices SET " . ($ok ? 'forward_ok_at = NOW(), forward_error = NULL' : 'forward_error = ?') . " WHERE id = ?")->execute($ok ? [$dev['id']] : [mb_substr((string)$err, 0, 250), $dev['id']]);
+            logActivity("Biometric forward → $fh:$fp", 'bio_device', $dev['id']);
+            $back($ok ? "✓ जुन्या Software ($fh:$fp) शी संपर्क झाला — आता प्रत्येक Punch तिकडेही जाईल." . ($n ? " आधीचे $n Punches पण पाठवायला रांगेत." : '')
+                : "Setting जतन झाली, पण आत्ता $fh:$fp शी संपर्क झाला नाही ($err). Data रांगेत ठेवून आपोआप पुन्हा प्रयत्न होईल — Hosting बाहेरच्या Port ला जाऊ देतं का ते तपासा.", !$ok);
         case 'disable':
         case 'enable':
             $pdo->prepare("UPDATE bio_devices SET status = ? WHERE id = ?")->execute([$action === 'disable' ? 'disabled' : 'active', $dev['id']]);
@@ -101,7 +119,8 @@ if ($ready) {
     $st = $pdo->prepare("SELECT d.*, c.name campus,
             (SELECT COUNT(*) FROM bio_punches p WHERE p.device_id = d.id AND p.punch_time >= CURDATE()) today,
             (SELECT COUNT(*) FROM bio_device_users du WHERE du.device_id = d.id) dusers,
-            (SELECT COUNT(*) FROM bio_commands bc WHERE bc.device_id = d.id AND bc.status IN ('queued','sent')) qcmd
+            (SELECT COUNT(*) FROM bio_commands bc WHERE bc.device_id = d.id AND bc.status IN ('queued','sent')) qcmd,
+            (SELECT COUNT(*) FROM bio_forward_queue fq WHERE fq.device_id = d.id) fq
         FROM bio_devices d LEFT JOIN campuses c ON c.id = d.campus_id WHERE d.organization_id = ? AND d.status <> 'pending' ORDER BY d.status, d.device_name");
     $st->execute([$orgId]);
     $devices = $st->fetchAll();
@@ -179,6 +198,11 @@ require_once __DIR__ . '/../includes/header.php';
             <?php if ($drift !== null && abs($drift) >= 3): ?> · <span style="color:#B45309;font-weight:600;">⏰ Machine ची वेळ <?= abs($drift) ?> मि. <?= $drift > 0 ? 'पुढे' : 'मागे' ?> — Restart करा</span><?php endif; ?>
             <?php if ($d['qcmd']): ?> · <span style="color:var(--rail);"><?= (int)$d['qcmd'] ?> आदेश रांगेत</span><?php endif; ?>
           </div>
+          <?php if (!empty($d['forward_host'])): $fwOk = !$d['forward_error']; ?>
+          <div style="font-size:12px;margin-top:3px;">🔁 जुन्या Software लाही: <b class="font-mono"><?= h($d['forward_host']) ?>:<?= (int)$d['forward_port'] ?></b>
+            · <?= $fwOk ? '<span style="color:#16A34A;font-weight:600;">✓ चालू</span> (शेवटचं ' . h(bioAgo($d['forward_ok_at'])) . ')' : '<span style="color:#DC2626;font-weight:600;">⚠ ' . h($d['forward_error']) . '</span>' ?>
+            <?php if ($d['fq']): ?> · <span style="color:#B45309;"><?= (int)$d['fq'] ?> पाठवायचे बाकी (आपोआप पुन्हा)</span><?php endif; ?></div>
+          <?php endif; ?>
         </div>
         <?php if ($d['status'] === 'active'): ?>
         <form method="POST" class="d-flex flex-wrap gap-2 align-items-center bio-cmd">
@@ -205,6 +229,14 @@ require_once __DIR__ . '/../includes/header.php';
           <select name="campus_id" class="form-select-custom" style="width:auto;"><option value="">— Campus —</option><?php foreach ($campuses as $c): ?><option value="<?= (int)$c['id'] ?>" <?= (int)$d['campus_id'] === (int)$c['id'] ? 'selected' : '' ?>><?= h($c['name']) ?></option><?php endforeach; ?></select>
           <button name="action" value="save" class="btn" style="border:1px solid var(--line);border-radius:9px;">जतन</button>
           <button name="action" value="<?= $d['status'] === 'disabled' ? 'enable' : 'disable' ?>" class="btn" style="border:1px solid var(--amber);color:var(--amber);border-radius:9px;"><?= $d['status'] === 'disabled' ? '▶ चालू करा' : '⏸ बंद करा' ?></button>
+        </form>
+        <form method="POST" class="d-flex flex-wrap gap-2 align-items-end mt-2">
+          <input type="hidden" name="device_id" value="<?= (int)$d['id'] ?>"><input type="hidden" name="action" value="forward_save">
+          <div><label class="form-label-custom" style="font-size:11px;">🔁 जुन्या Software चा Server (Machine वर आधी होता तो)</label>
+            <input name="forward_host" class="form-control-custom" value="<?= h($d['forward_host'] ?? '') ?>" placeholder="उदा. 103.141.53.25" style="width:200px;"></div>
+          <div><label class="form-label-custom" style="font-size:11px;">Port</label><input type="number" name="forward_port" class="form-control-custom" value="<?= h((string)($d['forward_port'] ?? '')) ?>" placeholder="25081" style="width:110px;"></div>
+          <button class="btn" style="border:1px solid var(--rail);color:var(--rail);border-radius:9px;">जतन व संपर्क तपासा</button>
+          <small style="color:var(--text-dim);max-width:340px;">दोन्ही Software चालू — प्रत्येक Punch / कर्मचारी जुन्या Software लाही जातो. रिकामा केलात तर बंद.</small>
         </form>
         <form method="POST" class="d-flex flex-wrap gap-2 align-items-end mt-2" onsubmit="return confirm('Machine व तिचे सगळे Raw Punches कायमचे काढायचे? (आधीची हजेरी राहते)');">
           <input type="hidden" name="device_id" value="<?= (int)$d['id'] ?>"><input type="hidden" name="action" value="delete">

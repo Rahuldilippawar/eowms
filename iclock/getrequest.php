@@ -15,6 +15,8 @@ if (!$dev) { echo 'OK'; exit; }
 bioTouchDevice($pdo, $dev, bioParseInfo($_GET['INFO'] ?? ''));
 
 if ($dev['status'] !== 'active') { echo 'OK'; exit; } // मंजूर Machine लाच आदेश
+// 🔁 जुन्या Software ला — मिनिटाला एकदा (तिथे Machine Online दिसावी). तिथले आदेश इथून चालवत नाही.
+register_shutdown_function(function () use ($pdo, $dev) { bioFinishResponse(); try { bioForward($pdo, $dev, 'getrequest', 'GET'); } catch (Throwable $e) {} });
 
 // रांगेतले आदेश (एकावेळी 20) — पाठवले म्हणून 'sent'; 10 मिनिटांत उत्तर न आलेले पुन्हा पाठवतो
 $st = $pdo->prepare("SELECT id, command FROM bio_commands WHERE device_id = ? AND (status = 'queued' OR (status = 'sent' AND sent_at < NOW() - INTERVAL 10 MINUTE)) ORDER BY id LIMIT 20");

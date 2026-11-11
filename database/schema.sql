@@ -3291,3 +3291,26 @@ ALTER TABLE staff_attendance
   ADD COLUMN overtime_minutes INT NOT NULL DEFAULT 0,
   ADD COLUMN missed_punch TINYINT(1) NOT NULL DEFAULT 0;
 
+-- 🔁 Biometric forward (जुन्या ADMS Server ला पण)-- ============================================================
+-- 🔁 Machine चा Data जुन्या Software (दुसऱ्या ADMS Server) ला पण पुढे पाठवणे — दोन्ही चालू ठेवण्यासाठी.
+-- पाठवता आलं नाही तर रांगेत ठेवून Cron पुन्हा पाठवतो (7 दिवस).
+ALTER TABLE bio_devices
+  ADD COLUMN forward_host VARCHAR(255) NULL,
+  ADD COLUMN forward_port INT NULL,
+  ADD COLUMN forward_ok_at DATETIME NULL,
+  ADD COLUMN forward_error VARCHAR(255) NULL,
+  ADD COLUMN forward_ping_at DATETIME NULL;
+
+CREATE TABLE bio_forward_queue (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  device_id INT NOT NULL,
+  path VARCHAR(30) NOT NULL,
+  query_string VARCHAR(1000) NOT NULL,
+  body MEDIUMTEXT NULL,
+  attempts INT NOT NULL DEFAULT 0,
+  last_error VARCHAR(255) NULL,
+  next_try_at DATETIME NOT NULL,
+  created_at DATETIME NOT NULL,
+  INDEX idx_next (next_try_at),
+  FOREIGN KEY (device_id) REFERENCES bio_devices(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
