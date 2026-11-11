@@ -4554,3 +4554,24 @@ CREATE TABLE recycle_bin (
   restored_by INT NULL,
   INDEX idx_org (organization_id, deleted_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ⚡ वेग: Data वाढला तरी Dashboard / अहवाल जलद — सगळ्यात जास्त वापरल्या जाणाऱ्या शोधांसाठी Indexes
+-- (आधीच असेल तर System Update हा भाग आपोआप वगळतो)
+ALTER TABLE work_records
+  ADD INDEX idx_org_date (organization_id, work_date);
+ALTER TABLE staff_attendance
+  ADD INDEX idx_org_date (organization_id, attendance_date);
+ALTER TABLE maintenance_logs
+  ADD INDEX idx_org_date (organization_id, work_date);
+ALTER TABLE grievances
+  ADD INDEX idx_org_status (organization_id, status, created_at);
+ALTER TABLE tasks
+  ADD INDEX idx_org_status (organization_id, status, target_date);
+ALTER TABLE guests
+  ADD INDEX idx_org_checkin (organization_id, check_in_time);
+ALTER TABLE vehicle_trips
+  ADD INDEX idx_vehicle_date (vehicle_id, trip_date);
+ALTER TABLE vehicle_fuel_log
+  ADD INDEX idx_vehicle_date (vehicle_id, fill_date);
+ALTER TABLE leave_applications
+  ADD INDEX idx_org_status (organization_id, status, start_date);
