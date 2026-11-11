@@ -155,8 +155,9 @@ if (array_key_exists('biometric_pin', $_POST)) {
             $pdo->prepare("UPDATE users SET biometric_pin = ? WHERE id = ?")->execute([$newPin === '' ? null : $newPin, $id]);
             logActivity("Biometric PIN बदलला: " . ($oldPin ?: '—') . " → " . ($newPin ?: '—'), 'user', $id);
         }
-        if ($newPin !== $oldPin || $wasActive !== $isActive || !empty($_POST['bio_resend'])) {
-            bioSyncStaff($pdo, activeOrgId(), $id, $oldPin !== $newPin ? $oldPin : null, $user['id'] ?? null);
+        $campusMoved = (int)($targetRow['campus_id'] ?? 0) !== (int)($dept['campus_id'] ?? 0);
+        if ($newPin !== $oldPin || $wasActive !== $isActive || $campusMoved || !empty($_POST['bio_resend'])) {
+            bioSyncStaff($pdo, activeOrgId(), $id, $oldPin !== $newPin ? $oldPin : null, $user['id'] ?? null, $campusMoved ? $targetRow['campus_id'] : null);
         }
         if ($newPin !== $oldPin && bioReady($pdo)) { bioProcessPending($pdo); } // या PIN चे आधीचे Punches आता याच्या हजेरीत
     }

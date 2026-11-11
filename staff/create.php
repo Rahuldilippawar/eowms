@@ -95,7 +95,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $newUserId = (int)$pdo->lastInsertId();
             $bioMsg = '';
             if ($newUserId && ($bioPin !== '' || $bioAuto) && bioReady($pdo)) {
-                $pinToSet = $bioPin !== '' ? $bioPin : bioNextPin($pdo, $orgId);
+                $pinToSet = $bioPin !== '' ? $bioPin : bioNextPin($pdo, $orgId, $campusId);
                 try {
                     $pdo->prepare("UPDATE users SET biometric_pin = ? WHERE id = ?")->execute([$pinToSet, $newUserId]);
                     $nDev = bioSyncStaff($pdo, $orgId, $newUserId, null, $user['id'] ?? null);
@@ -221,7 +221,7 @@ require_once __DIR__ . '/../includes/header.php';
       </div>
       <div class="col-md-4">
         <label class="form-label-custom">🖐️ Biometric PIN <span style="font-weight:400;color:var(--text-dim);">(Machine वरचा नंबर)</span></label>
-        <input type="text" name="biometric_pin" inputmode="numeric" pattern="[0-9]{1,9}" maxlength="9" class="form-control-custom" placeholder="रिकामा = आपोआप पुढचा नंबर" value="<?= h($_POST['biometric_pin'] ?? '') ?>">
+        <input type="text" name="biometric_pin" inputmode="numeric" pattern="[0-9]{1,9}" maxlength="9" class="form-control-custom" placeholder="रिकामा = Campus च्या Series मधला पुढचा नंबर" value="<?= h($_POST['biometric_pin'] ?? '') ?>">
         <label style="font-size:12px;margin-top:4px;display:flex;gap:6px;align-items:center;"><input type="checkbox" name="bio_auto" value="1" <?= $_SERVER['REQUEST_METHOD'] !== 'POST' || !empty($_POST['bio_auto']) ? 'checked' : '' ?>> Biometric Machine वर आपोआप जोडा</label>
       </div>
       <div class="col-md-4">

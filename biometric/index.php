@@ -55,7 +55,7 @@ smartAlerts($alerts);
         <?php if (!$L['feed']): ?><div class="sm-empty" id="bioEmpty" style="padding:18px;">आज अजून एकही Punch नाही.</div><?php endif; ?>
         <?php foreach ($L['feed'] as $p): ?>
           <div class="bio-row"><b class="t"><?= date('h:i:s A', strtotime($p['punch_time'])) ?></b>
-            <span class="n"><?= $p['name'] ? h($p['name']) : '<span style="color:#B45309;">PIN ' . h($p['pin']) . ' (न जोडलेला)</span>' ?>
+            <span class="n"><?= $p['name'] ? h($p['name']) : '<span style="color:#B45309;">PIN ' . h($p['pin']) . ($p['other_campus'] ? ' — ' . h($p['other_campus']) . ' (दुसऱ्या Campus चा — हजेरीत नाही)' : ' (न जोडलेला)') . '</span>' ?>
               <?php if ($p['punch_state'] !== null): ?><span class="bio-chip" style="background:var(--canvas);"><?= h(bioStateLabel($p['punch_state'])) ?></span><?php endif; ?></span>
             <small><?= h(bioVerifyLabel($p['verify_mode'])) ?> · <?= h($p['device_name'] . ($p['location'] ? ' · ' . $p['location'] : '')) ?></small></div>
         <?php endforeach; ?>

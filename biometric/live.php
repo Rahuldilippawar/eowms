@@ -7,7 +7,7 @@ header('Content-Type: application/json; charset=utf-8');
 if ((!hasRole('super_admin') && !isManagementOrAbove()) || !bioReady($pdo)) { echo json_encode(['ok' => false]); exit; }
 $L = bioLiveData($pdo, activeOrgId(), (int)($_GET['after'] ?? 0));
 $rows = array_map(fn($p) => [
-    'id' => (int)$p['id'], 'time' => date('h:i:s A', strtotime($p['punch_time'])), 'name' => $p['name'] ?: ('PIN ' . $p['pin'] . ' (न जोडलेला)'),
+    'id' => (int)$p['id'], 'time' => date('h:i:s A', strtotime($p['punch_time'])), 'name' => $p['name'] ?: ($p['other_campus'] ? 'PIN ' . $p['pin'] . ' — ' . $p['other_campus'] . ' (दुसऱ्या Campus चा — हजेरीत नाही)' : 'PIN ' . $p['pin'] . ' (न जोडलेला)'),
     'mapped' => (bool)$p['name'], 'state' => $p['punch_state'] !== null ? bioStateLabel($p['punch_state']) : '', 'verify' => bioVerifyLabel($p['verify_mode']),
     'device' => $p['device_name'] . ($p['location'] ? ' · ' . $p['location'] : ''),
 ], array_reverse($L['feed']));

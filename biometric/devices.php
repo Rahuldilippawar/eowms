@@ -60,7 +60,9 @@ if ($ready && $_SERVER['REQUEST_METHOD'] === 'POST') {
         case 'cmd':
             $cmd = $_POST['cmd'] ?? '';
             if ($cmd === 'sync_users') {
-                $st = $pdo->prepare("SELECT biometric_pin, name, employee_code FROM users WHERE organization_id = ? AND is_active = 1 AND biometric_pin IS NOT NULL AND biometric_pin <> '' ORDER BY biometric_pin LIMIT 2000");
+                // Machine ला Campus दिला असेल तर फक्त त्याच Campus चे कर्मचारी
+                $st = $pdo->prepare("SELECT biometric_pin, name, employee_code FROM users WHERE organization_id = ? AND is_active = 1 AND biometric_pin IS NOT NULL AND biometric_pin <> ''"
+                    . ($dev['campus_id'] ? " AND campus_id = " . (int)$dev['campus_id'] : '') . " ORDER BY biometric_pin LIMIT 2000");
                 $st->execute([$orgId]);
                 $n = 0;
                 foreach ($st->fetchAll() as $u) { bioQueueCommand($pdo, $dev['id'], bioUserCommand($u['biometric_pin'], $u['name'], $u['employee_code']), 'कर्मचारी पाठवला — PIN ' . $u['biometric_pin'], $user['id']); $n++; }
@@ -129,7 +131,8 @@ require_once __DIR__ . '/../includes/header.php';
       Enable Domain Name: <b>ON</b><br>Server Address: <b><?= h(bioServerHost()) ?></b><br>Server Port: <b>80</b><br>Enable Proxy Server: <b>OFF</b>
     </div>
     (काही Models मध्ये पूर्ण पत्ता मागतात: <code>http://<?= h(bioServerHost()) ?>/iclock/cdata</code>) — Machine ला LAN/WiFi ने Internet हवं.<br>
-    <b>2.</b> 1–2 मिनिटांत Machine इथे <b>"मंजुरी-प्रलंबित"</b> मध्ये दिसेल — नाव/ठिकाण देऊन <b>मंजूर करा</b>.<br>
+    <b>2.</b> 1–2 मिनिटांत Machine इथे <b>"मंजुरी-प्रलंबित"</b> मध्ये दिसेल — नाव/ठिकाण व <b>College/School (Campus)</b> देऊन <b>मंजूर करा</b>.
+    Machine वर फक्त त्याच Campus चे कर्मचारी जातात आणि त्याच Campus च्या कर्मचाऱ्यांचे Punches हजेरीत धरले जातात.<br>
     <b>3.</b> <a href="pins.php">PIN जोडणी</a> पानावर Machine वरचे कर्मचारी आपल्या कर्मचाऱ्यांशी जोडा (नावावरून आपोआप जोडण्याची सोय आहे).<br>
     <b>4.</b> झालं — Punch होताच हजेरी, उशीर/Overtime हिशोब व कर्मचाऱ्याला सूचना आपोआप. Hostinger मध्ये <b>Force HTTPS चालू करू नका</b> (Machine फक्त HTTP बोलते).
   </div>
@@ -145,7 +148,7 @@ require_once __DIR__ . '/../includes/header.php';
         <div style="font-size:11px;color:var(--text-dim);">IP <?= h($d['ip_address'] ?: '—') ?> · <?= (int)$d['punches'] ?> Punches · <?= h(bioAgo($d['last_seen_at'])) ?></div></div>
       <div><label class="form-label-custom" style="font-size:11px;">नाव</label><input name="device_name" class="form-control-custom" placeholder="उदा. मुख्य गेट" required></div>
       <div><label class="form-label-custom" style="font-size:11px;">ठिकाण</label><input name="location" class="form-control-custom" placeholder="उदा. Trust Office"></div>
-      <div><label class="form-label-custom" style="font-size:11px;">Campus</label><select name="campus_id" class="form-select-custom"><option value="">—</option><?php foreach ($campuses as $c): ?><option value="<?= (int)$c['id'] ?>"><?= h($c['name']) ?></option><?php endforeach; ?></select></div>
+      <div><label class="form-label-custom" style="font-size:11px;">Campus <?= count($campuses) > 1 ? '<b style="color:var(--rose);">*</b>' : '' ?></label><select name="campus_id" class="form-select-custom" <?= count($campuses) > 1 ? 'required' : '' ?>><option value=""><?= count($campuses) > 1 ? '— कोणत्या College/School ची? —' : '—' ?></option><?php foreach ($campuses as $c): ?><option value="<?= (int)$c['id'] ?>"><?= h($c['name']) ?></option><?php endforeach; ?></select></div>
       <button name="action" value="approve" class="btn" style="background:#16A34A;color:#fff;border-radius:9px;">✓ मंजूर करा</button>
       <button name="action" value="reject" formnovalidate class="btn" style="border:1px solid var(--rose);color:var(--rose);border-radius:9px;" onclick="return confirm('ही Machine व तिचे Punches काढायचे?');">✕ नाकारा</button>
     </form>
