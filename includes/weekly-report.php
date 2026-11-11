@@ -116,8 +116,29 @@ function weeklyReportData(PDO $pdo, $orgId, array $period) {
     unset($h);
     usort($health, fn($a, $b) => $a['score'] <=> $b['score']); // सर्वात कमकुवत आधी
 
+    // पत्रव्यवहार — या आठवड्यात नवीन/आवक/पूर्ण/रवाना (मागच्या आठवड्याशी तुलना), प्रलंबित, सर्वात जास्त थांबलेली, कोणाकडे किती
+    $letters = $q("SELECT COALESCE(SUM(DATE(created_at) BETWEEN ? AND ?), 0) new_week, COALESCE(SUM(DATE(created_at) BETWEEN ? AND ?), 0) new_prev,
+            COALESCE(SUM(status = 'completed' AND DATE(updated_at) BETWEEN ? AND ?), 0) done_week,
+            COALESCE(SUM(dispatch_date BETWEEN ? AND ?), 0) dispatched_week,
+            COALESCE(SUM(status IN ('in_progress','returned')), 0) pending,
+            COALESCE(SUM(status IN ('in_progress','returned') AND priority IN ('urgent','high')), 0) urgent,
+            COALESCE(SUM(status IN ('in_progress','returned') AND updated_at < DATE_SUB(NOW(), INTERVAL 7 DAY)), 0) stuck,
+            COALESCE(SUM(status = 'returned'), 0) returned_cnt
+        FROM letters WHERE organization_id = ?", [$s, $e, $ps, $pe, $s, $e, $s, $e, $orgId], 'one') ?: [];
+    $letters['inward_week'] = (int)$q("SELECT COUNT(*) FROM letter_inward_numbers lin JOIN letters l ON l.id = lin.letter_id
+        WHERE l.organization_id = ? AND DATE(lin.created_at) BETWEEN ? AND ?", [$orgId, $s, $e], 'col');
+    $letterStuck = $q("SELECT l.subject, l.priority, l.status, u.name holder, COALESCE(NULLIF(d.name_local, ''), d.name) dept, DATEDIFF(CURDATE(), DATE(l.updated_at)) idle
+        FROM letters l LEFT JOIN users u ON u.id = l.current_holder_id LEFT JOIN departments d ON d.id = l.department_id
+        WHERE l.organization_id = ? AND l.status IN ('in_progress','returned')
+        ORDER BY FIELD(l.priority, 'urgent','high','normal','low'), l.updated_at ASC LIMIT 8", [$orgId]);
+    $letterHolders = $q("SELECT u.name holder, COUNT(*) cnt, MAX(DATEDIFF(CURDATE(), DATE(l.updated_at))) oldest
+        FROM letters l JOIN users u ON u.id = l.current_holder_id
+        WHERE l.organization_id = ? AND l.status IN ('in_progress','returned') GROUP BY l.current_holder_id ORDER BY cnt DESC, oldest DESC LIMIT 6", [$orgId]);
+
     // लक्ष द्या — आपोआप निष्कर्ष
     $alerts = [];
+    if ((int)($letters['stuck'] ?? 0) > 0) { $alerts[] = ['warn', $letters['stuck'] . ' पत्रं 7+ दिवस एकाच टप्प्यावर थांबलेली' . ($letterStuck ? ' — सर्वात जुनं: ' . mb_strimwidth($letterStuck[0]['subject'], 0, 40, '…') . ' (' . ($letterStuck[0]['holder'] ?: '—') . ')' : '')]; }
+    if ((int)($letters['urgent'] ?? 0) > 0) { $alerts[] = ['warn', $letters['urgent'] . ' तातडीची/उच्च पत्रं मंजुरीसाठी प्रलंबित']; }
     $idle = array_filter($health, fn($h) => $h['weekWork'] === 0);
     foreach (array_slice(array_filter($health, fn($h) => $h['level'] === 'bad'), 0, 3) as $h) {
         $alerts[] = ['bad', $h['name'] . ' — आरोग्य ' . $h['score'] . '/100' . ($h['issues'] ? ' (' . implode(', ', $h['issues']) . ')' : '')];
@@ -150,7 +171,7 @@ function weeklyReportData(PDO $pdo, $orgId, array $period) {
     return [
         'org' => $org['name'] ?? 'E-Admin', 'orgId' => (int)$orgId, 'period' => $period, 'fy' => $fy, 'ecampus' => $ecampus,
         'summary' => $sum, 'health' => $health, 'work' => $work, 'workPrev' => $workPrev, 'days' => $days,
-        'tasks' => $tasks, 'overdueTasks' => $overdueTasks, 'req' => $req, 'renewals' => $renewals, 'renewInfo' => $renewInfo,
+        'tasks' => $tasks, 'overdueTasks' => $overdueTasks, 'req' => $req, 'renewals' => $renewals, 'renewInfo' => $renewInfo, 'letters' => $letters, 'letterStuck' => $letterStuck, 'letterHolders' => $letterHolders,
         'spendWeek' => $spendWeek, 'spendPrev' => $spendPrev, 'spendCat' => $spendCat, 'budget' => $budget, 'fyAlloc' => $fyAlloc, 'fySpent' => $fySpent,
         'alerts' => $alerts, 'good' => $good, 'generated' => date('Y-m-d H:i'),
     ];
@@ -289,6 +310,34 @@ function weeklyReportPdfHtml(array $d) {
             $html .= '<tr><td>' . $h($x['item_name']) . '</td><td>' . $h($x['dept'] ?? '—') . '</td><td class="num">' . date('d/m', strtotime($x['renewed_at'])) . '</td><td class="num" style="color:#137A4B;">' . date('d/m/Y', strtotime($x['expiry_date'])) . '</td></tr>';
         }
         $html .= '</tbody></table>';
+    }
+
+    // पत्रव्यवहार
+    $L = $d['letters'] ?? [];
+    if ($L && array_sum(array_map('intval', $L)) > 0) {
+        $diff = (int)$L['new_week'] - (int)$L['new_prev'];
+        $html .= '<h2>पत्रव्यवहार व मंजुऱ्या</h2><table class="kp"><tr>'
+            . $kpi('नवीन पत्रं', (int)$L['new_week'], 'मागचा आठवडा ' . (int)$L['new_prev'] . ($diff ? ' (' . ($diff > 0 ? '+' : '') . $diff . ')' : ''))
+            . $kpi('आवक (Inward)', (int)$L['inward_week'], 'या आठवड्यात नोंदली')
+            . $kpi('पूर्ण / रवाना', (int)$L['done_week'] . ' / ' . (int)$L['dispatched_week'], 'या आठवड्यात', '#137A4B')
+            . $kpi('मंजुरीसाठी प्रलंबित', (int)$L['pending'], (int)$L['urgent'] . ' तातडीची/उच्च · ' . (int)$L['stuck'] . ' 7+ दिवस थांबलेली', ((int)$L['stuck'] || (int)$L['urgent']) ? '#B45309' : '#191C3A')
+            . '</tr></table>';
+        if (!empty($d['letterStuck'])) {
+            $html .= '<table class="g" style="margin-top:6px;"><thead><tr><th style="width:44%;">प्रलंबित पत्र (तातडीची व जुनी आधी)</th><th style="width:20%;">विभाग</th><th style="width:22%;">सध्या कोणाकडे</th><th class="num" style="width:14%;">थांबलेलं</th></tr></thead><tbody>';
+            foreach ($d['letterStuck'] as $x) {
+                $idle = max(0, (int)$x['idle']);
+                $html .= '<tr><td>' . $h(mb_strimwidth((string)$x['subject'], 0, 70, '…'))
+                    . (in_array($x['priority'], ['urgent', 'high'], true) ? ' <span style="color:#B42318;font-weight:bold;">' . ($x['priority'] === 'urgent' ? 'तातडीचं' : 'उच्च') . '</span>' : '')
+                    . ($x['status'] === 'returned' ? ' <span style="color:#B45309;">परत पाठवलं</span>' : '') . '</td><td>' . $h($x['dept'] ?? '—') . '</td><td>' . $h($x['holder'] ?: '—')
+                    . '</td><td class="num" style="font-weight:bold;color:' . ($idle >= 7 ? '#B42318' : ($idle >= 3 ? '#B45309' : '#191C3A')) . ';">' . $idle . ' दिवस</td></tr>';
+            }
+            $html .= '</tbody></table>';
+            $more = (int)$L['pending'] - count($d['letterStuck']);
+            if ($more > 0) { $html .= '<div class="muted" style="margin-top:4px;"><b>+' . $more . ' अजून</b> — <a href="' . $h((defined('SITE_BASE_URL') ? SITE_BASE_URL : '') . '/letters/index.php') . '">पूर्ण यादी पाहा</a></div>'; }
+        }
+        if (!empty($d['letterHolders'])) {
+            $html .= '<div style="margin-top:6px;font-size:8.5pt;"><b>कोणाकडे किती पत्रं:</b> ' . implode(' · ', array_map(fn($x) => $h($x['holder']) . ' <b>' . (int)$x['cnt'] . '</b>' . ((int)$x['oldest'] >= 7 ? ' <span style="color:#B42318;">(' . (int)$x['oldest'] . ' दिवस)</span>' : ''), $d['letterHolders'])) . '</div>';
+        }
     }
 
     // E-Campus
