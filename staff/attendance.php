@@ -40,6 +40,7 @@ $statusChips = ['present' => 'done', 'absent' => 'overdue', 'half_day' => 'pendi
     <a href="attendance-summary.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:12.5px;padding:8px 16px;">📊 मासिक Summary</a>
     <a href="regularization.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:12.5px;padding:8px 16px;">📝 दुरुस्ती विनंत्या</a>
     <?php if ($canManage): ?>
+      <a href="../biometric/index.php" class="btn" style="border:1px solid var(--rail);color:var(--rail);border-radius:9px;font-size:12.5px;padding:8px 16px;font-weight:600;">📡 Biometric Live</a>
       <a href="attendance-monthly-grid.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:12.5px;padding:8px 16px;">📋 Monthly Grid</a>
       <a href="attendance-manual.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:12.5px;padding:8px 16px;">✏️ Manual Entry</a>
     <?php endif; ?>
@@ -48,7 +49,7 @@ $statusChips = ['present' => 'done', 'absent' => 'overdue', 'half_day' => 'pendi
       <a href="leave-types.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:12.5px;padding:8px 16px;">🏖️ रजा-प्रकार</a>
       <a href="leave-balances.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:12.5px;padding:8px 16px;">📊 रजा-शिल्लक</a>
       <a href="holidays.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:12.5px;padding:8px 16px;">🎉 सुट्ट्या</a>
-      <a href="../biometric/devices.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:12.5px;padding:8px 16px;">⚙️ Device Setup</a>
+      <a href="../biometric/devices.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:12.5px;padding:8px 16px;">⚙️ Biometric Machines</a>
     <?php endif; ?>
   </div>
 </div>

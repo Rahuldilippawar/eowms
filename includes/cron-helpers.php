@@ -13,7 +13,7 @@
 function cronRunAllJobs() {
     return [
         'send-push-queue'                  => ['every' => 5],
-        'process-biometric-attendance'     => ['every' => 15],
+        'bio-process'                      => ['every' => 5],
         'escalate-tickets'                 => ['every' => 60],
         'scheduled-backup'                 => ['daily' => 2],
         'offsite-backup'                   => ['daily' => 3],

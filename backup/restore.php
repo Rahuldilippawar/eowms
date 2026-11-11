@@ -1035,16 +1035,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['backup_file']['tmp_
             // ---------------- Biometric Devices + Staff Attendance ----------------
             try {
                 $deviceMap = [];
-                foreach ($data['biometric_devices'] ?? [] as $bd) {
+                // Biometric v2 — bio_devices (जुन्या Backup मधलं biometric_devices पण चालतं — Machine मंजूर म्हणून)
+                foreach (array_merge($data['bio_devices'] ?? [], $data['biometric_devices'] ?? []) as $bd) {
                     $newCampusId4 = !empty($bd['campus_id']) ? ($campusMap[$bd['campus_id']] ?? null) : null;
                     // serial_number Globally UNIQUE आहे — आधीच अस्तित्वात असेल तर Skip करतो
-                    $existStmt = $pdo->prepare("SELECT id FROM biometric_devices WHERE serial_number = ?");
+                    $existStmt = $pdo->prepare("SELECT id FROM bio_devices WHERE serial_number = ?");
                     $existStmt->execute([$bd['serial_number']]);
                     $existing = $existStmt->fetch();
                     if ($existing) { $deviceMap[$bd['id']] = $existing['id']; continue; }
-                    $pdo->prepare("INSERT INTO biometric_devices (organization_id, campus_id, serial_number, device_name, last_seen_at, is_active, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)")
-                        ->execute([$orgId, $newCampusId4, $bd['serial_number'], $bd['device_name'], $bd['last_seen_at'], $bd['is_active'], $bd['created_at']]);
-                    restoreTrack('biometric_devices', $bd['id'] ?? null, $pdo);
+                    $status = isset($bd['status']) ? $bd['status'] : (!empty($bd['is_active']) ? 'active' : 'disabled');
+                    $pdo->prepare("INSERT INTO bio_devices (organization_id, campus_id, serial_number, device_name, location, status, last_seen_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
+                        ->execute([$orgId, $newCampusId4, $bd['serial_number'], $bd['device_name'], $bd['location'] ?? null, $status === 'pending' ? 'active' : $status, $bd['last_seen_at'], $bd['created_at']]);
+                    restoreTrack('bio_devices', $bd['id'] ?? null, $pdo);
                     $deviceMap[$bd['id']] = $pdo->lastInsertId();
                 }
                 foreach ($data['staff_attendance'] ?? [] as $sa) {
