@@ -48,6 +48,13 @@ $totalLiters = (float)$stmt->fetch()['c'];
 
 $avgFuelEfficiency = $totalLiters > 0 ? round($totalKm / $totalLiters, 2) : null;
 
+// 🧠 Smart — पुढची सर्व्हिस, 90 दिवसांचा खर्च/km, प्रत्येक इंधन-भरणीचं मायलेज व विसंगती
+require_once __DIR__ . '/../includes/vehicle-helpers.php';
+$svcInfo = vehicleServiceStatus($pdo, [$vehicle])[$vehicleId] ?? null;
+$q90 = vehicleFleetStats($pdo, [$vehicleId], date('Y-m-d', strtotime('-89 days')), date('Y-m-d'))[$vehicleId];
+$fuelAna = vehicleFuelAnalysis($pdo, $vehicleId, 60);
+$vehBlocked = array_filter(vehicleDocs($vehicle), fn($d) => $d['critical'] && $d['state'] === 'expired');
+
 $stmt = $pdo->prepare("SELECT COALESCE(SUM(cost),0) c FROM vehicle_maintenance WHERE vehicle_id = ?");
 $stmt->execute([$vehicleId]);
 $totalMaintenanceCost = (float)$stmt->fetch()['c'];
@@ -118,11 +125,16 @@ for ($i = 5; $i >= 0; $i--) {
 </div>
 <?php endif; ?>
 
+<?php if ($vehBlocked): ?>
+<div class="alert alert-danger" style="border-radius:10px;font-size:13px;">🚫 <b>हे वाहन रस्त्यावर चालवू नये</b> — <?= h(implode(', ', array_map(fn($d) => $d['label'] . ' (' . date('d M Y', strtotime($d['date'])) . ')', $vehBlocked))) ?> ची मुदत संपली आहे. आधी नूतनीकरण करा.</div>
+<?php endif; ?>
 <div class="row g-3 mb-3">
-  <div class="col-6 col-lg-3"><div class="kpi-mini"><div class="lbl">सध्याचे मीटर</div><div class="val"><?= number_format($vehicle['current_odometer'], 0) ?></div></div></div>
-  <div class="col-6 col-lg-3"><div class="kpi-mini"><div class="lbl">एकूण अंतर (km)</div><div class="val"><?= number_format($totalKm, 0) ?></div></div></div>
-  <div class="col-6 col-lg-3"><div class="kpi-mini"><div class="lbl">सरासरी इंधन (km/l)</div><div class="val" style="color:var(--rail);"><?= $avgFuelEfficiency ?? '—' ?></div></div></div>
-  <div class="col-6 col-lg-3"><div class="kpi-mini"><div class="lbl">देखभाल खर्च (₹)</div><div class="val" style="color:var(--amber);"><?= number_format($totalMaintenanceCost, 0) ?></div></div></div>
+  <div class="col-6 col-lg-2"><div class="kpi-mini"><div class="lbl">सध्याचे मीटर</div><div class="val"><?= number_format($vehicle['current_odometer'], 0) ?></div></div></div>
+  <div class="col-6 col-lg-2"><div class="kpi-mini"><div class="lbl">एकूण अंतर (km)</div><div class="val"><?= number_format($totalKm, 0) ?></div></div></div>
+  <div class="col-6 col-lg-2"><div class="kpi-mini"><div class="lbl">सरासरी इंधन (km/l)</div><div class="val" style="color:var(--rail);"><?= $avgFuelEfficiency ?? '—' ?></div></div></div>
+  <div class="col-6 col-lg-2"><div class="kpi-mini"><div class="lbl">देखभाल खर्च (₹)</div><div class="val" style="color:var(--amber);"><?= number_format($totalMaintenanceCost, 0) ?></div></div></div>
+  <div class="col-6 col-lg-2"><div class="kpi-mini"><div class="lbl">खर्च / km (90 दि.)</div><div class="val"><?= $q90['cost_km'] !== null ? '₹' . number_format($q90['cost_km'], 2) : '—' ?></div></div></div>
+  <div class="col-6 col-lg-2"><div class="kpi-mini"><div class="lbl">पुढची सर्व्हिस</div><div class="val" style="font-size:14px;line-height:1.35;color:<?= $svcInfo ? ($svcInfo['state'] === 'overdue' ? 'var(--rose)' : ($svcInfo['state'] === 'soon' ? 'var(--amber)' : 'inherit')) : 'var(--text-dim)' ?>;"><?= $svcInfo ? h($svcInfo['text']) : 'ठरलेली नाही' ?></div></div></div>
 </div>
 
 <?php
@@ -226,6 +238,10 @@ for ($i = 5; $i >= 0; $i--) {
         <div class="row g-2">
           <div class="col-6"><label class="form-label-custom">खर्च (₹)</label><input type="number" step="0.01" name="cost" class="form-control-custom"></div>
           <div class="col-6"><label class="form-label-custom">पुढील तारीख</label><input type="date" name="next_due_date" class="form-control-custom"></div>
+          <div class="col-12"><label class="form-label-custom">पुढची सर्व्हिस km ला <small style="color:var(--text-dim);">(ऐच्छिक)</small></label>
+            <input type="number" step="1" name="next_due_km" class="form-control-custom" min="<?= (int)$vehicle['current_odometer'] + 1 ?>" placeholder="उदा. <?= number_format((float)$vehicle['current_odometer'] + 5000, 0, '.', '') ?> (सध्या <?= number_format((float)$vehicle['current_odometer']) ?>)">
+            <div class="d-flex gap-1 mt-1"><?php foreach ([3000, 5000, 10000] as $add): ?><button type="button" class="btn btn-sm" style="border:1px solid var(--line);border-radius:6px;font-size:11px;padding:2px 8px;" onclick="this.closest('.col-12').querySelector('input').value=<?= (int)$vehicle['current_odometer'] + $add ?>">+<?= number_format($add) ?></button><?php endforeach; ?></div>
+          </div>
         </div>
         <button type="submit" class="btn w-100" style="background:var(--rail);color:#fff;border-radius:9px;font-size:13px;padding:9px;font-weight:600;margin-top:10px;">नोंद जतन करा</button>
       </form>
@@ -254,13 +270,15 @@ for ($i = 5; $i >= 0; $i--) {
 
   <div class="col-lg-5">
     <div class="panel mb-3">
-      <div class="panel-head"><div class="title">इंधन इतिहास</div></div>
+      <div class="panel-head"><div class="title">इंधन इतिहास</div><?php if ($fuelAna['median_kmpl']): ?><div class="sub">नेहमीचं मायलेज ~<?= round($fuelAna['median_kmpl'], 1) ?> km/l · ⚠ = विसंगती (Mouse ठेवा)</div><?php endif; ?></div>
       <table class="rtable">
-        <thead><tr><th>दिनांक</th><th>लिटर</th><th>₹</th><th></th></tr></thead>
+        <thead><tr><th>दिनांक</th><th>लिटर</th><th>₹</th><th title="मागच्या भरणीपासूनचे km ÷ या वेळचे लिटर">मायलेज</th><th></th></tr></thead>
         <tbody>
-          <?php if (empty($fuelLogs)): ?><tr><td colspan="4" style="text-align:center;color:var(--text-dim);padding:18px;">कोणतीही नोंद नाही</td></tr><?php endif; ?>
-          <?php foreach ($fuelLogs as $f): ?>
+          <?php if (empty($fuelLogs)): ?><tr><td colspan="5" style="text-align:center;color:var(--text-dim);padding:18px;">कोणतीही नोंद नाही</td></tr><?php endif; ?>
+          <?php foreach ($fuelLogs as $f): $fe = $fuelAna['fills'][(int)$f['id']] ?? null; ?>
             <tr><td class="font-mono"><?= date('d M', strtotime($f['fill_date'])) ?></td><td class="font-mono"><?= $f['liters'] ?></td><td class="font-mono"><?= $f['cost'] ? number_format($f['cost'],0) : '—' ?></td>
+              <td class="font-mono" style="font-size:12px;"><?= $fe && $fe['kmpl'] !== null ? $fe['kmpl'] . ' km/l' : '—' ?>
+                <?php if ($fe) foreach ($fe['flags'] as $fl): ?><span title="<?= h(vehicleFuelFlagText($fl, $fe, $fuelAna['median_kmpl'])) ?>" style="color:<?= $fl === 'rate' ? 'var(--amber)' : 'var(--rose)' ?>;cursor:help;"> ⚠</span><?php endforeach; ?></td>
               <td><a href="request-correction.php?type=fuel&entry_id=<?= $f['id'] ?>&vehicle_id=<?= $vehicleId ?>" style="font-size:11px;color:var(--rail);" title="चूक झाली? सुधारणा विनंती करा"><i class="fa-solid fa-flag"></i></a></td>
             </tr>
           <?php endforeach; ?>
@@ -273,7 +291,7 @@ for ($i = 5; $i >= 0; $i--) {
 <div class="panel">
   <div class="panel-head"><div class="title">देखभाल इतिहास</div></div>
   <table class="rtable">
-    <thead><tr><th>दिनांक</th><th>प्रकार</th><th>तपशील</th><th>खर्च</th><th>पुढील तारीख</th><th></th></tr></thead>
+    <thead><tr><th>दिनांक</th><th>प्रकार</th><th>तपशील</th><th>खर्च</th><th>पुढील सर्व्हिस</th><th></th></tr></thead>
     <tbody>
       <?php if (empty($maintenanceLogs)): ?><tr><td colspan="6" style="text-align:center;color:var(--text-dim);padding:18px;">कोणतीही नोंद नाही</td></tr><?php endif; ?>
       <?php foreach ($maintenanceLogs as $m): ?>
@@ -282,7 +300,7 @@ for ($i = 5; $i >= 0; $i--) {
           <td style="font-weight:500;"><?= h($m['type']) ?></td>
           <td><?= h($m['description'] ?? '—') ?></td>
           <td class="font-mono"><?= $m['cost'] ? '₹' . number_format($m['cost'],0) : '—' ?></td>
-          <td class="font-mono"><?= $m['next_due_date'] ? date('d M Y', strtotime($m['next_due_date'])) : '—' ?></td>
+          <td class="font-mono"><?= $m['next_due_date'] ? date('d M Y', strtotime($m['next_due_date'])) : '—' ?><?= !empty($m['next_due_km']) ? '<div style="font-size:11px;color:var(--text-dim);">' . number_format((float)$m['next_due_km']) . ' km</div>' : '' ?></td>
           <td><a href="request-correction.php?type=maintenance&entry_id=<?= $m['id'] ?>&vehicle_id=<?= $vehicleId ?>" style="font-size:11px;color:var(--rail);" title="चूक झाली? सुधारणा विनंती करा"><i class="fa-solid fa-flag"></i></a></td>
         </tr>
       <?php endforeach; ?>

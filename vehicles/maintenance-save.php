@@ -31,6 +31,12 @@ $type = trim($_POST['type'] ?? '');
 $description = trim($_POST['description'] ?? '') ?: null;
 $cost = ($_POST['cost'] ?? '') !== '' ? (float)$_POST['cost'] : null;
 $nextDue = ($_POST['next_due_date'] ?? '') ?: null;
+$nextDueKm = ($_POST['next_due_km'] ?? '') !== '' ? (float)$_POST['next_due_km'] : null;
+if ($nextDueKm !== null && $nextDueKm <= (float)$vehicle['current_odometer']) {
+    $_SESSION['form_error'] = 'पुढच्या सर्व्हिसचे km सध्याच्या Meter (' . number_format((float)$vehicle['current_odometer']) . ') पेक्षा जास्त हवेत.';
+    header('Location: dashboard.php?id=' . $vehicleId);
+    exit;
+}
 
 if (!$type) {
     $_SESSION['form_error'] = 'कृपया देखभालीचा प्रकार भरा.';
@@ -38,11 +44,14 @@ if (!$type) {
     exit;
 }
 
-$insert = $pdo->prepare("
-    INSERT INTO vehicle_maintenance (vehicle_id, maintenance_date, type, description, cost, odometer_reading, next_due_date, created_by)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-");
-$insert->execute([$vehicleId, $maintenanceDate, $type, $description, $cost, $vehicle['current_odometer'], $nextDue, $user['id']]);
+require_once __DIR__ . '/../includes/vehicle-helpers.php';
+if (vehicleHasDueKm($pdo)) {
+    $insert = $pdo->prepare("INSERT INTO vehicle_maintenance (vehicle_id, maintenance_date, type, description, cost, odometer_reading, next_due_date, next_due_km, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    $insert->execute([$vehicleId, $maintenanceDate, $type, $description, $cost, $vehicle['current_odometer'], $nextDue, $nextDueKm, $user['id']]);
+} else {
+    $insert = $pdo->prepare("INSERT INTO vehicle_maintenance (vehicle_id, maintenance_date, type, description, cost, odometer_reading, next_due_date, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+    $insert->execute([$vehicleId, $maintenanceDate, $type, $description, $cost, $vehicle['current_odometer'], $nextDue, $user['id']]);
+}
 
 $vehMaintId = (int)$pdo->lastInsertId();
 recordBudgetTransaction($pdo, $orgId, $vehicle['department_id'], $cost, 'इतर', 'vehicle_maintenance_log', $vehMaintId, $vehicle['vehicle_number'] . ' — ' . $type, $user['id'], $maintenanceDate);

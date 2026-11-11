@@ -635,6 +635,7 @@ CREATE TABLE vehicle_maintenance (
   cost DECIMAL(10,2) NULL,
   odometer_reading DECIMAL(10,1) NULL,
   next_due_date DATE NULL,
+  next_due_km DECIMAL(10,1) NULL,
   vendor VARCHAR(255) NULL,
   created_by INT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
