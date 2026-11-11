@@ -108,7 +108,7 @@ function buildOrgBackup($pdo, $orgId) {
             SELECT sd.* FROM staff_documents sd JOIN users u ON u.id = sd.user_id WHERE u.organization_id = ?", [$orgId]),
         'staff_achievements' => safeFetchAll($pdo, "
             SELECT sa.* FROM staff_achievements sa JOIN users u ON u.id = sa.user_id WHERE u.organization_id = ?", [$orgId]),
-        'biometric_devices' => safeFetchAll($pdo, "SELECT * FROM biometric_devices WHERE organization_id = ?", [$orgId]),
+        'bio_devices' => safeFetchAll($pdo, "SELECT * FROM bio_devices WHERE organization_id = ?", [$orgId]),
         'staff_attendance' => safeFetchAll($pdo, "SELECT * FROM staff_attendance WHERE organization_id = ?", [$orgId]),
         'staff_shift_settings' => safeFetchAll($pdo, "
             SELECT s.* FROM staff_shift_settings s JOIN users u ON u.id = s.user_id WHERE u.organization_id = ?", [$orgId]),

@@ -1,122 +1,83 @@
 <?php
 // ============================================================
-// eSSL/ZKTeco ADMS ("iClock Push") Protocol Endpoint
+// 🖐️ eSSL / ZKTeco ADMS ("iClock Push") — मुख्य Endpoint (Biometric v2)
 // ============================================================
-// Machine च्या Settings मध्ये "Server URL/Address" म्हणून हा पत्ता द्या:
-//   http://<तुमचं-Domain>/iclock/cdata.php
-// (जर Machine ने आपोआप '/iclock/cdata' — .php शिवाय — पाठवायचा प्रयत्न
-// केला, तर याच Folder मधल्या .htaccess ने आपोआप इथे वळवलं जाईल.)
+// Machine → Menu → Comm. → Cloud Server / ADMS Setting:
+//   Server Address = तुमचं Domain (उदा. amd.babashree.com), Port = 80, Domain Name = ON
+// Machine इथे येते: /iclock/cdata?SN=… (iclock/.htaccess ने cdata.php कडे वळवलं जातं)
 //
-// हे Endpoint कुठलाही Login/Session मागत नाही — Machine थेट, स्वतःहून
-// Internet वरून याला Request पाठवते, त्यामुळे ते उघडंच असावं लागतं
-// (पण फक्त Attendance-Data स्वीकारतं, बाकी काहीही करत नाही — सुरक्षित).
+//  GET            — Handshake: Machine कोणत्या Settings ने Data पाठवू ते विचारते
+//  POST ATTLOG    — हजेरीचे Punches  → bio_punches + लगेच हिशोब + कर्मचाऱ्याला सूचना
+//  POST OPERLOG   — Machine वरचे कर्मचारी / बोटं / चेहरे → bio_device_users
+//
+// Login लागत नाही (Machine स्वतःहून पाठवते). सुरक्षा: अनोळखी Machine "मंजुरी-प्रलंबित" —
+// तिचे Punches जपून ठेवतो पण Super Admin ने मंजूर करेपर्यंत हजेरीत धरत नाही.
 // ============================================================
 
 require_once __DIR__ . '/../config/db.php';
-require_once __DIR__ . '/../includes/timezone.php'; // 🕘 IST — PHP व Database दोन्हीची वेळ
+require_once __DIR__ . '/../includes/timezone.php';
+require_once __DIR__ . '/../includes/bio-helpers.php';
 
-$serialNumber = trim($_GET['SN'] ?? '');
-if (!$serialNumber) {
-    http_response_code(400);
-    echo "ERROR: SN missing";
-    exit;
-}
+header('Content-Type: text/plain');
+$reply = function ($text, $code = 200) { http_response_code($code); echo $text; exit; };
 
-// हे Device आधीच नोंदवलेलं (Registered) आहे का ते तपासतो — नसेल तर आपोआप
-// एक "मंजुरी-प्रलंबित" (is_active = 0, is_approved = 0) नोंद तयार करतो.
-// सुरक्षा: अनोळखी Machine चे Punches Super Admin ने Devices पानावरून
-// मंजूर करेपर्यंत अजिबात स्वीकारले जात नाहीत.
-$deviceApproved = false;
-try {
-    $devStmt = $pdo->prepare("SELECT id, organization_id, is_active, is_approved FROM biometric_devices WHERE serial_number = ?");
-    $devStmt->execute([$serialNumber]);
-    $device = $devStmt->fetch();
-    if (!$device) {
-        // कुठल्या Organization शी जोडायचं हे आधी माहीत नसतं — पहिल्या Active
-        // Organization खाली (फक्त यादीत दिसण्यासाठी) निष्क्रिय नोंद करतो.
-        // 🔒 खोटे SN पाठवून Table भरून टाकणं रोखण्यासाठी — मंजुरी-प्रलंबित
-        // Devices आधीच २० असतील तर नवीन नोंद करत नाही.
-        $pendingCount = (int)$pdo->query("SELECT COUNT(*) FROM biometric_devices WHERE is_approved = 0")->fetchColumn();
-        if ($pendingCount >= 20 || !preg_match('/^[A-Za-z0-9_-]{4,50}$/', $serialNumber)) {
-            echo "OK";
-            exit;
-        }
-        $firstOrgStmt = $pdo->query("SELECT id FROM organizations WHERE is_active = 1 ORDER BY id LIMIT 1");
-        $firstOrgId = $firstOrgStmt->fetch()['id'] ?? 1;
-        $pdo->prepare("INSERT INTO biometric_devices (organization_id, serial_number, device_name, last_seen_at, is_active, is_approved) VALUES (?, ?, ?, NOW(), 0, 0)")
-            ->execute([$firstOrgId, mb_substr($serialNumber, 0, 50), 'नवीन Device — मंजुरी प्रलंबित']);
-    } else {
-        $pdo->prepare("UPDATE biometric_devices SET last_seen_at = NOW() WHERE id = ?")->execute([$device['id']]);
-        $deviceApproved = (int)$device['is_active'] === 1 && (int)$device['is_approved'] === 1;
-    }
-} catch (PDOException $e) {
-    // Migration अजून चाललेली नसेल तरी Machine ला Error न देता शांतपणे पुढे जातो
-}
+if (!bioReady($pdo)) { $reply('OK'); } // Database Update बाकी — Machine ला Error नको
+bioEnsureV2Reset($pdo);
 
-$method = $_SERVER['REQUEST_METHOD'];
+$sn = trim((string)($_GET['SN'] ?? ''));
+if (!bioValidSerial($sn)) { $reply('ERROR: SN', 400); }
+
+$dev = bioDeviceBySerial($pdo, $sn);
+if (!$dev) { $reply('OK'); } // मर्यादा ओलांडली — शांतपणे दुर्लक्ष
+bioTouchDevice($pdo, $dev, ['push_version' => $_GET['pushver'] ?? null]);
+
+$method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
 if ($method === 'GET') {
-    // ---------------- Handshake (Machine "मी कशी Settings वापरू?" विचारते) ----------------
-    header('Content-Type: text/plain');
-    echo "GET OPTION FROM: $serialNumber\r\n";
-    echo "Stamp=9999\r\n";
-    echo "OpStamp=9999\r\n";
-    echo "ErrorDelay=30\r\n";
-    echo "Delay=10\r\n";
-    echo "TransFlag=TransData AttLog OpLog\r\n";
-    echo "TimeZone=5.5\r\n";
-    echo "Realtime=1\r\n";
-    echo "Encrypt=0\r\n";
+    // Stamp — Machine ने शेवटचा कोणता Log पाठवला; None = सगळे पुन्हा पाठव ("सगळे Logs पुन्हा" आदेश)
+    $att = $dev['att_stamp'] !== null && $dev['att_stamp'] !== '' ? $dev['att_stamp'] : 'None';
+    $op = $dev['op_stamp'] !== null && $dev['op_stamp'] !== '' ? $dev['op_stamp'] : 'None';
+    $reply("GET OPTION FROM: $sn\r\n"
+        . "ATTLOGStamp=$att\r\nOPERLOGStamp=$op\r\nATTPHOTOStamp=None\r\n"
+        . "ErrorDelay=30\r\nDelay=10\r\nTransTimes=00:00;14:05\r\nTransInterval=1\r\n"
+        . "TransFlag=TransData AttLog OpLog EnrollUser ChgUser EnrollFP ChgFP FACE\r\n"
+        . "TimeZone=5.5\r\nRealtime=1\r\nEncrypt=None\r\nServerVer=2.4.1 EOWMS\r\n");
+}
+
+if ($method !== 'POST') { $reply('Method Not Allowed', 405); }
+
+$body = file_get_contents('php://input', false, null, 0, 4 * 1024 * 1024); // 4 MB पर्यंत
+$table = strtoupper((string)($_GET['table'] ?? ''));
+$stamp = preg_match('/^\d{1,20}$/', (string)($_GET['Stamp'] ?? '')) ? $_GET['Stamp'] : null;
+
+if ($table === 'ATTLOG') {
+    $res = bioIngestAttlog($pdo, $dev, $body);
+    if ($stamp !== null) { $pdo->prepare("UPDATE bio_devices SET att_stamp = ? WHERE id = ?")->execute([$stamp, (int)$dev['id']]); }
+    echo 'OK: ' . $res['count'];
+    // Machine ला लगेच उत्तर; मग हिशोब + सूचना (fastcgi असेल तर Response नंतर)
+    if (function_exists('fastcgi_finish_request')) { fastcgi_finish_request(); }
+    try { bioProcessAndNotify($pdo, $dev, $res['new']); } catch (Throwable $e) { error_log('bio process: ' . $e->getMessage()); }
     exit;
 }
 
-if ($method === 'POST') {
-    // ---------------- प्रत्यक्ष Attendance Data (Punch Records) ----------------
-    $table = $_GET['table'] ?? '';
-    $body = file_get_contents('php://input');
-
-    if (strtoupper($table) === 'ATTLOG' && $body && !$deviceApproved) {
-        // मंजूर न झालेलं / निष्क्रिय Device — Punches दुर्लक्षित
-        header('Content-Type: text/plain');
-        echo "OK: 0";
-        exit;
-    }
-
-    if (strtoupper($table) === 'ATTLOG' && $body) {
-        $lines = preg_split('/\r\n|\r|\n/', trim($body));
-        $inserted = 0;
-        foreach ($lines as $line) {
-            if (!trim($line)) continue;
-            // सामान्यतः Tab-Separated: PIN, वेळ, Status, Verify-Mode, ...
-            $parts = preg_split('/\t/', $line);
-            if (count($parts) < 2) continue;
-            $pin = trim($parts[0]);
-            $punchTime = trim($parts[1]);
-            $verifyMode = $parts[3] ?? null;
-
-            $ts = strtotime($punchTime);
-            if (!$pin || !$ts) continue;
-            $punchDateTime = date('Y-m-d H:i:s', $ts);
-
-            try {
-                // INSERT IGNORE — Machine ने तोच Punch पुन्हा पाठवला तरी दुप्पट नोंद नाही (Unique Key)
-                $insStmt = $pdo->prepare("INSERT IGNORE INTO biometric_punch_logs (device_serial, biometric_pin, punch_time, verify_mode) VALUES (?, ?, ?, ?)");
-                $insStmt->execute([$serialNumber, $pin, $punchDateTime, $verifyMode]);
-                $inserted += $insStmt->rowCount();
-            } catch (PDOException $e) {
-                // Migration अजून चाललेली नसेल — शांतपणे वगळतो
-            }
-        }
-        header('Content-Type: text/plain');
-        echo "OK: $inserted";
-        exit;
-    }
-
-    // इतर Table-प्रकार (OPLOG, इ.) — सध्या वापरत नाही, फक्त Acknowledge करतो
-    header('Content-Type: text/plain');
-    echo "OK";
-    exit;
+if ($table === 'OPERLOG') {
+    $n = bioIngestOperlog($pdo, $dev, $body);
+    if ($stamp !== null) { $pdo->prepare("UPDATE bio_devices SET op_stamp = ? WHERE id = ?")->execute([$stamp, (int)$dev['id']]); }
+    $reply('OK: ' . $n);
 }
 
-http_response_code(405);
-echo "Method Not Allowed";
+if ($table === 'OPTIONS' || isset($_GET['options'])) {
+    // काही Machines स्वतःची माहिती "~DeviceName=..,FWVersion=..,UserCount=.." अशी पाठवतात
+    $info = [];
+    foreach (preg_split('/[,\r\n]+/', (string)$body) as $kv) {
+        if (strpos($kv, '=') === false) { continue; }
+        [$k, $v] = array_map('trim', explode('=', $kv, 2));
+        $k = ltrim($k, '~');
+        $map = ['FWVersion' => 'firmware', 'UserCount' => 'user_count', 'FPCount' => 'fp_count', 'TransactionCount' => 'att_count', 'FaceCount' => 'face_count'];
+        if (isset($map[$k])) { $info[$map[$k]] = $v; }
+    }
+    if ($info) { bioTouchDevice($pdo, $dev, $info); }
+}
+
+// ATTPHOTO, BIODATA इ. — सध्या साठवत नाही, फक्त स्वीकारतो
+$reply('OK');

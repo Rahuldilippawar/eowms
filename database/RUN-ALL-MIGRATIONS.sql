@@ -2387,32 +2387,7 @@ ALTER TABLE maintenance_locations ADD COLUMN capacity INT NULL AFTER location_co
 ALTER TABLE users ADD COLUMN biometric_pin VARCHAR(20) NULL AFTER employee_code;
 ALTER TABLE users ADD UNIQUE KEY uniq_biometric_pin (organization_id, biometric_pin);
 
-CREATE TABLE biometric_devices (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  organization_id INT NOT NULL,
-  campus_id INT NULL,
-  serial_number VARCHAR(50) NOT NULL,
-  device_name VARCHAR(150) NULL COMMENT 'उदा. मुख्य प्रवेशद्वार, Trust Office',
-  last_seen_at TIMESTAMP NULL,
-  is_active TINYINT(1) DEFAULT 1,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
-  FOREIGN KEY (campus_id) REFERENCES campuses(id) ON DELETE SET NULL,
-  UNIQUE KEY uniq_serial (serial_number)
-) ENGINE=InnoDB;
 
--- Device वरून येणाऱ्या प्रत्येक Punch ची Raw नोंद (Processing च्या आधीची)
-CREATE TABLE biometric_punch_logs (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  device_serial VARCHAR(50) NOT NULL,
-  biometric_pin VARCHAR(20) NOT NULL,
-  punch_time DATETIME NOT NULL,
-  verify_mode VARCHAR(10) NULL,
-  processed TINYINT(1) DEFAULT 0,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  INDEX idx_pin_time (biometric_pin, punch_time),
-  INDEX idx_processed (processed)
-) ENGINE=InnoDB;
 
 -- रोजची, Processed Attendance (प्रत्येक Staff साठी, प्रत्येक दिवशी एक नोंद)
 CREATE TABLE staff_attendance (
@@ -3858,13 +3833,7 @@ DROP TABLE IF EXISTS letter_attachment_remarks;
 -- ============================================================
 -- FROM: migration-security-fixes-w1.sql
 -- ============================================================
--- Biometric: अनोळखी Machine आपोआप "मंजूर" होऊ नये — Super Admin ने मंजूर केल्यावरच तिचे Punches स्वीकारायचे
--- (आधीपासून असलेली Devices मंजूरच राहतात — DEFAULT 1; नवीन, आपोआप नोंदलेली Devices iclock/cdata.php मधून 0 ने येतात)
-ALTER TABLE biometric_devices ADD COLUMN is_approved TINYINT(1) NOT NULL DEFAULT 1 AFTER is_active;
 
--- Biometric: Machine ने तेच Punches पुन्हा पाठवले तरी दुप्पट नोंद होऊ नये
-DELETE p1 FROM biometric_punch_logs p1 JOIN biometric_punch_logs p2 ON p1.device_serial = p2.device_serial AND p1.biometric_pin = p2.biometric_pin AND p1.punch_time = p2.punch_time AND p1.id > p2.id;
-ALTER TABLE biometric_punch_logs ADD UNIQUE KEY uniq_device_pin_time (device_serial, biometric_pin, punch_time);
 
 -- Public फॉर्म (request.php, guests/pre-register.php) साठी साधी Rate-Limit नोंद
 CREATE TABLE IF NOT EXISTS public_form_submissions (
@@ -4575,3 +4544,98 @@ ALTER TABLE vehicle_fuel_log
   ADD INDEX idx_vehicle_date (vehicle_id, fill_date);
 ALTER TABLE leave_applications
   ADD INDEX idx_org_status (organization_id, status, start_date);
+
+-- ============================================================
+-- FROM: migration-biometric-v2.sql
+-- ============================================================
+-- 🖐️ Biometric v2 (eSSL / ZKTeco ADMS Push) — जुनी व्यवस्था पूर्ण काढून नवीन:
+-- Machines (मंजुरी, Online/Offline, माहिती), Raw Punches (मंजुरी-प्रलंबित Machine चे पण
+-- सांभाळून ठेवतो), Machine वरचे कर्मचारी, Remote आदेशांची रांग.
+DROP TABLE IF EXISTS biometric_punch_logs;
+DROP TABLE IF EXISTS biometric_devices;
+
+CREATE TABLE bio_devices (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  organization_id INT NULL,
+  campus_id INT NULL,
+  serial_number VARCHAR(50) NOT NULL,
+  device_name VARCHAR(150) NULL,
+  location VARCHAR(150) NULL,
+  status ENUM('pending','active','disabled') NOT NULL DEFAULT 'pending',
+  ip_address VARCHAR(45) NULL,
+  firmware VARCHAR(100) NULL,
+  push_version VARCHAR(20) NULL,
+  user_count INT NULL,
+  fp_count INT NULL,
+  face_count INT NULL,
+  att_count INT NULL,
+  att_stamp VARCHAR(30) NULL,
+  op_stamp VARCHAR(30) NULL,
+  last_seen_at DATETIME NULL,
+  last_punch_at DATETIME NULL,
+  offline_alerted_at DATETIME NULL,
+  approved_by INT NULL,
+  approved_at DATETIME NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_serial (serial_number),
+  INDEX idx_org_status (organization_id, status),
+  FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+  FOREIGN KEY (campus_id) REFERENCES campuses(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE bio_punches (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  device_id INT NOT NULL,
+  pin VARCHAR(20) NOT NULL,
+  punch_time DATETIME NOT NULL,
+  punch_state TINYINT NULL COMMENT '0 आत, 1 बाहेर, 2 Break बाहेर, 3 Break आत, 4 OT आत, 5 OT बाहेर',
+  verify_mode TINYINT NULL COMMENT '1 बोट, 15 चेहरा, 4 Card, 0 Password',
+  work_code VARCHAR(20) NULL,
+  user_id INT NULL,
+  processed TINYINT(1) NOT NULL DEFAULT 0,
+  notified TINYINT(1) NOT NULL DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_device_pin_time (device_id, pin, punch_time),
+  INDEX idx_user_time (user_id, punch_time),
+  INDEX idx_processed (processed),
+  INDEX idx_time (punch_time),
+  FOREIGN KEY (device_id) REFERENCES bio_devices(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE bio_device_users (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  device_id INT NOT NULL,
+  pin VARCHAR(20) NOT NULL,
+  name VARCHAR(100) NULL,
+  privilege TINYINT NULL,
+  card VARCHAR(30) NULL,
+  fp_count TINYINT NOT NULL DEFAULT 0,
+  has_face TINYINT(1) NOT NULL DEFAULT 0,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_device_pin (device_id, pin),
+  FOREIGN KEY (device_id) REFERENCES bio_devices(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE bio_commands (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  device_id INT NOT NULL,
+  label VARCHAR(150) NULL,
+  command TEXT NOT NULL,
+  status ENUM('queued','sent','done','failed') NOT NULL DEFAULT 'queued',
+  return_code VARCHAR(20) NULL,
+  created_by INT NULL,
+  created_at DATETIME NOT NULL,
+  sent_at DATETIME NULL,
+  done_at DATETIME NULL,
+  INDEX idx_device_status (device_id, status),
+  FOREIGN KEY (device_id) REFERENCES bio_devices(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Shift-नुसार हिशोब — उशीर / लवकर गेले / प्रत्यक्ष काम / Overtime (मिनिटांत), एकच Punch
+ALTER TABLE staff_attendance
+  ADD COLUMN late_minutes INT NOT NULL DEFAULT 0,
+  ADD COLUMN early_minutes INT NOT NULL DEFAULT 0,
+  ADD COLUMN worked_minutes INT NOT NULL DEFAULT 0,
+  ADD COLUMN overtime_minutes INT NOT NULL DEFAULT 0,
+  ADD COLUMN missed_punch TINYINT(1) NOT NULL DEFAULT 0;

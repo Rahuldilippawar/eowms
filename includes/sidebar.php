@@ -96,6 +96,7 @@ $dirToGroup = [
     'messages' => 'communication', 'grievances' => 'communication',
     'renewals' => 'compliance', 'sop' => 'compliance',
     'staff' => 'staff',
+    'biometric' => 'staff',
     'hostels' => 'hostel', 'residency' => 'hostel',
     'meditation' => 'activities', 'music' => 'activities', 'events' => 'activities', 'guests' => 'activities',
     'allocations' => 'facilities', 'room-booking' => 'facilities',
@@ -406,6 +407,9 @@ function navGroupHead($id, $key, $activeGroup, $icon, $label, $badge = 0) {
       <?php endif; ?>
       <a href="<?= $rp ?>staff/attendance.php" class="tree-node <?= $currentDir === 'staff' && $currentPage === 'attendance.php' ? 'active' : '' ?>">
         <i class="fa-solid fa-fingerprint fa-fw"></i><span>Staff Attendance</span>
+      </a>
+      <a href="<?= $rp ?>biometric/<?= hasRole('super_admin') || isManagementOrAbove() ? 'index.php' : 'my.php' ?>" class="tree-node <?= $currentDir === 'biometric' ? 'active' : '' ?>">
+        <i class="fa-solid fa-hand fa-fw"></i><span><?= hasRole('super_admin') || isManagementOrAbove() ? 'Biometric Live' : 'माझी Biometric हजेरी' ?></span>
       </a>
       <a href="<?= $rp ?>staff/my-leaves.php" class="tree-node <?= $currentDir === 'staff' && in_array($currentPage, ['my-leaves.php','leave-apply.php']) ? 'active' : '' ?>">
         <i class="fa-solid fa-umbrella-beach fa-fw"></i><span>रजा व्यवस्थापन</span>
