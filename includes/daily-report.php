@@ -210,9 +210,18 @@ function dailyReportData(PDO $pdo, $orgId, $date) {
     // 11) नूतनीकरण
     $ren = $q("SELECT r.item_name, r.expiry_date, DATEDIFF(r.expiry_date, ?) left_days, COALESCE(NULLIF(dp.name_local,''), dp.name) dept FROM renewal_items r LEFT JOIN departments dp ON dp.id = r.department_id
                WHERE r.organization_id = ? AND r.status <> 'inactive' AND r.expiry_date <= DATE_ADD(?, INTERVAL 7 DAY) ORDER BY r.expiry_date LIMIT 8", [$d, $o, $d]);
+    // एकूण आकडे (यादी 8 पर्यंतच — बाकी "+N अजून"), पुढच्या 7 दिवसांचा अंदाजे खर्च (मागच्या शुल्कावरून), आज नूतनीकरण केलेली
+    $renAgg = $q("SELECT COUNT(*) total, SUM(expiry_date < ?) expired, SUM(expiry_date <= DATE_ADD(?, INTERVAL 7 DAY)) due,
+            COALESCE(SUM(CASE WHEN expiry_date BETWEEN ? AND DATE_ADD(?, INTERVAL 7 DAY) THEN renewal_cost END), 0) cost7
+        FROM renewal_items WHERE organization_id = ? AND status <> 'inactive'", [$d, $d, $d, $d, $o], 'one') ?: [];
+    $renDone = $q("SELECT r.item_name, r.expiry_date, r.renewal_cost FROM renewal_history h JOIN renewal_items r ON r.id = h.renewal_item_id
+        WHERE r.organization_id = ? AND DATE(h.renewed_at) = ? ORDER BY h.renewed_at", [$o, $d]);
+    if ((int)($renAgg['total'] ?? 0) > 0) {
+        $S['renewInfo'] = ['total' => (int)$renAgg['total'], 'expired' => (int)$renAgg['expired'], 'due' => (int)$renAgg['due'], 'cost7' => (float)$renAgg['cost7'], 'done' => $renDone];
+    }
     if ($ren) {
         $S['renewals'] = $ren;
-        $exp = count(array_filter($ren, fn($x) => $x['left_days'] < 0));
+        $exp = (int)($renAgg['expired'] ?? count(array_filter($ren, fn($x) => $x['left_days'] < 0)));
         if ($exp) { $alerts[] = ['bad', $exp . ' परवाने/नूतनीकरण मुदत संपलेली']; }
     }
 
@@ -427,12 +436,26 @@ function dailyReportPdfHtml(array $D) {
         $html .= $S['ecampus']['html'];
     }
 
-    // --- नूतनीकरण ---
+    // --- नूतनीकरण --- (काहीच मुदतीत नसेल तरी "✓ सगळं वेळेत" — विसरलं की ठीक आहे, ते स्पष्ट)
+    $RI = $S['renewInfo'] ?? null;
+    $renLink = (defined('SITE_BASE_URL') ? SITE_BASE_URL : '') . '/renewals/index.php';
+    if (empty($S['renewals']) && $RI) {
+        $html .= $sec(++$n, 'नूतनीकरण', 'मुदत संपलेली / 7 दिवसांत संपणारी');
+        $html .= '<div class="ok-line" style="color:#137A4B;font-weight:bold;">सगळी ' . $RI['total'] . ' नूतनीकरणं वेळेत — पुढच्या 7 दिवसांत एकाचीही मुदत संपत नाही.</div>';
+    }
     if (!empty($S['renewals'])) {
         $html .= $sec(++$n, 'नूतनीकरण', 'मुदत संपलेली / 7 दिवसांत संपणारी');
         $html .= '<table class="g"><thead><tr><th style="width:46%;">परवाना / नूतनीकरण</th><th style="width:22%;">विभाग</th><th class="num-r" style="width:14%;">मुदत</th><th class="num-r" style="width:18%;">स्थिती</th></tr></thead><tbody>';
         foreach ($S['renewals'] as $x) { $late = $x['left_days'] < 0; $html .= '<tr><td>' . $h($x['item_name']) . '</td><td>' . $h($x['dept'] ?? '—') . '</td><td class="num-r">' . date('d/m/Y', strtotime($x['expiry_date'])) . '</td><td class="num-r" style="font-weight:bold;color:' . ($late ? '#B42318' : '#B45309') . ';">' . ($late ? abs($x['left_days']) . ' दिवस उलटले' : ($x['left_days'] == 0 ? 'आज' : $x['left_days'] . ' दिवस बाकी')) . '</td></tr>'; }
         $html .= '</tbody></table>';
+        $more = $RI ? $RI['due'] - count($S['renewals']) : 0;
+        $notes = [];
+        if ($more > 0) { $notes[] = '<b>+' . $more . ' अजून</b> — <a href="' . $h($renLink) . '">पूर्ण यादी पाहा</a>'; }
+        if ($RI && $RI['cost7'] > 0) { $notes[] = 'पुढच्या 7 दिवसांतल्या नूतनीकरणांचा अंदाजे खर्च <b>₹' . number_format($RI['cost7'], 0) . '</b> (मागच्या वेळच्या शुल्कावरून)'; }
+        if ($notes) { $html .= '<div class="muted" style="margin-top:4px;">' . implode(' · ', $notes) . '</div>'; }
+    }
+    if ($RI && $RI['done']) {
+        $html .= '<div style="margin-top:4px;color:#137A4B;">आज नूतनीकरण केलेली: ' . $h(implode(', ', array_map(fn($x) => $x['item_name'] . ' (पुढची मुदत ' . date('d/m/Y', strtotime($x['expiry_date'])) . ')', $RI['done']))) . '</div>';
     }
 
     // --- उद्याचं नियोजन ---

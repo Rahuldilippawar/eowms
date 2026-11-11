@@ -83,6 +83,14 @@ function weeklyReportData(PDO $pdo, $orgId, array $period) {
         FROM renewal_items r LEFT JOIN departments d ON d.id = r.department_id
         WHERE r.organization_id = ? AND r.status <> 'inactive' AND r.expiry_date <= DATE_ADD(CURDATE(), INTERVAL 30 DAY)
         ORDER BY r.expiry_date ASC LIMIT 12", [$orgId]);
+    // एकूण (यादी 12 पर्यंतच), पुढच्या 30 दिवसांचा अंदाजे खर्च, या आठवड्यात पूर्ण केलेली नूतनीकरणं
+    $renAgg = $q("SELECT COUNT(*) total, SUM(expiry_date < CURDATE()) expired, SUM(expiry_date <= DATE_ADD(CURDATE(), INTERVAL 30 DAY)) due,
+            COALESCE(SUM(CASE WHEN expiry_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY) THEN renewal_cost END), 0) cost30
+        FROM renewal_items WHERE organization_id = ? AND status <> 'inactive'", [$orgId], 'one') ?: [];
+    $renDone = $q("SELECT r.item_name, r.expiry_date, h.renewed_at, COALESCE(NULLIF(d.name_local, ''), d.name) dept
+        FROM renewal_history h JOIN renewal_items r ON r.id = h.renewal_item_id LEFT JOIN departments d ON d.id = r.department_id
+        WHERE r.organization_id = ? AND DATE(h.renewed_at) BETWEEN ? AND ? ORDER BY h.renewed_at", [$orgId, $s, $e]);
+    $renewInfo = ['total' => (int)($renAgg['total'] ?? 0), 'expired' => (int)($renAgg['expired'] ?? 0), 'due' => (int)($renAgg['due'] ?? 0), 'cost30' => (float)($renAgg['cost30'] ?? 0), 'done' => $renDone];
 
     // खर्च — Budget व्यवहार (या आठवड्यात) + चालू आर्थिक वर्ष
     $fy = (int)date('n') >= 4 ? (int)date('Y') : (int)date('Y') - 1;
@@ -142,7 +150,7 @@ function weeklyReportData(PDO $pdo, $orgId, array $period) {
     return [
         'org' => $org['name'] ?? 'E-Admin', 'orgId' => (int)$orgId, 'period' => $period, 'fy' => $fy, 'ecampus' => $ecampus,
         'summary' => $sum, 'health' => $health, 'work' => $work, 'workPrev' => $workPrev, 'days' => $days,
-        'tasks' => $tasks, 'overdueTasks' => $overdueTasks, 'req' => $req, 'renewals' => $renewals,
+        'tasks' => $tasks, 'overdueTasks' => $overdueTasks, 'req' => $req, 'renewals' => $renewals, 'renewInfo' => $renewInfo,
         'spendWeek' => $spendWeek, 'spendPrev' => $spendPrev, 'spendCat' => $spendCat, 'budget' => $budget, 'fyAlloc' => $fyAlloc, 'fySpent' => $fySpent,
         'alerts' => $alerts, 'good' => $good, 'generated' => date('Y-m-d H:i'),
     ];
@@ -251,17 +259,34 @@ function weeklyReportPdfHtml(array $d) {
 
     // विनंत्या + नूतनीकरण
     $r = $d['req'];
+    $RI = $d['renewInfo'] ?? [];
+    $renLink = (defined('SITE_BASE_URL') ? SITE_BASE_URL : '') . '/renewals/index.php';
     $html .= '<h2>कामाच्या विनंत्या व नूतनीकरण</h2><table class="kp"><tr>'
         . $kpi('नवीन विनंत्या', (int)($r['new_week'] ?? 0), 'या आठवड्यात आल्या')
         . $kpi('पूर्ण विनंत्या', (int)($r['done_week'] ?? 0), 'या आठवड्यात', '#137A4B')
         . $kpi('प्रलंबित विनंत्या', (int)($r['open_cnt'] ?? 0), (int)($r['overdue'] ?? 0) . ' SLA वेळ उलटून', ($r['overdue'] ?? 0) ? '#B45309' : '#191C3A')
-        . $kpi('नूतनीकरण (30 दिवस)', count($d['renewals']), count(array_filter($d['renewals'], fn($x) => $x['days_left'] < 0)) . ' मुदत संपलेली', '#191C3A')
+        . $kpi('नूतनीकरण (30 दिवस)', $RI['due'] ?? count($d['renewals']), ($RI['expired'] ?? count(array_filter($d['renewals'], fn($x) => $x['days_left'] < 0))) . ' मुदत संपलेली · ' . count($RI['done'] ?? []) . ' या आठवड्यात पूर्ण', ($RI['expired'] ?? 0) ? '#B42318' : '#191C3A')
         . '</tr></table>';
+    if (!$d['renewals'] && !empty($RI['total'])) {
+        $html .= '<div style="margin-top:6px;color:#137A4B;font-weight:bold;">सगळी ' . $RI['total'] . ' नूतनीकरणं वेळेत — पुढच्या 30 दिवसांत एकाचीही मुदत संपत नाही.</div>';
+    }
     if ($d['renewals']) {
         $html .= '<table class="g" style="margin-top:6px;"><thead><tr><th style="width:46%;">परवाना / नूतनीकरण</th><th style="width:20%;">विभाग</th><th class="num" style="width:14%;">मुदत</th><th class="num" style="width:20%;">स्थिती</th></tr></thead><tbody>';
         foreach ($d['renewals'] as $x) {
             $late = (int)$x['days_left'] < 0;
             $html .= '<tr><td>' . $h($x['item_name']) . '</td><td>' . $h($x['dept'] ?? '—') . '</td><td class="num">' . date('d/m/Y', strtotime($x['expiry_date'])) . '</td><td class="num" style="font-weight:bold;color:' . ($late ? '#B42318' : '#B45309') . ';">' . ($late ? abs($x['days_left']) . ' दिवस उलटले' : $x['days_left'] . ' दिवस बाकी') . '</td></tr>';
+        }
+        $html .= '</tbody></table>';
+        $notes = [];
+        $more = ($RI['due'] ?? 0) - count($d['renewals']);
+        if ($more > 0) { $notes[] = '<b>+' . $more . ' अजून</b> — <a href="' . $h($renLink) . '">पूर्ण यादी पाहा</a>'; }
+        if (!empty($RI['cost30'])) { $notes[] = 'पुढच्या 30 दिवसांतल्या नूतनीकरणांचा अंदाजे खर्च <b>' . weeklyReportMoney($RI['cost30']) . '</b> (मागच्या वेळच्या शुल्कावरून)'; }
+        if ($notes) { $html .= '<div class="muted" style="margin-top:4px;">' . implode(' · ', $notes) . '</div>'; }
+    }
+    if (!empty($RI['done'])) {
+        $html .= '<div style="margin-top:8px;font-weight:bold;color:#137A4B;">या आठवड्यात नूतनीकरण पूर्ण (' . count($RI['done']) . ')</div><table class="g" style="margin-top:3px;"><thead><tr><th style="width:46%;">परवाना / नूतनीकरण</th><th style="width:22%;">विभाग</th><th class="num" style="width:16%;">केलं</th><th class="num" style="width:16%;">पुढची मुदत</th></tr></thead><tbody>';
+        foreach (array_slice($RI['done'], 0, 12) as $x) {
+            $html .= '<tr><td>' . $h($x['item_name']) . '</td><td>' . $h($x['dept'] ?? '—') . '</td><td class="num">' . date('d/m', strtotime($x['renewed_at'])) . '</td><td class="num" style="color:#137A4B;">' . date('d/m/Y', strtotime($x['expiry_date'])) . '</td></tr>';
         }
         $html .= '</tbody></table>';
     }
