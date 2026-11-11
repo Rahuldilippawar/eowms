@@ -219,7 +219,7 @@ require_once __DIR__ . '/../includes/header.php';
   </div>
   <?php elseif ($setup === 'email'): ?>
   <div class="panel mb-3">
-    <div class="panel-head"><div class="title">📧 Email Code सेट करा</div><div class="sub">प्रत्येक Login ला <?= h($u['email']) ?> वर Code येईल</div></div>
+    <div class="panel-head"><div class="title">📧 Email Code सेट करा</div><div class="sub">प्रत्येक Login ला <b><?= h($u['email']) ?></b> वर Code येईल</div></div>
     <div style="padding:16px 20px 20px;">
       <?php if (empty($_GET['sent'])): ?>
         <p style="font-size:13.5px;">आधी तुमचा Email चालतो याची खात्री करू — Code पाठवतो.</p>
@@ -247,7 +247,7 @@ require_once __DIR__ . '/../includes/header.php';
       <a class="tf-opt" href="?setup=email">
         <i class="fa-solid fa-envelope-circle-check fa-2x" style="color:var(--rail);"></i>
         <div class="t">Email Code</div>
-        <div class="d">प्रत्येक Login ला <?= h($u['email'] ?: 'तुमच्या Email') ?> वर 6 अंकी Code. App नको असेल तर सोपं.</div>
+        <div class="d">प्रत्येक Login ला <b><?= h($u['email'] ?: 'तुमच्या Email') ?></b> वर 6 अंकी Code. App नको असेल तर सोपं.</div>
       </a>
     </div>
   </div>
