@@ -51,7 +51,16 @@ jobs:
             echo "::error::FTP_SERVER / FTP_USERNAME / FTP_PASSWORD secrets are not set"
             exit 1
           fi
-          sudo apt-get install -y -qq lftp > /dev/null
+          # lftp — Ubuntu Server (security.ubuntu.com) कधी कधी तात्पुरता मिळत नाही; म्हणून
+          # package-यादी Update करून 4 वेळा प्रयत्न (मध्ये थांबून), मगच थांबतो
+          for i in 1 2 3 4; do
+            command -v lftp > /dev/null && break
+            sudo apt-get install -y -qq lftp > /dev/null 2>&1 && break
+            echo "lftp install प्रयत्न $i अयशस्वी — package-यादी Update करून पुन्हा"
+            sudo apt-get update -qq > /dev/null 2>&1 || true
+            sleep $((i * 10))
+          done
+          command -v lftp > /dev/null || { echo "::error::lftp install होऊ शकलं नाही (Ubuntu package server मिळाला नाही) — थोड्या वेळाने Re-run करा"; exit 1; }
           if [ "$PROTOCOL" = "ftps" ]; then
             # FTPS Certificate कोणत्या नावासाठी आहे — FTP_SERVER हेच नाव असायला हवं
             echo "FTPS certificate names:"
