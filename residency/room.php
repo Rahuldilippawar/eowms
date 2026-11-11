@@ -130,6 +130,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($action === 'add_item' && $canManage) {
         $itemName = trim($_POST['item_name'] ?? '');
         $ownership = $_POST['ownership'] ?? 'संस्थेचे';
+        if (!in_array($ownership, ['संस्थेचे', 'वैयक्तिक'], true)) { $ownership = 'संस्थेचे'; }   // ENUM बाहेरचं मूल्य → 500 टाळा
         $quantity = max(1, (int)($_POST['quantity'] ?? 1));
         $remarks = trim($_POST['item_remarks'] ?? '') ?: null;
         if ($itemName) {

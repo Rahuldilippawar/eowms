@@ -212,7 +212,7 @@ if ('serviceWorker' in navigator) {
 <script>if (window.eowmsPushStart && window.eowmsUid) eowmsPushStart(<?= json_encode($rootPath ?? '') ?>);</script>
 
 <!-- Offline-first form queue (works alongside the service worker above) -->
-<script src="<?= $rootPath ?? '' ?>assets/js/offline-queue.js"></script>
+<script src="<?= $rootPath ?? '' ?>assets/js/offline-queue.js?v=2"></script>
 
 <?php if (!empty($_SESSION['play_welcome_chime'])): unset($_SESSION['play_welcome_chime']);
   // प्राधान्य 1: Super Admin ने Upload केलेलं Music (Database मध्ये साठवलेलं)
