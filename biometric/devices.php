@@ -60,10 +60,10 @@ if ($ready && $_SERVER['REQUEST_METHOD'] === 'POST') {
         case 'cmd':
             $cmd = $_POST['cmd'] ?? '';
             if ($cmd === 'sync_users') {
-                $st = $pdo->prepare("SELECT biometric_pin, name FROM users WHERE organization_id = ? AND is_active = 1 AND biometric_pin IS NOT NULL AND biometric_pin <> '' ORDER BY biometric_pin LIMIT 2000");
+                $st = $pdo->prepare("SELECT biometric_pin, name, employee_code FROM users WHERE organization_id = ? AND is_active = 1 AND biometric_pin IS NOT NULL AND biometric_pin <> '' ORDER BY biometric_pin LIMIT 2000");
                 $st->execute([$orgId]);
                 $n = 0;
-                foreach ($st->fetchAll() as $u) { bioQueueCommand($pdo, $dev['id'], bioUserCommand($u['biometric_pin'], $u['name']), 'कर्मचारी पाठवला — PIN ' . $u['biometric_pin'], $user['id']); $n++; }
+                foreach ($st->fetchAll() as $u) { bioQueueCommand($pdo, $dev['id'], bioUserCommand($u['biometric_pin'], $u['name'], $u['employee_code']), 'कर्मचारी पाठवला — PIN ' . $u['biometric_pin'], $user['id']); $n++; }
                 $back($n ? "$n कर्मचारी (नाव + PIN) Machine कडे पाठवण्यासाठी रांगेत — Machine वर बोट/चेहरा नोंदवायचा बाकी असेल तर Machine वरच नोंदवा." : 'PIN दिलेले कर्मचारी नाहीत — आधी PIN जोडणी पानावर PIN द्या.', !$n);
             }
             if ($cmd === 'pull_all') {

@@ -101,7 +101,7 @@ if ($ready && $_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!in_array((int)$s['id'], $ids, true)) { continue; }
             $pin = bioNextPin($pdo, $orgId);
             $setPin($s['id'], $pin);
-            foreach ($devs as $did) { bioQueueCommand($pdo, $did, bioUserCommand($pin, $s['name']), 'नवीन कर्मचारी — PIN ' . $pin, $user['id']); }
+            foreach ($devs as $did) { bioQueueCommand($pdo, $did, bioUserCommand($pin, $s['name'], $s['employee_code']), 'नवीन कर्मचारी — PIN ' . $pin, $user['id']); }
             $n++;
         }
         $back("$n कर्मचाऱ्यांना PIN दिला" . ($devs ? ' व ' . count($devs) . ' Machine(s) वर पाठवला — आता Machine वर त्यांचं बोट/चेहरा नोंदवा.' : ' (Machine मंजूर झाल्यावर "सगळे कर्मचारी पाठवा" वापरा).'));

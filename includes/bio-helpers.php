@@ -390,11 +390,44 @@ function bioQueueCommand(PDO $pdo, $deviceId, $command, $label, $byUserId = null
     return (int)$pdo->lastInsertId();
 }
 
-/** Machine वर कर्मचारी (नाव + PIN) — Machine वरचं नाव इंग्रजी अक्षरांतच नीट दिसतं */
-function bioUserCommand($pin, $name) {
+/** Machine वर कर्मचारी (नाव + PIN) — Machine वरचं नाव इंग्रजी अक्षरांतच नीट दिसतं (मराठी नाव असेल तर कर्मचारी क्रमांक / "Staff PIN") */
+function bioUserCommand($pin, $name, $alt = null) {
     $ascii = trim(preg_replace('/[^A-Za-z0-9 .\-]/', '', (string)$name));
+    if (mb_strlen($ascii) < 3) { $ascii = trim(preg_replace('/[^A-Za-z0-9 .\-]/', '', (string)$alt)); }
     if ($ascii === '') { $ascii = 'Staff ' . $pin; }
     return "DATA UPDATE USERINFO PIN=$pin\tName=" . mb_substr($ascii, 0, 24) . "\tPri=0\tPasswd=\tCard=\tGrp=1\tTZ=0000000100000000\tVerify=0";
+}
+
+/** हा PIN संस्थेत दुसऱ्या कर्मचाऱ्याकडे आहे का (निष्क्रिय धरून) — असेल तर त्याचं नाव */
+function bioPinOwner(PDO $pdo, $orgId, $pin, $exceptUserId = 0) {
+    $st = $pdo->prepare("SELECT name FROM users WHERE organization_id = ? AND biometric_pin = ? AND id <> ? LIMIT 1");
+    $st->execute([(int)$orgId, (string)$pin, (int)$exceptUserId]);
+    return $st->fetchColumn() ?: null;
+}
+
+/**
+ * कर्मचाऱ्याची नोंद बदलली (नवीन / PIN बदलला / सक्रिय-निष्क्रिय) — सगळ्या चालू Machines वर आपोआप:
+ * सक्रिय + PIN → नाव+PIN पाठवतो; जुना PIN बदलला → जुना काढतो; निष्क्रिय → Machine वरून काढतो (सोडून गेलेले Punch करू शकत नाहीत).
+ * परत: किती Machines ना आदेश गेला (0 = Machine नाही / bio Tables नाहीत).
+ */
+function bioSyncStaff(PDO $pdo, $orgId, $userId, $oldPin = null, $byUserId = null) {
+    if (!bioReady($pdo)) { return 0; }
+    $u = $pdo->prepare("SELECT id, name, employee_code, biometric_pin, is_active FROM users WHERE id = ? AND organization_id = ?");
+    $u->execute([(int)$userId, (int)$orgId]);
+    $u = $u->fetch();
+    if (!$u) { return 0; }
+    $devs = $pdo->prepare("SELECT id FROM bio_devices WHERE organization_id = ? AND status = 'active'");
+    $devs->execute([(int)$orgId]);
+    $devs = $devs->fetchAll(PDO::FETCH_COLUMN);
+    $pin = (string)($u['biometric_pin'] ?? '');
+    $old = (string)($oldPin ?? '');
+    foreach ($devs as $did) {
+        if ($old !== '' && $old !== $pin) { bioQueueCommand($pdo, $did, "DATA DELETE USERINFO PIN=$old", 'जुना PIN काढला — ' . $old, $byUserId); }
+        if ($pin === '') { continue; }
+        if ((int)$u['is_active'] === 1) { bioQueueCommand($pdo, $did, bioUserCommand($pin, $u['name'], $u['employee_code']), 'कर्मचारी पाठवला — PIN ' . $pin, $byUserId); }
+        else { bioQueueCommand($pdo, $did, "DATA DELETE USERINFO PIN=$pin", 'निष्क्रिय कर्मचारी काढला — PIN ' . $pin, $byUserId); }
+    }
+    return count($devs);
 }
 
 /** पुढचा मोकळा PIN — संस्थेतला सर्वात मोठा अंकी PIN + 1 (Machine वरचे PIN पण धरून) */

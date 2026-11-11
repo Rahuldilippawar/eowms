@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/bio-helpers.php';
 requireLogin('../');
 requireRole(['super_admin'], '../');
 $user = currentUser();
@@ -65,7 +66,7 @@ if ($departmentId) {
 
 // Safety: never allow the LAST remaining super_admin to be demoted or deactivated —
 // this prevents the whole system from becoming permanently inaccessible.
-$targetStmt = $pdo->prepare("SELECT role, is_active, left_date, department_id, campus_id, salary, email FROM users WHERE id = ? AND organization_id = ?");
+$targetStmt = $pdo->prepare("SELECT role, is_active, left_date, department_id, campus_id, salary, email, biometric_pin FROM users WHERE id = ? AND organization_id = ?");
 $targetStmt->execute([$id, activeOrgId()]);
 $targetRow = $targetStmt->fetch();
 if (!$targetRow) {
@@ -139,6 +140,28 @@ if ($newPassword !== '') {
 }
 
 logActivity('कर्मचारी संपादित केला', 'user', $id, "$name — role: $role, active: $isActive");
+
+// 🖐️ Biometric PIN — बदलला / सक्रिय-निष्क्रिय / "पुन्हा पाठवा" तर सगळ्या चालू Machines वर आपोआप
+if (array_key_exists('biometric_pin', $_POST)) {
+    $oldPin = (string)($targetRow['biometric_pin'] ?? '');
+    $newPin = trim((string)$_POST['biometric_pin']);
+    $bioNote = null;
+    if ($newPin !== '' && !preg_match('/^[0-9]{1,9}$/', $newPin)) {
+        $bioNote = 'Biometric PIN फक्त अंकांत (1–9 अंक) असावा — PIN बदलला नाही.';
+    } elseif ($newPin !== '' && ($owner = bioPinOwner($pdo, activeOrgId(), $newPin, $id))) {
+        $bioNote = "Biometric PIN '$newPin' आधीच $owner यांना दिला आहे — PIN बदलला नाही.";
+    } else {
+        if ($newPin !== $oldPin) {
+            $pdo->prepare("UPDATE users SET biometric_pin = ? WHERE id = ?")->execute([$newPin === '' ? null : $newPin, $id]);
+            logActivity("Biometric PIN बदलला: " . ($oldPin ?: '—') . " → " . ($newPin ?: '—'), 'user', $id);
+        }
+        if ($newPin !== $oldPin || $wasActive !== $isActive || !empty($_POST['bio_resend'])) {
+            bioSyncStaff($pdo, activeOrgId(), $id, $oldPin !== $newPin ? $oldPin : null, $user['id'] ?? null);
+        }
+        if ($newPin !== $oldPin && bioReady($pdo)) { bioProcessPending($pdo); } // या PIN चे आधीचे Punches आता याच्या हजेरीत
+    }
+    if ($bioNote) { $_SESSION['form_error'] = $bioNote; }
+}
 
 if ($emailChanged) {
     try {

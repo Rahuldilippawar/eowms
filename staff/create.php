@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/staff-dept-picker.php';
 require_once __DIR__ . '/../includes/mailer.php';
+require_once __DIR__ . '/../includes/bio-helpers.php';
 requireLogin('../');
 requireRole(['super_admin'], '../');
 $user = currentUser();
@@ -17,6 +18,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $designation = trim($_POST['designation'] ?? '');
     $teachingMode = in_array($_POST['teaching_mode'] ?? '', ['Teaching', 'Non Teaching', 'Other'], true) ? $_POST['teaching_mode'] : 'Non Teaching';
     $employeeCode = trim($_POST['employee_code'] ?? '') ?: null;
+    $bioPin = trim($_POST['biometric_pin'] ?? '');
+    $bioAuto = !empty($_POST['bio_auto']);
     $mobile = trim($_POST['mobile'] ?? '') ?: null;
     $salary = trim($_POST['salary'] ?? '') !== '' ? (float)$_POST['salary'] : null;
     $joiningDate = ($_POST['joining_date'] ?? '') ?: date('Y-m-d');
@@ -35,6 +38,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $codeCheck->execute([$employeeCode]);
         if ($check->fetch()) {
             $error = "'$email' आधीच अस्तित्वात आहे.";
+        } elseif ($bioPin !== '' && !preg_match('/^[0-9]{1,9}$/', $bioPin)) {
+            $error = 'Biometric PIN फक्त अंकांत (1–9 अंक) असावा.';
+        } elseif ($bioPin !== '' && ($pinOwner = bioPinOwner($pdo, activeOrgId(), $bioPin))) {
+            $error = "Biometric PIN '$bioPin' आधीच $pinOwner यांना दिला आहे — वेगळा PIN द्या किंवा रिकामा ठेवा (आपोआप मिळेल).";
         } elseif ($employeeCode !== null && $codeCheck->fetch()) {
             $error = "कर्मचारी कोड '$employeeCode' आधीच दुसऱ्या कर्मचाऱ्याला दिलेला आहे — कृपया वेगळा कोड द्या.";
         } else {
@@ -84,6 +91,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
         if (!$error && isset($insert)) {
+            // 🖐️ Biometric — PIN (दिलेला किंवा आपोआप पुढचा) व सगळ्या चालू Machines वर नाव+PIN
+            $newUserId = (int)$pdo->lastInsertId();
+            $bioMsg = '';
+            if ($newUserId && ($bioPin !== '' || $bioAuto) && bioReady($pdo)) {
+                $pinToSet = $bioPin !== '' ? $bioPin : bioNextPin($pdo, $orgId);
+                try {
+                    $pdo->prepare("UPDATE users SET biometric_pin = ? WHERE id = ?")->execute([$pinToSet, $newUserId]);
+                    $nDev = bioSyncStaff($pdo, $orgId, $newUserId, null, $user['id'] ?? null);
+                    $bioMsg = " 🖐️ Biometric PIN: $pinToSet" . ($nDev ? " — $nDev Machine(s) वर पाठवला; आता Machine वर बोट/चेहरा नोंदवा." : ' (Machine मंजूर झाल्यावर पाठवला जाईल).');
+                } catch (PDOException $e) { $bioMsg = ' ⚠ Biometric PIN देता आला नाही — PIN जोडणी पानावर द्या.'; }
+            }
 
             // Role-wise welcome email with login credentials — silently skipped if
             // the hosting's mail server isn't configured (e.g. local XAMPP testing).
@@ -96,6 +114,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['flash'] = $generatedPassword
                 ? "'$name' जोडले गेले. Auto-generated password: $generatedPassword (हा आत्ताच नोंद करा — पुन्हा दिसणार नाही). कर्मचाऱ्याच्या ईमेलवर login माहिती पाठवण्याचा प्रयत्न झाला आहे."
                 : "'$name' जोडले गेले. कर्मचाऱ्याच्या ईमेलवर login माहिती पाठवण्याचा प्रयत्न झाला आहे.";
+            $_SESSION['flash'] .= $bioMsg;
             header('Location: index.php');
             exit;
         }
@@ -199,6 +218,11 @@ require_once __DIR__ . '/../includes/header.php';
       <div class="col-md-4">
         <label class="form-label-custom"><?= h(t('s64')) ?></label>
         <input type="text" name="employee_code" class="form-control-custom">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label-custom">🖐️ Biometric PIN <span style="font-weight:400;color:var(--text-dim);">(Machine वरचा नंबर)</span></label>
+        <input type="text" name="biometric_pin" inputmode="numeric" pattern="[0-9]{1,9}" maxlength="9" class="form-control-custom" placeholder="रिकामा = आपोआप पुढचा नंबर" value="<?= h($_POST['biometric_pin'] ?? '') ?>">
+        <label style="font-size:12px;margin-top:4px;display:flex;gap:6px;align-items:center;"><input type="checkbox" name="bio_auto" value="1" <?= $_SERVER['REQUEST_METHOD'] !== 'POST' || !empty($_POST['bio_auto']) ? 'checked' : '' ?>> Biometric Machine वर आपोआप जोडा</label>
       </div>
       <div class="col-md-4">
         <label class="form-label-custom"><?= h(t('s278')) ?></label>

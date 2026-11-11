@@ -1067,4 +1067,12 @@ return [
     "आजचं काम" => ["आज का काम", "Today's work"],
     "वीज / Internet / LAN Cable तपासा." => ["बिजली / Internet / LAN Cable जाँचें।", "Check power / internet / LAN cable."],
     "माझी Biometric हजेरी" => ["मेरी Biometric उपस्थिति", "My biometric attendance"],
+    "फक्त अंकांत ({n}–{n} अंक) असावा." => ["केवल अंकों में ({n}–{n} अंक) होना चाहिए।", "must be digits only ({n}–{n} digits)."],
+    "यांना दिला आहे — वेगळा PIN द्या किंवा रिकामा ठेवा (आपोआप मिळेल)." => ["को दिया है — दूसरा PIN दें या खाली छोड़ें (अपने आप मिलेगा)।", "is already assigned — give another PIN or leave blank (auto)."],
+    "वर पाठवला; आता Machine वर बोट/चेहरा नोंदवा." => ["पर भेजा; अब Machine पर उँगली/चेहरा दर्ज करें।", "sent; now enrol finger/face on the machine."],
+    "देता आला नाही — PIN जोडणी पानावर द्या." => ["नहीं दिया जा सका — PIN जोड़ने वाले पेज पर दें।", "could not be assigned — assign on the PIN mapping page."],
+    "आपोआप पुढचा नंबर" => ["अपने आप अगला नंबर", "auto next number"],
+    "वर आपोआप जोडा" => ["पर अपने आप जोड़ें", "add automatically"],
+    "फक्त अंकांत ({n}–{n} अंक) असावा — PIN बदलला नाही." => ["केवल अंकों में ({n}–{n} अंक) होना चाहिए — PIN नहीं बदला।", "must be digits only ({n}–{n} digits) — PIN not changed."],
+    "यांना दिला आहे — PIN बदलला नाही." => ["को दिया है — PIN नहीं बदला।", "is already assigned — PIN not changed."],
 ];

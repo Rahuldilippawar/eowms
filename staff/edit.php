@@ -165,6 +165,11 @@ if ($staffMember['role'] !== 'super_admin' && superAdminExistsOtherThan($pdo, (i
         <label class="form-label-custom">रुजू दिनांक (Joining Date)</label>
         <input type="date" name="joining_date" class="form-control-custom" value="<?= h($staffMember['joining_date']) ?>">
       </div>
+      <div class="col-md-4">
+        <label class="form-label-custom">🖐️ Biometric PIN <span style="font-weight:400;color:var(--text-dim);">(Machine वरचा नंबर)</span></label>
+        <input type="text" name="biometric_pin" inputmode="numeric" pattern="[0-9]{1,9}" maxlength="9" class="form-control-custom" value="<?= h($staffMember['biometric_pin'] ?? '') ?>" placeholder="रिकामा = Biometric नाही">
+        <label style="font-size:12px;margin-top:4px;display:flex;gap:6px;align-items:center;"><input type="checkbox" name="bio_resend" value="1"> Machine वर पुन्हा पाठवा</label>
+      </div>
       <?php if ($staffMember['left_date']): ?>
         <div class="col-md-4">
           <label class="form-label-custom">सोडल्याचा दिनांक (Leave Date)</label>
