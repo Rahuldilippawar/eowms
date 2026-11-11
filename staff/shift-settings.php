@@ -15,6 +15,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $halfDayHours = (float)($_POST['half_day_hours'] ?? 4);
         $off1 = ($_POST['weekly_off_1'] ?? '') !== '' ? (int)$_POST['weekly_off_1'] : null;
         $off2 = ($_POST['weekly_off_2'] ?? '') !== '' ? (int)$_POST['weekly_off_2'] : null;
+        $ownChk = $pdo->prepare("SELECT 1 FROM users WHERE id = ? AND organization_id = ?");
+        $ownChk->execute([$userId, $orgId]);
+        if (!$ownChk->fetchColumn()) { $_SESSION['flash'] = 'कर्मचारी सापडला नाही.'; header('Location: shift-settings.php'); exit; }
 
         $pdo->prepare("
             INSERT INTO staff_shift_settings (user_id, shift_start, shift_end, grace_minutes, half_day_hours, weekly_off_1, weekly_off_2)
@@ -57,7 +60,7 @@ $deptsStmt->execute([$orgId]);
 $deptsForShift = $deptsStmt->fetchAll();
 
 $staffStmt = $pdo->prepare("
-    SELECT u.id, u.name, u.designation, d.name_local AS dept_name, s.*
+    SELECT s.*, u.id, u.name, u.designation, d.name_local AS dept_name   -- s.* आधी: नाहीतर s.id (Setting चा id / NULL) u.id ला पुसतो → Shift चुकीच्या कर्मचाऱ्याला
     FROM users u LEFT JOIN departments d ON d.id = u.department_id LEFT JOIN staff_shift_settings s ON s.user_id = u.id
     WHERE u.organization_id = ? AND u.is_active = 1 ORDER BY u.name
 ");

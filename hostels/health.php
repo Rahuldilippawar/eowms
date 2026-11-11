@@ -11,7 +11,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     if ($action === 'save_health') {
         $studentId = (int)($_POST['student_id'] ?? 0);
-        $bloodGroup = trim($_POST['blood_group'] ?? '');
+        $bloodGroup = mb_substr(trim($_POST['blood_group'] ?? ''), 0, 10);
         $allergies = trim($_POST['allergies'] ?? '');
         $medication = trim($_POST['regular_medication'] ?? '');
         $emgName = trim($_POST['emergency_contact_name'] ?? '');
@@ -88,7 +88,7 @@ if ($selectedId) {
       <form method="POST" style="padding:18px 24px;">
         <input type="hidden" name="action" value="save_health"><input type="hidden" name="student_id" value="<?= $selectedId ?>">
         <div class="row g-2 mb-2">
-          <div class="col-4"><label class="form-label-custom">रक्तगट</label><input type="text" name="blood_group" class="form-control-custom" value="<?= h($health['blood_group'] ?? '') ?>" placeholder="उदा. O+"></div>
+          <div class="col-4"><label class="form-label-custom">रक्तगट</label><input type="text" name="blood_group" maxlength="10" class="form-control-custom" value="<?= h($health['blood_group'] ?? '') ?>" placeholder="उदा. O+"></div>
           <div class="col-8"><label class="form-label-custom">Emergency संपर्क नाव</label><input type="text" name="emergency_contact_name" class="form-control-custom" value="<?= h($health['emergency_contact_name'] ?? '') ?>"></div>
         </div>
         <label class="form-label-custom">Emergency फोन</label>
