@@ -18,6 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $naacValidUntil = ($_POST['naac_valid_until'] ?? '') ?: null;
     $ugcValidUntil = ($_POST['ugc_valid_until'] ?? '') ?: null;
     $establishedYear = is_numeric($_POST['established_year'] ?? '') ? (int)$_POST['established_year'] : null;
+    if ($establishedYear !== null && ($establishedYear < 1901 || $establishedYear > (int)date('Y'))) { $establishedYear = null; }   // MySQL YEAR = 1901–2155
 
     if (!$name || !$code) {
         $_SESSION['form_error'] = t('s428');
@@ -107,7 +108,7 @@ require_once __DIR__ . '/../includes/header.php';
       </div>
       <div class="col-md-4">
         <label class="form-label-custom">स्थापना वर्ष</label>
-        <input type="number" name="established_year" class="form-control-custom" placeholder="उदा. 1985" min="1800" max="<?= date('Y') ?>">
+        <input type="number" name="established_year" class="form-control-custom" title="1901 ते चालू वर्ष" placeholder="उदा. 1985" min="1901" max="<?= date('Y') ?>">
       </div>
 
       <div class="col-md-6">

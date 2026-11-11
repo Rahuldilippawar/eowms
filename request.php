@@ -22,6 +22,7 @@ if ($orgId) {
 }
 
 $success = null;
+$requestCode = '';   // Bot (honeypot) वाटेत Code नसतो — Warning टाळा
 $error = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
