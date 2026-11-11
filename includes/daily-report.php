@@ -144,12 +144,15 @@ function dailyReportData(PDO $pdo, $orgId, $date) {
     // 5) पत्रव्यवहार
     $l = $q("SELECT COALESCE(SUM(DATE(created_at) = ?),0) new_cnt, COALESCE(SUM(status='completed' AND DATE(updated_at) = ?),0) done,
              COALESCE(SUM(status IN ('in_progress','returned')),0) pending, COALESCE(SUM(status IN ('in_progress','returned') AND priority IN ('urgent','high')),0) urgent,
-             COALESCE(SUM(dispatch_date = ?),0) dispatched FROM letters WHERE organization_id = ?", [$d, $d, $d, $o], 'one');
+             COALESCE(SUM(dispatch_date = ?),0) dispatched,
+             COALESCE(SUM(status IN ('in_progress','returned') AND DATE(updated_at) <= DATE_SUB(?, INTERVAL 7 DAY)),0) stuck FROM letters WHERE organization_id = ?", [$d, $d, $d, $d, $o], 'one');
+    if ($l) { $l['inward'] = (int)$q("SELECT COUNT(*) FROM letter_inward_numbers lin JOIN letters x ON x.id = lin.letter_id WHERE x.organization_id = ? AND DATE(lin.created_at) = ?", [$o, $d], 'col'); }
     $lHold = $q("SELECT l.subject, u.name holder, DATEDIFF(?, DATE(l.updated_at)) idle, l.priority FROM letters l LEFT JOIN users u ON u.id = l.current_holder_id
                  WHERE l.organization_id = ? AND l.status IN ('in_progress','returned') ORDER BY FIELD(l.priority,'urgent','high','normal','low'), l.updated_at LIMIT 6", [$d, $o]);
     if (array_sum(array_map('intval', $l ?: [])) > 0) {
         $S['letters'] = ['l' => $l, 'hold' => $lHold];
         if ((int)$l['urgent'] > 0) { $alerts[] = ['warn', (int)$l['urgent'] . ' तातडीची/उच्च पत्रं मंजुरीसाठी प्रलंबित']; }
+        if ((int)$l['stuck'] > 0) { $alerts[] = ['warn', (int)$l['stuck'] . ' पत्रं 7+ दिवस एकाच टप्प्यावर थांबलेली']; }
     }
 
     // 6) खर्च
@@ -378,11 +381,13 @@ function dailyReportPdfHtml(array $D) {
     if (!empty($S['letters'])) {
         $l = $S['letters']['l'];
         $html .= $sec(++$n, 'पत्रव्यवहार व मंजुऱ्या');
-        $html .= $kpis([$kpi('आज नवीन पत्रं', (int)$l['new_cnt']), $kpi('आज पूर्ण', (int)$l['done'], '', '#137A4B'), $kpi('आज रवाना', (int)$l['dispatched']), $kpi('मंजुरीसाठी प्रलंबित', (int)$l['pending'], (int)$l['urgent'] . ' तातडीची/उच्च', $l['urgent'] ? '#B45309' : '#191C3A')]);
+        $html .= $kpis([$kpi('आज नवीन पत्रं', (int)$l['new_cnt'], (int)($l['inward'] ?? 0) . ' आवक (Inward)'), $kpi('आज पूर्ण', (int)$l['done'], '', '#137A4B'), $kpi('आज रवाना', (int)$l['dispatched']), $kpi('मंजुरीसाठी प्रलंबित', (int)$l['pending'], (int)$l['urgent'] . ' तातडीची/उच्च · ' . (int)($l['stuck'] ?? 0) . ' 7+ दिवस', $l['urgent'] ? '#B45309' : '#191C3A')]);
         if ($S['letters']['hold']) {
             $html .= '<table class="g"><thead><tr><th style="width:52%;">प्रलंबित पत्र</th><th style="width:28%;">सध्या कोणाकडे</th><th class="num-r" style="width:20%;">थांबलेलं</th></tr></thead><tbody>';
             foreach ($S['letters']['hold'] as $x) { $html .= '<tr><td>' . $h(mb_strimwidth($x['subject'], 0, 70, '…')) . (in_array($x['priority'], ['urgent', 'high'], true) ? ' <span class="pill" style="background:#FDECEC;color:#B42318;">' . ($x['priority'] === 'urgent' ? 'तातडीचं' : 'उच्च') . '</span>' : '') . '</td><td>' . $h($x['holder'] ?: '—') . '</td><td class="num-r">' . max(0, (int)$x['idle']) . ' दिवस</td></tr>'; }
             $html .= '</tbody></table>';
+            $moreL = (int)$l['pending'] - count($S['letters']['hold']);
+            if ($moreL > 0) { $html .= '<div class="muted" style="margin-top:4px;"><b>+' . $moreL . ' अजून</b> — <a href="' . $h((defined('SITE_BASE_URL') ? SITE_BASE_URL : '') . '/letters/index.php') . '">पूर्ण यादी पाहा</a></div>'; }
         }
     }
 
