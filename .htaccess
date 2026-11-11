@@ -1,0 +1,73 @@
+# 🔒⚡ मुख्य .htaccess — सुरक्षा + वेग (Hostinger / Apache / LiteSpeed)
+# प्रत्येक भाग <IfModule> मध्ये — Module नसेल तर Site बंद पडत नाही, फक्त तो भाग लागू होत नाही.
+
+# ---------- 1) Folder ची यादी कधीच दिसू नये ----------
+Options -Indexes
+
+# ---------- 2) HTTP → HTTPS ----------
+# Biometric Machine (iclock/) बरेचदा फक्त HTTP बोलते — त्यांना Redirect नको.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{HTTPS} !=on
+  RewriteCond %{HTTP:X-Forwarded-Proto} !=https
+  RewriteCond %{HTTP_HOST} !^(localhost|127\.0\.0\.1)(:\d+)?$ [NC]
+  RewriteCond %{REQUEST_URI} !(^|/)iclock/ [NC]
+  RewriteCond %{REQUEST_URI} !(^|/)\.well-known/ [NC]
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+</IfModule>
+
+# ---------- 3) गुप्त / अंतर्गत Files बाहेरून उघडता येऊ नयेत ----------
+<FilesMatch "(^\.|\.(sql|log|bak|backup|old|orig|swp|ini|env|md|sh|lock|dist|yml|yaml)$|^(composer\.(json|lock)|package(-lock)?\.json)$)">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+  </IfModule>
+</FilesMatch>
+# .well-known (SSL प्रमाणपत्र नूतनीकरण) मात्र चालू राहावं
+<IfModule mod_rewrite.c>
+  RewriteRule (^|/)\.(?!well-known/) - [F,L]
+</IfModule>
+
+# ---------- 4) Gzip — पानं / CSS / JS 60-70% लहान, जलद उघडतात ----------
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/plain text/css text/xml text/javascript
+  AddOutputFilterByType DEFLATE application/javascript application/x-javascript application/json application/xml
+  AddOutputFilterByType DEFLATE application/manifest+json image/svg+xml font/ttf font/otf application/vnd.ms-fontobject
+</IfModule>
+
+# ---------- 5) Browser Cache — CSS/JS/Images पुन्हा पुन्हा Download नकोत (Server चा भार कमी) ----------
+# PHP पानं Cache होत नाहीत (auth.php no-store पाठवतो). CSS/JS ला ?v= Version असल्याने बदल लगेच दिसतात.
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType text/css "access plus 7 days"
+  ExpiresByType application/javascript "access plus 7 days"
+  ExpiresByType text/javascript "access plus 7 days"
+  ExpiresByType image/png "access plus 30 days"
+  ExpiresByType image/jpeg "access plus 30 days"
+  ExpiresByType image/gif "access plus 30 days"
+  ExpiresByType image/webp "access plus 30 days"
+  ExpiresByType image/svg+xml "access plus 30 days"
+  ExpiresByType image/x-icon "access plus 30 days"
+  ExpiresByType font/woff2 "access plus 1 year"
+  ExpiresByType font/woff "access plus 1 year"
+  ExpiresByType font/ttf "access plus 1 year"
+  ExpiresByType audio/mpeg "access plus 30 days"
+</IfModule>
+# Service Worker व Manifest कधीच जुने राहू नयेत — नाहीतर App Update अडकतो
+<FilesMatch "^(sw\.js|manifest\.(json|php))$">
+  <IfModule mod_headers.c>
+    Header set Cache-Control "no-cache, must-revalidate"
+  </IfModule>
+  <IfModule mod_expires.c>
+    ExpiresActive Off
+  </IfModule>
+</FilesMatch>
+
+# ---------- 6) Server ची माहिती लपवा ----------
+<IfModule mod_headers.c>
+  Header unset X-Powered-By
+  Header always unset X-Powered-By
+</IfModule>
