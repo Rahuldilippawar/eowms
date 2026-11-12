@@ -71,6 +71,8 @@
 <div id="idleRestored"><i class="fa-solid fa-rotate-left"></i><span>Logout आधी भरलेला मजकूर परत भरला — तपासून जतन करा.</span></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+<?php // 🛟 बाहेरचा CDN बंद/हळू/अडवलेला असेल (उदा. संस्थेचं Wi-Fi Filter) तर आपल्याच Server वरची प्रत — Charts, Modals, Dropdown तुटू नयेत ?>
+<script>window.Chart || document.write('<script src="<?= $rootPath ?? '' ?>assets/js/fallback/chart.umd.min.js"><\/script>'); window.bootstrap || document.write('<script src="<?= $rootPath ?? '' ?>assets/js/fallback/bootstrap.bundle.min.js"><\/script>');</script>
 <script src="<?= $rootPath ?? '' ?>assets/js/eowms-advance.js?v=2"></script>
 <script src="<?= $rootPath ?? '' ?>assets/js/eowms-theme.js?v=3"></script>
 <script src="<?= $rootPath ?? '' ?>assets/js/eowms-mobile.js?v=3"></script>
