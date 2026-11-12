@@ -131,6 +131,7 @@ $tone = ['ok' => ['#137A4B', '#E7F6EF', 'ठीक'], 'warn' => ['#B45309', '#FE
         <a href="sessions.php"><b>🔐 Active Sessions</b><small><?= $sess ?> Online · Force Logout</small></a>
         <a href="security.php"><b>🚨 सुरक्षा इशारे</b><small><?= $failedToday ?> अयशस्वी Login आज</small></a>
         <a href="broadcast.php"><b>📢 Broadcast</b><small>सगळ्यांना एकदम सूचना</small></a>
+        <a href="celebrations.php"><b>🎂 वाढदिवस व वर्धापनदिन</b><small>शुभेच्छा Email / सूचना, चाचणी</small></a>
         <a href="usage.php"><b>📊 Module वापर</b><small>कोण काय वापरतं</small></a>
         <a href="data-quality.php"><b>🗂️ Data दर्जा</b><small>अपूर्ण / डुप्लिकेट नोंदी</small></a>
         <a href="recycle-bin.php"><b>🗑️ Recycle Bin</b><small><?= $recycleN ?> परत आणता येतील</small></a>
