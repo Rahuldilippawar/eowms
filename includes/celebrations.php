@@ -18,11 +18,11 @@ function celebrationsOn(PDO $pdo, $orgId, $date) {
     $cond = fn($col) => "((MONTH($col) = $m AND DAY($col) = $d)" . sprintf($feb29, $col) . ")";
     $out = ['birthdays' => [], 'anniversaries' => []];
     try {
-        $st = $pdo->prepare("SELECT u.id, u.name, u.email, u.department_id, u.designation, d.name AS dept FROM users u LEFT JOIN departments d ON d.id = u.department_id
+        $st = $pdo->prepare("SELECT u.id, u.name, u.email, u.department_id, u.designation, u.photo_path, d.name AS dept FROM users u LEFT JOIN departments d ON d.id = u.department_id
             WHERE u.organization_id = ? AND u.is_active = 1 AND u.date_of_birth IS NOT NULL AND " . $cond('u.date_of_birth') . " ORDER BY u.name");
         $st->execute([(int)$orgId]);
         $out['birthdays'] = $st->fetchAll();
-        $st = $pdo->prepare("SELECT u.id, u.name, u.email, u.department_id, u.designation, d.name AS dept, ? - YEAR(u.joining_date) AS years FROM users u LEFT JOIN departments d ON d.id = u.department_id
+        $st = $pdo->prepare("SELECT u.id, u.name, u.email, u.department_id, u.designation, u.photo_path, d.name AS dept, ? - YEAR(u.joining_date) AS years FROM users u LEFT JOIN departments d ON d.id = u.department_id
             WHERE u.organization_id = ? AND u.is_active = 1 AND u.joining_date IS NOT NULL AND YEAR(u.joining_date) < ? AND " . $cond('u.joining_date') . " ORDER BY u.name");
         $st->execute([$y, (int)$orgId, $y]);
         $out['anniversaries'] = $st->fetchAll();
@@ -100,10 +100,17 @@ function celebrationsSend(PDO $pdo, array $org, $date) {
 
 /** कर्मचारी ज्यांची माहिती अपूर्ण आहे — त्यांना शुभेच्छा जाऊ शकत नाहीत */
 function celebrationsMissing(PDO $pdo, $orgId) {
+    require_once __DIR__ . '/photo-helpers.php';
     try {
-        $st = $pdo->prepare("SELECT u.id, u.name, u.email, u.date_of_birth, u.joining_date, d.name AS dept FROM users u LEFT JOIN departments d ON d.id = u.department_id
-            WHERE u.organization_id = ? AND u.is_active = 1 AND (u.date_of_birth IS NULL OR u.joining_date IS NULL OR u.email IS NULL OR u.email = '') ORDER BY d.name, u.name");
+        $st = $pdo->prepare("SELECT u.id, u.name, u.email, u.date_of_birth, u.joining_date, u.photo_path, d.name AS dept FROM users u LEFT JOIN departments d ON d.id = u.department_id
+            WHERE u.organization_id = ? AND u.is_active = 1 ORDER BY d.name, u.name");
         $st->execute([(int)$orgId]);
-        return $st->fetchAll();
+        $out = [];
+        foreach ($st->fetchAll() as $u) {
+            // फोटो: none = दिलेलाच नाही, broken = मार्ग आहे पण File Server वर नाही
+            $u['photo_state'] = !$u['photo_path'] ? 'none' : (eowmsPhotoExists($u['photo_path']) ? 'ok' : 'broken');
+            if (!$u['date_of_birth'] || !$u['joining_date'] || !$u['email'] || $u['photo_state'] !== 'ok') $out[] = $u;
+        }
+        return $out;
     } catch (PDOException $e) { return []; }
 }

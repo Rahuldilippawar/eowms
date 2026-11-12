@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/includes/photo-helpers.php';
 require_once __DIR__ . '/includes/auth.php';
 
 // Show the primary organization's name/logo if one exists (typical single-org deployment)
@@ -483,8 +484,8 @@ $todayLabel = $marathiDays[(int)date('w')] . ', ' . (int)date('j') . ' ' . $mara
       <div class="birthday-row" id="wishes">
         <?php foreach ($birthdays as $b): ?>
           <div class="birthday-card">
-            <?php if (!empty($b['photo_path'])): ?>
-              <img src="<?= h($b['photo_path']) ?>" class="birthday-photo" alt="">
+            <?php if (eowmsPhotoExists($b['photo_path'] ?? null)): ?>
+              <img src="<?= h(ltrim(preg_replace('#^(\.\./)+#', '', $b['photo_path']), '/')) ?>" class="birthday-photo" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"><div class="birthday-avatar" style="display:none;"><?= h(mb_substr($b['name'], 0, 1)) ?></div>
             <?php else: ?>
               <div class="birthday-avatar"><?= h(mb_substr($b['name'], 0, 1)) ?></div>
             <?php endif; ?>
@@ -522,8 +523,8 @@ $todayLabel = $marathiDays[(int)date('w')] . ', ' . (int)date('j') . ' ' . $mara
       <div class="birthday-row">
         <?php foreach ($anniversaries as $a): ?>
           <div class="birthday-card">
-            <?php if (!empty($a['photo_path'])): ?>
-              <img src="<?= h($a['photo_path']) ?>" class="birthday-photo" alt="">
+            <?php if (eowmsPhotoExists($a['photo_path'] ?? null)): ?>
+              <img src="<?= h(ltrim(preg_replace('#^(\.\./)+#', '', $a['photo_path']), '/')) ?>" class="birthday-photo" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"><div class="birthday-avatar" style="display:none;"><?= h(mb_substr($a['name'], 0, 1)) ?></div>
             <?php else: ?>
               <div class="birthday-avatar"><?= h(mb_substr($a['name'], 0, 1)) ?></div>
             <?php endif; ?>

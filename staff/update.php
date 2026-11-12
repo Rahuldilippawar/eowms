@@ -25,17 +25,12 @@ $joiningDate = ($_POST['joining_date'] ?? '') ?: null;
 $dateOfBirth = ($_POST['date_of_birth'] ?? '') ?: null;
 
 // Photo upload is optional on edit — only touches photo_path if a new file was actually chosen
-$photoPath = null;
-if (isset($_FILES['photo']) && $_FILES['photo']['error'] === UPLOAD_ERR_OK) {
-    $uploadDir = __DIR__ . '/../assets/uploads/staff/';
-    if (!is_dir($uploadDir)) { mkdir($uploadDir, 0755, true); }
-    $ext = strtolower(pathinfo($_FILES['photo']['name'], PATHINFO_EXTENSION));
-    if (in_array($ext, ['jpg', 'jpeg', 'png', 'webp'], true)) {
-        $safeName = uniqid('staff_') . '.' . $ext;
-        if (move_uploaded_file($_FILES['photo']['tmp_name'], $uploadDir . $safeName)) {
-            $photoPath = 'assets/uploads/staff/' . $safeName;
-        }
-    }
+require_once __DIR__ . '/../includes/photo-helpers.php';
+[$photoPath, $photoErr] = eowmsSavePhotoUpload($_FILES['photo'] ?? null, 'staff', 'staff_');
+if ($photoErr) {
+    $_SESSION['form_error'] = '📷 ' . $photoErr . ' (बाकी बदल जतन झाले नाहीत — पुन्हा जतन करा.)';
+    header('Location: edit.php?id=' . $id);
+    exit;
 }
 
 if ($unlockAccount) {

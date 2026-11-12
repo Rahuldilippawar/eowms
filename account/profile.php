@@ -28,37 +28,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $success = t('s505');
     }
 } elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'update_photo') {
-    if (!empty($_FILES['photo']['name']) && $_FILES['photo']['error'] === UPLOAD_ERR_OK) {
-        $allowedExt = ['jpg', 'jpeg', 'png', 'webp'];
-        $ext = strtolower(pathinfo($_FILES['photo']['name'], PATHINFO_EXTENSION));
-        if (!in_array($ext, $allowedExt, true)) {
-            $error = 'फक्त jpg, jpeg, png, webp फाईल्स चालतात.';
-        } elseif ($_FILES['photo']['size'] > 3 * 1024 * 1024) {
-            $error = 'फोटो 3 MB पेक्षा मोठा नसावा.';
-        } else {
-            $photoDir = __DIR__ . '/../assets/uploads/profile-photos';
-            if (!is_dir($photoDir)) { mkdir($photoDir, 0755, true); }
-            $safeFilename = 'user-' . $user['id'] . '-' . uniqid() . '.' . $ext;
-            if (move_uploaded_file($_FILES['photo']['tmp_name'], $photoDir . '/' . $safeFilename)) {
-                // जुना फोटो असल्यास काढून टाका (जागा वाया जाऊ नये)
-                $oldStmt = $pdo->prepare("SELECT photo_path FROM users WHERE id = ?");
-                $oldStmt->execute([$user['id']]);
-                $oldPhoto = $oldStmt->fetch()['photo_path'] ?? null;
-                if ($oldPhoto && strpos($oldPhoto, 'profile-photos/') !== false) {
-                    $oldFullPath = __DIR__ . '/../' . $oldPhoto;
-                    if (is_file($oldFullPath)) { @unlink($oldFullPath); }
-                }
-                $newPhotoPath = 'assets/uploads/profile-photos/' . $safeFilename;
-                $pdo->prepare("UPDATE users SET photo_path = ? WHERE id = ?")->execute([$newPhotoPath, $user['id']]);
-                // Session मधली प्रतही अद्ययावत — नवीन फोटो लगेच सगळीकडे दिसावा
-                $_SESSION['user']['photo_path'] = $newPhotoPath;
-                $user['photo_path'] = $newPhotoPath;
-                logActivity('स्वतःचा Profile फोटो बदलला');
-                $success = 'फोटो यशस्वीरित्या अपडेट झाला.';
-            } else {
-                $error = 'फोटो Upload होऊ शकला नाही — पुन्हा प्रयत्न करा.';
-            }
+    require_once __DIR__ . '/../includes/photo-helpers.php';
+    [$newPhotoPath, $photoErr] = eowmsSavePhotoUpload($_FILES['photo'] ?? null, 'profile-photos', 'user_' . (int)$user['id'] . '_');
+    if ($photoErr) {
+        $error = $photoErr;
+    } elseif ($newPhotoPath) {
+        // जुना फोटो असल्यास काढून टाका (जागा वाया जाऊ नये)
+        $oldStmt = $pdo->prepare("SELECT photo_path FROM users WHERE id = ?");
+        $oldStmt->execute([$user['id']]);
+        $oldPhoto = $oldStmt->fetch()['photo_path'] ?? null;
+        if ($oldPhoto && strpos($oldPhoto, 'profile-photos/') !== false) {
+            $oldFullPath = __DIR__ . '/../' . $oldPhoto;
+            if (is_file($oldFullPath)) { @unlink($oldFullPath); }
         }
+        $pdo->prepare("UPDATE users SET photo_path = ? WHERE id = ?")->execute([$newPhotoPath, $user['id']]);
+        // Session मधली प्रतही अद्ययावत — नवीन फोटो लगेच सगळीकडे दिसावा
+        $_SESSION['user']['photo_path'] = $newPhotoPath;
+        $user['photo_path'] = $newPhotoPath;
+        logActivity('स्वतःचा Profile फोटो बदलला');
+        $success = 'फोटो यशस्वीरित्या अपडेट झाला.';
+    } else {
+        $error = 'फोटो निवडा.';
     }
 }
 
