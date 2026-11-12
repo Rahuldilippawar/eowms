@@ -2027,4 +2027,6 @@ return [
     "फोटो जतन झाला नाही — पुन्हा प्रयत्न करा." => ["फोटो सहेजी नहीं गई — फिर प्रयास करें।", "Photo wasn't saved — try again."],
     "बाकी बदल जतन झाले नाहीत — पुन्हा जतन करा.)" => ["बाकी बदलाव सहेजे नहीं गए — फिर सहेजें।)", "other changes weren't saved — save again.)"],
     "फोटो निवडा." => ["फोटो चुनें।", "Choose a photo."],
+    "पानावर Login शिवायही दाखवा" => ["पेज पर Login के बिना भी दिखाएँ", "page — show even without login"],
+    "कर्मचाऱ्याचं नाव, फोटो व पद — सगळ्यांना (उदा. Office मधला TV). विद्यार्थी व शुभेच्छा-संदेश फक्त Login नंतर." => ["कर्मचारी का नाम, फोटो व पद — सभी को (जैसे Office का TV)। विद्यार्थी व शुभकामना-संदेश केवल Login के बाद।", "Staff name, photo and designation — for everyone (e.g. the office TV). Students and wish messages only after login."],
 ];

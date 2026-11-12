@@ -13,7 +13,7 @@ $orgName = activeOrgName();
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $act = $_POST['act'] ?? '';
     if ($act === 'settings') {
-        foreach (['celebration_email', 'celebration_push', 'celebration_colleagues'] as $k) { orgSettingSet($pdo, $orgId, $k, !empty($_POST[$k]) ? '1' : '0'); }
+        foreach (['celebration_email', 'celebration_push', 'celebration_colleagues', 'celebration_public'] as $k) { orgSettingSet($pdo, $orgId, $k, !empty($_POST[$k]) ? '1' : '0'); }
         logActivity('वाढदिवस/वर्धापनदिन सेटिंग्ज बदलल्या', 'settings', $orgId, '');
         $_SESSION['flash'] = '✅ सेटिंग्ज जतन झाल्या.';
     } elseif ($act === 'test') {
@@ -44,6 +44,7 @@ $cronAge = $cron && $cron['last_finished_at'] ? (time() - strtotime($cron['last_
 $sEmail = celebrationSetting($pdo, $orgId, 'celebration_email');
 $sPush = celebrationSetting($pdo, $orgId, 'celebration_push');
 $sCol = celebrationSetting($pdo, $orgId, 'celebration_colleagues');
+$sPub = celebrationSetting($pdo, $orgId, 'celebration_public');
 $preview = ($_GET['preview'] ?? '') === 'anniversary' ? 'anniversary' : 'birthday';
 
 $pageTitle = 'वाढदिवस व वर्धापनदिन';
@@ -135,6 +136,7 @@ smartAlerts($al);
         <label class="cl-sw"><input type="checkbox" name="celebration_email" value="1" <?= $sEmail ? 'checked' : '' ?>><span><b>📧 कर्मचाऱ्याला Email</b><small>वाढदिवस / वर्धापनदिनाच्या शुभेच्छांचा Email</small></span></label>
         <label class="cl-sw"><input type="checkbox" name="celebration_push" value="1" <?= $sPush ? 'checked' : '' ?>><span><b>📱 कर्मचाऱ्याला App / फोनवर सूचना</b><small>शुभेच्छा थेट फोनवर (Push)</small></span></label>
         <label class="cl-sw"><input type="checkbox" name="celebration_colleagues" value="1" <?= $sCol ? 'checked' : '' ?>><span><b>👥 त्याच विभागातल्या सहकाऱ्यांना सूचना</b><small>"आज X यांचा वाढदिवस — शुभेच्छा द्या!" (Management ला नेहमी)</small></span></label>
+        <label class="cl-sw"><input type="checkbox" name="celebration_public" value="1" <?= $sPub ? 'checked' : '' ?>><span><b>🌐 Welcome पानावर Login शिवायही दाखवा</b><small>कर्मचाऱ्याचं नाव, फोटो व पद — सगळ्यांना (उदा. Office मधला TV). विद्यार्थी व शुभेच्छा-संदेश फक्त Login नंतर.</small></span></label>
         <button class="btn mt-2" style="background:var(--rail);color:#fff;border-radius:9px;font-size:13px;padding:8px 18px;font-weight:600;">जतन करा</button>
       </form>
     </div>

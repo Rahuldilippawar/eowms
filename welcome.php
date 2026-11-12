@@ -85,7 +85,15 @@ try {
 } catch (PDOException $e) {}
 $loggedInUser = currentUser();
 // 🔒 Welcome हे Public पान आहे — Login नसल्यास कोणाचीही नावं/फोटो (वाढदिवस, वर्धापनदिन, शुभेच्छा) दाखवू नका
-if (!$loggedInUser) { $birthdays = []; $anniversaries = []; $wishesByUser = []; }
+// संस्थेने परवानगी दिली असेल (वाढदिवस व वर्धापनदिन पान → सेटिंग, default चालू) तर Login शिवायही
+// फक्त कर्मचाऱ्यांचे — नाव, फोटो, पद. वसतिगृहातील विद्यार्थी व शुभेच्छा-संदेश कधीच नाही.
+if (!$loggedInUser) {
+    require_once __DIR__ . '/includes/app-settings.php';
+    $publicCelebrate = (string)orgSetting($pdo, (int)($org['id'] ?? 0), 'celebration_public', '1') !== '0';
+    $birthdays = $publicCelebrate ? array_values(array_filter($birthdays, fn($b) => ($b['kind'] ?? '') === 'staff')) : [];
+    if (!$publicCelebrate) { $anniversaries = []; }
+    $wishesByUser = [];
+}
 
 // 📊 सेवा-आकडे — फक्त Login केलेल्यांना (Public पानावर संस्थेचा Data नाही)
 $publicStats = null;
