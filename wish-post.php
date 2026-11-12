@@ -23,8 +23,13 @@ if (!in_array($wishType, ['birthday', 'anniversary'], true)) { $wishType = 'birt
 
 if ($targetUserId && $wishText) {
     $wishText = mb_substr($wishText, 0, 200); // खूप मोठी शुभेच्छा नको — भिंत नीट दिसावी म्हणून
-    $targetStmt = $pdo->prepare("SELECT organization_id FROM users WHERE id = ?");
-    $targetStmt->execute([$targetUserId]);
+    // फक्त आपल्याच संस्थेच्या, सक्रिय कर्मचाऱ्याला — आणि खरंच आज त्याचा वाढदिवस / वर्धापनदिन असेल तरच
+    // (नाहीतर कोणीही कोणत्याही संस्थेतल्या कोणालाही कधीही "शुभेच्छा" सूचना पाठवू शकत होतं)
+    $dateCol = $wishType === 'birthday' ? 'date_of_birth' : 'joining_date';
+    $targetStmt = $pdo->prepare("SELECT organization_id FROM users WHERE id = ? AND is_active = 1 AND organization_id IN (?, ?)
+        AND $dateCol IS NOT NULL AND MONTH($dateCol) = MONTH(CURDATE()) AND DAY($dateCol) = DAY(CURDATE())"
+        . ($wishType === 'anniversary' ? " AND YEAR(joining_date) < YEAR(CURDATE())" : ''));
+    $targetStmt->execute([$targetUserId, (int)($user['organization_id'] ?? 0), (int)activeOrgId()]);
     $target = $targetStmt->fetch();
 
     if ($target) {

@@ -97,6 +97,7 @@ if (!$isAllView) {
   @media print{ .toolbar{display:none;} #eowmsLangSelect,.lang-bar{display:none !important;} body{background:#fff;} .doc{margin:0;box-shadow:none;} }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>window.Chart || document.write('<script src="../assets/js/fallback/chart.umd.min.js"><\/script>');</script>
 </head>
 <body>
 <div class="lang-bar" style="display:flex;justify-content:flex-end;padding:12px 16px 0;margin:0;max-width:none;margin-left:auto;margin-right:auto;"><?= i18nSwitcher('style="border:1px solid var(--line);border-radius:9px;padding:8px 12px;font-size:12.5px;color:var(--text-dim);background:#fff;cursor:pointer;"') ?></div>
