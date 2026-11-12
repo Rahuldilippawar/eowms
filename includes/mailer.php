@@ -56,7 +56,7 @@ function sendWelcomeEmail($email, $name, $username, $plainPassword, $orgName, $c
 
     $headers = "MIME-Version: 1.0\r\n";
     $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
-    $headers .= "From: $orgName <no-reply@" . ($_SERVER['HTTP_HOST'] ?? 'localhost') . ">\r\n";
+    $headers .= "From: =?UTF-8?B?" . base64_encode(trim(preg_replace('/[\r\n"]+/', ' ', (string)$orgName))) . "?= <no-reply@" . eowmsMailDomain() . ">\r\n";
 
     try {
         return @mail($email, "=?UTF-8?B?" . base64_encode($subject) . "?=", $body, $headers);
@@ -94,7 +94,7 @@ function sendPasswordResetEmail($email, $name, $code, $orgName) {
 
     $headers = "MIME-Version: 1.0\r\n";
     $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
-    $headers .= "From: $orgName <no-reply@" . ($_SERVER['HTTP_HOST'] ?? 'localhost') . ">\r\n";
+    $headers .= "From: =?UTF-8?B?" . base64_encode(trim(preg_replace('/[\r\n"]+/', ' ', (string)$orgName))) . "?= <no-reply@" . eowmsMailDomain() . ">\r\n";
 
     try {
         return @mail($email, "=?UTF-8?B?" . base64_encode($subject) . "?=", $body, $headers);
@@ -137,7 +137,7 @@ function sendRenewalReminderEmail($email, $name, $itemName, $daysLeft, $expiryDa
 
     $headers = "MIME-Version: 1.0\r\n";
     $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
-    $headers .= "From: $orgName <no-reply@" . ($_SERVER['HTTP_HOST'] ?? 'localhost') . ">\r\n";
+    $headers .= "From: =?UTF-8?B?" . base64_encode(trim(preg_replace('/[\r\n"]+/', ' ', (string)$orgName))) . "?= <no-reply@" . eowmsMailDomain() . ">\r\n";
 
     try {
         return @mail($email, "=?UTF-8?B?" . base64_encode($subject) . "?=", $body, $headers);
@@ -184,7 +184,7 @@ function sendPurchasePendingSummaryEmail($email, $name, $orgName, $fy, $totalCou
 
     $headers = "MIME-Version: 1.0\r\n";
     $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
-    $headers .= "From: $orgName <no-reply@" . ($_SERVER['HTTP_HOST'] ?? 'localhost') . ">\r\n";
+    $headers .= "From: =?UTF-8?B?" . base64_encode(trim(preg_replace('/[\r\n"]+/', ' ', (string)$orgName))) . "?= <no-reply@" . eowmsMailDomain() . ">\r\n";
 
     try {
         return @mail($email, "=?UTF-8?B?" . base64_encode($subject) . "?=", $body, $headers);
@@ -193,61 +193,49 @@ function sendPurchasePendingSummaryEmail($email, $name, $orgName, $fy, $totalCou
     }
 }
 
-/** वाढदिवसाच्या शुभेच्छांचा Email पाठवते. */
-function sendBirthdayEmail($email, $name, $orgName) {
-    if (!$email || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        return false;
-    }
-    $subject = "🎂 वाढदिवसाच्या हार्दिक शुभेच्छा, $name!";
-    $body = "
+/** वाढदिवसाचा Email — HTML (Admin पानावर Preview साठी पण) */
+function birthdayEmailHtml($name, $orgName) {
+    $n = htmlspecialchars((string)$name, ENT_QUOTES, 'UTF-8'); $o = htmlspecialchars((string)$orgName, ENT_QUOTES, 'UTF-8');
+    return "
     <div style='font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;background:#F3F4F7;'>
       <div style='background:#10162B;padding:20px 24px;border-radius:10px 10px 0 0;text-align:center;'>
-        <div style='color:#fff;font-size:20px;font-weight:bold;'>$orgName</div>
+        <div style='color:#fff;font-size:20px;font-weight:bold;'>$o</div>
       </div>
       <div style='background:#fff;padding:28px 24px;border-radius:0 0 10px 10px;text-align:center;'>
         <div style='font-size:36px;margin-bottom:10px;'>🎂🎉</div>
-        <p style='font-size:16px;color:#1A1D29;'>प्रिय <strong>$name</strong>,</p>
-        <p style='font-size:14px;color:#1A1D29;line-height:1.7;'>आजच्या तुमच्या वाढदिवसानिमित्त $orgName परिवाराकडून तुम्हाला मनःपूर्वक शुभेच्छा! तुमचं हे वर्ष आरोग्यदायी, आनंदी आणि यशस्वी जावो अशी सद्गुरूंच्या चरणी प्रार्थना.</p>
+        <p style='font-size:16px;color:#1A1D29;'>प्रिय <strong>$n</strong>,</p>
+        <p style='font-size:14px;color:#1A1D29;line-height:1.7;'>आजच्या तुमच्या वाढदिवसानिमित्त $o परिवाराकडून तुम्हाला मनःपूर्वक शुभेच्छा! तुमचं हे वर्ष आरोग्यदायी, आनंदी आणि यशस्वी जावो अशी सद्गुरूंच्या चरणी प्रार्थना.</p>
         <p style='font-size:24px;margin:16px 0;'>🎈🎁🎊</p>
         <p style='font-size:11.5px;color:#8A90AC;margin-top:20px;'>!! आत्मा मालिक !! — हा ईमेल आपोआप पाठवला गेला आहे.</p>
       </div>
     </div>";
-    $headers = "MIME-Version: 1.0\r\n";
-    $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
-    $headers .= "From: $orgName <no-reply@" . ($_SERVER['HTTP_HOST'] ?? 'localhost') . ">\r\n";
-    try {
-        return @mail($email, "=?UTF-8?B?" . base64_encode($subject) . "?=", $body, $headers);
-    } catch (Throwable $e) {
-        return false;
-    }
+}
+
+/** वाढदिवसाच्या शुभेच्छांचा Email पाठवते. */
+function sendBirthdayEmail($email, $name, $orgName) {
+    return eowmsSendMail($email, "🎂 वाढदिवसाच्या हार्दिक शुभेच्छा, $name!", birthdayEmailHtml($name, $orgName), [], $orgName) > 0;
+}
+
+/** कामाच्या वर्धापनदिनाचा Email — HTML */
+function workAnniversaryEmailHtml($name, $yearsCompleted, $orgName) {
+    $n = htmlspecialchars((string)$name, ENT_QUOTES, 'UTF-8'); $o = htmlspecialchars((string)$orgName, ENT_QUOTES, 'UTF-8'); $y = (int)$yearsCompleted;
+    return "
+    <div style='font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;background:#F3F4F7;'>
+      <div style='background:#10162B;padding:20px 24px;border-radius:10px 10px 0 0;text-align:center;'>
+        <div style='color:#fff;font-size:20px;font-weight:bold;'>$o</div>
+      </div>
+      <div style='background:#fff;padding:28px 24px;border-radius:0 0 10px 10px;text-align:center;'>
+        <div style='font-size:36px;margin-bottom:10px;'>🏆🎊</div>
+        <p style='font-size:16px;color:#1A1D29;'>प्रिय <strong>$n</strong>,</p>
+        <p style='font-size:14px;color:#1A1D29;line-height:1.7;'>आज तुम्ही $o परिवारासोबत <strong style='color:#D9530F;'>$y वर्षं</strong> पूर्ण करत आहात. तुमच्या समर्पणाबद्दल आणि योगदानाबद्दल मनःपूर्वक धन्यवाद — पुढील वाटचालीसाठी शुभेच्छा!</p>
+        <p style='font-size:11.5px;color:#8A90AC;margin-top:20px;'>!! आत्मा मालिक !! — हा ईमेल आपोआप पाठवला गेला आहे.</p>
+      </div>
+    </div>";
 }
 
 /** कामाच्या वर्धापनदिनाच्या (Work Anniversary) अभिनंदनाचा Email पाठवते. */
 function sendWorkAnniversaryEmail($email, $name, $yearsCompleted, $orgName) {
-    if (!$email || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        return false;
-    }
-    $subject = "🎊 $orgName सोबत $yearsCompleted वर्षं पूर्ण — अभिनंदन!";
-    $body = "
-    <div style='font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;background:#F3F4F7;'>
-      <div style='background:#10162B;padding:20px 24px;border-radius:10px 10px 0 0;text-align:center;'>
-        <div style='color:#fff;font-size:20px;font-weight:bold;'>$orgName</div>
-      </div>
-      <div style='background:#fff;padding:28px 24px;border-radius:0 0 10px 10px;text-align:center;'>
-        <div style='font-size:36px;margin-bottom:10px;'>🏆🎊</div>
-        <p style='font-size:16px;color:#1A1D29;'>प्रिय <strong>$name</strong>,</p>
-        <p style='font-size:14px;color:#1A1D29;line-height:1.7;'>आज तुम्ही $orgName परिवारासोबत <strong style='color:#D9530F;'>$yearsCompleted वर्षं</strong> पूर्ण करत आहात. तुमच्या समर्पणाबद्दल आणि योगदानाबद्दल मनःपूर्वक धन्यवाद — पुढील वाटचालीसाठी शुभेच्छा!</p>
-        <p style='font-size:11.5px;color:#8A90AC;margin-top:20px;'>!! आत्मा मालिक !! — हा ईमेल आपोआप पाठवला गेला आहे.</p>
-      </div>
-    </div>";
-    $headers = "MIME-Version: 1.0\r\n";
-    $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
-    $headers .= "From: $orgName <no-reply@" . ($_SERVER['HTTP_HOST'] ?? 'localhost') . ">\r\n";
-    try {
-        return @mail($email, "=?UTF-8?B?" . base64_encode($subject) . "?=", $body, $headers);
-    } catch (Throwable $e) {
-        return false;
-    }
+    return eowmsSendMail($email, "🎊 $orgName सोबत $yearsCompleted वर्षं पूर्ण — अभिनंदन!", workAnniversaryEmailHtml($name, $yearsCompleted, $orgName), [], $orgName) > 0;
 }
 
 /** From-पत्त्याचं Domain — Cron (CLI) मधून HTTP_HOST नसतो, म्हणून SITE_BASE_URL वरून */

@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../includes/photo-helpers.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/staff-dept-picker.php';
 require_once __DIR__ . '/../includes/mailer.php';
@@ -44,6 +45,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = "Biometric PIN '$bioPin' आधीच $pinOwner यांना दिला आहे — वेगळा PIN द्या किंवा रिकामा ठेवा (आपोआप मिळेल).";
         } elseif ($employeeCode !== null && $codeCheck->fetch()) {
             $error = "कर्मचारी कोड '$employeeCode' आधीच दुसऱ्या कर्मचाऱ्याला दिलेला आहे — कृपया वेगळा कोड द्या.";
+        } elseif (($photoRes = eowmsSavePhotoUpload($_FILES['photo'] ?? null, 'staff', 'staff_')) && $photoRes[1]) {
+            $error = '📷 ' . $photoRes[1];
         } else {
             // Campus / College → विभाग (विभाग असेल तर त्याचाच Campus; Management पदांसाठी निवडलेला Campus)
             [$campusId, $departmentId] = staffDeptResolve($pdo, $orgId, $_POST['campus_id'] ?? '', $_POST['department_id'] ?? '');
@@ -64,19 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $generatedPassword = $password;
             }
 
-            // Photo upload (optional)
-            $photoPath = null;
-            if (isset($_FILES['photo']) && $_FILES['photo']['error'] === UPLOAD_ERR_OK) {
-                $uploadDir = __DIR__ . '/../assets/uploads/staff/';
-                if (!is_dir($uploadDir)) { mkdir($uploadDir, 0755, true); }
-                $ext = strtolower(pathinfo($_FILES['photo']['name'], PATHINFO_EXTENSION));
-                if (in_array($ext, ['jpg', 'jpeg', 'png', 'webp'], true)) {
-                    $safeName = uniqid('staff_') . '.' . $ext;
-                    if (move_uploaded_file($_FILES['photo']['tmp_name'], $uploadDir . $safeName)) {
-                        $photoPath = 'assets/uploads/staff/' . $safeName;
-                    }
-                }
-            }
+            $photoPath = $photoRes[0]; // 📷 आधीच तपासून जतन केलेला (मोठा असेल तर लहान केलेला)
 
             $insert = $pdo->prepare("
                 INSERT INTO users (organization_id, campus_id, department_id, employee_code, name, email, mobile, designation, teaching_mode, salary, joining_date, date_of_birth, photo_path, password, must_change_password, role, is_active)
