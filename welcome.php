@@ -313,35 +313,61 @@ $todayLabel = $marathiDays[(int)date('w')] . ', ' . (int)date('j') . ' ' . $mara
 
   .action-row{display:flex;gap:14px;justify-content:center;margin-top:34px;flex-wrap:wrap;animation:eowms-fade-up .9s .45s ease both;}
 
-  .birthday-wrap{max-width:900px;margin:40px auto 0;animation:eowms-fade-up .9s .5s ease both;}
-  .birthday-heading{font-family:'Space Grotesk';font-size:15px;color:#FBEBD6;text-align:center;margin-bottom:16px;letter-spacing:.3px;}
-  .birthday-row{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;}
-  .birthday-card{
-    background:linear-gradient(160deg,rgba(201,127,29,.18),rgba(255,255,255,.04));
-    border:1px solid rgba(251,235,214,.3);border-radius:16px;padding:20px 22px;
-    width:240px;text-align:center;box-shadow:0 8px 26px rgba(0,0,0,.16);
-    transition:transform .25s ease;
-  }
-  .birthday-card:hover{transform:translateY(-4px);}
-  .birthday-photo{
-    width:72px;height:72px;border-radius:50%;object-fit:cover;margin:0 auto 12px;
-    border:3px solid #C97F1D;display:block;
-  }
-  .birthday-avatar{
-    width:72px;height:72px;border-radius:50%;margin:0 auto 12px;
-    background:#C97F1D;color:#fff;display:flex;align-items:center;justify-content:center;
-    font-family:'Space Grotesk';font-size:24px;font-weight:700;
-  }
-  .birthday-name{font-size:15px;font-weight:700;color:#fff;margin-bottom:4px;}
-  .birthday-sub{font-size:11.5px;color:#DCEFEC;margin-bottom:10px;}
-  .birthday-wish{font-size:12px;color:#FBEBD6;font-style:italic;}
-  .wishes-list{margin-top:10px;text-align:left;max-height:110px;overflow-y:auto;}
-  .wish-item{font-size:11px;color:#DCEFEC;background:rgba(255,255,255,.06);border-radius:7px;padding:6px 9px;margin-bottom:5px;line-height:1.4;word-break:break-word;}
-  .wish-form{display:flex;gap:6px;margin-top:10px;}
-  .wish-form input[type=text]{flex:1;min-width:0;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:7px;padding:6px 10px;font-size:11.5px;color:#fff;}
-  .wish-form input[type=text]::placeholder{color:rgba(255,255,255,.5);}
-  .wish-form button{background:#D9530F;color:#fff;border:none;border-radius:7px;padding:6px 12px;font-size:11.5px;font-weight:600;cursor:pointer;white-space:nowrap;}
-  .wish-login-link{display:inline-block;margin-top:10px;font-size:11px;color:#FBEBD6;text-decoration:underline;}
+  /* 🎉 आजचा आनंद — वाढदिवस / सेवापूर्ती */
+  .cel{position:relative;max-width:980px;margin:44px auto 0;padding:28px 16px 30px;border-radius:24px;overflow:hidden;
+    background:radial-gradient(120% 90% at 50% 0%,rgba(217,83,15,.22),rgba(201,127,29,.08) 45%,rgba(255,255,255,.02) 75%);border:1px solid rgba(251,235,214,.16);
+    animation:eowms-fade-up .9s .5s ease both;}
+  .cel-confetti{position:absolute;inset:0;pointer-events:none;overflow:hidden;}
+  .cel-confetti i{position:absolute;top:-12px;left:var(--x);width:7px;height:12px;border-radius:2px;background:var(--c);opacity:.75;animation:cel-fall var(--d) var(--l) linear infinite;}
+  @keyframes cel-fall{0%{transform:translateY(-10px) rotate(0);}100%{transform:translateY(560px) rotate(540deg);opacity:0;}}
+  .cel-head{position:relative;text-align:center;margin-bottom:20px;}
+  .cel-eyebrow{display:inline-block;font-size:12px;color:#F59E0B;font-weight:700;padding:4px 12px;border:1px solid rgba(245,158,11,.35);border-radius:999px;background:rgba(245,158,11,.08);}
+  .cel-head h2{font-family:'Space Grotesk','Noto Sans Devanagari',sans-serif;font-size:26px;font-weight:800;margin:10px 0 4px;color:#FBEBD6;}
+  .cel-head h2 .g{background:linear-gradient(90deg,#FDE68A,#F59E0B 50%,#FB923C);-webkit-background-clip:text;background-clip:text;color:transparent;} .cel-head h2 .sep{color:#6B7280;}
+  .cel-head p{font-size:13px;color:#C9D3DE;margin:0 auto;max-width:none;text-align:center;}
+  .cel-row{position:relative;display:flex;gap:16px;overflow-x:auto;scroll-snap-type:x mandatory;padding:6px 4px 10px;-webkit-overflow-scrolling:touch;scrollbar-width:thin;}
+  .cel-row > .cel-card:first-child{margin-left:auto;} .cel-row > .cel-card:last-child{margin-right:auto;}
+  .cel-card{flex:0 0 min(300px,82vw);scroll-snap-align:center;position:relative;text-align:center;padding:26px 18px 18px;border-radius:20px;
+    background:linear-gradient(170deg,rgba(255,255,255,.10),rgba(255,255,255,.03));border:1px solid rgba(255,255,255,.14);backdrop-filter:blur(6px);
+    box-shadow:0 14px 40px rgba(0,0,0,.28);transition:transform .25s ease,box-shadow .25s ease;}
+  .cel-card:hover{transform:translateY(-4px);box-shadow:0 20px 48px rgba(0,0,0,.36);}
+  .cel-card::before{content:'';position:absolute;inset:0 0 auto 0;height:4px;border-radius:20px 20px 0 0;background:linear-gradient(90deg,#EC4899,#F59E0B,#D9530F);}
+  .cel-card.anniv::before{background:linear-gradient(90deg,#FDE68A,#F59E0B,#B45309);}
+  .cel-card.me{border-color:rgba(245,158,11,.6);box-shadow:0 0 0 2px rgba(245,158,11,.25),0 18px 44px rgba(0,0,0,.32);}
+  .cel-ph{position:relative;width:112px;height:112px;margin:0 auto 14px;}
+  .cel-ring{position:absolute;inset:-5px;border-radius:50%;background:conic-gradient(#F59E0B,#EC4899,#D9530F,#22D3EE,#F59E0B);animation:cel-spin 6s linear infinite;}
+  .cel-card.anniv .cel-ring{background:conic-gradient(#FDE68A,#F59E0B,#B45309,#FDE68A);}
+  .cel-ring::after{content:'';position:absolute;inset:4px;border-radius:50%;background:#141a2e;}
+  @keyframes cel-spin{to{transform:rotate(360deg);}}
+  .cel-ph img,.cel-ini{position:absolute;inset:3px;width:calc(100% - 6px);height:calc(100% - 6px);border-radius:50%;object-fit:cover;}
+  .cel-ini{display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;font-size:36px;font-weight:800;color:#fff;letter-spacing:.02em;
+    background:linear-gradient(135deg,#F59E0B,#D9530F 55%,#9D174D);}
+  .cel-card.anniv .cel-ini{background:linear-gradient(135deg,#FDE68A,#D97706 55%,#78350F);}
+  .cel-badge{position:absolute;right:-6px;bottom:2px;min-width:34px;height:34px;padding:0 8px;border-radius:999px;display:flex;align-items:center;justify-content:center;
+    background:#fff;color:#7C2D12;font-size:16px;font-weight:800;box-shadow:0 4px 12px rgba(0,0,0,.3);}
+  .cel-card.anniv .cel-badge{font-size:12px;background:linear-gradient(135deg,#FDE68A,#F59E0B);color:#451A03;}
+  .cel-name{font-size:18px;font-weight:800;color:#fff;line-height:1.3;}
+  .cel-sub{font-size:12.5px;color:#B8C4D2;margin-top:3px;}
+  .cel-msg{font-size:13px;color:#FBEBD6;margin:12px 0 4px;line-height:1.55;}
+  .cel-count{display:inline-block;margin-top:8px;font-size:11.5px;font-weight:700;color:#FDE68A;background:rgba(245,158,11,.14);border-radius:999px;padding:3px 10px;}
+  .cel-wishes{margin-top:8px;text-align:left;max-height:150px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;}
+  .cel-wish{font-size:12px;color:#E2E8F0;background:rgba(255,255,255,.07);border-radius:10px;padding:7px 10px;line-height:1.45;word-break:break-word;}
+  .cel-wish b{display:block;font-size:11px;color:#FDBA74;}
+  .cel-login{display:inline-flex;align-items:center;gap:6px;margin-top:14px;padding:9px 18px;border-radius:999px;font-size:13px;font-weight:700;color:#1A1D29;text-decoration:none;
+    background:linear-gradient(90deg,#FDE68A,#F59E0B);box-shadow:0 6px 18px rgba(245,158,11,.3);}
+  .cel-done{margin-top:12px;font-size:12.5px;font-weight:700;color:#86EFAC;}
+  .cel-form{margin-top:12px;}
+  .cel-quick{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;}
+  .cel-quick button{border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.07);color:#fff;border-radius:999px;padding:7px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:background .15s,transform .15s;}
+  .cel-quick button:hover{background:rgba(245,158,11,.25);transform:translateY(-1px);}
+  .cel-own{display:flex;gap:6px;margin-top:8px;}
+  .cel-own input{flex:1;min-width:0;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:999px;padding:8px 14px;font-size:12.5px;color:#fff;font-family:inherit;}
+  .cel-own input::placeholder{color:rgba(255,255,255,.5);}
+  .cel-own button{background:#D9530F;color:#fff;border:none;border-radius:999px;padding:8px 16px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;}
+  .cel-swipe{display:none;text-align:center;font-size:11.5px;color:#9FB0C3;margin-top:6px;}
+  .ts-cel{color:#FDE68A;text-decoration:none;font-weight:700;}
+  @media (max-width:600px){ .cel-swipe{display:block;} .cel{margin-top:34px;border-radius:18px;padding:22px 10px 24px;} .cel-head h2{font-size:22px;} }
+  @media (prefers-reduced-motion:reduce){ .cel-confetti,.cel-ring{animation:none;} .cel-confetti{display:none;} }
 
   .btn-hero{
     padding:14px 32px;border-radius:12px;font-size:14.5px;font-weight:600;text-decoration:none;
@@ -388,7 +414,7 @@ $todayLabel = $marathiDays[(int)date('w')] . ', ' . (int)date('j') . ' ' . $mara
   footer{text-align:center;padding:26px;font-size:12px;color:#8A90AC;}
 
   @media (prefers-reduced-motion: reduce){
-    .med-aura,.med-figure,.med-mandala,.med-chakras circle,.med-crown,.med-lotus,.med-sparks circle,.med-breath .in,.hero::before,.hero::after,.quote-om,.mark,.hero h1,.hero p,.quote-card,.action-row,.birthday-wrap,.sacred-ring,.yantra,.hero-eyebrow,.today-strip,.content-eyebrow,.content-title,.content-glyph{animation:none;opacity:1;}
+    .med-aura,.med-figure,.med-mandala,.med-chakras circle,.med-crown,.med-lotus,.med-sparks circle,.med-breath .in,.hero::before,.hero::after,.quote-om,.mark,.hero h1,.hero p,.quote-card,.action-row,.cel,.sacred-ring,.yantra,.hero-eyebrow,.today-strip,.content-eyebrow,.content-title,.content-glyph{animation:none;opacity:1;}
   }
 </style>
 </head>
@@ -455,7 +481,7 @@ $todayLabel = $marathiDays[(int)date('w')] . ', ' . (int)date('j') . ' ' . $mara
     </svg>
   </div>
   <div class="med-breath" id="medBreath"><span class="in">🌬️ श्वास घ्या…</span><span class="out">🍃 श्वास सोडा…</span></div>
-  <div class="today-strip"><span class="dot"></span><span id="wlGreet" class="ts-i"></span><span class="ts-i"><?= h($todayLabel) ?></span><span id="wlClock" class="ts-i wl-clock"></span></div>
+  <div class="today-strip"><span class="dot"></span><span id="wlGreet" class="ts-i"></span><span class="ts-i"><?= h($todayLabel) ?></span><span id="wlClock" class="ts-i wl-clock"></span><?php if (!empty($birthdays) || !empty($anniversaries)): ?><a href="#wishes" class="ts-i ts-cel"><?= !empty($birthdays) ? '🎂 ' . count($birthdays) . ' वाढदिवस' : '' ?><?= !empty($birthdays) && !empty($anniversaries) ? ' · ' : '' ?><?= !empty($anniversaries) ? '🏆 ' . count($anniversaries) . ' सेवापूर्ती' : '' ?> ↓</a><?php endif; ?></div>
   <div class="hero-eyebrow">!! आत्मा मालिक !!</div>
   <h1><?= htmlspecialchars($org['name'] ?? 'E-Admin — Smart Administration') ?></h1>
   <p><?= h(t('s145')) ?></p>
@@ -486,80 +512,79 @@ $todayLabel = $marathiDays[(int)date('w')] . ', ' . (int)date('j') . ' ' . $mara
   </form>
   <button type="button" class="wl-install" id="wlInstall" hidden><i class="fa-solid fa-mobile-screen-button"></i> 📲 App म्हणून Install करा</button>
 
-  <?php if (!empty($birthdays)): ?>
-    <div class="birthday-wrap">
-      <div class="birthday-heading">🎉 आज वाढदिवस — शुभेच्छा! 🎂</div>
-      <div class="birthday-row" id="wishes">
-        <?php foreach ($birthdays as $b): ?>
-          <div class="birthday-card">
-            <?php if (eowmsPhotoExists($b['photo_path'] ?? null)): ?>
-              <img src="<?= h(ltrim(preg_replace('#^(\.\./)+#', '', $b['photo_path']), '/')) ?>" class="birthday-photo" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"><div class="birthday-avatar" style="display:none;"><?= h(mb_substr($b['name'], 0, 1)) ?></div>
-            <?php else: ?>
-              <div class="birthday-avatar"><?= h(mb_substr($b['name'], 0, 1)) ?></div>
-            <?php endif; ?>
-            <div class="birthday-name"><?= h($b['name']) ?></div>
-            <div class="birthday-sub"><?= h($b['sub_label'] ?? '') ?></div>
-            <div class="birthday-wish">🎈 वाढदिवसाच्या खूप खूप शुभेच्छा!</div>
-            <?php if ($b['kind'] === 'staff'): ?>
-              <?php if (!empty($wishesByUser[$b['id']])): ?>
-                <div class="wishes-list">
-                  <?php foreach ($wishesByUser[$b['id']] as $w): if ($w['wish_type'] !== 'birthday') continue; ?>
-                    <div class="wish-item">💬 <strong><?= h($w['poster_name']) ?>:</strong> <?= h($w['wish_text']) ?></div>
+  <?php
+  // 🎉 आजचा आनंद — वाढदिवस + कामाचा वर्धापनदिन एकाच सुंदर भागात
+  $celebs = [];
+  foreach ($birthdays as $b) { $celebs[] = $b + ['ctype' => 'birthday']; }
+  foreach ($anniversaries as $a) { $celebs[] = $a + ['ctype' => 'anniversary', 'kind' => 'staff']; }
+  $initials = function ($n) { $p = preg_split('/\s+/u', trim((string)$n)); return mb_strtoupper(mb_substr($p[0] ?? '', 0, 1) . (count($p) > 1 ? mb_substr(end($p), 0, 1) : '')); };
+  ?>
+  <?php if ($celebs): ?>
+    <section class="cel" id="wishes" aria-label="आजचे वाढदिवस व वर्धापनदिन">
+      <div class="cel-confetti" aria-hidden="true"><?php for ($i = 0; $i < 18; $i++): ?><i style="--x:<?= ($i * 53) % 100 ?>%;--d:<?= 5 + ($i % 5) ?>s;--l:<?= ($i * 0.37) % 4 ?>s;--c:<?= ['#F59E0B', '#D9530F', '#EC4899', '#22D3EE', '#A3E635', '#FBEBD6'][$i % 6] ?>;"></i><?php endfor; ?></div>
+      <div class="cel-head">
+        <span class="cel-eyebrow">आजचा आनंद</span>
+        <h2><?php if (count($birthdays)): ?>🎂 <span class="g">वाढदिवस</span><?php endif; ?><?= count($birthdays) && count($anniversaries) ? ' <span class="sep">·</span> ' : '' ?><?php if (count($anniversaries)): ?>🏆 <span class="g">सेवापूर्ती</span><?php endif; ?></h2>
+        <p><?= count($celebs) === 1 ? 'आपल्या परिवारातील एका सदस्याचा आज खास दिवस' : 'आपल्या परिवारातील ' . count($celebs) . ' सदस्यांचा आज खास दिवस' ?> — शुभेच्छा द्या! 🎉</p>
+      </div>
+      <div class="cel-row <?= count($celebs) === 1 ? 'one' : '' ?>">
+        <?php foreach ($celebs as $c):
+          $isB = $c['ctype'] === 'birthday'; $uid = (int)($c['id'] ?? 0);
+          $myWishes = array_values(array_filter($wishesByUser[$uid] ?? [], fn($w) => $w['wish_type'] === ($isB ? 'birthday' : 'anniversary')));
+          $iWished = $loggedInUser && array_filter($myWishes, fn($w) => (int)$w['posted_by'] === (int)$loggedInUser['id']);
+          $isMe = $loggedInUser && $uid && $uid === (int)$loggedInUser['id'];
+          $years = (int)($c['years_completed'] ?? 0);
+        ?>
+          <article class="cel-card <?= $isB ? 'bday' : 'anniv' ?> <?= $isMe ? 'me' : '' ?>">
+            <div class="cel-ph">
+              <div class="cel-ring"></div>
+              <?php if (eowmsPhotoExists($c['photo_path'] ?? null)): ?>
+                <img src="<?= h(ltrim(preg_replace('#^(\.\./)+#', '', $c['photo_path']), '/')) ?>" alt="" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"><span class="cel-ini" style="display:none;"><?= h($initials($c['name'])) ?></span>
+              <?php else: ?>
+                <span class="cel-ini"><?= h($initials($c['name'])) ?></span>
+              <?php endif; ?>
+              <span class="cel-badge"><?= $isB ? '🎂' : $years . ' वर्षं' ?></span>
+            </div>
+            <div class="cel-name"><?= h($c['name']) ?></div>
+            <?php if (!empty($c['sub_label'])): ?><div class="cel-sub"><?= h($c['sub_label']) ?></div><?php endif; ?>
+            <div class="cel-msg">
+              <?php if ($isMe): ?><?= $isB ? '🎂 आज तुमचा वाढदिवस — सगळ्या परिवाराकडून खूप खूप शुभेच्छा!' : '🏆 संस्थेसोबत ' . $years . ' वर्षं — तुमच्या सेवेबद्दल मनःपूर्वक धन्यवाद!' ?>
+              <?php elseif ($isB): ?>🎈 वाढदिवसाच्या खूप खूप शुभेच्छा!
+              <?php else: ?>🎊 संस्थेसोबत <b><?= $years ?> वर्षं</b> पूर्ण — अभिनंदन!<?php endif; ?>
+            </div>
+            <?php if (($c['kind'] ?? '') === 'staff' && $uid): ?>
+              <?php if ($myWishes): ?>
+                <div class="cel-count">💬 <?= count($myWishes) ?> शुभेच्छा</div>
+                <div class="cel-wishes">
+                  <?php foreach (array_slice(array_reverse($myWishes), 0, 6) as $w): ?>
+                    <div class="cel-wish"><b><?= h($w['poster_name']) ?></b><span><?= h($w['wish_text']) ?></span></div>
                   <?php endforeach; ?>
                 </div>
               <?php endif; ?>
-              <?php if ($loggedInUser): ?>
-                <form method="POST" action="wish-post.php" class="wish-form">
-                  <input type="hidden" name="target_user_id" value="<?= $b['id'] ?>">
-                  <input type="hidden" name="wish_type" value="birthday">
-                  <input type="text" name="wish_text" maxlength="200" placeholder="छोटी शुभेच्छा लिहा..." required>
-                  <button type="submit">पाठवा</button>
-                </form>
+              <?php if (!$loggedInUser): ?>
+                <a href="login.php" class="cel-login">🔑 Login करून शुभेच्छा द्या</a>
+              <?php elseif ($isMe): ?>
+              <?php elseif ($iWished): ?>
+                <div class="cel-done">✓ तुम्ही शुभेच्छा दिल्या</div>
               <?php else: ?>
-                <a href="login.php" class="wish-login-link">🔑 Login करून शुभेच्छा द्या</a>
+                <form method="POST" action="wish-post.php" class="cel-form">
+                  <?= function_exists('csrfField') ? csrfField() : '' ?>
+                  <input type="hidden" name="target_user_id" value="<?= $uid ?>">
+                  <input type="hidden" name="wish_type" value="<?= $isB ? 'birthday' : 'anniversary' ?>">
+                  <div class="cel-quick">
+                    <?php foreach ($isB ? ['🎂 वाढदिवसाच्या हार्दिक शुभेच्छा!', '🙏 आनंदी व निरोगी आयुष्य लाभो!', '🎉 Happy Birthday!'] : ['🏆 मनःपूर्वक अभिनंदन!', '🙏 पुढील वाटचालीस शुभेच्छा!', '🎊 Congratulations!'] as $qw): ?>
+                      <button type="submit" name="wish_text" value="<?= h($qw) ?>"><?= h($qw) ?></button>
+                    <?php endforeach; ?>
+                  </div>
+                  <div class="cel-own"><input type="text" name="wish_custom" maxlength="200" placeholder="किंवा तुमची शुभेच्छा लिहा…"><button type="submit">पाठवा</button></div>
+                </form>
               <?php endif; ?>
             <?php endif; ?>
-          </div>
+          </article>
         <?php endforeach; ?>
       </div>
-    </div>
-  <?php endif; ?>
-
-  <?php if (!empty($anniversaries)): ?>
-    <div class="birthday-wrap">
-      <div class="birthday-heading">🎊 आज कामाचा वर्धापनदिन — अभिनंदन! 🏆</div>
-      <div class="birthday-row">
-        <?php foreach ($anniversaries as $a): ?>
-          <div class="birthday-card">
-            <?php if (eowmsPhotoExists($a['photo_path'] ?? null)): ?>
-              <img src="<?= h(ltrim(preg_replace('#^(\.\./)+#', '', $a['photo_path']), '/')) ?>" class="birthday-photo" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"><div class="birthday-avatar" style="display:none;"><?= h(mb_substr($a['name'], 0, 1)) ?></div>
-            <?php else: ?>
-              <div class="birthday-avatar"><?= h(mb_substr($a['name'], 0, 1)) ?></div>
-            <?php endif; ?>
-            <div class="birthday-name"><?= h($a['name']) ?></div>
-            <div class="birthday-sub"><?= h($a['sub_label'] ?? '') ?></div>
-            <div class="birthday-wish">🎊 संस्थेसोबत <?= (int)$a['years_completed'] ?> वर्षं पूर्ण — अभिनंदन!</div>
-            <?php if (!empty($wishesByUser[$a['id']])): ?>
-              <div class="wishes-list">
-                <?php foreach ($wishesByUser[$a['id']] as $w): if ($w['wish_type'] !== 'anniversary') continue; ?>
-                  <div class="wish-item">💬 <strong><?= h($w['poster_name']) ?>:</strong> <?= h($w['wish_text']) ?></div>
-                <?php endforeach; ?>
-              </div>
-            <?php endif; ?>
-            <?php if ($loggedInUser): ?>
-              <form method="POST" action="wish-post.php" class="wish-form">
-                <input type="hidden" name="target_user_id" value="<?= $a['id'] ?>">
-                <input type="hidden" name="wish_type" value="anniversary">
-                <input type="text" name="wish_text" maxlength="200" placeholder="छोटी शुभेच्छा लिहा..." required>
-                <button type="submit">पाठवा</button>
-              </form>
-            <?php else: ?>
-              <a href="login.php" class="wish-login-link">🔑 Login करून शुभेच्छा द्या</a>
-            <?php endif; ?>
-          </div>
-        <?php endforeach; ?>
-      </div>
-    </div>
+      <?php if (count($celebs) > 1): ?><div class="cel-swipe">👉 आणखी पाहण्यासाठी बाजूला सरकवा</div><?php endif; ?>
+    </section>
   <?php endif; ?>
 
   <?php if ($quote): ?>

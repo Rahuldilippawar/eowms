@@ -15,7 +15,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $targetUserId = (int)($_POST['target_user_id'] ?? 0);
 $wishType = $_POST['wish_type'] ?? 'birthday';
-$wishText = trim($_POST['wish_text'] ?? '');
+// झटपट शुभेच्छा-बटण (wish_text) किंवा स्वतः लिहिलेली (wish_custom)
+$wishText = trim((string)($_POST['wish_text'] ?? '')) ?: trim((string)($_POST['wish_custom'] ?? ''));
 $wishDate = date('Y-m-d');
 
 if (!in_array($wishType, ['birthday', 'anniversary'], true)) { $wishType = 'birthday'; }
