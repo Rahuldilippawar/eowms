@@ -92,7 +92,9 @@ function salarySave(PDO $pdo, $orgId, $userId, array $s, $effectiveFrom, $source
     $set = ['pf_applicable = ?', 'esic_applicable = ?', 'pt_applicable = ?', 'is_handicap = ?', "pf_mode = ?", "esic_mode = ?", "pt_mode = ?"];
     $vals = [$row['pf_applicable'], $row['esic_applicable'], $row['pt_applicable'], $row['is_handicap'],
         $row['pf_applicable'] ? 'YES' : 'NO', $row['esic_applicable'] ? 'YES' : 'NO', $row['pt_applicable'] ? 'YES' : 'NO'];
-    if ($effectiveFrom <= date('Y-m-d')) { $set[] = 'salary = ?'; $vals[] = $row['gross']; }
+    // आज लागू असलेली रचना (नंतरच्या तारखेची आधीच असेल तर तीच) — त्याचा एकूण पगार
+    $now = salaryCurrent($pdo, $orgId, [$userId])[(int)$userId] ?? null;
+    if ($now && $now['effective_from'] <= date('Y-m-d')) { $set[] = 'salary = ?'; $vals[] = $now['gross']; }
     foreach (['uan_no', 'esic_no'] as $k) {
         $v = preg_replace('/\s+/', '', (string)($s[$k] ?? ''));
         if ($v !== '' && $v !== '0') { $set[] = "$k = ?"; $vals[] = mb_substr($v, 0, 50); }
