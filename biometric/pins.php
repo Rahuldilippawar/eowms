@@ -37,12 +37,27 @@ if ($ready) {
         FROM bio_device_users du JOIN bio_devices d ON d.id = du.device_id WHERE d.organization_id = ? GROUP BY du.pin");
     $st->execute([$orgId]);
     foreach ($st->fetchAll() as $r) { $pins[$r['pin']] = $r + ['punches' => 0, 'last' => null]; }
-    $st = $pdo->prepare("SELECT p.pin, COUNT(*) n, MAX(p.punch_time) last, GROUP_CONCAT(DISTINCT d.device_name SEPARATOR ', ') devs FROM bio_punches p JOIN bio_devices d ON d.id = p.device_id
-        WHERE d.organization_id = ? GROUP BY p.pin");
-    $st->execute([$orgId]);
-    foreach ($st->fetchAll() as $r) {
-        $pins[$r['pin']] = ($pins[$r['pin']] ?? ['pin' => $r['pin'], 'mname' => null, 'devs' => $r['devs'], 'fp' => 0, 'face' => 0]);
-        $pins[$r['pin']]['punches'] = (int)$r['n']; $pins[$r['pin']]['last'] = $r['last'];
+    // ⚡ (device_id, pin) गटाने — uniq_device_pin_time Index पुरतो (लाखो Punches वर JOIN + GROUP BY pin टाळतो); मग PHP मध्ये PIN नुसार बेरीज
+    $devNames = $pdo->prepare("SELECT id, device_name FROM bio_devices WHERE organization_id = ?");
+    $devNames->execute([$orgId]);
+    $devNames = $devNames->fetchAll(PDO::FETCH_KEY_PAIR);
+    $agg = [];
+    if ($devNames) {
+        $st = $pdo->prepare("SELECT device_id, pin, COUNT(*) n, MAX(punch_time) last FROM bio_punches
+            WHERE device_id IN (" . implode(',', array_map('intval', array_keys($devNames))) . ") GROUP BY device_id, pin");
+        $st->execute();
+        foreach ($st->fetchAll() as $r) {
+            $g = &$agg[$r['pin']];
+            $g['n'] = ($g['n'] ?? 0) + (int)$r['n'];
+            if (empty($g['last']) || $r['last'] > $g['last']) { $g['last'] = $r['last']; }
+            $g['devs'][$devNames[$r['device_id']] ?? ''] = true;
+            unset($g);
+        }
+    }
+    foreach ($agg as $pin => $r) {
+        $pin = (string)$pin;
+        $pins[$pin] = ($pins[$pin] ?? ['pin' => $pin, 'mname' => null, 'devs' => implode(', ', array_keys($r['devs'])), 'fp' => 0, 'face' => 0]);
+        $pins[$pin]['punches'] = $r['n']; $pins[$pin]['last'] = $r['last'];
     }
 }
 uksort($pins, fn($a, $b) => (ctype_digit((string)$a) && ctype_digit((string)$b)) ? (int)$a <=> (int)$b : strcmp($a, $b));

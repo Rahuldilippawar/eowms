@@ -30,9 +30,9 @@ $summaryStmt = $pdo->prepare("
       SUM(CASE WHEN status = 'on_leave' THEN 1 ELSE 0 END) AS leave_count,
       SUM(CASE WHEN is_late = 1 THEN 1 ELSE 0 END) AS late_count,
       COUNT(*) AS total_marked
-    FROM staff_attendance WHERE user_id = ? AND DATE_FORMAT(attendance_date, '%Y-%m') = ?
+    FROM staff_attendance WHERE user_id = ? AND attendance_date BETWEEN ? AND LAST_DAY(?)
 ");
-$summaryStmt->execute([$targetUserId, $month]);
+$summaryStmt->execute([$targetUserId, $month . '-01', $month . '-01']);
 $summary = $summaryStmt->fetch();
 
 $monthLabel = date('F Y', strtotime($month . '-01'));
@@ -44,8 +44,8 @@ $offDates = [];
 $holStmt = $pdo->prepare("SELECT holiday_date FROM holidays WHERE organization_id = ? AND (campus_id IS NULL OR campus_id = ?) AND DATE_FORMAT(holiday_date, '%Y-%m') = ?");
 $holStmt->execute([$orgId, $targetUser['campus_id'], $month]);
 foreach ($holStmt->fetchAll(PDO::FETCH_COLUMN) as $hd) { $offDates[$hd] = true; }
-$holMarkStmt = $pdo->prepare("SELECT attendance_date FROM staff_attendance WHERE user_id = ? AND status = 'holiday' AND DATE_FORMAT(attendance_date, '%Y-%m') = ?");
-$holMarkStmt->execute([$targetUserId, $month]);
+$holMarkStmt = $pdo->prepare("SELECT attendance_date FROM staff_attendance WHERE user_id = ? AND status = 'holiday' AND attendance_date BETWEEN ? AND LAST_DAY(?)");
+$holMarkStmt->execute([$targetUserId, $month . '-01', $month . '-01']);
 foreach ($holMarkStmt->fetchAll(PDO::FETCH_COLUMN) as $hd) { $offDates[$hd] = true; }
 $weeklyOffs = [0];
 try {

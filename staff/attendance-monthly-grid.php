@@ -75,9 +75,9 @@ if ($loaded) {
 
     $attStmt = $pdo->prepare("
         SELECT user_id, DAY(attendance_date) AS d, status FROM staff_attendance
-        WHERE organization_id = ? AND DATE_FORMAT(attendance_date, '%Y-%m') = ?
+        WHERE organization_id = ? AND attendance_date BETWEEN ? AND LAST_DAY(?)
     ");
-    $attStmt->execute([$orgId, $month]);
+    $attStmt->execute([$orgId, $month . '-01', $month . '-01']);
     foreach ($attStmt->fetchAll() as $a) { $attGrid[$a['user_id']][(int)$a['d']] = $a['status']; }
 }
 

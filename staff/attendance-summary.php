@@ -20,10 +20,10 @@ $sql = "
       SUM(CASE WHEN sa.is_late = 1 THEN 1 ELSE 0 END) AS late_count,
       COUNT(sa.id) AS total_marked
     FROM users u LEFT JOIN departments d ON d.id = u.department_id
-    LEFT JOIN staff_attendance sa ON sa.user_id = u.id AND DATE_FORMAT(sa.attendance_date, '%Y-%m') = ?
+    LEFT JOIN staff_attendance sa ON sa.user_id = u.id AND sa.attendance_date BETWEEN ? AND LAST_DAY(?)
     WHERE u.organization_id = ? AND u.is_active = 1
 ";
-$params = [$month, $orgId];
+$params = [$month . '-01', $month . '-01', $orgId];
 if (!$isMgmt) { $sql .= " AND u.department_id = ?"; $params[] = $user['department_id'] ?? 0; }
 $sql .= " GROUP BY u.id, u.name, u.designation, d.name_local ORDER BY u.name";
 $stmt = $pdo->prepare($sql);

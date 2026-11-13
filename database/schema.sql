@@ -954,7 +954,9 @@ CREATE TABLE activity_logs (
   entity_id INT NULL,
   details TEXT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  INDEX idx_org_created (organization_id, created_at)
+  INDEX idx_org_created (organization_id, created_at),
+  INDEX idx_user_created (user_id, created_at),
+  INDEX idx_org_action (organization_id, action(40), created_at)
 ) ENGINE=InnoDB;
 
 -- ---------------- ध्यान व सत्संग (Meditation & Satsang) ----------------

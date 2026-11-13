@@ -12,7 +12,7 @@ $filterDate = $_GET['date'] ?? '';
 $sql = "SELECT * FROM activity_logs WHERE organization_id = ? AND (action LIKE '%Login%' OR action LIKE '%Logout%')";
 $params = [$orgId];
 if ($filterUserId) { $sql .= " AND user_id = ?"; $params[] = $filterUserId; }
-if ($filterDate) { $sql .= " AND DATE(created_at) = ?"; $params[] = $filterDate; }
+if ($filterDate) { $sql .= " AND created_at >= ? AND created_at < DATE_ADD(?, INTERVAL 1 DAY)"; $params[] = $filterDate; $params[] = $filterDate; }
 $sql .= " ORDER BY created_at DESC LIMIT 300";
 
 try {
@@ -25,7 +25,7 @@ try {
 
 // आजचा सारांश
 try {
-    $todayLoginStmt = $pdo->prepare("SELECT COUNT(DISTINCT user_id) c FROM activity_logs WHERE organization_id = ? AND action LIKE '%Login%' AND DATE(created_at) = CURDATE()");
+    $todayLoginStmt = $pdo->prepare("SELECT COUNT(DISTINCT user_id) c FROM activity_logs WHERE organization_id = ? AND action LIKE '%Login%' AND created_at >= CURDATE()");
     $todayLoginStmt->execute([$orgId]);
     $todayLoginCount = (int)$todayLoginStmt->fetch()['c'];
 } catch (PDOException $e) { $todayLoginCount = 0; }

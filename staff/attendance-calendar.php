@@ -35,8 +35,8 @@ $targetStmt->execute([$targetUserId, $orgId]);
 $targetUser = $targetStmt->fetch();
 if (!$targetUser) { die('व्यक्ती सापडली नाही.'); }
 
-$attStmt = $pdo->prepare("SELECT * FROM staff_attendance WHERE user_id = ? AND DATE_FORMAT(attendance_date, '%Y-%m') = ?");
-$attStmt->execute([$targetUserId, $month]);
+$attStmt = $pdo->prepare("SELECT * FROM staff_attendance WHERE user_id = ? AND attendance_date BETWEEN ? AND LAST_DAY(?)");
+$attStmt->execute([$targetUserId, $month . '-01', $month . '-01']);
 $attByDate = [];
 foreach ($attStmt->fetchAll() as $a) { $attByDate[$a['attendance_date']] = $a; }
 
