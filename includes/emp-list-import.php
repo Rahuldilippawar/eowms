@@ -69,7 +69,7 @@ function empListDeptHints($name) {
         'housekeeping' => ['HSK', 'हाऊसकीपिंग'], 'store' => ['STR', 'भांडार'], 'security' => ['SEC', 'सुरक्षा'], 'bhojnalay' => ['BHJ', 'भोजनालय'], 'mess' => ['BHJ', 'भोजनालय'],
         'goshala' => ['GSH', 'गोशाळा'], 'gaushala' => ['GSH', 'गोशाळा'], 'reception' => ['RCP', 'स्वागत कक्ष'], 'gardentrust' => ['GRD', 'बाग विभाग (ट्रस्ट)'], 'garden' => ['GRD', 'बाग विभाग'],
         'civil' => ['CVL', 'सिव्हिल'], 'maintenance' => ['MTN', 'देखभाल'], 'napstrust' => ['NAPS', 'NAPS (ट्रस्ट)'], '58plusageemployee' => ['SNR', '५८+ वयाचे कर्मचारी'],
-        'electrical' => ['ELE', 'इलेक्ट्रिकल'], 'plumbing' => ['PLM', 'प्लंबिंग'], 'hr' => ['HR', 'मनुष्यबळ'], 'purchase' => ['PUR', 'खरेदी'], 'it' => ['IT', 'आयटी'],
+        'hostel' => ['HOS', 'वसतिगृह'], 'napshostel' => ['NAPH', 'NAPS वसतिगृह'], 'electrical' => ['ELE', 'इलेक्ट्रिकल'], 'plumbing' => ['PLM', 'प्लंबिंग'], 'hr' => ['HR', 'मनुष्यबळ'], 'purchase' => ['PUR', 'खरेदी'], 'it' => ['IT', 'आयटी'],
     ];
     return $hints[$k] ?? null;
 }

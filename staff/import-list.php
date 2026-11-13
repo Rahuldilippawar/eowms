@@ -45,12 +45,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($act === 'apply' && $P && hash_equals($P['token'], (string)($_POST['token'] ?? ''))) {
         $result = empListApply($pdo, $orgId, $me, $P, [
             'old' => in_array($_POST['old_action'] ?? '', ['keep', 'deactivate', 'delete'], true) ? $_POST['old_action'] : 'deactivate',
+            'scope' => ($_POST['old_scope'] ?? '') === 'campus' ? 'campus' : 'depts', // default — फक्त यादीतल्या विभागांचे
             'pin' => !empty($_POST['pin_from_empid']),
             'hod' => !empty($_POST['make_hod']),
         ]);
         unset($_SESSION['emplist_import']); $P = null;
         $_SESSION['emplist_credentials'] = $result['credentials'];
         $step = 'done';
+    } elseif ($act === 'reactivate') {
+        // ↩️ निष्क्रिय झालेले कर्मचारी परत सक्रिय (याच संस्थेचे, Super Admin सोडून)
+        $ids = array_values(array_unique(array_filter(array_map('intval', (array)($_POST['ids'] ?? [])))));
+        $n = 0;
+        if ($ids) {
+            $st = $pdo->prepare("UPDATE users SET is_active = 1, left_date = NULL WHERE organization_id = ? AND role <> 'super_admin' AND is_active = 0 AND id IN (" . implode(',', array_fill(0, count($ids), '?')) . ")");
+            $st->execute(array_merge([$orgId], $ids)); $n = $st->rowCount();
+            logActivity('निष्क्रिय कर्मचारी परत सक्रिय केले', 'user', null, "$n कर्मचारी");
+        }
+        $_SESSION['flash'] = "↩️ $n कर्मचारी परत सक्रिय केले.";
+        header('Location: import-list.php' . (!empty($_POST['react_campus']) ? '?react_campus=' . (int)$_POST['react_campus'] : ''));
+        exit;
     } elseif ($act === 'cancel') {
         unset($_SESSION['emplist_import']); $P = null;
     }
@@ -60,7 +73,7 @@ if ($step === 'upload' && $P && ($_GET['step'] ?? '') === 'preview') { $step = '
 /** प्रत्यक्ष बदल */
 function empListApply(PDO $pdo, $orgId, array $me, array $P, array $opt) {
     $campusId = (int)$P['campus_id'];
-    $R = ['created' => 0, 'updated' => 0, 'depts_new' => [], 'removed' => 0, 'remove_failed' => [], 'pins' => 0, 'hods' => 0, 'credentials' => [], 'notes' => []];
+    $R = ['deactivated_ids' => [], 'created' => 0, 'updated' => 0, 'depts_new' => [], 'removed' => 0, 'remove_failed' => [], 'pins' => 0, 'hods' => 0, 'credentials' => [], 'notes' => []];
     $domain = empListDomain($pdo, $orgId);
     $hasCol = function ($c) use ($pdo) { static $cols = null; if ($cols === null) { $cols = array_column($pdo->query("SHOW COLUMNS FROM users")->fetchAll(), 'Field'); } return in_array($c, $cols, true); };
 
@@ -155,21 +168,27 @@ function empListApply(PDO $pdo, $orgId, array $me, array $P, array $opt) {
 
     // 3) आधीचे कर्मचारी (या Campus चे, यादीत नसलेले) — Management / Super Admin / स्वतः सोडून
     if ($opt['old'] !== 'keep') {
-        foreach (empListOldStaff($pdo, $orgId, $campusId, array_keys($touched), (int)$me['id']) as $o) {
+        foreach (empListOldStaff($pdo, $orgId, $campusId, array_keys($touched), (int)$me['id'], $opt['scope'] === 'campus' ? null : array_values(array_unique($deptId))) as $o) {
             if ($opt['old'] === 'delete') {
                 if (staffHardDelete($pdo, $o['id'])) $R['removed']++; else { $pdo->prepare("UPDATE users SET is_active = 0 WHERE id = ?")->execute([$o['id']]); $R['remove_failed'][] = $o['name']; }
-            } else { $pdo->prepare("UPDATE users SET is_active = 0 WHERE id = ?")->execute([$o['id']]); $R['removed']++; }
+            } else { $pdo->prepare("UPDATE users SET is_active = 0 WHERE id = ?")->execute([$o['id']]); $R['removed']++; $R['deactivated_ids'][] = (int)$o['id']; }
         }
     }
     logActivity('कर्मचारी यादी आयात केली', 'user', null, "{$R['created']} नवीन, {$R['updated']} अद्ययावत, " . count($R['depts_new']) . " नवीन विभाग, {$R['removed']} आधीचे " . ($opt['old'] === 'delete' ? 'हटवले' : 'निष्क्रिय'));
     return $R;
 }
 
-/** या Campus चे आधीचे कर्मचारी जे यादीत नाहीत (Management / Super Admin / स्वतः सोडून) */
-function empListOldStaff(PDO $pdo, $orgId, $campusId, array $keepIds, $meId) {
+/**
+ * यादीत नसलेले आधीचे कर्मचारी (Management / Super Admin / स्वतः सोडून).
+ * $deptIds दिले तर फक्त त्या विभागांतले — एकेका विभागाची यादी दिली तर बाकीच्या विभागांना हात लागू नये;
+ * null = संपूर्ण Campus.
+ */
+function empListOldStaff(PDO $pdo, $orgId, $campusId, array $keepIds, $meId, ?array $deptIds = null) {
+    if ($deptIds !== null && !$deptIds) return [];
+    $deptSql = $deptIds !== null ? ' AND u.department_id IN (' . implode(',', array_map('intval', $deptIds)) . ')' : '';
     $st = $pdo->prepare("SELECT u.id, u.name, u.employee_code, u.designation, d.name dept FROM users u LEFT JOIN departments d ON d.id = u.department_id
         LEFT JOIN role_definitions rd ON rd.role_key = u.role
-        WHERE u.organization_id = ? AND u.campus_id = ? AND u.is_active = 1 AND u.role <> 'super_admin' AND COALESCE(rd.category, 'staff') NOT IN ('management', 'super_admin') AND u.id <> ? ORDER BY d.name, u.name");
+        WHERE u.organization_id = ? AND u.campus_id = ? AND u.is_active = 1 AND u.role <> 'super_admin' AND COALESCE(rd.category, 'staff') NOT IN ('management', 'super_admin') AND u.id <> ?$deptSql ORDER BY d.name, u.name");
     $st->execute([$orgId, $campusId, $meId]);
     return array_values(array_filter($st->fetchAll(), fn($u) => !isset(array_flip($keepIds)[$u['id']])));
 }
@@ -221,13 +240,57 @@ require_once __DIR__ . '/../includes/smart-insights.php';
   </div>
 </div>
 
+<?php
+  // ↩️ निष्क्रिय कर्मचारी परत सक्रिय — Campus निवडून, विभागनिहाय
+  $rc = (int)($_GET['react_campus'] ?? 0);
+  $inactive = [];
+  if (isset($campuses[$rc])) {
+      $st = $pdo->prepare("SELECT u.id, u.name, u.employee_code, u.designation, COALESCE(d.name, '— विभाग नाही —') dept FROM users u LEFT JOIN departments d ON d.id = u.department_id
+          LEFT JOIN role_definitions rd ON rd.role_key = u.role
+          WHERE u.organization_id = ? AND u.campus_id = ? AND u.is_active = 0 AND u.role <> 'super_admin' AND COALESCE(rd.category, 'staff') NOT IN ('management', 'super_admin') ORDER BY dept, u.name");
+      $st->execute([$orgId, $rc]);
+      foreach ($st->fetchAll() as $u) { $inactive[$u['dept']][] = $u; }
+  }
+?>
+<?php if (!empty($_SESSION['flash'])): ?><div class="alert alert-success mt-3" style="border-radius:10px;font-size:13px;"><?= h($_SESSION['flash']) ?></div><?php unset($_SESSION['flash']); endif; ?>
+<div class="panel mt-3" id="reactivate">
+  <div class="panel-head"><div class="title">↩️ निष्क्रिय कर्मचारी परत सक्रिय करा</div><div class="sub">चुकून निष्क्रिय झाले असतील (उदा. एका विभागाची यादी दिल्यावर) — Campus निवडा, हवे ते निवडा, सक्रिय करा</div></div>
+  <form method="GET" style="padding:12px 18px 0;" class="d-flex gap-2 flex-wrap align-items-center">
+    <select name="react_campus" class="form-select-custom" style="width:auto;" onchange="this.form.submit()">
+      <option value="">— Campus निवडा —</option>
+      <?php foreach ($campuses as $id => $n): ?><option value="<?= (int)$id ?>" <?= $rc === (int)$id ? 'selected' : '' ?>><?= h($n) ?></option><?php endforeach; ?>
+    </select>
+    <noscript><button class="btn btn-sm">दाखवा</button></noscript>
+  </form>
+  <?php if (isset($campuses[$rc])): ?>
+    <?php if (!$inactive): ?><div class="sm-empty" style="padding:14px 18px;">या Campus मध्ये निष्क्रिय कर्मचारी नाहीत ✓</div>
+    <?php else: $total = array_sum(array_map('count', $inactive)); ?>
+    <form method="POST" style="padding:10px 18px 16px;">
+      <?= csrfField() ?><input type="hidden" name="act" value="reactivate"><input type="hidden" name="react_campus" value="<?= $rc ?>">
+      <label style="font-size:13px;font-weight:700;"><input type="checkbox" onclick="this.closest('form').querySelectorAll('input[name=\'ids[]\']').forEach(function(c){c.checked=this.checked;}.bind(this))"> सगळे <?= $total ?> निवडा</label>
+      <?php foreach ($inactive as $dept => $list): ?>
+        <div style="margin-top:10px;">
+          <label style="font-size:12.5px;font-weight:700;color:var(--text-dim);"><input type="checkbox" onclick="this.parentNode.nextElementSibling.querySelectorAll('input').forEach(function(c){c.checked=this.checked;}.bind(this))"> <?= h($dept) ?> (<?= count($list) ?>)</label>
+          <div style="display:flex;flex-wrap:wrap;gap:4px 14px;padding:4px 0 0 20px;">
+            <?php foreach ($list as $u): ?><label style="font-size:12.5px;"><input type="checkbox" name="ids[]" value="<?= (int)$u['id'] ?>"> <?= h($u['name']) ?><?= $u['employee_code'] ? ' <small class="font-mono" style="color:var(--text-dim);">#' . h($u['employee_code']) . '</small>' : '' ?></label><?php endforeach; ?>
+          </div>
+        </div>
+      <?php endforeach; ?>
+      <button class="btn mt-3" style="background:var(--rail);color:#fff;border-radius:9px;font-size:13px;padding:8px 18px;font-weight:600;"><i class="fa-solid fa-rotate-left me-1"></i>निवडलेले परत सक्रिय करा</button>
+    </form>
+    <?php endif; ?>
+  <?php endif; ?>
+</div>
+
 <?php elseif ($step === 'preview' && $P):
   $campusId = (int)$P['campus_id'];
   $ds = $pdo->prepare("SELECT * FROM departments WHERE organization_id = ? AND campus_id = ?"); $ds->execute([$orgId, $campusId]); $campusDepts = $ds->fetchAll();
   $codes = array_values(array_filter(array_column($P['employees'], 'empid'))); $existing = [];
   if ($codes) { $q = $pdo->prepare("SELECT employee_code, id, organization_id, is_active FROM users WHERE employee_code IN (" . implode(',', array_fill(0, count($codes), '?')) . ")"); $q->execute($codes); foreach ($q->fetchAll() as $x) { if ((int)$x['organization_id'] === (int)$orgId) $existing[$x['employee_code']] = $x; } }
   $keep = array_map(fn($x) => (int)$x['id'], $existing);
-  $old = empListOldStaff($pdo, $orgId, $campusId, $keep, (int)$me['id']);
+  $listDeptIds = array_values(array_filter(array_map(fn($dn) => (int)(empListFindDept($campusDepts, $dn)['id'] ?? 0), array_keys($P['depts']))));
+  $old = empListOldStaff($pdo, $orgId, $campusId, $keep, (int)$me['id'], $listDeptIds);   // फक्त यादीतल्या विभागांचे
+  $oldAll = empListOldStaff($pdo, $orgId, $campusId, $keep, (int)$me['id']);              // संपूर्ण Campus
   $newCount = count(array_filter($P['employees'], fn($e) => $e['empid'] === '' || !isset($existing[$e['empid']])));
   $newDepts = array_filter(array_keys($P['depts']), fn($d) => !empListFindDept($campusDepts, $d));
 ?>
@@ -236,7 +299,7 @@ require_once __DIR__ . '/../includes/smart-insights.php';
       ['label' => '🆕 नवीन जोडले जातील', 'value' => $newCount, 'tone' => 'ok'],
       ['label' => '🔄 अद्ययावत होतील', 'value' => count($P['employees']) - $newCount, 'sub' => 'Emp Id ने ओळखले'],
       ['label' => '🏢 विभाग', 'value' => count($P['depts']), 'sub' => count($newDepts) . ' नवीन तयार होतील'],
-      ['label' => '👋 आधीचे (यादीत नाहीत)', 'value' => count($old), 'tone' => $old ? 'warn' : '', 'sub' => $campuses[$campusId] ?? ''],
+      ['label' => '👋 आधीचे (यादीत नाहीत)', 'value' => count($old), 'tone' => $old ? 'warn' : '', 'sub' => 'यादीतल्या विभागांतले · संपूर्ण Campus: ' . count($oldAll)],
   ]); ?>
   <?php if ($P['warnings']): ?><div class="alert alert-warning" style="border-radius:10px;font-size:12.5px;"><b>⚠️ <?= count($P['warnings']) ?> गोष्टी तपासा</b> (बाकी Import होईल):<ul class="mb-0 mt-1"><?php foreach (array_slice($P['warnings'], 0, 20) as $w): ?><li><?= h($w) ?></li><?php endforeach; ?></ul></div><?php endif; ?>
 
@@ -245,7 +308,10 @@ require_once __DIR__ . '/../includes/smart-insights.php';
     <div style="font-weight:700;margin-bottom:8px;">2️⃣ खात्री करा — <?= h($campuses[$campusId] ?? '') ?></div>
     <div class="row g-3">
       <div class="col-md-6">
-        <div class="form-label-custom">यादीत नसलेले आधीचे <?= count($old) ?> कर्मचारी:</div>
+        <div class="form-label-custom">कोणते आधीचे कर्मचारी?</div>
+        <label class="d-block" style="font-size:13px;"><input type="radio" name="old_scope" value="depts" checked> <b>फक्त यादीतल्या विभागांचे</b> — <?= count($old) ?> जण <small style="color:var(--text-dim);">(शिफारस — एकेका विभागाची यादी दिली तरी बाकी विभागांना हात लागत नाही)</small></label>
+        <label class="d-block mb-2" style="font-size:13px;"><input type="radio" name="old_scope" value="campus"> संपूर्ण Campus मधले यादीत नसलेले — <b><?= count($oldAll) ?> जण</b> <small style="color:var(--text-dim);">(संपूर्ण Campus ची पूर्ण यादी दिली असेल तरच)</small></label>
+        <div class="form-label-custom">त्यांचं काय करायचं:</div>
         <label class="d-block" style="font-size:13px;"><input type="radio" name="old_action" value="deactivate" checked> <b>निष्क्रिय करा</b> <small style="color:var(--text-dim);">(शिफारस — Login बंद, यादीतून गायब; जुनी हजेरी/नोंदी सुरक्षित; हवं तर परत चालू करता येतात)</small></label>
         <label class="d-block" style="font-size:13px;"><input type="radio" name="old_action" value="delete"> <b style="color:var(--rose);">कायमचे हटवा</b> <small style="color:var(--text-dim);">(त्यांच्या सगळ्या नोंदींसह — 30 दिवस Recycle Bin मध्ये)</small></label>
         <label class="d-block" style="font-size:13px;"><input type="radio" name="old_action" value="keep"> तसेच ठेवा</label>
@@ -291,7 +357,7 @@ require_once __DIR__ . '/../includes/smart-insights.php';
   </div>
   <?php if ($old): ?>
   <div class="panel mt-3">
-    <div class="panel-head"><div class="title">👋 यादीत नसलेले आधीचे कर्मचारी (<?= count($old) ?>)</div><div class="sub">वर निवडलेली कृती यांच्यावर होईल</div></div>
+    <div class="panel-head"><div class="title">👋 यादीतल्या विभागांतले, पण यादीत नसलेले आधीचे कर्मचारी (<?= count($old) ?>)</div><div class="sub">वर निवडलेली कृती यांच्यावर होईल<?= count($oldAll) > count($old) ? ' · "संपूर्ण Campus" निवडलं तर आणखी ' . (count($oldAll) - count($old)) . ' जण' : '' ?></div></div>
     <div style="padding:10px 18px;display:flex;flex-wrap:wrap;gap:6px;">
       <?php foreach ($old as $o): ?><span class="status-chip" style="background:var(--canvas);font-size:11.5px;"><?= h($o['name']) ?><?= $o['dept'] ? ' · ' . h($o['dept']) : '' ?></span><?php endforeach; ?>
     </div>
@@ -309,6 +375,13 @@ require_once __DIR__ . '/../includes/smart-insights.php';
         ['label' => '👋 आधीचे काढले', 'value' => $result['removed']],
         ['label' => '🖐️ Biometric PIN दिले', 'value' => $result['pins'], 'sub' => $result['hods'] . ' HOD नेमले'],
     ]); ?>
+    <?php if (!empty($result['deactivated_ids'])): ?>
+      <form method="POST" class="alert alert-warning d-flex justify-content-between align-items-center flex-wrap gap-2" style="border-radius:10px;font-size:12.5px;">
+        <?= csrfField() ?><input type="hidden" name="act" value="reactivate"><?php foreach ($result['deactivated_ids'] as $di): ?><input type="hidden" name="ids[]" value="<?= (int)$di ?>"><?php endforeach; ?>
+        <span>👋 या आयातीत <?= count($result['deactivated_ids']) ?> आधीचे कर्मचारी निष्क्रिय झाले. चुकून झालं असेल तर —</span>
+        <button class="btn btn-sm" style="border:1px solid var(--line);border-radius:8px;background:#fff;">↩️ हे परत सक्रिय करा</button>
+      </form>
+    <?php endif; ?>
     <?php if ($result['depts_new']): ?><div class="alert alert-info" style="border-radius:10px;font-size:12.5px;">🏢 नवीन विभाग: <?= h(implode(', ', $result['depts_new'])) ?></div><?php endif; ?>
     <?php if ($result['remove_failed']): ?><div class="alert alert-warning" style="border-radius:10px;font-size:12.5px;">हे कायमचे हटवता आले नाहीत (त्यांच्या नोंदी अडकल्या) — त्याऐवजी निष्क्रिय केले: <?= h(implode(', ', $result['remove_failed'])) ?></div><?php endif; ?>
     <?php if ($result['notes']): ?><div class="alert alert-warning" style="border-radius:10px;font-size:12.5px;"><ul class="mb-0"><?php foreach ($result['notes'] as $n): ?><li><?= h($n) ?></li><?php endforeach; ?></ul></div><?php endif; ?>
