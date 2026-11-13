@@ -77,8 +77,11 @@ $drMsg = (string)orgSetting($pdo, $orgId, 'daily_report_last_msg', '');
 $drAt = orgSetting($pdo, $orgId, 'daily_report_last_at');
 $mailOk = function_exists('mail');
 $emailBad = !$mailOk || ($drMsg !== '' && preg_match('/अयशस्वी|त्रुटी|fail|error/iu', $drMsg));
-$checks[] = [$emailBad ? 'bad' : ($drAt ? 'ok' : 'warn'), '✉️', 'Email पाठवणं', $drAt ? 'दैनिक अहवाल ' . $ago($drAt) : 'अजून पाठवलं नाही',
-    $mailOk ? ($drMsg ? mb_strimwidth($drMsg, 0, 70, '…') : 'Server वर mail() उपलब्ध') : 'Server वर mail() बंद आहे', '../reports/daily.php'];
+$em = saTableReady($pdo, 'email_log') ? $q1("SELECT SUM(status = 'sent') s, SUM(status = 'failed') f, MAX(sent_at) last FROM email_log WHERE (organization_id = ? OR organization_id IS NULL) AND sent_at >= NOW() - INTERVAL 1 DAY", [$orgId]) : [];
+$emS = (int)($em['s'] ?? 0); $emF = (int)($em['f'] ?? 0);
+$checks[] = [$emailBad || ($emF && !$emS) ? 'bad' : ($emF ? 'warn' : ($drAt || $emS ? 'ok' : 'warn')), '✉️', 'Email पाठवणं',
+    $em ? ($emS + $emF ? '24 तासांत ' . $emS . ' पाठवले' . ($emF ? ' · ' . $emF . ' अयशस्वी' : '') : 'गेल्या 24 तासांत एकही नाही') : ($drAt ? 'दैनिक अहवाल ' . $ago($drAt) : 'अजून पाठवलं नाही'),
+    $mailOk ? (!empty($em['last']) ? 'शेवटचा Email ' . $ago($em['last']) . ' · नोंद बघा' : ($drMsg ? mb_strimwidth($drMsg, 0, 70, '…') : 'Server वर mail() उपलब्ध')) : 'Server वर mail() बंद आहे', 'email-log.php'];
 
 // 🔐 सुरक्षा
 $sess = saTableReady($pdo, 'user_sessions') ? (int)($q1("SELECT COUNT(DISTINCT user_id) c FROM user_sessions WHERE organization_id = ? AND ended_at IS NULL AND last_seen >= DATE_SUB(NOW(), INTERVAL 15 MINUTE)", [$orgId])['c'] ?? 0) : 0;
@@ -130,6 +133,7 @@ $tone = ['ok' => ['#137A4B', '#E7F6EF', 'ठीक'], 'warn' => ['#B45309', '#FE
         <a href="view-as.php"><b>👁️ View as</b><small>कर्मचाऱ्याच्या नजरेतून पाहा</small></a>
         <a href="sessions.php"><b>🔐 Active Sessions</b><small><?= $sess ?> Online · Force Logout</small></a>
         <a href="security.php"><b>🚨 सुरक्षा इशारे</b><small><?= $failedToday ?> अयशस्वी Login आज</small></a>
+        <a href="email-log.php"><b>✉️ Email नोंद</b><small>कधी, कोणाला, कोणता Email · स्थिती</small></a>
         <a href="broadcast.php"><b>📢 Broadcast</b><small>सगळ्यांना एकदम सूचना</small></a>
         <a href="celebrations.php"><b>🎂 वाढदिवस व वर्धापनदिन</b><small>शुभेच्छा Email / सूचना, चाचणी</small></a>
         <a href="usage.php"><b>📊 Module वापर</b><small>कोण काय वापरतं</small></a>
