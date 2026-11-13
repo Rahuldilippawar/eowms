@@ -312,6 +312,8 @@ function eowmsSwitchDashTab(which, btn) {
 
 <?php $smartPart = 'alerts'; require __DIR__ . '/includes/dashboard-smart-view.php'; $smartPart = 'main'; ?>
 
+<?php if ($isMgmtView || $isCampusHeadView) { require __DIR__ . '/includes/dashboard-staff-count.php'; } // 👥 ट्रस्ट / College / विभागनिहाय कर्मचारी संख्या ?>
+
 <?php require __DIR__ . '/includes/dashboard-smart-view.php'; ?>
 
     <?php if (!empty($todayAttendanceIssues)): ?>
