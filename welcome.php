@@ -36,10 +36,10 @@ try {
 $birthdays = [];
 try {
     $bStmt = $pdo->prepare("
-        SELECT id, name, photo_path, designation AS sub_label, 'staff' AS kind
-        FROM users
-        WHERE organization_id = ? AND is_active = 1 AND date_of_birth IS NOT NULL
-          AND MONTH(date_of_birth) = MONTH(CURDATE()) AND DAY(date_of_birth) = DAY(CURDATE())
+        SELECT u.id, u.name, u.photo_path, u.designation AS sub_label, d.name AS dept, 'staff' AS kind
+        FROM users u LEFT JOIN departments d ON d.id = u.department_id
+        WHERE u.organization_id = ? AND u.is_active = 1 AND u.date_of_birth IS NOT NULL
+          AND MONTH(u.date_of_birth) = MONTH(CURDATE()) AND DAY(u.date_of_birth) = DAY(CURDATE())
     ");
     $bStmt->execute([$org['id'] ?? 0]);
     $birthdays = $bStmt->fetchAll();
@@ -63,11 +63,11 @@ if (currentUser()) try {
 $anniversaries = [];
 try {
     $aStmt = $pdo->prepare("
-        SELECT id, name, photo_path, designation AS sub_label, TIMESTAMPDIFF(YEAR, joining_date, CURDATE()) AS years_completed
-        FROM users
-        WHERE organization_id = ? AND is_active = 1 AND joining_date IS NOT NULL
-          AND MONTH(joining_date) = MONTH(CURDATE()) AND DAY(joining_date) = DAY(CURDATE())
-          AND YEAR(joining_date) < YEAR(CURDATE())
+        SELECT u.id, u.name, u.photo_path, u.designation AS sub_label, d.name AS dept, 'staff' AS kind, TIMESTAMPDIFF(YEAR, u.joining_date, CURDATE()) AS years_completed
+        FROM users u LEFT JOIN departments d ON d.id = u.department_id
+        WHERE u.organization_id = ? AND u.is_active = 1 AND u.joining_date IS NOT NULL
+          AND MONTH(u.joining_date) = MONTH(CURDATE()) AND DAY(u.joining_date) = DAY(CURDATE())
+          AND YEAR(u.joining_date) < YEAR(CURDATE())
     ");
     $aStmt->execute([$org['id'] ?? 0]);
     $anniversaries = $aStmt->fetchAll();
@@ -348,6 +348,7 @@ $todayLabel = $marathiDays[(int)date('w')] . ', ' . (int)date('j') . ' ' . $mara
   .cel-card.anniv .cel-badge{font-size:12px;background:linear-gradient(135deg,#FDE68A,#F59E0B);color:#451A03;}
   .cel-name{font-size:18px;font-weight:800;color:#fff;line-height:1.3;}
   .cel-sub{font-size:12.5px;color:#B8C4D2;margin-top:3px;}
+  .cel-dept{display:inline-block;margin-top:6px;font-size:12.5px;font-weight:700;color:#FCD34D;background:rgba(245,158,11,.14);border:1px solid rgba(245,158,11,.35);border-radius:20px;padding:3px 12px;}
   .cel-msg{font-size:13px;color:#FBEBD6;margin:12px 0 4px;line-height:1.55;}
   .cel-count{display:inline-block;margin-top:8px;font-size:11.5px;font-weight:700;color:#FDE68A;background:rgba(245,158,11,.14);border-radius:999px;padding:3px 10px;}
   .cel-wishes{margin-top:8px;text-align:left;max-height:150px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;}
@@ -546,6 +547,7 @@ $todayLabel = $marathiDays[(int)date('w')] . ', ' . (int)date('j') . ' ' . $mara
               <span class="cel-badge"><?= $isB ? '🎂' : $years . ' वर्षं' ?></span>
             </div>
             <div class="cel-name"><?= h($c['name']) ?></div>
+            <?php if (!empty($c['dept'])): ?><div class="cel-dept">🏢 <?= h($c['dept']) ?><?= preg_match('/विभाग|dept|department/iu', $c['dept']) ? '' : ' विभाग' ?></div><?php endif; ?>
             <?php if (!empty($c['sub_label'])): ?><div class="cel-sub"><?= h($c['sub_label']) ?></div><?php endif; ?>
             <div class="cel-msg">
               <?php if ($isMe): ?><?= $isB ? '🎂 आज तुमचा वाढदिवस — सगळ्या परिवाराकडून खूप खूप शुभेच्छा!' : '🏆 संस्थेसोबत ' . $years . ' वर्षं — तुमच्या सेवेबद्दल मनःपूर्वक धन्यवाद!' ?>
