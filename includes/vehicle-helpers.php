@@ -263,3 +263,26 @@ function vehicleFuelFlagText($flag, $e = [], $median = null) {
     if ($flag === 'rate') return 'दर ₹' . $e['rate'] . '/लि — नेहमीपेक्षा जास्त';
     return $flag;
 }
+
+
+/** vehicles.lifetime_docs / remarks — Database Update झालं आहे का */
+function vehicleHasExtra(PDO $pdo) {
+    static $ok = null;
+    if ($ok === null) { try { $pdo->query("SELECT lifetime_docs, remarks FROM vehicles LIMIT 0"); $ok = true; } catch (PDOException $e) { $ok = false; } }
+    return $ok;
+}
+
+/** आजीवन (LTT / One time) असू शकणारे कागदपत्र */
+const VEHICLE_LIFETIME_FIELDS = ['mv_tax' => 'MV टॅक्स', 'road_tax' => 'रोड टॅक्स', 'green_tax' => 'ग्रीन टॅक्स', 'permit' => 'परमिट', 'fitness' => 'फिटनेस'];
+
+/** आजीवन यादी + शेरा जतन (Database Update नसेल तर शांतपणे काही नाही) */
+function vehicleSaveExtra(PDO $pdo, $vehicleId, array $lifetime, $remarks, $keepRemarksIfEmpty = false) {
+    if (!vehicleHasExtra($pdo)) return;
+    $lt = implode(',', array_values(array_intersect(array_keys(VEHICLE_LIFETIME_FIELDS), $lifetime)));
+    $remarks = trim(mb_substr((string)$remarks, 0, 255));
+    if ($keepRemarksIfEmpty && $remarks === '') {
+        $pdo->prepare("UPDATE vehicles SET lifetime_docs = ? WHERE id = ?")->execute([$lt ?: null, $vehicleId]);
+    } else {
+        $pdo->prepare("UPDATE vehicles SET lifetime_docs = ?, remarks = ? WHERE id = ?")->execute([$lt ?: null, $remarks ?: null, $vehicleId]);
+    }
+}

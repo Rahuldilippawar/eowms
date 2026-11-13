@@ -627,6 +627,8 @@ CREATE TABLE vehicles (
   driver_id INT NULL,
   fuel_type ENUM('petrol','diesel','cng','electric','other') DEFAULT 'diesel',
   current_odometer DECIMAL(10,1) DEFAULT 0,
+  lifetime_docs VARCHAR(100) NULL,
+  remarks VARCHAR(255) NULL,
   is_active TINYINT(1) DEFAULT 1,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,

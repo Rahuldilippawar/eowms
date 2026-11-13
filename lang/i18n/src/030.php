@@ -2330,4 +2330,6 @@ return [
     "वाहन कागदपत्र अहवाल" => ["वाहन दस्तावेज़ रिपोर्ट", "Vehicle documents report"],
     "निष्क्रिय पण" => ["निष्क्रिय भी", "include inactive"],
     "कागदपत्र अहवाल" => ["दस्तावेज़ रिपोर्ट", "Documents report"],
+    "आजीवन (LTT / One time) — नूतनीकरण लागत नाही" => ["आजीवन (LTT / One time) — नवीनीकरण नहीं लगता", "Lifetime (LTT / One time) — no renewal needed"],
+    "उदा. सबब सदर वाहने संस्थे अंतर्गत वापरली जातात." => ["उदा. ये वाहन संस्था के अंदर ही उपयोग होते हैं।", "e.g. These vehicles are used only within the institution."],
 ];

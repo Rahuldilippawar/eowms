@@ -55,6 +55,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         syncVehicleRenewals($pdo, $id, $orgId, $campusId, $vehDeptId, $vehicleNumber, $renewalDates);
     }
 
+    // आजीवन कर (LTT) व शेरा — आजीवन असेल तर त्याची मुदत-तारीख लागत नाही
+    if (vehicleHasExtra($pdo)) { vehicleSaveExtra($pdo, $id, (array)($_POST['lifetime'] ?? []), $_POST['remarks'] ?? ''); }
+
     logActivity('वाहन संपादित केले', 'vehicle', $id, $vehicleNumber);
     $_SESSION['flash'] = 'वाहन अद्ययावत केले — नूतनीकरण तारखाही Sync झाल्या.';
     header('Location: index.php');
@@ -194,6 +197,18 @@ require_once __DIR__ . '/../includes/header.php';
         <label class="form-label-custom">MV टॅक्स Validity</label>
         <input type="date" name="mv_tax_validity" class="form-control-custom" value="<?= h($vehicle['mv_tax_validity']) ?>">
       </div>
+      <?php if (vehicleHasExtra($pdo)): $ltSel = array_filter(explode(',', (string)($vehicle['lifetime_docs'] ?? ''))); ?>
+      <div class="col-12">
+        <label class="form-label-custom">♾️ आजीवन (LTT / One time) — नूतनीकरण लागत नाही</label>
+        <div style="display:flex;flex-wrap:wrap;gap:6px 18px;font-size:13px;">
+          <?php foreach (VEHICLE_LIFETIME_FIELDS as $k => $l): ?><label style="display:inline-flex;gap:6px;align-items:center;"><input type="checkbox" name="lifetime[]" value="<?= h($k) ?>" <?= in_array($k, $ltSel, true) ? 'checked' : '' ?>> <?= h($l) ?></label><?php endforeach; ?>
+        </div>
+      </div>
+      <div class="col-12">
+        <label class="form-label-custom">शेरा</label>
+        <input type="text" name="remarks" maxlength="255" class="form-control-custom" value="<?= h($vehicle['remarks'] ?? '') ?>" placeholder="उदा. सबब सदर वाहने संस्थे अंतर्गत वापरली जातात.">
+      </div>
+      <?php endif; ?>
     </div>
 
     <div class="d-flex justify-content-end gap-2 mt-4">
