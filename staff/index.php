@@ -236,6 +236,7 @@ try {
 <div class="d-flex justify-content-between align-items-start mb-1">
   <div class="page-title mb-0"><?= h(t('s252')) ?></div>
   <div class="d-flex gap-2">
+    <a href="list-print.php" class="btn" style="border:1px solid var(--rail);color:var(--rail);border-radius:9px;font-size:13px;padding:9px 16px;font-weight:600;"><i class="fa-solid fa-print me-1"></i>यादी Print / PDF</a>
     <a href="employee-report.php" class="btn" style="border:1px solid var(--rail);color:var(--rail);border-radius:9px;font-size:13px;padding:9px 16px;font-weight:600;"><i class="fa-solid fa-file-lines me-1"></i>कर्मचारी अहवाल</a>
     <?php if (isManagementOrAbove() || hasRole('super_admin')): ?>
       <a href="id-cards-bulk.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13.5px;padding:9px 18px;"><i class="fa-solid fa-id-card me-1"></i>Bulk ID Cards</a>
