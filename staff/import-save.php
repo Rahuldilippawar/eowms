@@ -37,21 +37,27 @@ function randomPassword($length = 10) {
     return $pw;
 }
 
-$handle = fopen($_FILES['csv_file']['tmp_name'], 'r');
-
-// Strip a UTF-8 BOM if present (common when the file is saved/edited in Excel) —
-// otherwise the first header cell silently becomes "\xEF\xBB\xBFname" instead of
-// "name" and the required-column check below fails even though the column exists.
-$bom = fread($handle, 3);
-if ($bom !== "\xEF\xBB\xBF") {
-    rewind($handle);
+// CSV / Excel (.xlsx) / जुनी Excel (.xls) — तिन्ही चालतात
+require_once __DIR__ . '/../includes/sheet-reader.php';
+try {
+    $sheetRows = eowmsReadSheet($_FILES['csv_file']['tmp_name'], $_FILES['csv_file']['name'] ?? '');
+} catch (Throwable $e) {
+    $_SESSION['form_error'] = $e->getMessage();
+    header('Location: import.php');
+    exit;
 }
-
-$header = array_map(fn($h) => strtolower(trim($h)), fgetcsv($handle));
+// जुन्या Software ची विभागनिहाय "Employee List" दिली असेल तर — योग्य पानावर पाठवा
+foreach (array_slice($sheetRows, 0, 15) as $r) {
+    if (preg_grep('/^\s*(emp\s*name|desg1)\s*$/i', array_map('strval', $r))) {
+        $_SESSION['form_error'] = 'ही विभागनिहाय कर्मचारी यादी (Employee List) आहे — ती वरच्या "📋 विभागनिहाय कर्मचारी यादी आयात" मधून द्या.';
+        header('Location: import.php');
+        exit;
+    }
+}
+$header = array_map(fn($h) => strtolower(trim((string)$h)), array_shift($sheetRows) ?? []);
 $required = ['name', 'department', 'designation', 'username'];
 
 if (array_diff($required, $header)) {
-    fclose($handle);
     $_SESSION['form_error'] = t('s509');
     header('Location: import.php');
     exit;
@@ -74,7 +80,8 @@ $firstCampusStmt = $pdo->prepare("SELECT id FROM campuses WHERE organization_id 
 $firstCampusStmt->execute([$orgId]);
 $fallbackCampusId = $firstCampusStmt->fetch()['id'] ?? null;
 
-while (($row = fgetcsv($handle)) !== false) {
+foreach ($sheetRows as $row) {
+    $row = array_map(fn($c) => is_float($c) && abs($c - round($c)) < 1e-9 ? sprintf('%.0f', $c) : (string)$c, $row);
     $rowNum++;
     // पूर्णपणे रिकामी ओळ — वगळा
     if (count(array_filter($row, fn($c) => trim((string)$c) !== '')) === 0) continue;
@@ -82,6 +89,8 @@ while (($row = fgetcsv($handle)) !== false) {
     // Header च्या लांबीइतकं Pad/Trim करतो, नाहीतर array_combine Error देतो
     $row = array_slice(array_pad($row, count($header), ''), 0, count($header));
     $data = array_combine($header, $row);
+    // Excel मधली तारीख (Serial अंक, उदा. 45444) → YYYY-MM-DD
+    foreach (['joining_date', 'date_of_birth'] as $dc) { if (isset($data[$dc]) && preg_match('/^\d{5}$/', trim($data[$dc]))) { $data[$dc] = date('Y-m-d', (int)round(((int)$data[$dc] - 25569) * 86400)); } }
 
     $deptKey = mb_strtolower(trim($data['department']));
     $department = $deptsByKey[$deptKey] ?? null;
@@ -126,6 +135,18 @@ while (($row = fgetcsv($handle)) !== false) {
         continue;
     }
     $created++;
+    // ऐच्छिक जादा रकाने — कर्मचारी क्रमांक, Gender, Aadhar, बँक, पत्ते
+    $newId = (int)$pdo->lastInsertId();
+    $extraMap = ['employee_code' => 'employee_code', 'gender' => 'gender', 'aadhar_number' => 'aadhar_number', 'bank_account_no' => 'bank_account_no', 'ifsc_code' => 'ifsc_code',
+        'bank_name' => 'bank_name', 'branch_name' => 'branch_name', 'permanent_address' => 'permanent_address', 'local_address' => 'local_address', 'whatsapp_number' => 'whatsapp_number'];
+    foreach ($extraMap as $colName => $dbCol) {
+        $v = trim((string)($data[$colName] ?? ''));
+        if ($v === '') continue;
+        if ($dbCol === 'gender') { $v = stripos($v, 'f') === 0 ? 'Female' : (stripos($v, 'm') === 0 ? 'Male' : null); if (!$v) continue; }
+        if ($dbCol === 'aadhar_number') { $v = preg_replace('/\D/', '', $v); if (strlen($v) !== 12) continue; }
+        try { $pdo->prepare("UPDATE users SET `$dbCol` = ? WHERE id = ?")->execute([mb_substr($v, 0, 255), $newId]); }
+        catch (PDOException $e) { $skipped[] = "ओळ {$rowNum}: '$colName' जतन झाला नाही (" . ((int)($e->errorInfo[1] ?? 0) === 1062 ? 'आधीच वापरात' : 'अवैध') . ")"; }
+    }
 
     sendWelcomeEmail($email, nameCase($data['name']), $email, $plainPassword, activeOrgName(), 'staff', $loginUrl);
 
@@ -136,8 +157,6 @@ while (($row = fgetcsv($handle)) !== false) {
         'password' => $plainPassword,
     ];
 }
-fclose($handle);
-
 logActivity('CSV द्वारे कर्मचारी आयात केले', 'user', null, "$created कर्मचारी जोडले");
 $_SESSION['flash'] = "$created कर्मचारी यशस्वीरित्या जोडले गेले.";
 $_SESSION['import_skipped'] = $skipped;

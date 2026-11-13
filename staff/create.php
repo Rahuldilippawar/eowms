@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../includes/photo-helpers.php';
+require_once __DIR__ . '/../includes/staff-extra-fields.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/staff-dept-picker.php';
 require_once __DIR__ . '/../includes/mailer.php';
@@ -45,6 +46,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = "Biometric PIN '$bioPin' आधीच $pinOwner यांना दिला आहे — वेगळा PIN द्या किंवा रिकामा ठेवा (आपोआप मिळेल).";
         } elseif ($employeeCode !== null && $codeCheck->fetch()) {
             $error = "कर्मचारी कोड '$employeeCode' आधीच दुसऱ्या कर्मचाऱ्याला दिलेला आहे — कृपया वेगळा कोड द्या.";
+        } elseif (($extraRes = staffExtraFromPost($_POST)) && $extraRes[1]) {
+            $error = '🪪 ' . $extraRes[1];
         } elseif (($photoRes = eowmsSavePhotoUpload($_FILES['photo'] ?? null, 'staff', 'staff_')) && $photoRes[1]) {
             $error = '📷 ' . $photoRes[1];
         } else {
@@ -84,6 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$error && isset($insert)) {
             // 🖐️ Biometric — PIN (दिलेला किंवा आपोआप पुढचा) व सगळ्या चालू Machines वर नाव+PIN
             $newUserId = (int)$pdo->lastInsertId();
+            if ($newUserId && !empty($extraRes[0])) { staffExtraSave($pdo, $newUserId, $extraRes[0]); } // 🪪 ओळख, बँक व पत्ता
             $bioMsg = '';
             if ($newUserId && ($bioPin !== '' || $bioAuto) && bioReady($pdo)) {
                 $pinToSet = $bioPin !== '' ? $bioPin : bioNextPin($pdo, $orgId, $campusId);
@@ -231,6 +235,8 @@ require_once __DIR__ . '/../includes/header.php';
         <label class="form-label-custom">रुजू दिनांक (Joining Date)</label>
         <input type="date" name="joining_date" class="form-control-custom" value="<?= date('Y-m-d') ?>">
       </div>
+
+<?= staffExtraFieldsHtml($_SERVER['REQUEST_METHOD'] === 'POST' ? $_POST : []) ?>
 
       <div class="col-12 d-flex justify-content-end gap-2 mt-2">
         <a href="index.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13.5px;padding:9px 20px;"><?= h(t('s3')) ?></a>
