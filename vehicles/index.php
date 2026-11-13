@@ -56,6 +56,7 @@ try {
     <?php endif; ?>
     <?php if ($seesAllVehicles): ?>
     <a href="analytics.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13px;padding:9px 16px;"><i class="fa-solid fa-chart-line me-1"></i>Fleet विश्लेषण</a>
+    <a href="docs-register.php" target="_blank" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13px;padding:9px 16px;"><i class="fa-solid fa-file-pdf me-1"></i>कागदपत्र अहवाल</a>
     <?php endif; ?>
     <?php if ($canManageVeh): ?>
     <a href="import.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13px;padding:9px 16px;"><i class="fa-solid fa-file-import me-1"></i>Import</a>
