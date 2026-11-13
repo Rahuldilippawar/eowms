@@ -103,7 +103,14 @@ $hasPendingReq = (bool)array_filter($requests, fn($r) => in_array($r['status'], 
   .mr-ev .t{font-size:13px;font-weight:700;} .mr-ev .d{font-size:12px;color:var(--text-dim);margin-top:1px;} .mr-ev .w{font-size:11px;color:var(--text-dim);font-family:'JetBrains Mono',monospace;}
   .mr-badge{display:inline-block;font-size:11px;font-weight:700;border-radius:99px;padding:2px 9px;color:#fff;}
   .mr-empty{padding:16px 18px;color:var(--text-dim);font-size:12.5px;}
-  @media (max-width:600px){ .mr-hero h1{font-size:19px;} .mr-chip{flex:1 1 calc(50% - 8px);min-width:0;} }
+  .mr-acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;}
+  .mr-acts a{display:inline-flex;align-items:center;gap:7px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:#fff;text-decoration:none;border-radius:10px;padding:7px 12px;font-size:12.5px;font-weight:700;}
+  .mr-acts a:hover{background:rgba(255,255,255,.2);color:#fff;} .mr-acts a.hot{background:#B42318;border-color:#B42318;}
+  .mr-by{font-size:11px;color:rgba(255,255,255,.55);margin-top:10px;}
+  .mr-none{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;background:var(--surface,#fff);border:1px dashed var(--line);border-radius:14px;padding:10px 14px;}
+  .mr-none .t{font-size:12px;font-weight:800;color:var(--text-dim);margin-right:4px;}
+  .mr-none .c{font-size:12px;background:var(--canvas);border-radius:99px;padding:3px 10px;color:var(--text-dim);}
+  @media (max-width:600px){ .mr-hero{padding:16px;} .mr-hero h1{font-size:19px;} .mr-chips{gap:6px;} .mr-chip{flex:1 1 calc(50% - 6px);min-width:0;padding:7px 10px;} .mr-chip .v{font-size:14px;} .mr-acts a{flex:1 1 auto;justify-content:center;} }
 </style>
 
 <div class="page-eyebrow"><?= h(activeOrgName()) ?></div>
@@ -129,13 +136,32 @@ $hasPendingReq = (bool)array_filter($requests, fn($r) => in_array($r['status'], 
       <div class="mr-chip"><div class="l">खोलीत एकूण</div><div class="v"><?= count($people) + 1 ?><?= $my['capacity'] ? ' / ' . (int)$my['capacity'] : '' ?> जण</div></div>
       <div class="mr-chip"><div class="l">बाकी बिलं</div><div class="v" style="color:<?= $pendingCount ? '#FCA5A5' : '#86EFAC' ?>;"><?= $pendingCount ?> · ₹<?= number_format($totalPending, 0) ?></div></div>
       <?php if ($lastInsp): $rl = $ratingLabels[$lastInsp['condition_rating']] ?? ['—', '#999']; ?><div class="mr-chip"><div class="l">शेवटची तपासणी</div><div class="v"><span style="color:<?= $rl[1] ?>;">●</span> <?= h($rl[0]) ?> <small style="font-size:11px;font-weight:600;opacity:.7;"><?= date('d M', strtotime($lastInsp['inspection_date'])) ?></small></div></div><?php endif; ?>
-      <?php if ($my['allotted_by_name']): ?><div class="mr-chip"><div class="l">नोंद केली</div><div class="v" style="font-size:13.5px;"><?= h($my['allotted_by_name']) ?></div></div><?php endif; ?>
     </div>
+    <div class="mr-acts">
+      <a href="../requests/create.php"><i class="fa-solid fa-screwdriver-wrench"></i> दुरुस्ती / काम सांगा</a>
+      <?php if (!$hasPendingReq): ?><a href="request-allotment.php"><i class="fa-solid fa-right-left"></i> Room बदल विनंती</a><?php endif; ?>
+      <?php if ($pendingCount): ?><a href="#mrBills" class="hot"><i class="fa-solid fa-indian-rupee-sign"></i> <?= $pendingCount ?> बिल बाकी</a><?php endif; ?>
+    </div>
+    <?php if ($my['allotted_by_name']): ?><div class="mr-by">नोंद: <?= h($my['allotted_by_name']) ?></div><?php endif; ?>
   </div>
+  <?php
+  // 📭 अजून नोंद नसलेले भाग — प्रत्येकासाठी मोठा रिकामा Panel नको, एकच छोटी पट्टी
+  $emptySecs = [];
+  if (!$people) $emptySecs[] = ['👥', 'खोलीत तुम्ही एकटेच'];
+  if (!$items) $emptySecs[] = ['🛋️', 'साहित्याची नोंद नाही'];
+  if (!$inspections) $emptySecs[] = ['🔍', 'तपासणी झाली नाही'];
+  if (!$mlogs) $emptySecs[] = ['🔧', 'देखभालीची नोंद नाही'];
+  if (empty($myBills)) $emptySecs[] = ['💰', 'बिल अजून नाही'];
+  if (!$guests) $emptySecs[] = ['🧳', 'पाहुण्यांची नोंद नाही'];
+  if ($emptySecs): ?>
+  <div class="mr-none mb-3"><span class="t">📭 अजून नोंद नाही</span><?php foreach ($emptySecs as [$ic, $tx]): ?><span class="c"><?= $ic ?> <?= h($tx) ?></span><?php endforeach; ?></div>
+  <?php endif; ?>
 
+  <?php if ($people || $items): ?>
   <div class="row g-3 mb-3">
+    <?php if ($people): ?>
     <!-- ---------- 👥 सोबत राहणारे ---------- -->
-    <div class="col-lg-5">
+    <div class="col-lg">
       <div class="panel h-100">
         <div class="panel-head"><div class="mr-sec">👥 या खोलीत सोबत</div><div class="sub"><?= count($people) ?> जण</div></div>
         <div style="padding:6px 18px 12px;">
@@ -150,8 +176,9 @@ $hasPendingReq = (bool)array_filter($requests, fn($r) => in_array($r['status'], 
         </div>
       </div>
     </div>
+    <?php endif; if ($items): ?>
     <!-- ---------- 🛋️ खोलीतलं साहित्य ---------- -->
-    <div class="col-lg-7">
+    <div class="col-lg">
       <div class="panel h-100">
         <div class="panel-head"><div class="mr-sec">🛋️ खोलीतलं साहित्य</div><div class="sub"><?= count($items) ?> नोंदी · संस्थेचं साहित्य सोडताना परत द्यावं लागतं</div></div>
         <?php if (!$items): ?><div class="mr-empty">रहिवासी विभागाने अजून साहित्याची नोंद केलेली नाही.</div><?php else: ?>
@@ -167,12 +194,14 @@ $hasPendingReq = (bool)array_filter($requests, fn($r) => in_array($r['status'], 
         <?php endif; ?>
       </div>
     </div>
+    <?php endif; ?>
   </div>
+  <?php endif; ?>
 <?php endif; ?>
 
 <div class="row g-3 mb-3">
   <!-- ---------- 🔁 Movement — प्रवेश, खोली-बदल, सोडलं, विनंत्या ---------- -->
-  <div class="col-lg-<?= $my ? '5' : '12' ?>">
+  <div class="col-lg">
     <div class="panel h-100">
       <div class="panel-head"><div class="mr-sec">🔁 Movement / इतिहास</div><div class="sub">Room मिळाली, बदलली, सोडली — नवीन आधी</div></div>
       <div style="padding:14px 18px 4px;">
@@ -192,9 +221,10 @@ $hasPendingReq = (bool)array_filter($requests, fn($r) => in_array($r['status'], 
     </div>
   </div>
 
-  <?php if ($my): ?>
+  <?php if ($my && ($inspections || $mlogs)): ?>
   <!-- ---------- 🔍 तपासणी + 🔧 देखभाल ---------- -->
   <div class="col-lg-7">
+    <?php if ($inspections): ?>
     <div class="panel mb-3">
       <div class="panel-head"><div class="mr-sec">🔍 खोलीची तपासणी</div><div class="sub">रहिवासी विभागाने केलेल्या</div></div>
       <?php if (!$inspections): ?><div class="mr-empty">अजून तपासणी झालेली नाही.</div><?php else: ?>
@@ -209,6 +239,7 @@ $hasPendingReq = (bool)array_filter($requests, fn($r) => in_array($r['status'], 
       </table></div>
       <?php endif; ?>
     </div>
+    <?php endif; if ($mlogs): ?>
     <div class="panel">
       <div class="panel-head"><div class="mr-sec">🔧 देखभाल / दुरुस्ती नोंदी</div><div class="sub">या खोलीत झालेली कामं</div></div>
       <?php if (!$mlogs): ?><div class="mr-empty">या खोलीसाठी अजून देखभालीची नोंद नाही.</div><?php else: ?>
@@ -223,14 +254,16 @@ $hasPendingReq = (bool)array_filter($requests, fn($r) => in_array($r['status'], 
       </table></div>
       <?php endif; ?>
     </div>
+    <?php endif; ?>
   </div>
   <?php endif; ?>
 </div>
 
-<?php if ($my): ?>
+<?php if ($my && (!empty($myBills) || $guests)): ?>
 <div class="row g-3 mb-3">
+  <?php if (!empty($myBills)): ?>
   <!-- ---------- 💰 बिलं ---------- -->
-  <div class="col-lg-7">
+  <div class="col-lg" id="mrBills">
     <div class="panel h-100">
       <div class="panel-head"><div class="mr-sec">💰 माझं बिल-इतिहास (भाडं + वीज)</div><div class="sub">बाकी: ₹<?= number_format($totalPending, 0) ?></div></div>
       <div style="overflow-x:auto;"><table class="rtable">
@@ -250,8 +283,9 @@ $hasPendingReq = (bool)array_filter($requests, fn($r) => in_array($r['status'], 
       </table></div>
     </div>
   </div>
+  <?php endif; if ($guests): ?>
   <!-- ---------- 🧳 पाहुणे ---------- -->
-  <div class="col-lg-5">
+  <div class="col-lg">
     <div class="panel h-100">
       <div class="panel-head"><div class="mr-sec">🧳 या खोलीतले पाहुणे</div><div class="sub">रहिवासी विभागाकडे नोंदवलेले</div></div>
       <?php if (!$guests): ?><div class="mr-empty">पाहुण्यांची नोंद नाही.</div><?php else: ?>
@@ -267,6 +301,7 @@ $hasPendingReq = (bool)array_filter($requests, fn($r) => in_array($r['status'], 
       <?php endif; ?>
     </div>
   </div>
+  <?php endif; ?>
 </div>
 <?php endif; ?>
 
