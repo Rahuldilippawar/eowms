@@ -109,35 +109,10 @@ if (ecampusReady($pdo)):
 <?php endif; ?>
 
 
-<?php
-// 🤫 काहीच बाकी नसेल तर मोठा Panel नको — एक ओळ
-$rqQuiet = $smart['requests'] && (int)$smart['requests']['counts']['open_cnt'] === 0;
-$tkQuiet = $smart['tasks'] && (int)$smart['tasks']['counts']['open_cnt'] === 0 && (int)$smart['tasks']['counts']['overdue_cnt'] === 0;
-if ($rqQuiet || $tkQuiet): ?>
-<div class="sm-quiet-row mb-3">
-  <?php if ($rqQuiet): $rc0 = $smart['requests']['counts']; ?>
-    <a class="sm-quiet" href="requests/index.php"><i class="fa-solid fa-inbox" style="color:#3B6FC9;"></i><span><b>कामाच्या विनंत्या</b> — ✅ एकही उघडी नाही<small>आज नवीन <?= (int)$rc0['new_today'] ?> · आज पूर्ण <?= (int)$rc0['done_today'] ?></small></span><em>›</em></a>
-  <?php endif; ?>
-  <?php if ($tkQuiet): $tc0 = $smart['tasks']['counts']; ?>
-    <div class="sm-quiet"><i class="fa-solid fa-list-check" style="color:var(--rail);"></i><span><b>Tasks</b> — ✅ काहीही बाकी नाही<small>या महिन्यात पूर्ण <?= (int)$tc0['done_month'] ?></small></span>
-      <?php if ($quickAssign): ?><button type="button" class="btn btn-sm sm-qa-btn" data-bs-toggle="modal" data-bs-target="#smQuickAssign"><i class="fa-solid fa-bolt"></i> Task द्या</button><?php endif; ?>
-      <a href="<?= $smart['tasks']['orgWide'] ? 'tasks/index.php' : 'tasks/my-tasks.php' ?>" class="sm-link">›</a></div>
-  <?php endif; ?>
-</div>
-<style>
-  .sm-quiet-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:10px;}
-  .sm-quiet{display:flex;align-items:center;gap:12px;background:var(--surface,#fff);border:1px solid var(--line);border-radius:14px;padding:11px 14px;text-decoration:none;color:var(--text);}
-  .sm-quiet > i{width:34px;height:34px;border-radius:10px;background:var(--canvas);display:grid;place-items:center;flex-shrink:0;}
-  .sm-quiet span{flex:1;min-width:0;font-size:13px;} .sm-quiet small{display:block;font-size:11.5px;color:var(--text-dim);}
-  .sm-quiet em,.sm-quiet .sm-link{font-style:normal;color:var(--text-dim);font-size:18px;text-decoration:none;}
-</style>
-<?php endif; ?>
-
-<?php if (($smart['requests'] && !$rqQuiet) || ($smart['tasks'] && !$tkQuiet)): ?>
 <div class="row g-3 mb-3">
-  <?php if ($smart['requests'] && !$rqQuiet): $rq = $smart['requests']; $rc = $rq['counts']; ?>
+  <?php if ($smart['requests']): $rq = $smart['requests']; $rc = $rq['counts']; ?>
   <!-- ============ कामाच्या विनंत्या ============ -->
-  <div class="<?= $smart['tasks'] && !$tkQuiet ? 'col-xl-6' : 'col-12' ?>">
+  <div class="<?= $smart['tasks'] ? 'col-xl-6' : 'col-12' ?>">
     <div class="panel h-100 sm-panel" data-sm-tabs>
       <div class="panel-head d-flex justify-content-between align-items-center gap-2">
         <div><div class="title"><i class="fa-solid fa-inbox me-1" style="color:#3B6FC9;"></i> कामाच्या विनंत्या</div>
@@ -181,10 +156,10 @@ if ($rqQuiet || $tkQuiet): ?>
   </div>
   <?php endif; ?>
 
-  <?php if ($smart['tasks'] && !$tkQuiet): $tk = $smart['tasks']; $tc = $tk['counts'];
+  <?php if ($smart['tasks']): $tk = $smart['tasks']; $tc = $tk['counts'];
     $onTimePct = $tc['done_month'] > 0 ? (int)round($tc['ontime_month'] * 100 / $tc['done_month']) : null; ?>
   <!-- ============ Tasks ============ -->
-  <div class="<?= $smart['requests'] && !$rqQuiet ? 'col-xl-6' : 'col-12' ?>">
+  <div class="<?= $smart['requests'] ? 'col-xl-6' : 'col-12' ?>">
     <div class="panel h-100 sm-panel" data-sm-tabs>
       <div class="panel-head d-flex justify-content-between align-items-center gap-2">
         <div><div class="title"><i class="fa-solid fa-list-check me-1" style="color:var(--rail);"></i> <?= $tk['orgWide'] ? 'Tasks — संपूर्ण संस्था' : 'माझे Tasks' ?></div>
@@ -231,13 +206,12 @@ if ($rqQuiet || $tkQuiet): ?>
   </div>
   <?php endif; ?>
 </div>
-<?php endif; ?>
 
 <div class="row g-3">
   <!-- ============ विभाग-आरोग्य ============ -->
   <div class="col-lg-8">
     <?php $smShowAll = count($smart['health']) > 1 && hasPermission('view_org_wide_dashboards'); ?>
-    <div class="panel" id="smDepts" data-fold="smDepts">
+    <div class="panel" id="smDepts">
       <div class="panel-head d-flex justify-content-between align-items-center flex-wrap gap-2">
         <div><div class="title"><i class="fa-solid fa-heart-pulse me-1" style="color:var(--rose);"></i> <?= $isMgmtView ? 'विभाग — आरोग्य व कामगिरी' : 'माझा विभाग' ?></div>
           <div class="sub">मागील ३० दिवसांची पूर्णता, मुदतबाह्य Tasks, SLA व नूतनीकरण यांवरून गुण</div></div>

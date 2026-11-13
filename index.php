@@ -51,7 +51,6 @@ $yesterdayCompleted = (int)$stmt->fetch()['c'];
 
 function kpiTrend($today, $yesterday) {
     if ($yesterday == 0) { return $today > 0 ? ['dir' => 'up', 'text' => 'नवीन'] : null; }
-    if ($today == 0) { return ['dir' => 'flat', 'text' => 'आज अजून नाही · काल ' . $yesterday]; } // −100% असं घाबरवणारं नको
     $diff = $today - $yesterday;
     if ($diff == 0) { return ['dir' => 'flat', 'text' => 'कालच्याइतकंच']; }
     $pct = round((abs($diff) / $yesterday) * 100);
@@ -266,27 +265,52 @@ function eowmsSwitchDashTab(which, btn) {
 <?php endif; ?>
 
 <div id="dashTabOverview">
-<?php $smartPart = 'alerts'; require __DIR__ . '/includes/dashboard-smart-view.php'; $smartPart = 'main'; ?>
-
-<!-- ⚡ आजचे आकडे — एका ओळीत -->
-<div class="dq mb-3">
-  <a class="dq-i" href="daily-work/report.php"><i class="fa-regular fa-clipboard"></i><b><?= $todayReports ?><small>/<?= $staffCount ?></small></b><span><?= h(t('s123')) ?></span>
-    <?php if ($trendReports): ?><em class="<?= $trendReports['dir'] ?>"><?= $trendReports['dir'] === 'up' ? '↑' : ($trendReports['dir'] === 'down' ? '↓' : '·') ?> <?= h($trendReports['text']) ?></em><?php endif; ?></a>
-  <a class="dq-i" href="daily-work/report.php"><i class="fa-solid fa-check"></i><b><?= $todayCompleted ?></b><span><?= h(t('s52')) ?></span>
-    <?php if ($trendCompleted): ?><em class="<?= $trendCompleted['dir'] ?>"><?= $trendCompleted['dir'] === 'up' ? '↑' : ($trendCompleted['dir'] === 'down' ? '↓' : '·') ?> <?= h($trendCompleted['text']) ?></em><?php endif; ?></a>
-  <a class="dq-i <?= $renewalsDue ? 'warn' : '' ?>" href="renewals/index.php?filter=due_soon"><i class="fa-solid fa-shield-halved"></i><b><?= $renewalsDue ?></b><span><?= h(t('s53')) ?></span></a>
-  <a class="dq-i" href="departments/index.php"><i class="fa-solid fa-building"></i><b><?= count($departments) ?></b><span><?= $isMgmtView ? h(t('s54')) : ($isCampusHeadView ? 'Campus चे विभाग' : 'माझा विभाग') ?></span></a>
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3">
+    <div class="kpi-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <span class="kpi-label"><?= h(t('s123')) ?></span>
+        <div class="kpi-icon" style="background:var(--rail-soft);color:var(--rail);"><i class="fa-regular fa-clipboard"></i></div>
+      </div>
+      <div class="kpi-value"><?= $todayReports ?><span style="font-size:15px;color:var(--text-dim);font-weight:500;">/<?= $staffCount ?></span></div>
+      <?php if ($trendReports): ?>
+        <div class="kpi-trend kpi-trend-<?= $trendReports['dir'] ?>"><?= $trendReports['dir'] === 'up' ? '↑' : ($trendReports['dir'] === 'down' ? '↓' : '→') ?> <?= h($trendReports['text']) ?></div>
+      <?php endif; ?>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="kpi-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <span class="kpi-label"><?= h(t('s52')) ?></span>
+        <div class="kpi-icon" style="background:var(--rail-soft);color:var(--rail);"><i class="fa-solid fa-check"></i></div>
+      </div>
+      <div class="kpi-value"><?= $todayCompleted ?></div>
+      <?php if ($trendCompleted): ?>
+        <div class="kpi-trend kpi-trend-<?= $trendCompleted['dir'] ?>"><?= $trendCompleted['dir'] === 'up' ? '↑' : ($trendCompleted['dir'] === 'down' ? '↓' : '→') ?> <?= h($trendCompleted['text']) ?></div>
+      <?php endif; ?>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="kpi-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <span class="kpi-label"><?= h(t('s53')) ?></span>
+        <div class="kpi-icon" style="background:var(--rose-soft);color:var(--rose);"><i class="fa-solid fa-shield-halved"></i></div>
+      </div>
+      <div class="kpi-value"><?= $renewalsDue ?></div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="kpi-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <span class="kpi-label"><?= $isMgmtView ? h(t('s54')) : ($isCampusHeadView ? 'Campus चे विभाग' : 'माझा विभाग') ?></span>
+        <div class="kpi-icon" style="background:var(--rail-soft);color:var(--rail);"><i class="fa-solid fa-building"></i></div>
+      </div>
+      <div class="kpi-value"><?= count($departments) ?></div>
+    </div>
+  </div>
 </div>
-<style>
-  .dq{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;}
-  .dq-i{display:flex;flex-direction:column;gap:2px;background:var(--surface,#fff);border:1px solid var(--line);border-radius:14px;padding:10px 12px;text-decoration:none;color:var(--text);min-width:0;position:relative;}
-  .dq-i > i{position:absolute;right:10px;top:10px;font-size:12px;color:var(--rail);opacity:.75;}
-  .dq-i.warn > i{color:var(--rose);} .dq-i.warn b{color:var(--rose);}
-  .dq-i b{font-family:'JetBrains Mono',monospace;font-size:22px;line-height:1.1;} .dq-i b small{font-size:12px;color:var(--text-dim);font-weight:500;}
-  .dq-i span{font-size:11.5px;color:var(--text-dim);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .dq-i em{font-style:normal;font-size:10.5px;color:var(--text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;} .dq-i em.up{color:#15803D;} .dq-i em.down{color:#B45309;}
-  @media (max-width:640px){ .dq{gap:6px;} .dq-i{padding:8px 8px;border-radius:12px;} .dq-i b{font-size:17px;} .dq-i span{font-size:10px;} .dq-i em{font-size:9.5px;} .dq-i > i{display:none;} }
-</style>
+
+<?php $smartPart = 'alerts'; require __DIR__ . '/includes/dashboard-smart-view.php'; $smartPart = 'main'; ?>
 
 <?php if ($isMgmtView || $isCampusHeadView) { require __DIR__ . '/includes/dashboard-staff-count.php'; } // 👥 ट्रस्ट / College / विभागनिहाय कर्मचारी संख्या ?>
 
@@ -326,7 +350,7 @@ function eowmsSwitchDashTab(which, btn) {
 </div>
 
 <div class="mt-3">
-<div class="panel mb-3 dash-analytics" id="dashAnalytics" data-fold="dashAnalytics" data-mgmt="<?= $isMgmtView ? '1' : '0' ?>">
+<div class="panel mb-3 dash-analytics" id="dashAnalytics" data-mgmt="<?= $isMgmtView ? '1' : '0' ?>">
   <div class="panel-head dash-an-head">
     <div>
       <div class="title">📊 कामाचं विश्लेषण</div>
@@ -426,36 +450,6 @@ function eowmsSwitchDashTab(which, btn) {
 </div>
 <?php endif; ?>
 
-<script>
-// 📂 मोठे भाग (विश्लेषण, विभाग-आरोग्य) — Header वर टॅप करून उघडा/बंद; निवड लक्षात राहते; उघडल्यावर Charts नीट
-(function () {
-  document.querySelectorAll('[data-fold]').forEach(function (p) {
-    var head = p.querySelector('.panel-head'); if (!head) return;
-    var key = 'dashFold_' + p.dataset.fold, body = document.createElement('div');
-    body.className = 'dz-body';
-    while (head.nextSibling) body.appendChild(head.nextSibling);
-    p.appendChild(body); p.classList.add('dz-fold');
-    var tg = document.createElement('button'); tg.type = 'button'; tg.className = 'dz-tg'; tg.innerHTML = '<i class="fa-solid fa-chevron-down"></i>';
-    tg.setAttribute('aria-label', 'उघडा / बंद करा'); head.appendChild(tg);
-    var open; try { open = localStorage.getItem(key) === '1'; } catch (e) { open = false; }
-    function set(v) { open = v; p.classList.toggle('dz-open', v); body.hidden = !v; try { localStorage.setItem(key, v ? '1' : '0'); } catch (e) {} if (v) setTimeout(function () { window.dispatchEvent(new Event('resize')); }, 60); }
-    set(open);
-    head.addEventListener('click', function (e) { if (e.target.closest('button:not(.dz-tg), a, input, select, label')) return; set(!open); });
-  });
-})();
-</script>
-<style>
-  .dz-fold > .panel-head{cursor:pointer;}
-  @media (max-width:640px){
-    .sm-panel .sm-stats{grid-template-columns:repeat(4,minmax(0,1fr)) !important;}
-    .sm-panel .sm-stats > div{padding:8px 6px !important;text-align:center;} .sm-panel .sm-stats b{font-size:18px !important;} .sm-panel .sm-stats span{font-size:10px !important;}
-    .sm-panel .sm-list > a.sm-row:nth-of-type(n+4){display:none;}
-    .sm-panel .sm-list:has(> a.sm-row:nth-of-type(4))::after{content:'… आणखी — "सर्व पहा" दाबा';display:block;text-align:center;font-size:11.5px;color:var(--text-dim);padding:8px;}
-  }
-  .dz-tg{border:0;background:var(--canvas);width:32px;height:32px;border-radius:50%;color:var(--text-dim);flex-shrink:0;margin-left:8px;}
-  .dz-tg i{transition:transform .2s;} .dz-open .dz-tg i{transform:rotate(180deg);}
-  .dz-fold:not(.dz-open) > .panel-head{border-bottom:0;} .dz-fold:not(.dz-open) .dash-range{display:none !important;}
-</style>
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
 <?php if (empty($user['onboarding_seen'])): ?>
 <script>
