@@ -81,6 +81,7 @@
 if (isset($pdo) && $pdo instanceof PDO && function_exists('currentUser') && currentUser()) { require_once __DIR__ . '/dept-groups.php'; echo deptGroupsScript($pdo, activeOrgId()); } ?>
 <script src="<?= $rootPath ?? '' ?>assets/js/dept-groups.js?v=1"></script>
 <script src="<?= $rootPath ?? '' ?>assets/js/select-smart.js?v=1"></script>
+<script src="<?= $rootPath ?? '' ?>assets/js/filter-smart.js?v=1"></script>
 <script>
 // Mobile hamburger menu — opens/closes the sidebar on small screens
 (function () {
