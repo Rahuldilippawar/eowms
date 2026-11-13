@@ -5,6 +5,8 @@ requireLogin('../');
 $orgId = activeOrgId();
 $visibleDeptIds = getVisibleDepartmentIdsForStaffTracking();
 if ($visibleDeptIds !== null && !$visibleDeptIds) { header('Location: index.php?view=tree'); exit; }
+require_once __DIR__ . '/../includes/employee-report-access.php';
+if (!staffCanSeeColleagueDetails()) { header('Location: index.php?view=tree'); exit; } // 🔒 साधा कर्मचारी — सहकाऱ्यांची यादी Print नाही
 $canSensitive = isManagementOrAbove() || hasRole('super_admin');
 
 // ---- निवडता येणारे स्तंभ: key => [नाव, गट, संवेदनशील?, PDF रुंदी(%)]

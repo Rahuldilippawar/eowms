@@ -13,6 +13,12 @@ $orgId = activeOrgId();
 $visibleDeptIds = getVisibleDepartmentIdsForStaffTracking();
 $hasBroadAccess = $visibleDeptIds === null;
 
+// 🔒 साधा कर्मचारी — फक्त स्वतःचं Profile (सहकाऱ्यांचे Mobile/Email/हजेरी/काम नाही)
+require_once __DIR__ . '/../includes/employee-report-access.php';
+if ((int)$user['id'] !== $empId && !staffCanSeeColleagueDetails()) {
+    http_response_code(403);
+    die(t('s579'));
+}
 if (!$hasBroadAccess && (int)$user['id'] !== $empId) {
     // स्वतःचं Profile नेहमीच बघता येतं — इतरांचं फक्त Visible विभागांतलं
     $empDeptCheck = $pdo->prepare("SELECT department_id FROM users WHERE id = ? AND organization_id = ?");
