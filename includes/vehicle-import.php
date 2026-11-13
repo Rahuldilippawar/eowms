@@ -153,6 +153,9 @@ function vehImportAnalyse(PDO $pdo, $orgId, array $rows, array $opts) {
         $ic = $get('insurance_cost');
         $it['insCost'] = is_numeric($ic) && (float)$ic > 0 ? (float)$ic : null;
         $rm = $str('remark'); if ($rm !== '') { $it['notes'][] = $rm; }
+        $it['remark'] = $rm !== '' ? $rm : $str('remarks');
+        $it['lifetime'] = [];
+        foreach (VEH_IMPORT_RENEWAL_COLS as $short => $col) { if (($it['kinds'][$col] ?? '') === 'lifetime') { $it['lifetime'][] = $short; } }
 
         $it['existing'] = $existing[$it['key']] ?? null;
         $it['action'] = $it['errors'] ? 'skip' : ($it['existing'] ? (!empty($opts['update']) ? 'update' : 'skip-existing') : 'create');
@@ -196,6 +199,8 @@ function vehImportApply(PDO $pdo, $orgId, array $items) {
             }
             $rd = [];
             foreach (VEH_IMPORT_RENEWAL_COLS as $short => $col) { $rd[$short] = $merged[$col] ?? null; if ($rd[$short]) { $renewals++; } }
+            // आजीवन कर (LTT) व शेरा — Update मध्ये File मध्ये शेरा नसेल तर आधीचा तसाच
+            vehicleSaveExtra($pdo, $vid, array_merge($it['lifetime'] ?? [], $it['action'] === 'update' ? array_filter(explode(',', (string)($it['existing']['lifetime_docs'] ?? '')), fn($f) => empty($merged[VEH_IMPORT_RENEWAL_COLS[$f] ?? ''])) : []), $it['remark'] ?? '', $it['action'] === 'update');
             syncVehicleRenewals($pdo, $vid, $orgId, $dept['campus_id'], $dept['id'], $it['number'], $rd,
                 ['issued' => $it['from'] ?? [], 'cost' => !empty($it['insCost']) ? ['insurance' => $it['insCost']] : []]);
         }
@@ -257,6 +262,7 @@ function vehImportFromReport(array $rows, array $otherSheets = []) {
         'permit_validity', 'insurance_validity', 'mv_tax_validity', 'green_tax_validity', 'fitness_validity', 'puc_validity', 'road_tax_validity',
         'permit_from', 'insurance_from', 'mv_tax_from', 'green_tax_from', 'fitness_from', 'puc_from', 'road_tax_from', 'insurance_cost', 'remark']];
     $g = fn($r, $c) => $c === null ? '' : ($r[$c] ?? '');
+    $lastRemark = '';
     foreach (array_slice($rows, $hdr + 2) as $r) {
         $num = trim((string)$g($r, $col['vehicle_number']));
         if ($num === '' || !preg_match('/[A-Za-z]{2}.*\d/', $num)) continue; // सही/तळटीप ओळी
@@ -272,6 +278,9 @@ function vehImportFromReport(array $rows, array $otherSheets = []) {
             if (trim((string)$tv) === '' && trim((string)$fv) !== '') { $tv = $fv; $fv = ''; }
             $line[] = $tv; $from[] = $fv;
         }
+        // Excel मध्ये एकत्र (Merge) केलेला शेरा — पुढच्या कागदपत्र नसलेल्या वाहनांनाही तोच
+        $noDocs = trim(implode('', array_map('strval', array_merge(array_slice($line, 8), $from)))) === '' && !is_numeric($cap);
+        if ($remark !== '') { $lastRemark = $remark; } elseif ($noDocs && !empty($lastRemark)) { $remark = $lastRemark; } else { $lastRemark = ''; }
         $key = vehImportKey($num);
         $cost = $costCol !== null && is_numeric($g($r, $costCol)) ? (float)$g($r, $costCol) : ($costs[$key] ?? '');
         $out[] = array_merge($line, $from, [$cost, $remark]);

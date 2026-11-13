@@ -72,7 +72,17 @@ foreach ($vehicles as $v) {
     $html .= '<tr><td>' . $i . '</td><td class="vn">' . $esc($v['vehicle_number']) . '</td><td class="ty">' . $esc($v['vehicle_type']) . '</td><td>' . ($v['passenger_capacity'] ?: '') . '</td>'
         . '<td class="mono">' . $esc($v['engine_no']) . '</td><td class="mono">' . $esc($v['chassis_no']) . '</td>';
     $any = false;
+    $life = array_filter(explode(',', (string)($v['lifetime_docs'] ?? '')));
+    $hasDoc = (bool)$life;
+    foreach ($DOCS as $k => [$l, $col]) { if (($ren[(int)$v['id']][$k] ?? null) || !empty($v[$col])) { $hasDoc = true; } }
+    if (!$hasDoc && trim((string)($v['remarks'] ?? '')) !== '') { // कागदपत्र नाहीत — PDF प्रमाणे शेरा पूर्ण रुंदीत
+        $html .= '<td colspan="12" style="font-weight:bold;">' . $esc($v['remarks']) . '</td>';
+        if ($showCost) { $html .= '<td></td>'; }
+        $html .= '</tr>';
+        continue;
+    }
     foreach ($DOCS as $k => [$l, $col]) {
+        if (in_array($k, $life, true)) { $html .= '<td colspan="2" style="font-weight:bold;">one time tax (LTT)</td>'; continue; }
         $r = $ren[(int)$v['id']][$k] ?? null;
         $to = $r['expiry_date'] ?? $v[$col] ?? null; $from = $r['issued_date'] ?? null;
         if ($to) $any = true;

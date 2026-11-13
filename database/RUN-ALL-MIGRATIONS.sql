@@ -4723,3 +4723,11 @@ CREATE TABLE staff_salary (
   INDEX idx_org (organization_id),
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
+-- FROM: migration-vehicle-lifetime.sql
+-- ============================================================
+-- 🚌 आजीवन कर (LTT / One time tax) — कोणत्या कागदपत्राला नूतनीकरण लागत नाही (उदा. mv_tax), आणि वाहनाबद्दल शेरा
+ALTER TABLE vehicles
+  ADD COLUMN lifetime_docs VARCHAR(100) NULL,
+  ADD COLUMN remarks VARCHAR(255) NULL;
