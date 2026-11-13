@@ -24,6 +24,20 @@ $salary = trim($_POST['salary'] ?? '') !== '' ? (float)$_POST['salary'] : null;
 $joiningDate = ($_POST['joining_date'] ?? '') ?: null;
 $dateOfBirth = ($_POST['date_of_birth'] ?? '') ?: null;
 
+// 🪪 ओळख, बँक व पत्ता + कर्मचारी क्रमांक — आधी तपासा (चूक असेल तर काहीच जतन न करता परत)
+require_once __DIR__ . '/../includes/staff-extra-fields.php';
+[$extraF, $extraErr] = staffExtraFromPost($_POST, true);
+if (!$extraErr && $extraF['employee_code'] !== null) {
+    $ec = $pdo->prepare("SELECT name FROM users WHERE employee_code = ? AND id <> ?");
+    $ec->execute([$extraF['employee_code'], $id]);
+    if ($dupE = $ec->fetchColumn()) { $extraErr = "कर्मचारी क्रमांक '{$extraF['employee_code']}' आधीच $dupE यांना दिला आहे."; }
+}
+if ($extraErr) {
+    $_SESSION['form_error'] = '🪪 ' . $extraErr . ' (बदल जतन झाले नाहीत.)';
+    header('Location: edit.php?id=' . $id);
+    exit;
+}
+
 // Photo upload is optional on edit — only touches photo_path if a new file was actually chosen
 require_once __DIR__ . '/../includes/photo-helpers.php';
 [$photoPath, $photoErr] = eowmsSavePhotoUpload($_FILES['photo'] ?? null, 'staff', 'staff_');
@@ -133,6 +147,7 @@ if ($newPassword !== '') {
     $update = $pdo->prepare("UPDATE users SET name=?, designation=?, teaching_mode=?, department_id=?, campus_id=?, role=?, is_active=?, salary=?, joining_date=?, left_date=?, date_of_birth=?, photo_path=COALESCE(?, photo_path) WHERE id=?");
     $update->execute([$name, $designation, $teachingMode, $departmentId, $dept['campus_id'], $role, $isActive, $salary, $joiningDate, $leftDate, $dateOfBirth, $photoPath, $id]);
 }
+staffExtraSave($pdo, $id, $extraF); // 🪪 ओळख, बँक, पत्ता, कर्मचारी क्रमांक
 
 logActivity('कर्मचारी संपादित केला', 'user', $id, "$name — role: $role, active: $isActive");
 

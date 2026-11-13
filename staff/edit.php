@@ -186,6 +186,8 @@ if ($staffMember['role'] !== 'super_admin' && superAdminExistsOtherThan($pdo, (i
         </div>
       <?php endif; ?>
 
+<?php require_once __DIR__ . '/../includes/staff-extra-fields.php'; echo staffExtraFieldsHtml($staffMember, true); ?>
+
       <div class="col-12 d-flex justify-content-end gap-2 mt-2">
         <a href="index.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13.5px;padding:9px 20px;"><?= h(t('s3')) ?></a>
         <button type="submit" class="btn" style="background:var(--rail);color:#fff;border-radius:9px;font-size:13.5px;padding:9px 20px;font-weight:600;"><?= h(t('s12')) ?></button>

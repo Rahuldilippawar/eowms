@@ -8,7 +8,7 @@ function eowmsReadSheet($path, $originalName) {
     $ext = strtolower(pathinfo((string)$originalName, PATHINFO_EXTENSION));
     $head = (string)@file_get_contents($path, false, null, 0, 4);
     if ($ext === 'xlsx' || $head === "PK\x03\x04") { return eowmsReadXlsx($path); }
-    if ($ext === 'xls') { throw new RuntimeException('जुनी .xls File चालत नाही — Excel मध्ये "Save As → Excel Workbook (.xlsx)" किंवा CSV करून द्या.'); }
+    if ($ext === 'xls' || $head === "\xD0\xCF\x11\xE0") { require_once __DIR__ . '/xls-reader.php'; return eowmsReadXls($path); } // जुनी Excel 97–2003
     $rows = [];
     $fh = fopen($path, 'r');
     if (!$fh) { throw new RuntimeException('File उघडता आली नाही.'); }

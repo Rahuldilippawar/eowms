@@ -32,6 +32,14 @@ function logFailedLogin($pdo, $email, $reason) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
+    // 🪪 Email ऐवजी कर्मचारी क्रमांक (Emp Id) दिला — त्या कर्मचाऱ्याचा Login-Email शोधा
+    if ($email !== '' && strpos($email, '@') === false) {
+        try {
+            $ec = $pdo->prepare("SELECT email FROM users WHERE employee_code = ? AND is_active = 1 LIMIT 1");
+            $ec->execute([$email]);
+            $email = (string)($ec->fetchColumn() ?: $email);
+        } catch (PDOException $e) {}
+    }
 
     // 🔒 एकाच IP वरून १५ मिनिटांत २० पेक्षा जास्त चुकीचे प्रयत्न — Brute-force
     // (अनेक खाती एकामागून एक तपासणं) रोखण्यासाठी तो IP तात्पुरता थांबवतो.
@@ -306,13 +314,13 @@ $loginOrgName = $loginOrg['name'] ?? 'VJMAT';
 
       <form method="POST" id="lgForm" novalidate>
         <div class="lg-field" id="lgEmailWrap">
-          <input type="email" name="email" id="loginEmailField" placeholder=" " autocomplete="username" required inputmode="email"
+          <input type="text" name="email" id="loginEmailField" placeholder=" " autocomplete="username" required autocapitalize="off" spellcheck="false"
                  value="<?= h($_POST['email'] ?? '') ?>" <?= empty($_POST['email']) ? 'autofocus' : '' ?>>
-          <label for="loginEmailField"><?= h(t('s48')) ?></label>
+          <label for="loginEmailField">ईमेल / कर्मचारी क्रमांक (Emp Id)</label>
           <i class="fa-regular fa-envelope lead"></i>
           <i class="fa-solid fa-circle-check ok-mark"></i>
         </div>
-        <div class="lg-hint">कृपया योग्य ईमेल लिहा (उदा. name@school.in)</div>
+        <div class="lg-hint">कृपया योग्य ईमेल (उदा. name@school.in) किंवा तुमचा कर्मचारी क्रमांक लिहा</div>
         <div class="lg-field">
           <input type="password" name="password" id="loginPassField" placeholder=" " autocomplete="current-password" required <?= !empty($_POST['email']) ? 'autofocus' : '' ?>>
           <label for="loginPassField"><?= h(t('s62')) ?></label>
@@ -342,7 +350,7 @@ $loginOrgName = $loginOrg['name'] ?? 'VJMAT';
   var email = document.getElementById('loginEmailField'), pass = document.getElementById('loginPassField');
   var emailWrap = document.getElementById('lgEmailWrap');
   var remember = document.getElementById('lgRemember'), KEY = 'eowmsLoginEmail';
-  var okEmail = function (v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); };
+  var okEmail = function (v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) || /^[A-Za-z0-9._\/-]{1,30}$/.test(v); }; // Email किंवा Emp Id
   // ईमेल लक्षात ठेवा — फक्त ईमेल, पासवर्ड कधीच नाही
   try {
     var saved = localStorage.getItem(KEY);
@@ -378,7 +386,7 @@ $loginOrgName = $loginOrg['name'] ?? 'VJMAT';
   var shake = function () { card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake'); };
   form.addEventListener('submit', function (e) {
     checkEmail(true);
-    if (email.value.trim().indexOf('@') < 1) { e.preventDefault(); emailWrap.classList.add('bad'); shake(); email.focus(); return; }
+    if (!okEmail(email.value.trim())) { e.preventDefault(); emailWrap.classList.add('bad'); shake(); email.focus(); return; } // Email किंवा Emp Id
     if (!pass.value) { e.preventDefault(); shake(); pass.focus(); return; }
     try { if (remember.checked) localStorage.setItem(KEY, email.value.trim()); else localStorage.removeItem(KEY); } catch (x) {}
     btn.disabled = true;

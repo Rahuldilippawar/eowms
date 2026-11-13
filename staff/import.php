@@ -44,6 +44,15 @@ requireRole(['super_admin'], '../');
   <?php unset($_SESSION['form_error']); ?>
 <?php endif; ?>
 
+<a href="import-list.php" class="panel mb-3 d-flex align-items-center gap-3" style="padding:16px 20px;text-decoration:none;color:inherit;border:2px solid var(--rail);">
+  <div style="font-size:30px;">📋</div>
+  <div style="flex:1;">
+    <div style="font-weight:800;font-size:15px;">जुन्या Software ची विभागनिहाय कर्मचारी यादी आयात करा</div>
+    <div style="font-size:12.5px;color:var(--text-dim);">"Employee List" (.xls / .xlsx / .csv) जशीच्या तशी — विभाग नसेल तर तयार, Emp Id ने ओळख, Aadhar / बँक / पत्ता सगळं, Emp Id = Biometric PIN, आधीचे कर्मचारी निष्क्रिय / हटवा. आधी Preview.</div>
+  </div>
+  <i class="fa-solid fa-chevron-right" style="color:var(--rail);"></i>
+</a>
+
 <div class="row g-3">
   <div class="col-lg-7">
     <div class="panel">
@@ -54,7 +63,7 @@ requireRole(['super_admin'], '../');
       <form method="POST" action="import-save.php" enctype="multipart/form-data" style="padding:22px 24px;">
         <label class="form-label-custom"><?= h(t('s264')) ?></label>
         <div class="upload-box mb-3">
-          <input type="file" name="csv_file" accept=".csv,.txt" required style="width:100%;">
+          <input type="file" name="csv_file" accept=".csv,.txt,.xlsx,.xls" required style="width:100%;">
         </div>
         <button type="submit" class="btn" style="background:var(--rail);color:#fff;border-radius:9px;font-size:13.5px;padding:9px 20px;font-weight:600;">
           <i class="fa-solid fa-upload me-1"></i>आयात करा (Import)
@@ -79,6 +88,7 @@ requireRole(['super_admin'], '../');
           <li><?= h(t('s270')) ?></li>
           <li><strong>salary</strong>, <strong>joining_date</strong>, <strong>mobile</strong>, <strong>date_of_birth</strong> — सगळे ऐच्छिक आहेत, रिकामे ठेवता येतात. <strong>date_of_birth</strong> दिलं तर वाढदिवसाच्या दिवशी Welcome Page वर आपोआप शुभेच्छा-कार्ड दिसेल. <strong>salary फक्त Management ला दिसतो.</strong></li>
           <li>तारखांचा Format: <strong>YYYY-MM-DD</strong> (उदा. 2024-06-01)</li>
+          <li><strong>employee_code, gender, aadhar_number, bank_account_no, ifsc_code, bank_name, branch_name, permanent_address, local_address</strong> — ऐच्छिक जादा रकाने (Template मध्ये आहेत). CSV, Excel (.xlsx) किंवा जुनी Excel (.xls) — तिन्ही चालतात.</li>
           <li>फोटो CSV मधून येत नाही — तो प्रत्येक कर्मचाऱ्याच्या Profile → Edit मधून वेगळा अपलोड करावा लागतो.</li>
           <li><strong><?= h(t('s271')) ?></strong> <?= h(t('s272')) ?></li>
           <li><?= h(t('s273')) ?></li>
