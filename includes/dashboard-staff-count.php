@@ -62,48 +62,66 @@ uasort($depts, fn($a, $b) => $b['n'] <=> $a['n']);
 $maxDept = max(1, ...array_column($depts, 'n'));
 $pct = fn($a, $b) => $b ? round($a * 100 / $b) : 0;
 ?>
-<div class="panel mb-3 sc-mini" id="staffCount">
-  <div class="sc-top">
-    <a href="staff/index.php" class="sc-total" title="कर्मचारी यादी">👥 कर्मचारी <b><?= number_format($sc['total']) ?></b></a>
-    <span class="sc-pill trust">🏛️ ट्रस्ट <b><?= $sc['trust'] ?></b></span>
-    <span class="sc-pill">🎓 College / School <b><?= $sc['college'] ?></b></span>
-    <?php if ($hasAtt): ?><span class="sc-pill ok">✅ आज हजर <b><?= $sc['present'] ?></b></span><?php endif; ?>
+<?php $trustPct = $sc['total'] ? round($sc['trust'] * 100 / $sc['total']) : 0; $maxC = max(1, ...array_column($campuses, 'n')); $ci = 0; ?>
+<div class="panel mb-3 scx" id="staffCount">
+  <div class="scx-top">
+    <a href="staff/index.php" class="scx-total"><span class="scx-ic">👥</span><span><small>कर्मचारी</small><b><?= number_format($sc['total']) ?></b></span></a>
+    <?php if ($hasAtt): ?><span class="scx-att" title="आज हजर"><i></i><b><?= $sc['present'] ?></b> आज हजर <small><?= $pct($sc['present'], $sc['total']) ?>%</small></span><?php endif; ?>
   </div>
-  <div class="sc-camps">
-    <?php foreach ($campuses as $ck => $C): ?>
-      <button type="button" class="sc-camp <?= $C['trust'] ? 'trust' : '' ?>" data-c="<?= h((string)$ck) ?>"><?= h($C['name']) ?> <b><?= $C['n'] ?></b> <i>▾</i></button>
+  <div class="scx-split" title="ट्रस्ट <?= $sc['trust'] ?> · College / School <?= $sc['college'] ?>">
+    <i class="t" style="width:<?= $trustPct ?>%"></i><i class="c" style="width:<?= 100 - $trustPct ?>%"></i>
+  </div>
+  <div class="scx-leg"><span><i class="t"></i>🏛️ ट्रस्ट <b><?= $sc['trust'] ?></b></span><span><i class="c"></i>🎓 College / School <b><?= $sc['college'] ?></b></span></div>
+  <div class="scx-list">
+    <?php foreach ($campuses as $ck => $C): $ci++; ?>
+      <button type="button" class="scx-row <?= $C['trust'] ? 'trust' : '' ?> <?= $ci > 4 ? 'more' : '' ?>" data-c="<?= h((string)$ck) ?>" <?= $ci > 4 ? 'hidden' : '' ?>>
+        <span class="nm" title="<?= h($C['name']) ?>"><?= h($C['name']) ?></span>
+        <span class="bar"><i style="width:<?= max(3, round($C['n'] * 100 / $maxC)) ?>%"></i></span>
+        <b><?= $C['n'] ?></b><em>›</em>
+      </button>
+      <div class="scx-depts" data-c="<?= h((string)$ck) ?>" hidden>
+        <?php foreach ($C['depts'] as $did => $d): ?><a href="staff/index.php<?= $did ? '?department_id=' . $did : '' ?>"><?= h($d['name']) ?> <b><?= $d['n'] ?></b></a><?php endforeach; ?>
+      </div>
     <?php endforeach; ?>
+    <?php if ($ci > 4): ?><button type="button" class="scx-moreb">+ <?= $ci - 4 ?> अधिक</button><?php endif; ?>
   </div>
-  <?php foreach ($campuses as $ck => $C): ?>
-    <div class="sc-depts" data-c="<?= h((string)$ck) ?>" hidden>
-      <?php foreach ($C['depts'] as $did => $d): ?><a href="staff/index.php<?= $did ? '?department_id=' . $did : '' ?>"><?= h($d['name']) ?> <b><?= $d['n'] ?></b></a><?php endforeach; ?>
-    </div>
-  <?php endforeach; ?>
 </div>
 <style>
-  .sc-mini{padding:10px 14px;}
-  .sc-top{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;}
-  .sc-total{font-size:13px;font-weight:700;color:var(--text);text-decoration:none;margin-right:4px;}
-  .sc-total b{font-family:'JetBrains Mono',monospace;font-size:17px;color:var(--rail);margin-left:3px;}
-  .sc-pill{font-size:11.5px;color:var(--text-dim);background:var(--canvas);border-radius:20px;padding:3px 10px;font-weight:600;}
-  .sc-pill b{font-family:'JetBrains Mono',monospace;color:var(--rail);margin-left:2px;} .sc-pill.trust b{color:#B45309;} .sc-pill.ok b{color:var(--green,#15803D);}
-  .sc-camps{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
-  .sc-camp{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:3px 9px;font-size:11.5px;color:var(--text);font-weight:600;border-left:3px solid var(--rail);}
-  .sc-camp.trust{border-left-color:#F59E0B;} .sc-camp b{font-family:'JetBrains Mono',monospace;margin-left:3px;} .sc-camp i{font-style:normal;color:var(--text-dim);font-size:10px;}
-  .sc-camp.on{background:var(--canvas);} .sc-camp.on i{display:inline-block;transform:rotate(180deg);}
-  .sc-depts{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);}
-  .sc-depts a{font-size:11.5px;color:var(--text-dim);text-decoration:none;} .sc-depts a b{color:var(--text);font-family:'JetBrains Mono',monospace;} .sc-depts a:hover{color:var(--rail);}
+  .scx{padding:12px 14px;}
+  .scx-top{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .scx-total{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--text);}
+  .scx-ic{width:38px;height:38px;border-radius:11px;background:color-mix(in srgb,var(--rail) 12%,transparent);display:grid;place-items:center;font-size:18px;}
+  .scx-total small{display:block;font-size:11.5px;color:var(--text-dim);font-weight:600;line-height:1;}
+  .scx-total b{font-family:'JetBrains Mono',monospace;font-size:24px;line-height:1.1;color:var(--text);}
+  .scx-att{font-size:12px;color:var(--text-dim);display:inline-flex;align-items:center;gap:5px;background:var(--canvas);border-radius:99px;padding:4px 10px;}
+  .scx-att i{width:7px;height:7px;border-radius:50%;background:#16A34A;} .scx-att b{color:#15803D;} .scx-att small{color:var(--text-dim);}
+  .scx-split{display:flex;height:8px;border-radius:99px;overflow:hidden;background:var(--canvas);margin:12px 0 6px;}
+  .scx-split i{display:block;height:100%;} .scx-split i.t,.scx-leg i.t{background:#F59E0B;} .scx-split i.c,.scx-leg i.c{background:var(--rail);}
+  .scx-leg{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--text-dim);}
+  .scx-leg i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px;} .scx-leg b{color:var(--text);font-family:'JetBrains Mono',monospace;margin-left:2px;}
+  .scx-list{margin-top:10px;border-top:1px solid var(--line);}
+  .scx-row{display:grid;grid-template-columns:minmax(0,1fr) 64px 34px 12px;align-items:center;gap:8px;width:100%;border:0;background:transparent;padding:9px 2px;border-bottom:1px dashed var(--line);text-align:left;color:var(--text);font-size:13px;}
+  .scx-row .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600;}
+  .scx-row .bar{height:5px;border-radius:99px;background:var(--canvas);overflow:hidden;} .scx-row .bar i{display:block;height:100%;background:var(--rail);border-radius:99px;}
+  .scx-row.trust .bar i{background:#F59E0B;}
+  .scx-row b{font-family:'JetBrains Mono',monospace;text-align:right;} .scx-row em{font-style:normal;color:var(--text-dim);transition:transform .15s;}
+  .scx-row.on em{transform:rotate(90deg);} .scx-row.on{background:var(--canvas);border-radius:8px;}
+  .scx-depts{display:flex;flex-wrap:wrap;gap:6px;padding:8px 2px 10px;}
+  .scx-depts a{font-size:12px;background:var(--canvas);border-radius:99px;padding:3px 10px;color:var(--text);text-decoration:none;} .scx-depts a b{font-family:'JetBrains Mono',monospace;color:var(--rail);margin-left:3px;}
+  .scx-moreb{border:0;background:transparent;color:var(--rail);font-size:12.5px;font-weight:700;padding:8px 2px 0;}
 </style>
 <script>
 (function () {
   var r = document.getElementById('staffCount'); if (!r) return;
-  r.querySelectorAll('.sc-camp').forEach(function (b) {
+  r.querySelectorAll('.scx-row').forEach(function (b) {
     b.addEventListener('click', function () {
       var open = !b.classList.contains('on');
-      r.querySelectorAll('.sc-camp').forEach(function (x) { x.classList.remove('on'); });
-      r.querySelectorAll('.sc-depts').forEach(function (d) { d.hidden = !(open && d.dataset.c === b.dataset.c); });
+      r.querySelectorAll('.scx-row').forEach(function (x) { x.classList.remove('on'); });
+      r.querySelectorAll('.scx-depts').forEach(function (d) { d.hidden = !(open && d.dataset.c === b.dataset.c); });
       if (open) b.classList.add('on');
     });
   });
+  var mb = r.querySelector('.scx-moreb');
+  if (mb) mb.addEventListener('click', function () { r.querySelectorAll('.scx-row.more').forEach(function (x) { x.hidden = false; }); mb.remove(); });
 })();
 </script>
