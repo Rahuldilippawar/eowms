@@ -188,6 +188,8 @@ function vehImportApply(PDO $pdo, $orgId, array $items) {
                 // File मध्ये रिकामं/NA असेल तर आधीची माहिती तशीच ठेवतो
                 $merged = [];
                 foreach (VEH_IMPORT_DATE_COLS as $col) { $merged[$col] = $d[$col] ?: ($v[$col] ?? null); }
+                // File मध्ये आजीवन (LTT) — जुनी मुदत-तारीख काढा, नाहीतर नूतनीकरण आठवण चुकीची येत राहते
+                foreach ($it['lifetime'] ?? [] as $short) { if (isset(VEH_IMPORT_RENEWAL_COLS[$short])) { $merged[VEH_IMPORT_RENEWAL_COLS[$short]] = null; } }
                 $pdo->prepare("UPDATE vehicles SET department_id = ?, campus_id = ?, vehicle_type = COALESCE(NULLIF(?, ''), vehicle_type), model = COALESCE(NULLIF(?, ''), model),
                         date_of_registration = ?, chassis_no = COALESCE(NULLIF(?, ''), chassis_no), engine_no = COALESCE(NULLIF(?, ''), engine_no), vehicle_class = COALESCE(NULLIF(?, ''), vehicle_class),
                         passenger_capacity = COALESCE(?, passenger_capacity), fuel_type = ?, permit_validity = ?, puc_validity = ?, insurance_validity = ?, fitness_validity = ?, road_tax_validity = ?, green_tax_validity = ?, mv_tax_validity = ?

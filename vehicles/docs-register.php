@@ -125,11 +125,13 @@ $qs = fn($o) => http_build_query(array_filter(array_merge(['dept' => $deptF ?: '
   .tb a,.tb button{font-family:inherit;font-size:13px;border-radius:8px;padding:7px 13px;border:0;cursor:pointer;text-decoration:none;font-weight:600;}
   .tb .bk{color:#fff;background:transparent;border:1px solid #475069;} .tb .pr{background:#D9530F;color:#fff;} .tb .pd{background:#fff;color:#191C3A;}
   .tb select,.tb input[type=text]{font-family:inherit;font-size:12.5px;border-radius:7px;border:1px solid #475069;background:#262B4D;color:#fff;padding:5px 8px;}
-  .tb input[type=text]{width:150px;} .tb label{display:inline-flex;gap:5px;align-items:center;}
+  .tb input[type=text]{width:150px;max-width:100%;} .tb label{display:inline-flex;gap:5px;align-items:center;flex-wrap:wrap;max-width:100%;}
+  .tb select{max-width:100%;}
   .sum{margin-left:auto;} .sum b{color:#fff;} .sum .r{color:#FCA5A5;} .sum .a{color:#FCD34D;}
   .sheet{background:#fff;max-width:1180px;margin:16px auto;padding:18px;box-shadow:0 4px 20px rgba(0,0,0,.12);overflow-x:auto;}
   table.r{min-width:1080px;} table.r thead{display:table-header-group;} table.r tr{page-break-inside:avoid;}
   td.exp,td.soon,table.r th{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  @media (max-width:700px){ .tb input[type=text]{width:calc(33% - 6px);min-width:90px;} .sum{margin-left:0;width:100%;} .sheet{margin:8px;padding:10px;} }
   @media print{ html{background:#fff;} .tb{display:none;} .sheet{box-shadow:none;margin:0;padding:0;max-width:none;overflow:visible;} table.r{min-width:0;} }
 </style></head><body>
 <form class="tb" method="get">
