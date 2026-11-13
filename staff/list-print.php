@@ -38,7 +38,13 @@ $COLS = [
     'bank_name' => ['बँक', 'बँक व पगार', true, 9],
     'bank_account_no' => ['खाते क्रमांक', 'बँक व पगार', true, 11],
     'ifsc_code' => ['IFSC', 'बँक व पगार', true, 8],
-    'salary' => ['पगार', 'बँक व पगार', true, 7],
+    'basic' => ['Basic', 'बँक व पगार', true, 7],
+    'hra' => ['HRA', 'बँक व पगार', true, 6],
+    'ta' => ['TA', 'बँक व पगार', true, 6],
+    'medical' => ['वैद्यकीय', 'बँक व पगार', true, 6],
+    'salary' => ['एकूण पगार', 'बँक व पगार', true, 7],
+    'deduct' => ['PF+ESIC+PT', 'बँक व पगार', true, 7],
+    'net_salary' => ['निव्वळ पगार', 'बँक व पगार', true, 7],
     'status' => ['स्थिती', 'इतर', false, 6],
     'sign' => ['सही', 'इतर', false, 12],
     'remark' => ['शेरा', 'इतर', false, 12],
@@ -50,7 +56,7 @@ $PRESETS = [
     'sign' => ['✍️ सही पत्रक', ['name', 'employee_code', 'designation', 'sign']],
     'personal' => ['🪪 वैयक्तिक', ['photo', 'name', 'father_name', 'gender', 'date_of_birth', 'age', 'joining_date', 'service', 'mobile']],
 ];
-if ($canSensitive) { $PRESETS['bank'] = ['🏦 बँक व पगार', ['name', 'employee_code', 'designation', 'bank_name', 'bank_account_no', 'ifsc_code', 'salary']]; }
+if ($canSensitive) { $PRESETS['bank'] = ['🏦 बँक व पगार', ['name', 'employee_code', 'designation', 'bank_name', 'bank_account_no', 'ifsc_code', 'salary', 'net_salary']]; }
 
 // ---- Campus व विभाग (पाहण्याच्या अधिकारातले)
 $st = $pdo->prepare("SELECT d.id, d.name, d.name_local, d.campus_id, c.name campus, c.college_type FROM departments d LEFT JOIN campuses c ON c.id = d.campus_id
@@ -99,6 +105,16 @@ if ($out) {
     $sql .= " ORDER BY " . ['name' => 'u.name', 'employee_code' => 'LENGTH(u.employee_code), u.employee_code, u.name', 'designation' => 'u.designation, u.name', 'joining_date' => 'u.joining_date IS NULL, u.joining_date, u.name'][$sort];
     $st = $pdo->prepare($sql); $st->execute($p);
     $people = $st->fetchAll();
+    $salS = [];
+    if ($canSensitive && array_intersect($cols, ['basic', 'hra', 'ta', 'medical', 'salary', 'deduct', 'net_salary'])) {
+        require_once __DIR__ . '/../includes/salary-helpers.php';
+        $salS = salaryCurrent($pdo, $orgId, array_column($people, 'id'));
+        foreach ($people as &$pp) {
+            $ss = $salS[(int)$pp['id']] ?? (($pp['salary'] ?? 0) > 0 ? ['gross' => $pp['salary'], 'basic' => $pp['salary'], 'hra' => 0, 'ta' => 0, 'medical' => 0, 'pf_applicable' => $pp['pf_applicable'], 'esic_applicable' => $pp['esic_applicable'], 'pt_applicable' => 1, 'is_handicap' => $pp['is_handicap'], '_only' => 1] : null);
+            $pp['_sal'] = $ss; $pp['_ded'] = $ss ? salaryDeductions($ss, $pp['gender']) : null;
+        }
+        unset($pp);
+    }
 
     // ---- गट
     $groups = [];
@@ -136,7 +152,10 @@ if ($out) {
             case 'service': return $years($u['joining_date']);
             case 'emergency': return $esc(trim($u['emergency_contact_name'] . ($u['emergency_contact_relation'] ? ' (' . $u['emergency_contact_relation'] . ')' : '') . ' ' . $u['emergency_contact_mobile']));
             case 'aadhar_number': $a = preg_replace('/\D/', '', (string)$u['aadhar_number']); return $a === '' ? '' : ($maskAadhar ? 'XXXX XXXX ' . substr($a, -4) : trim(chunk_split($a, 4, ' ')));
-            case 'salary': return $u['salary'] !== null && $u['salary'] !== '' ? '₹' . number_format((float)$u['salary']) : '';
+            case 'salary': $v = $u['_sal']['gross'] ?? $u['salary']; return $v !== null && $v !== '' ? '₹' . number_format((float)$v) : '';
+            case 'basic': case 'hra': case 'ta': case 'medical': return empty($u['_sal']) || !empty($u['_sal']['_only']) ? '' : '₹' . number_format((float)$u['_sal'][$k]);
+            case 'deduct': return empty($u['_ded']) ? '' : '₹' . number_format($u['_ded']['total']);
+            case 'net_salary': return empty($u['_ded']) ? '' : '<b>₹' . number_format($u['_ded']['net']) . '</b>';
             case 'status': return (int)$u['is_active'] ? 'सक्रिय' : 'निष्क्रिय';
             case 'sign': case 'remark': return '';
             default: return $esc($u[$k] ?? '');

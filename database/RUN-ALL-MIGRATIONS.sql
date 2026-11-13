@@ -4695,3 +4695,31 @@ CREATE TABLE email_log (
   INDEX idx_email (to_email),
   INDEX idx_cat (category, sent_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
+-- FROM: migration-staff-salary.sql
+-- ============================================================
+-- 💰 पगार रचना — Basic/HRA/TA/वैद्यकीय/इतर, PF/ESIC/PT; प्रत्येक बदल "कधीपासून" तारखेसह (इतिहास)
+CREATE TABLE staff_salary (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  organization_id INT NOT NULL,
+  user_id INT NOT NULL,
+  effective_from DATE NOT NULL,
+  gross DECIMAL(12,2) NOT NULL DEFAULT 0,
+  basic DECIMAL(12,2) NOT NULL DEFAULT 0,
+  hra DECIMAL(12,2) NOT NULL DEFAULT 0,
+  ta DECIMAL(12,2) NOT NULL DEFAULT 0,
+  medical DECIMAL(12,2) NOT NULL DEFAULT 0,
+  other_allow DECIMAL(12,2) NOT NULL DEFAULT 0,
+  pf_applicable TINYINT(1) NOT NULL DEFAULT 0,
+  esic_applicable TINYINT(1) NOT NULL DEFAULT 0,
+  pt_applicable TINYINT(1) NOT NULL DEFAULT 1,
+  is_handicap TINYINT(1) NOT NULL DEFAULT 0,
+  source VARCHAR(20) NOT NULL DEFAULT 'manual',
+  note VARCHAR(255) NULL,
+  created_by INT NULL,
+  created_at DATETIME NOT NULL,
+  UNIQUE KEY uniq_user_from (user_id, effective_from),
+  INDEX idx_org (organization_id),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
