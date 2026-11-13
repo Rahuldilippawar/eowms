@@ -4731,3 +4731,10 @@ CREATE TABLE staff_salary (
 ALTER TABLE vehicles
   ADD COLUMN lifetime_docs VARCHAR(100) NULL,
   ADD COLUMN remarks VARCHAR(255) NULL;
+
+-- ============================================================
+-- FROM: migration-perf-indexes.sql
+-- ============================================================
+-- ⚡ वेग — Activity Log लाखो नोंदींवर: व्यक्तीनुसार व कृतीनुसार (Login/View as…) शोध Index वरून
+ALTER TABLE activity_logs ADD INDEX idx_user_created (user_id, created_at);
+ALTER TABLE activity_logs ADD INDEX idx_org_action (organization_id, action(40), created_at);

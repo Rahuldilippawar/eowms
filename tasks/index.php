@@ -54,22 +54,39 @@ if ($onlyMine) {
     $filterSql .= " AND t.assigned_by = ?"; $filterParams[] = $filterAssignedBy;
 }
 
-$sql = "SELECT t.*, d.name_local AS dept_name, u1.name AS assignee_name, u2.name AS assigner_name
-        FROM tasks t
+$selSql = "SELECT t.*, d.name_local AS dept_name, u1.name AS assignee_name, u2.name AS assigner_name";
+$fromSql = " FROM tasks t
         JOIN departments d ON d.id = t.department_id
         JOIN users u1 ON u1.id = t.assigned_to
         JOIN users u2 ON u2.id = t.assigned_by" . $filterSql;
 $params = $filterParams;
 if ($status === 'overdue') {
-    $sql .= " AND t.status IN ('pending','in_progress') AND t.target_date < CURDATE()";
-} elseif ($status !== 'all') { $sql .= " AND t.status = ?"; $params[] = $status; }
-$sql .= " ORDER BY t.target_date";
-$stmt = $pdo->prepare($sql);
-$stmt->execute($params);
-$tasks = $stmt->fetchAll();
+    $fromSql .= " AND t.status IN ('pending','in_progress') AND t.target_date < CURDATE()";
+} elseif ($status !== 'all') { $fromSql .= " AND t.status = ?"; $params[] = $status; }
+$isCsv = ($_GET['export'] ?? '') === 'csv';
+// ⚡ यादी पानागणिक — हजारो टास्क एकदम (प्रत्येकाचा तपशील-Modal सह) पाठवल्यास पान खूप जड होतं
+$tkPer = 50;
+$tkTotal = 0; $tkPage = max(1, (int)($_GET['pg'] ?? 1)); $tkPages = 1;
+if ($isCsv) {
+    $stmt = $pdo->prepare($selSql . $fromSql . " ORDER BY t.target_date");
+    $stmt->execute($params);
+    $tasks = $stmt->fetchAll();
+} else {
+    $cStmt = $pdo->prepare("SELECT COUNT(*)" . $fromSql);
+    $cStmt->execute($params);
+    $tkTotal = (int)$cStmt->fetchColumn();
+    $tkPages = max(1, (int)ceil($tkTotal / $tkPer));
+    $tkPage = min($tkPage, $tkPages);
+    // आधी उघडे (मुदतीनुसार), मग पूर्ण/रद्द (नवीन आधी)
+    $stmt = $pdo->prepare($selSql . $fromSql . " ORDER BY (t.status IN ('pending','in_progress')) DESC,
+        CASE WHEN t.status IN ('pending','in_progress') THEN t.target_date END ASC, t.target_date DESC, t.id DESC
+        LIMIT " . $tkPer . " OFFSET " . (($tkPage - 1) * $tkPer));
+    $stmt->execute($params);
+    $tasks = $stmt->fetchAll();
+}
 
 // 📊 Excel — सध्याच्या Filter नुसार (विभाग / स्थिती / मी दिलेले)
-if (($_GET['export'] ?? '') === 'csv') {
+if ($isCsv) {
     while (ob_get_level()) ob_end_clean();
     header('Content-Type: text/csv; charset=utf-8');
     header('Content-Disposition: attachment; filename="tasks-' . $status . '-' . date('Y-m-d') . '.csv"');
@@ -280,18 +297,32 @@ smartTiles([
   $todayYmd = date('Y-m-d');
   $cols = ['overdue' => ['⏰ मुदत संपलेले', 'var(--rose)'], 'pending' => ['⏳ प्रलंबित', 'var(--amber)'], 'in_progress' => ['🔧 सुरू आहे', '#3B6FC9'], 'completed' => ['✅ पूर्ण', 'var(--rail)']];
   $board = array_fill_keys(array_keys($cols), []);
-  foreach ($tasks as $bt) {
-      if ($bt['status'] === 'cancelled') continue;
+  // Board — यादीच्या पानापासून स्वतंत्र, पण प्रत्येक स्तंभात मर्यादित कार्ड (एकूण संख्या SQL ने)
+  $boardCap = 40;
+  $bc = $pdo->prepare("SELECT SUM(t.status IN ('pending','in_progress') AND t.target_date < CURDATE()) overdue,
+      SUM(t.status = 'pending' AND t.target_date >= CURDATE()) pending, SUM(t.status = 'in_progress' AND t.target_date >= CURDATE()) in_progress,
+      SUM(t.status = 'completed') completed" . $fromSql);
+  $bc->execute($params);
+  $boardCnt = array_map('intval', $bc->fetch(PDO::FETCH_ASSOC) ?: []);
+  $boardTasks = [];
+  foreach (["t.status IN ('pending','in_progress') AND t.target_date < CURDATE() ORDER BY t.target_date",
+            "t.status = 'pending' AND t.target_date >= CURDATE() ORDER BY t.target_date",
+            "t.status = 'in_progress' AND t.target_date >= CURDATE() ORDER BY t.target_date",
+            "t.status = 'completed' ORDER BY t.completed_at DESC"] as $bi => $cond) {
+      $bq = $pdo->prepare($selSql . $fromSql . " AND " . $cond . " LIMIT " . ($bi === 3 ? 20 : $boardCap));
+      $bq->execute($params);
+      foreach ($bq->fetchAll() as $bt) { $boardTasks[] = $bt; }
+  }
+  foreach ($boardTasks as $bt) {
       $k = in_array($bt['status'], ['pending', 'in_progress'], true) && $bt['target_date'] < $todayYmd ? 'overdue' : $bt['status'];
       if (isset($board[$k])) $board[$k][] = $bt;
   }
-  usort($board['completed'], fn($a, $b) => strcmp((string)$b['completed_at'], (string)$a['completed_at']));
   $prioCol = ['urgent' => 'var(--rose)', 'high' => 'var(--amber)', 'normal' => '#3B6FC9', 'low' => 'var(--text-dim)'];
 ?>
 <div class="tk-board" id="tkBoard" hidden>
-  <?php foreach ($cols as $k => [$lbl, $col]): $items = $k === 'completed' ? array_slice($board[$k], 0, 20) : $board[$k]; ?>
+  <?php foreach ($cols as $k => [$lbl, $col]): $items = $board[$k]; $colTotal = $boardCnt[$k] ?? count($items); ?>
     <div class="tk-col">
-      <div class="tk-col-head" style="border-top-color:<?= $col ?>;"><?= $lbl ?> <em><?= count($board[$k]) ?></em></div>
+      <div class="tk-col-head" style="border-top-color:<?= $col ?>;"><?= $lbl ?> <em><?= $colTotal ?></em></div>
       <div class="tk-col-body">
         <?php if (!$items): ?><div class="tk-empty">—</div><?php endif; ?>
         <?php foreach ($items as $bt):
@@ -306,7 +337,7 @@ smartTiles([
             <div class="tk-card-d"><?= h($bt['dept_name']) ?></div>
           </button>
         <?php endforeach; ?>
-        <?php if ($k === 'completed' && count($board[$k]) > 20): ?><div class="tk-empty">+<?= count($board[$k]) - 20 ?> आणखी</div><?php endif; ?>
+        <?php if ($colTotal > count($items)): ?><a class="tk-empty" style="display:block;text-decoration:none;" href="<?= h($statusQs($k)) ?>">+<?= $colTotal - count($items) ?> आणखी — यादीत पहा</a><?php endif; ?>
       </div>
     </div>
   <?php endforeach; ?>
@@ -363,6 +394,32 @@ smartTiles([
             <button type="button" class="btn btn-sm" style="border:1px solid var(--line);border-radius:7px;font-size:10.5px;padding:4px 10px;" data-bs-toggle="modal" data-bs-target="#taskDetailModal<?= $task['id'] ?>">तपशील</button>
           </td>
         </tr>
+      <?php endforeach; ?>
+    </tbody>
+  </table>
+</div>
+<?php if ($tkPages > 1):
+  $pgUrl = function ($n) { return '?' . http_build_query(array_merge($_GET, ['pg' => $n])); }; ?>
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-2" style="font-size:12.5px;">
+    <span style="color:var(--text-dim);"><?= (($tkPage - 1) * $tkPer) + 1 ?>–<?= min($tkTotal, $tkPage * $tkPer) ?> / <?= $tkTotal ?> टास्क</span>
+    <div class="d-flex gap-1">
+      <?php if ($tkPage > 1): ?><a class="btn btn-sm" style="border:1px solid var(--line);border-radius:8px;" href="<?= h($pgUrl($tkPage - 1)) ?>">‹ मागे</a><?php endif; ?>
+      <span class="btn btn-sm" style="border:1px solid var(--line);border-radius:8px;pointer-events:none;"><?= $tkPage ?> / <?= $tkPages ?></span>
+      <?php if ($tkPage < $tkPages): ?><a class="btn btn-sm" style="border:1px solid var(--line);border-radius:8px;" href="<?= h($pgUrl($tkPage + 1)) ?>">पुढे ›</a><?php endif; ?>
+    </div>
+  </div>
+<?php endif; ?>
+<?php
+  // तपशील-Modals — यादीच्या या पानातले + Board वरचे (दुप्पट नाहीत)
+  $modalTasks = [];
+  foreach (array_merge($tasks, $boardTasks) as $mt) { $modalTasks[$mt['id']] = $mt; }
+  foreach ($modalTasks as $task):
+        $isOverdue = strtotime($task['target_date']) < strtotime(date('Y-m-d')) && !in_array($task['status'], ['completed', 'cancelled'], true);
+        $chip = $isOverdue && $task['status'] === 'pending' ? 'overdue' : $statusChip[$task['status']];
+        $chipText = $isOverdue ? 'मुदत संपली' : $statusLabels[$task['status']];
+        if ($task['status'] === 'completed' && !empty($task['verified_at'])) { $chipText .= ' ✔ पडताळले'; }
+        $isMyAssignment = (int)$task['assigned_by'] === (int)$user['id'] || hasRole('super_admin');
+      ?>
         <div class="modal fade" id="taskDetailModal<?= $task['id'] ?>" tabindex="-1">
           <div class="modal-dialog"><div class="modal-content" style="border-radius:14px;">
             <div class="modal-body" style="padding:22px 24px;">
@@ -429,10 +486,8 @@ smartTiles([
             </div>
           </div></div>
         </div>
-      <?php endforeach; ?>
-    </tbody>
-  </table>
-</div>
+<?php endforeach; ?>
+
 
 <?php if ($counts['all'] > 0): ?>
 <script>

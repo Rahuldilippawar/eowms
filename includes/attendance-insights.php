@@ -24,9 +24,9 @@ try {
             SUM(sa.status IN ('present','half_day')) present, SUM(sa.status = 'absent') absent,
             SUM(sa.status = 'on_leave') on_leave, SUM(sa.is_late = 1) late
         FROM staff_attendance sa JOIN users u ON u.id = sa.user_id
-        WHERE sa.organization_id = ? AND DATE_FORMAT(sa.attendance_date, '%Y-%m') = ?$aiDeptSql
+        WHERE sa.organization_id = ? AND sa.attendance_date BETWEEN ? AND LAST_DAY(?)$aiDeptSql
         GROUP BY sa.attendance_date ORDER BY sa.attendance_date");
-    $st->execute(array_merge([$orgId, $month], $aiDeptParams));
+    $st->execute(array_merge([$orgId, $month . '-01', $month . '-01'], $aiDeptParams));
     $aiDaily = $st->fetchAll();
 
     $st = $pdo->prepare("SELECT
@@ -34,8 +34,8 @@ try {
             SUM(sa.status = 'on_leave') on_leave, SUM(sa.is_late = 1) late, SUM(sa.is_early_leave = 1) early,
             SEC_TO_TIME(ROUND(AVG(CASE WHEN sa.first_punch_time IS NOT NULL THEN TIME_TO_SEC(sa.first_punch_time) END))) avg_in
         FROM staff_attendance sa JOIN users u ON u.id = sa.user_id
-        WHERE sa.organization_id = ? AND DATE_FORMAT(sa.attendance_date, '%Y-%m') = ?$aiDeptSql");
-    $st->execute(array_merge([$orgId, $month], $aiDeptParams));
+        WHERE sa.organization_id = ? AND sa.attendance_date BETWEEN ? AND LAST_DAY(?)$aiDeptSql");
+    $st->execute(array_merge([$orgId, $month . '-01', $month . '-01'], $aiDeptParams));
     $aiMonth = $st->fetch() ?: [];
     $workDays = (int)$aiMonth['present'] + (int)$aiMonth['half'] + (int)$aiMonth['absent'];
     $aiRate = $workDays > 0 ? (int)round(((int)$aiMonth['present'] + 0.5 * (int)$aiMonth['half']) * 100 / $workDays) : null;
@@ -43,13 +43,13 @@ try {
     // वारंवार उशीर / गैरहजर (महिना)
     $topSql = "SELECT u.name, d.name_local AS dept, SUM(sa.is_late = 1) late, SUM(sa.status = 'absent') absent
         FROM staff_attendance sa JOIN users u ON u.id = sa.user_id LEFT JOIN departments d ON d.id = u.department_id
-        WHERE sa.organization_id = ? AND DATE_FORMAT(sa.attendance_date, '%Y-%m') = ?$aiDeptSql
+        WHERE sa.organization_id = ? AND sa.attendance_date BETWEEN ? AND LAST_DAY(?)$aiDeptSql
         GROUP BY u.id, u.name, d.name_local";
     $st = $pdo->prepare("$topSql HAVING late > 0 ORDER BY late DESC LIMIT 5");
-    $st->execute(array_merge([$orgId, $month], $aiDeptParams));
+    $st->execute(array_merge([$orgId, $month . '-01', $month . '-01'], $aiDeptParams));
     $aiLate = $st->fetchAll();
     $st = $pdo->prepare("$topSql HAVING absent > 0 ORDER BY absent DESC LIMIT 5");
-    $st->execute(array_merge([$orgId, $month], $aiDeptParams));
+    $st->execute(array_merge([$orgId, $month . '-01', $month . '-01'], $aiDeptParams));
     $aiAbsent = $st->fetchAll();
 
     // विभागनिहाय हजेरी % (फक्त Management)
@@ -59,9 +59,9 @@ try {
                 SUM(sa.status = 'present') + 0.5 * SUM(sa.status = 'half_day') pres,
                 SUM(sa.status IN ('present','half_day','absent')) total
             FROM staff_attendance sa JOIN users u ON u.id = sa.user_id JOIN departments d ON d.id = u.department_id
-            WHERE sa.organization_id = ? AND DATE_FORMAT(sa.attendance_date, '%Y-%m') = ?
+            WHERE sa.organization_id = ? AND sa.attendance_date BETWEEN ? AND LAST_DAY(?)
             GROUP BY d.id, d.name_local HAVING total > 0");
-        $st->execute([$orgId, $month]);
+        $st->execute([$orgId, $month . '-01', $month . '-01']);
         foreach ($st->fetchAll() as $r) { $aiDepts[] = ['name' => $r['name'], 'pct' => (int)round($r['pres'] * 100 / $r['total'])]; }
         usort($aiDepts, fn($a, $b) => $a['pct'] <=> $b['pct']);
     }

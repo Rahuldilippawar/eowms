@@ -104,26 +104,10 @@ foreach ($balStmt->fetchAll() as $b) { $balByUserType[$b['user_id']][$b['leave_t
             $remaining = $allocated - $used;
           ?>
             <td>
-              <button type="button" class="btn btn-sm" style="border:none;background:none;font-size:12px;padding:2px;" data-bs-toggle="modal" data-bs-target="#balModal<?= $s['id'] ?>_<?= $lt['id'] ?>">
+              <button type="button" class="btn btn-sm" style="border:none;background:none;font-size:12px;padding:2px;" data-bs-toggle="modal" data-bs-target="#balModal"
+                data-uid="<?= (int)$s['id'] ?>" data-lt="<?= (int)$lt['id'] ?>" data-alloc="<?= h($allocated) ?>" data-used="<?= h($used) ?>" data-name="<?= h($s['name'] . ' — ' . $lt['name_local']) ?>">
                 <span class="font-mono" style="color:<?= $remaining <= 0 ? 'var(--rose)' : 'var(--rail)' ?>;font-weight:600;"><?= $remaining ?></span>/<?= $allocated ?>
               </button>
-              <div class="modal fade" id="balModal<?= $s['id'] ?>_<?= $lt['id'] ?>" tabindex="-1">
-                <div class="modal-dialog modal-sm"><div class="modal-content" style="border-radius:14px;">
-                  <form method="POST">
-                    <input type="hidden" name="action" value="set_one"><input type="hidden" name="year" value="<?= $year ?>">
-                    <input type="hidden" name="user_id" value="<?= $s['id'] ?>"><input type="hidden" name="leave_type_id" value="<?= $lt['id'] ?>">
-                    <div class="modal-body" style="padding:18px;">
-                      <div style="font-weight:600;font-size:12.5px;margin-bottom:8px;"><?= h($s['name']) ?> — <?= h($lt['name_local']) ?></div>
-                      <label class="form-label-custom">एकूण दिवस (<?= $year ?>)</label>
-                      <input type="number" step="0.5" name="allocated_days" class="form-control-custom" value="<?= $allocated ?>">
-                      <div style="font-size:11px;color:var(--text-dim);margin-top:4px;">आधीच <?= $used ?> दिवस वापरलेले आहेत</div>
-                    </div>
-                    <div class="modal-footer" style="border-top:1px solid var(--line);padding:10px;">
-                      <button type="submit" class="btn btn-sm w-100" style="background:var(--rail);color:#fff;border-radius:7px;">जतन करा</button>
-                    </div>
-                  </form>
-                </div></div>
-              </div>
             </td>
           <?php endforeach; ?>
         </tr>
@@ -131,5 +115,33 @@ foreach ($balStmt->fetchAll() as $b) { $balByUserType[$b['user_id']][$b['leave_t
     </tbody>
   </table>
 </div>
+
+<?php // ⚡ एकच Modal — प्रत्येक कर्मचारी × रजा-प्रकारासाठी वेगळा नाही (पान खूप हलकं); बटणावरून भरतो ?>
+<div class="modal fade" id="balModal" tabindex="-1">
+  <div class="modal-dialog modal-sm"><div class="modal-content" style="border-radius:14px;">
+    <form method="POST">
+      <input type="hidden" name="action" value="set_one"><input type="hidden" name="year" value="<?= $year ?>">
+      <input type="hidden" name="user_id" value=""><input type="hidden" name="leave_type_id" value="">
+      <div class="modal-body" style="padding:18px;">
+        <div style="font-weight:600;font-size:12.5px;margin-bottom:8px;" data-bal="name"></div>
+        <label class="form-label-custom">एकूण दिवस (<?= $year ?>)</label>
+        <input type="number" step="0.5" name="allocated_days" class="form-control-custom" value="">
+        <div style="font-size:11px;color:var(--text-dim);margin-top:4px;">आधीच <span data-bal="used"></span> दिवस वापरलेले आहेत</div>
+      </div>
+      <div class="modal-footer" style="border-top:1px solid var(--line);padding:10px;">
+        <button type="submit" class="btn btn-sm w-100" style="background:var(--rail);color:#fff;border-radius:7px;">जतन करा</button>
+      </div>
+    </form>
+  </div></div>
+</div>
+<script>
+document.getElementById('balModal').addEventListener('show.bs.modal', function (e) {
+  var b = e.relatedTarget; if (!b) return; var f = this.querySelector('form');
+  f.user_id.value = b.getAttribute('data-uid'); f.leave_type_id.value = b.getAttribute('data-lt');
+  f.allocated_days.value = b.getAttribute('data-alloc');
+  this.querySelector('[data-bal="name"]').textContent = b.getAttribute('data-name');
+  this.querySelector('[data-bal="used"]').textContent = b.getAttribute('data-used');
+});
+</script>
 
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

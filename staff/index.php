@@ -402,7 +402,7 @@ smartAlerts($alerts);
               <a href="edit.php?id=<?= $person['id'] ?>" onclick="event.stopPropagation()" class="btn btn-sm" style="border:1px solid var(--line);border-radius:7px;font-size:12px;padding:5px 12px;"><i class="fa-solid fa-pen me-1"></i>Edit</a>
               <?php if ($person['role'] !== 'super_admin'): ?>
                 <button type="button" class="btn btn-sm" style="border:1px solid var(--rose);color:var(--rose);border-radius:7px;font-size:12px;padding:5px 12px;"
-                  data-bs-toggle="modal" data-bs-target="#deleteModal<?= $person['id'] ?>"><i class="fa-solid fa-trash me-1"></i>Delete</button>
+                  data-bs-toggle="modal" data-bs-target="#deleteModal" data-del-id="<?= (int)$person['id'] ?>" data-del-name="<?= h($person['name']) ?>"><i class="fa-solid fa-trash me-1"></i>Delete</button>
               <?php else: ?>
                 <span title="Super Admin अकाउंट डिलीट करता येत नाही" style="font-size:11px;color:var(--text-dim);"><i class="fa-solid fa-lock"></i> <?= h(t('s255')) ?></span>
               <?php endif; ?>
@@ -410,34 +410,43 @@ smartAlerts($alerts);
           <?php endif; ?>
         </tr>
 
-        <?php if (hasRole('super_admin') && $person['role'] !== 'super_admin'): ?>
-        <div class="modal fade" id="deleteModal<?= $person['id'] ?>" tabindex="-1">
-          <div class="modal-dialog">
-            <div class="modal-content" style="border-radius:14px;">
-              <form method="POST" action="delete.php">
-                <input type="hidden" name="id" value="<?= $person['id'] ?>">
-                <div class="modal-body" style="padding:22px;">
-                  <div style="font-family:'Space Grotesk';font-weight:600;font-size:16px;color:var(--rose);margin-bottom:10px;">
-                    <i class="fa-solid fa-triangle-exclamation me-1"></i>'<?= h($person['name']) ?>' कायमचे डिलीट करायचे?
-                  </div>
-                  <p style="font-size:13px;color:var(--text-dim);"><?= h(t('s256')) ?></p>
-                  <div style="font-size:12.5px;background:var(--canvas);border-radius:8px;padding:8px 10px;margin-bottom:10px;">त्यांचा Login, हजेरी, रजा, कामाच्या नोंदी, Tasks, E-Campus कामं, Campus प्रमुख पद आणि फोटो — सगळं कायमचं हटेल. फक्त पूर्वीच्या कामाचा इतिहास ठेवायचा असेल तर Delete ऐवजी <b>Edit → निष्क्रिय</b> करा.</div>
-                  <label class="form-label-custom"><?= h(t('s257')) ?> <span class="font-mono" style="color:var(--rose);"><?= h($person['name']) ?></span> <span style="font-weight:400;">(किंवा <b>हटवा</b>)</span></label>
-                  <input type="text" name="confirm_name" class="form-control-custom" autocomplete="off" required>
-                </div>
-                <div class="modal-footer" style="border-top:1px solid var(--line);">
-                  <button type="button" class="btn btn-sm" data-bs-dismiss="modal" style="border:1px solid var(--line);border-radius:7px;"><?= h(t('s3')) ?></button>
-                  <button type="submit" class="btn btn-sm" style="background:var(--rose);color:#fff;border-radius:7px;"><?= h(t('s82')) ?></button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-        <?php endif; ?>
       <?php endforeach; ?>
     </tbody>
   </table>
 </div>
+<?php if (hasRole('super_admin')): ?>
+<?php // ⚡ एकच Delete-Modal — प्रत्येक कर्मचाऱ्यासाठी वेगळा नाही (पान हलकं); बटणावरून नाव/ID भरतो ?>
+        <div class="modal fade" id="deleteModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content" style="border-radius:14px;">
+      <form method="POST" action="delete.php">
+        <input type="hidden" name="id" value="" data-del="id">
+        <div class="modal-body" style="padding:22px;">
+          <div style="font-family:'Space Grotesk';font-weight:600;font-size:16px;color:var(--rose);margin-bottom:10px;">
+            <i class="fa-solid fa-triangle-exclamation me-1"></i>'<span data-del="name"></span>' कायमचे डिलीट करायचे?
+          </div>
+          <p style="font-size:13px;color:var(--text-dim);"><?= h(t('s256')) ?></p>
+          <div style="font-size:12.5px;background:var(--canvas);border-radius:8px;padding:8px 10px;margin-bottom:10px;">त्यांचा Login, हजेरी, रजा, कामाच्या नोंदी, Tasks, E-Campus कामं, Campus प्रमुख पद आणि फोटो — सगळं कायमचं हटेल. फक्त पूर्वीच्या कामाचा इतिहास ठेवायचा असेल तर Delete ऐवजी <b>Edit → निष्क्रिय</b> करा.</div>
+          <label class="form-label-custom"><?= h(t('s257')) ?> <span class="font-mono" style="color:var(--rose);" data-del="name"></span> <span style="font-weight:400;">(किंवा <b>हटवा</b>)</span></label>
+          <input type="text" name="confirm_name" class="form-control-custom" autocomplete="off" required>
+        </div>
+        <div class="modal-footer" style="border-top:1px solid var(--line);">
+          <button type="button" class="btn btn-sm" data-bs-dismiss="modal" style="border:1px solid var(--line);border-radius:7px;"><?= h(t('s3')) ?></button>
+          <button type="submit" class="btn btn-sm" style="background:var(--rose);color:#fff;border-radius:7px;"><?= h(t('s82')) ?></button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+<script>
+document.getElementById('deleteModal').addEventListener('show.bs.modal', function (e) {
+  var b = e.relatedTarget; if (!b) return;
+  this.querySelector('[data-del="id"]').value = b.getAttribute('data-del-id');
+  this.querySelectorAll('[data-del="name"]').forEach(function (x) { x.textContent = b.getAttribute('data-del-name'); });
+  this.querySelector('input[name="confirm_name"]').value = '';
+});
+</script>
+<?php endif; ?>
 
 <style>
   .st-tools { display:flex; flex-wrap:wrap; gap:8px; padding:12px 14px; align-items:center; }

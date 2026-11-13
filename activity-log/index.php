@@ -64,7 +64,8 @@ foreach (array_slice($failedIps, 0, 3, true) as $ip => $n) {
 if ($stat['failed24'] >= 10 && !$alerts) $alerts[] = ['warn', "२४ तासांत {$stat['failed24']} अयशस्वी Login प्रयत्न.", '?kind=failed&from=' . date('Y-m-d', strtotime('-1 day'))];
 if ($stat['sens7']) $alerts[] = ['info', "गेल्या ७ दिवसांत {$stat['sens7']} संवेदनशील कृती (हटवणे, Permissions, Backup, पासवर्ड…) — एकदा नजर टाका.", '?kind=sensitive&from=' . date('Y-m-d', strtotime('-6 days'))];
 
-$users = $pdo->prepare("SELECT DISTINCT u.id, u.name FROM activity_logs al JOIN users u ON u.id = al.user_id WHERE al.organization_id = ? ORDER BY u.name");
+// ⚡ लाखो नोंदींवर DISTINCT नको — प्रत्येक व्यक्तीसाठी Index वरून "एक तरी नोंद आहे का" (idx_user_created)
+$users = $pdo->prepare("SELECT u.id, u.name FROM users u WHERE EXISTS (SELECT 1 FROM activity_logs al WHERE al.user_id = u.id AND al.organization_id = ?) ORDER BY u.name");
 $users->execute([$orgId]); $users = $users->fetchAll();
 $pages = max(1, (int)ceil($total / $per));
 $qsBase = fn($over) => '?' . http_build_query(array_merge(['from' => $from, 'to' => $to, 'q' => $q, 'user' => $actor ?: '', 'kind' => $kind], $over));

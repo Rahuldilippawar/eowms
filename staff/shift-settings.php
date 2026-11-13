@@ -127,50 +127,63 @@ $dayNames = ['रविवार', 'सोमवार', 'मंगळवार'
           <td><?= $s['half_day_hours'] ?? 4 ?> तास</td>
           <td><?= $s['weekly_off_1'] !== null ? h($dayNames[$s['weekly_off_1']]) : 'रविवार' ?><?= $s['weekly_off_2'] !== null ? ', ' . h($dayNames[$s['weekly_off_2']]) : '' ?></td>
           <td>
-            <button type="button" class="btn btn-sm" style="border:1px solid var(--line);border-radius:7px;font-size:11px;padding:4px 10px;" data-bs-toggle="modal" data-bs-target="#shiftModal<?= $s['id'] ?>">Edit</button>
+            <button type="button" class="btn btn-sm" style="border:1px solid var(--line);border-radius:7px;font-size:11px;padding:4px 10px;" data-bs-toggle="modal" data-bs-target="#shiftModal"
+              data-sh='<?= h(json_encode(['id' => (int)$s['id'], 'name' => $s['name'], 'start' => $s['shift_start'] ? substr($s['shift_start'], 0, 5) : '09:30', 'end' => $s['shift_end'] ? substr($s['shift_end'], 0, 5) : '17:30', 'grace' => $s['grace_minutes'] ?? 15, 'half' => $s['half_day_hours'] ?? 4, 'wo1' => (string)(int)($s['weekly_off_1'] ?? 0), 'wo2' => isset($s['weekly_off_2']) ? (string)(int)$s['weekly_off_2'] : ''], JSON_UNESCAPED_UNICODE)) ?>'>Edit</button>
           </td>
         </tr>
-        <div class="modal fade" id="shiftModal<?= $s['id'] ?>" tabindex="-1">
-          <div class="modal-dialog"><div class="modal-content" style="border-radius:14px;">
-            <form method="POST">
-              <input type="hidden" name="action" value="save_one"><input type="hidden" name="user_id" value="<?= $s['id'] ?>">
-              <div class="modal-body" style="padding:20px;">
-                <div style="font-weight:600;margin-bottom:12px;"><?= h($s['name']) ?></div>
-                <div class="row g-2 mb-2">
-                  <div class="col-6"><label class="form-label-custom">Shift सुरू</label><input type="time" name="shift_start" class="form-control-custom" value="<?= h($s['shift_start'] ?: '09:30') ?>"></div>
-                  <div class="col-6"><label class="form-label-custom">Shift संपली</label><input type="time" name="shift_end" class="form-control-custom" value="<?= h($s['shift_end'] ?: '17:30') ?>"></div>
-                </div>
-                <div class="row g-2 mb-2">
-                  <div class="col-6"><label class="form-label-custom">Grace (मिनिटं)</label><input type="number" name="grace_minutes" class="form-control-custom" value="<?= h($s['grace_minutes'] ?? 15) ?>"></div>
-                  <div class="col-6"><label class="form-label-custom">Half-Day तास</label><input type="number" step="0.5" name="half_day_hours" class="form-control-custom" value="<?= h($s['half_day_hours'] ?? 4) ?>"></div>
-                </div>
-                <div class="row g-2">
-                  <div class="col-6">
-                    <label class="form-label-custom">सुट्टी 1</label>
-                    <select name="weekly_off_1" class="form-select-custom">
-                      <option value="">-- नाही --</option>
-                      <?php foreach ($dayNames as $i => $dn): ?><option value="<?= $i ?>" <?= (int)($s['weekly_off_1'] ?? 0) === $i ? 'selected' : '' ?>><?= $dn ?></option><?php endforeach; ?>
-                    </select>
-                  </div>
-                  <div class="col-6">
-                    <label class="form-label-custom">सुट्टी 2 (ऐच्छिक)</label>
-                    <select name="weekly_off_2" class="form-select-custom">
-                      <option value="">-- नाही --</option>
-                      <?php foreach ($dayNames as $i => $dn): ?><option value="<?= $i ?>" <?= isset($s['weekly_off_2']) && (int)$s['weekly_off_2'] === $i ? 'selected' : '' ?>><?= $dn ?></option><?php endforeach; ?>
-                    </select>
-                  </div>
-                </div>
-              </div>
-              <div class="modal-footer" style="border-top:1px solid var(--line);">
-                <button type="button" class="btn btn-sm" data-bs-dismiss="modal" style="border:1px solid var(--line);border-radius:7px;">रद्द करा</button>
-                <button type="submit" class="btn btn-sm" style="background:var(--rail);color:#fff;border-radius:7px;">जतन करा</button>
-              </div>
-            </form>
-          </div></div>
-        </div>
       <?php endforeach; ?>
     </tbody>
   </table>
 </div>
+
+<?php // ⚡ एकच Shift-Modal — प्रत्येक कर्मचाऱ्यासाठी वेगळा नाही (पान हलकं); Edit बटणावरून भरतो ?>
+<div class="modal fade" id="shiftModal" tabindex="-1">
+  <div class="modal-dialog"><div class="modal-content" style="border-radius:14px;">
+    <form method="POST">
+      <input type="hidden" name="action" value="save_one"><input type="hidden" name="user_id" value="">
+      <div class="modal-body" style="padding:20px;">
+        <div style="font-weight:600;margin-bottom:12px;" data-sh="name"></div>
+        <div class="row g-2 mb-2">
+          <div class="col-6"><label class="form-label-custom">Shift सुरू</label><input type="time" name="shift_start" class="form-control-custom" value="09:30"></div>
+          <div class="col-6"><label class="form-label-custom">Shift संपली</label><input type="time" name="shift_end" class="form-control-custom" value="17:30"></div>
+        </div>
+        <div class="row g-2 mb-2">
+          <div class="col-6"><label class="form-label-custom">Grace (मिनिटं)</label><input type="number" name="grace_minutes" class="form-control-custom" value="15"></div>
+          <div class="col-6"><label class="form-label-custom">Half-Day तास</label><input type="number" step="0.5" name="half_day_hours" class="form-control-custom" value="4"></div>
+        </div>
+        <div class="row g-2">
+          <div class="col-6">
+            <label class="form-label-custom">सुट्टी 1</label>
+            <select name="weekly_off_1" class="form-select-custom">
+              <option value="">-- नाही --</option>
+              <?php foreach ($dayNames as $i => $dn): ?><option value="<?= $i ?>"><?= $dn ?></option><?php endforeach; ?>
+            </select>
+          </div>
+          <div class="col-6">
+            <label class="form-label-custom">सुट्टी 2 (ऐच्छिक)</label>
+            <select name="weekly_off_2" class="form-select-custom">
+              <option value="">-- नाही --</option>
+              <?php foreach ($dayNames as $i => $dn): ?><option value="<?= $i ?>"><?= $dn ?></option><?php endforeach; ?>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer" style="border-top:1px solid var(--line);">
+        <button type="button" class="btn btn-sm" data-bs-dismiss="modal" style="border:1px solid var(--line);border-radius:7px;">रद्द करा</button>
+        <button type="submit" class="btn btn-sm" style="background:var(--rail);color:#fff;border-radius:7px;">जतन करा</button>
+      </div>
+    </form>
+  </div></div>
+</div>
+<script>
+document.getElementById('shiftModal').addEventListener('show.bs.modal', function (e) {
+  var b = e.relatedTarget; if (!b) return; var d = {}; try { d = JSON.parse(b.getAttribute('data-sh')); } catch (x) {}
+  var f = this.querySelector('form');
+  f.user_id.value = d.id; f.shift_start.value = d.start; f.shift_end.value = d.end;
+  f.grace_minutes.value = d.grace; f.half_day_hours.value = d.half;
+  f.weekly_off_1.value = d.wo1; f.weekly_off_2.value = d.wo2;
+  this.querySelector('[data-sh="name"]').textContent = d.name;
+});
+</script>
 
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

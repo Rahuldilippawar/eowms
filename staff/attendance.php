@@ -13,20 +13,25 @@ require_once __DIR__ . '/../includes/header.php';
 $month = $_GET['month'] ?? date('Y-m');
 if (!preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $month)) { $month = date('Y-m'); }
 
-$sql = "
-    SELECT sa.*, u.name, u.designation, d.name_local AS dept_name
-    FROM staff_attendance sa JOIN users u ON u.id = sa.user_id LEFT JOIN departments d ON d.id = u.department_id
-    WHERE sa.organization_id = ? AND DATE_FORMAT(sa.attendance_date, '%Y-%m') = ?
-";
-$params = [$orgId, $month];
-if (!$isMgmt) { $sql .= " AND u.department_id = ?"; $params[] = $user['department_id'] ?? 0; }
-$sql .= " ORDER BY sa.attendance_date DESC, u.name";
-$stmt = $pdo->prepare($sql);
-$stmt->execute($params);
-$records = $stmt->fetchAll();
-
+// ⚡ संपूर्ण महिना × सगळे कर्मचारी एकदम नको (हजारो ओळी) — दिवसांचे Chips (संख्येसह) + निवडलेल्या एका दिवसाची यादी
+$mStart = $month . '-01';
+$mEnd = date('Y-m-t', strtotime($mStart));
+$scopeSql = " FROM staff_attendance sa JOIN users u ON u.id = sa.user_id LEFT JOIN departments d ON d.id = u.department_id
+    WHERE sa.organization_id = ? AND sa.attendance_date BETWEEN ? AND ?";
+$params = [$orgId, $mStart, $mEnd];
+if (!$isMgmt) { $scopeSql .= " AND u.department_id = ?"; $params[] = $user['department_id'] ?? 0; }
+$dStmt = $pdo->prepare("SELECT sa.attendance_date d, COUNT(*) n, SUM(sa.status IN ('present','half_day')) pres, SUM(sa.status = 'absent') abs_n" . $scopeSql . " GROUP BY sa.attendance_date ORDER BY sa.attendance_date DESC");
+$dStmt->execute($params);
+$days = $dStmt->fetchAll();
+$selDay = $_GET['day'] ?? '';
+$dayList = array_column($days, 'd');
+if (!in_array($selDay, $dayList, true)) { $selDay = $dayList[0] ?? ''; }
 $byDate = [];
-foreach ($records as $r) { $byDate[$r['attendance_date']][] = $r; }
+if ($selDay !== '') {
+    $stmt = $pdo->prepare("SELECT sa.*, u.name, u.designation, d.name_local AS dept_name" . $scopeSql . " AND sa.attendance_date = ? ORDER BY u.name");
+    $stmt->execute(array_merge($params, [$selDay]));
+    $byDate[$selDay] = $stmt->fetchAll();
+}
 
 $statusLabels = ['present' => '✅ हजर', 'absent' => '❌ गैरहजर', 'half_day' => '🟡 अर्धा दिवस', 'holiday' => '🎉 सुट्टी', 'on_leave' => '🏖️ रजेवर'];
 $statusChips = ['present' => 'done', 'absent' => 'overdue', 'half_day' => 'pending', 'holiday' => 'done', 'on_leave' => 'pending'];
@@ -59,6 +64,27 @@ $statusChips = ['present' => 'done', 'absent' => 'overdue', 'half_day' => 'pendi
 </form>
 
 <?php require __DIR__ . '/../includes/attendance-insights.php'; ?>
+
+<?php if ($days): ?>
+<style>
+  .att-days{display:flex;gap:6px;overflow-x:auto;padding:2px 0 10px;margin-bottom:6px;scrollbar-width:thin;}
+  .att-days a{flex:0 0 auto;min-width:64px;text-align:center;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:6px 8px;text-decoration:none;color:var(--text);line-height:1.2;}
+  .att-days a b{display:block;font-size:13px;}
+  .att-days a span{font-size:10.5px;color:var(--text-dim);}
+  .att-days a.on{background:var(--ink);border-color:var(--ink);color:#fff;}
+  .att-days a.on span{color:rgba(255,255,255,.75);}
+  .att-days a em{font-style:normal;color:var(--rose);}
+  .att-days a.on em{color:#FCA5A5;}
+</style>
+<div class="att-days" aria-label="दिवस">
+  <?php foreach ($days as $dy): ?>
+    <a href="?<?= h(http_build_query(['month' => $month, 'day' => $dy['d']])) ?>" class="<?= $dy['d'] === $selDay ? 'on' : '' ?>">
+      <b><?= date('d D', strtotime($dy['d'])) ?></b>
+      <span>✅ <?= (int)$dy['pres'] ?><?php if ((int)$dy['abs_n']): ?> · <em>❌ <?= (int)$dy['abs_n'] ?></em><?php endif; ?></span>
+    </a>
+  <?php endforeach; ?>
+</div>
+<?php endif; ?>
 
 <?php if (empty($byDate)): ?>
   <div class="panel" style="padding:40px;text-align:center;color:var(--text-dim);">या महिन्यात कुठलीही Attendance नोंदवली गेलेली नाही.</div>
