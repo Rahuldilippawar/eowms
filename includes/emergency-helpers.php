@@ -88,7 +88,7 @@ function emergencyDispatch($pdo, array $alert, $senderName, array $recipientIds,
         $headers = "MIME-Version: 1.0\r\nContent-Type: text/html; charset=UTF-8\r\nFrom: E-Admin SOS <no-reply@" . ($_SERVER['HTTP_HOST'] ?? 'localhost') . ">\r\n";
         foreach ($st->fetchAll(PDO::FETCH_COLUMN) as $email) {
             if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                try { @mail($email, '=?UTF-8?B?' . base64_encode($title) . '?=', $body, $headers); } catch (Throwable $e) {}
+                require_once __DIR__ . '/mailer.php'; eowmsMailRaw($email, $title, $body, $headers);
             }
         }
     }

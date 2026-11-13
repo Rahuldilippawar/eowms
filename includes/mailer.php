@@ -59,7 +59,7 @@ function sendWelcomeEmail($email, $name, $username, $plainPassword, $orgName, $c
     $headers .= "From: =?UTF-8?B?" . base64_encode(trim(preg_replace('/[\r\n"]+/', ' ', (string)$orgName))) . "?= <no-reply@" . eowmsMailDomain() . ">\r\n";
 
     try {
-        return @mail($email, "=?UTF-8?B?" . base64_encode($subject) . "?=", $body, $headers);
+        return eowmsMailRaw($email, $subject, $body, $headers);
     } catch (Throwable $e) {
         return false;
     }
@@ -97,7 +97,7 @@ function sendPasswordResetEmail($email, $name, $code, $orgName) {
     $headers .= "From: =?UTF-8?B?" . base64_encode(trim(preg_replace('/[\r\n"]+/', ' ', (string)$orgName))) . "?= <no-reply@" . eowmsMailDomain() . ">\r\n";
 
     try {
-        return @mail($email, "=?UTF-8?B?" . base64_encode($subject) . "?=", $body, $headers);
+        return eowmsMailRaw($email, $subject, $body, $headers);
     } catch (Throwable $e) {
         return false;
     }
@@ -140,7 +140,7 @@ function sendRenewalReminderEmail($email, $name, $itemName, $daysLeft, $expiryDa
     $headers .= "From: =?UTF-8?B?" . base64_encode(trim(preg_replace('/[\r\n"]+/', ' ', (string)$orgName))) . "?= <no-reply@" . eowmsMailDomain() . ">\r\n";
 
     try {
-        return @mail($email, "=?UTF-8?B?" . base64_encode($subject) . "?=", $body, $headers);
+        return eowmsMailRaw($email, $subject, $body, $headers);
     } catch (Throwable $e) {
         return false;
     }
@@ -187,7 +187,7 @@ function sendPurchasePendingSummaryEmail($email, $name, $orgName, $fy, $totalCou
     $headers .= "From: =?UTF-8?B?" . base64_encode(trim(preg_replace('/[\r\n"]+/', ' ', (string)$orgName))) . "?= <no-reply@" . eowmsMailDomain() . ">\r\n";
 
     try {
-        return @mail($email, "=?UTF-8?B?" . base64_encode($subject) . "?=", $body, $headers);
+        return eowmsMailRaw($email, $subject, $body, $headers);
     } catch (Throwable $e) {
         return false;
     }
@@ -273,10 +273,68 @@ function eowmsSendMail($to, $subject, $html, array $attachments = [], $fromName 
         }
         $body .= "--$b--\r\n";
     }
-    $subj = '=?UTF-8?B?' . base64_encode((string)$subject) . '?=';
     $sent = 0;
     foreach ($list as $addr) {
-        try { if (@mail($addr, $subj, $body, $headers)) { $sent++; } } catch (Throwable $e) {}
+        if (eowmsMailRaw($addr, (string)$subject, $body, $headers, count($attachments), strlen($body))) { $sent++; }
     }
     return $sent;
+}
+
+/**
+ * ✉️ प्रत्यक्ष mail() — आणि प्रत्येक Email ची नोंद email_log मध्ये (कधी, कोणाला, कोणता, यशस्वी/अयशस्वी).
+ * Body (पासवर्ड/OTP असू शकतात) कधीच साठवत नाही; OTP/पासवर्डच्या Subject मधले आकडे लपवतो.
+ */
+function eowmsMailRaw($addr, $subject, $body, $headers, $attachCount = 0, $size = null) {
+    $ok = false; $err = null;
+    try { $ok = (bool)@mail($addr, '=?UTF-8?B?' . base64_encode((string)$subject) . '?=', $body, $headers); }
+    catch (Throwable $e) { $err = $e->getMessage(); }
+    if (!$ok && !$err) { $le = error_get_last(); $err = $le && stripos($le['message'] ?? '', 'mail') !== false ? $le['message'] : 'Server ने Email स्वीकारला नाही (mail() अयशस्वी)'; }
+    eowmsMailLog($addr, (string)$subject, $ok, $err, $attachCount, $size ?? strlen((string)$body));
+    return $ok;
+}
+
+/** कोणत्या कामातून Email गेला — बोलावणाऱ्या function/फाईलवरून ओळखतो */
+function eowmsMailCategory() {
+    $byFn = ['sendWelcomeEmail' => 'welcome', 'sendPasswordResetEmail' => 'password', 'sendRenewalReminderEmail' => 'renewal',
+        'sendPurchasePendingSummaryEmail' => 'purchase', 'sendBirthdayEmail' => 'birthday', 'sendWorkAnniversaryEmail' => 'anniversary'];
+    $byFile = ['two-factor.php' => 'otp', 'offsite-backup.php' => 'backup', 'daily-report.php' => 'daily', 'weekly-report.php' => 'weekly',
+        'emergency-helpers.php' => 'sos', 'update.php' => 'email_change', 'celebrations.php' => 'birthday'];
+    foreach (debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 12) as $f) {
+        if (isset($f['function'], $byFn[$f['function']])) return $byFn[$f['function']];
+    }
+    foreach (debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 12) as $f) {
+        $b = basename($f['file'] ?? '');
+        if ($b && $b !== 'mailer.php' && isset($byFile[$b])) return $byFile[$b];
+    }
+    return 'other';
+}
+
+/** Email प्रकारांची नावं (नोंद पानासाठी) */
+function eowmsMailCategories() {
+    return ['welcome' => '👋 नवीन खातं', 'password' => '🔑 पासवर्ड रिसेट', 'otp' => '🔐 Login Code (2FA)', 'email_change' => '📧 Email बदल',
+        'renewal' => '⏳ नूतनीकरण आठवण', 'purchase' => '🛒 खरेदी प्रलंबित', 'birthday' => '🎂 वाढदिवस', 'anniversary' => '🎊 वर्धापनदिन',
+        'daily' => '📰 दैनिक अहवाल', 'weekly' => '📊 साप्ताहिक अहवाल', 'backup' => '☁️ Backup', 'sos' => '🚨 SOS', 'other' => '✉️ इतर'];
+}
+
+function eowmsMailLog($addr, $subject, $ok, $err = null, $attachCount = 0, $size = 0) {
+    $pdo = $GLOBALS['pdo'] ?? null;
+    if (!$pdo instanceof PDO) return;
+    try {
+        $cat = eowmsMailCategory();
+        if (in_array($cat, ['otp', 'password'], true)) $subject = preg_replace('/\d{4,}/', '••••••', $subject);
+        $st = $pdo->prepare("SELECT id, organization_id FROM users WHERE email = ? ORDER BY is_active DESC LIMIT 1");
+        $st->execute([$addr]); $u = $st->fetch(PDO::FETCH_ASSOC) ?: [];
+        $orgId = $u['organization_id'] ?? null;
+        if (!$orgId && PHP_SAPI !== 'cli' && function_exists('activeOrgId')) { try { $orgId = activeOrgId() ?: null; } catch (Throwable $e) {} }
+        $by = null;
+        $src = PHP_SAPI === 'cli' ? 'cron:' . basename($_SERVER['argv'][0] ?? $_SERVER['SCRIPT_NAME'] ?? '') : (parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH) ?: '');
+        // Page उघडल्यावर पार्श्वभूमीत आपोआप जाणारे (उदा. दैनिक अहवाल) — ते "आपोआप", व्यक्तीने पाठवलेले नाहीत
+        if (preg_match('/autosend|cron/i', $src)) { $src = 'cron:' . basename($src); }
+        elseif (PHP_SAPI !== 'cli' && function_exists('currentUser')) { try { $cu = currentUser(); $by = $cu['id'] ?? null; } catch (Throwable $e) {} }
+        $pdo->prepare("INSERT INTO email_log (organization_id, to_email, to_user_id, subject, category, status, error_message, attachments, size_bytes, sent_by, source, sent_at)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,NOW())")
+            ->execute([$orgId, mb_substr($addr, 0, 190), $u['id'] ?? null, mb_substr($subject, 0, 255), $cat, $ok ? 'sent' : 'failed',
+                $err ? mb_substr($err, 0, 255) : null, (int)$attachCount, (int)$size, $by, mb_substr($src, 0, 120)]);
+        if (mt_rand(1, 300) === 1) { $pdo->exec("DELETE FROM email_log WHERE sent_at < NOW() - INTERVAL 365 DAY"); }
+    } catch (Throwable $e) {}
 }

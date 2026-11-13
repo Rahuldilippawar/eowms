@@ -208,7 +208,7 @@ function recyclePurgeOld(PDO $pdo) {
 
 /** Super Admin साधनांचा वरचा Nav (सगळ्या admin/ पानांवर) */
 function saNav($active) {
-    $items = ['index' => ['🛡️', 'Control Center'], 'sessions' => ['🔐', 'Active Sessions'], 'security' => ['🚨', 'सुरक्षा इशारे'],
+    $items = ['index' => ['🛡️', 'Control Center'], 'sessions' => ['🔐', 'Active Sessions'], 'security' => ['🚨', 'सुरक्षा इशारे'], 'email-log' => ['✉️', 'Email नोंद'],
         'broadcast' => ['📢', 'Broadcast'], 'usage' => ['📊', 'Module वापर'], 'data-quality' => ['🗂️', 'Data दर्जा'], 'recycle-bin' => ['🗑️', 'Recycle Bin'], 'view-as' => ['👁️', 'View as']];
     $h = '<div class="sa-nav">';
     foreach ($items as $k => [$i, $l]) { $h .= '<a href="' . $k . '.php" class="' . ($k === $active ? 'on' : '') . '">' . $i . ' ' . $l . '</a>'; }

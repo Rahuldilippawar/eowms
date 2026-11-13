@@ -447,6 +447,26 @@ CREATE TABLE cron_digest_log (
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
+-- ✉️ Email नोंद
+CREATE TABLE email_log (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  organization_id INT NULL,
+  to_email VARCHAR(190) NOT NULL,
+  to_user_id INT NULL,
+  subject VARCHAR(255) NOT NULL,
+  category VARCHAR(30) NOT NULL DEFAULT 'other',
+  status ENUM('sent','failed') NOT NULL,
+  error_message VARCHAR(255) NULL,
+  attachments INT NOT NULL DEFAULT 0,
+  size_bytes INT NOT NULL DEFAULT 0,
+  sent_by INT NULL,
+  source VARCHAR(120) NULL,
+  sent_at DATETIME NOT NULL,
+  INDEX idx_org_time (organization_id, sent_at),
+  INDEX idx_email (to_email),
+  INDEX idx_cat (category, sent_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- ---------------- Task Assignment ----------------
 CREATE TABLE tasks (
   id INT AUTO_INCREMENT PRIMARY KEY,
