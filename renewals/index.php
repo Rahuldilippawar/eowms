@@ -563,6 +563,11 @@ window.addEventListener('DOMContentLoaded', function () {
   .rn-more-menu{position:absolute;right:0;top:calc(100% + 6px);z-index:50;min-width:190px;background:var(--surface,#fff);border:1px solid var(--line);border-radius:12px;box-shadow:0 14px 30px -12px rgba(16,22,43,.25);padding:6px;}
   .rn-more-menu a{display:flex;gap:10px;align-items:center;padding:9px 12px;border-radius:8px;text-decoration:none;color:var(--text);font-size:13.5px;}
   .rn-more-menu a:hover{background:var(--canvas);} .rn-more-menu i{width:16px;color:var(--text-dim);}
+  @media (max-width:767.98px){
+    .rn-more[open] > summary::after{content:'';position:fixed;inset:0;background:rgba(10,14,30,.45);z-index:2990;}
+    .rn-more-menu{position:fixed;left:0;right:0;top:auto;bottom:0;z-index:3000;border-radius:18px 18px 0 0;padding:10px 10px calc(14px + env(safe-area-inset-bottom));min-width:0;}
+    .rn-more-menu a{padding:13px 14px;font-size:15px;}
+  }
   .rn-ana{background:var(--surface,#fff);border:1px solid var(--line);border-radius:14px;margin-bottom:12px;}
   .rn-ana > summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:11px 16px;}
   .rn-ana > summary::-webkit-details-marker{display:none;}
@@ -592,6 +597,13 @@ window.addEventListener('DOMContentLoaded', function () {
     .rn-list .rtable tr.rn-row td.rc-act .btn{padding:3px 10px !important;font-size:11.5px !important;}
   }
 </style>
+<script>
+(function () {   // '⋯ अधिक' — बाहेर टॅप / Esc ने बंद
+  var m = document.querySelector('.rn-more'); if (!m) return;
+  document.addEventListener('click', function (e) { if (m.open && !m.querySelector('.rn-more-menu').contains(e.target) && !m.querySelector('summary').contains(e.target)) m.open = false; });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') m.open = false; });
+})();
+</script>
 <script>
 (function () {   // 🔍 शोध · ↕ क्रम · 📊 Excel — दिसणाऱ्या नोंदींवर
   var q = document.getElementById('rnFind'), so = document.getElementById('rnSort'), cnt = document.getElementById('rnCount');
