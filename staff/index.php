@@ -6,7 +6,9 @@ require_once __DIR__ . '/../includes/header.php';
 // 5-Tier Access: स्वतःचा विभाग → अनेक विभाग → एक कॉलेज → अनेक कॉलेज →
 // संपूर्ण संस्था
 $visibleDeptIds = getVisibleDepartmentIdsForStaffTracking();
-$canSeeList = !($visibleDeptIds !== null && empty($visibleDeptIds));
+require_once __DIR__ . '/../includes/employee-report-access.php';
+$canSeeDetails = staffCanSeeColleagueDetails(); // 🔒 साधा कर्मचारी — सहकाऱ्यांचे Mobile/Email/यादी नाही
+$canSeeList = !($visibleDeptIds !== null && empty($visibleDeptIds)) && $canSeeDetails;
 $orgId = activeOrgId();
 
 // 🌳 Tree View (College/School → विभाग → कर्मचारी) — पूर्वीची "Trust Directory".
@@ -25,7 +27,7 @@ if ($staffView === 'tree') {
     $campusStmt->execute([$orgId]);
     $treeCampuses = $campusStmt->fetchAll();
 
-    $deptStmt = $pdo->prepare("SELECT d.id, d.campus_id, d.name, d.name_local, c.college_type FROM departments d LEFT JOIN campuses c ON c.id = d.campus_id WHERE d.organization_id = ? AND d.is_active = 1 ORDER BY d.name_local");
+    $deptStmt = $pdo->prepare("SELECT d.id, d.campus_id, d.name, d.name_local, d.hod_id, c.college_type FROM departments d LEFT JOIN campuses c ON c.id = d.campus_id WHERE d.organization_id = ? AND d.is_active = 1 ORDER BY d.name_local");
     $deptStmt->execute([$orgId]);
     $treeDepts = $deptStmt->fetchAll();
 
@@ -72,7 +74,7 @@ if ($staffView === 'tree') {
                       <span style="width:26px;height:26px;border-radius:50%;background:var(--rail);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;"><?= h(mb_substr($s['name'], 0, 2)) ?></span>
                       <span><?= h($s['name']) ?><?php if ($s['designation']): ?> <span style="color:#999;">— <?= h($s['designation']) ?></span><?php endif; ?>
                         <span style="color:#999;font-size:11px;"> · <?= h($deptName) ?></span>
-                        <?php if (!empty($s['mobile'])): ?> <a href="tel:<?= h($s['mobile']) ?>" style="color:var(--rail);font-size:11.5px;text-decoration:none;">📞 <?= h($s['mobile']) ?></a><?php endif; ?>
+                        <?php if (!empty($s['mobile']) && ($canSeeDetails || (int)$s['id'] === (int)$user['id'] || (int)$s['id'] === (int)($d['hod_id'] ?? 0))): ?> <a href="tel:<?= h($s['mobile']) ?>" style="color:var(--rail);font-size:11.5px;text-decoration:none;">📞 <?= h($s['mobile']) ?></a><?php endif; ?>
                       </span>
                     </div>
                   <?php endforeach; ?>
@@ -236,7 +238,7 @@ try {
 <div class="d-flex justify-content-between align-items-start mb-1">
   <div class="page-title mb-0"><?= h(t('s252')) ?></div>
   <div class="d-flex gap-2">
-    <a href="list-print.php" class="btn" style="border:1px solid var(--rail);color:var(--rail);border-radius:9px;font-size:13px;padding:9px 16px;font-weight:600;"><i class="fa-solid fa-print me-1"></i>यादी Print / PDF</a>
+    <?php if ($canSeeDetails): ?><a href="list-print.php" class="btn" style="border:1px solid var(--rail);color:var(--rail);border-radius:9px;font-size:13px;padding:9px 16px;font-weight:600;"><i class="fa-solid fa-print me-1"></i>यादी Print / PDF</a><?php endif; ?>
     <a href="employee-report.php" class="btn" style="border:1px solid var(--rail);color:var(--rail);border-radius:9px;font-size:13px;padding:9px 16px;font-weight:600;"><i class="fa-solid fa-file-lines me-1"></i>कर्मचारी अहवाल</a>
     <?php if (isManagementOrAbove() || hasRole('super_admin')): ?>
       <a href="id-cards-bulk.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13.5px;padding:9px 18px;"><i class="fa-solid fa-id-card me-1"></i>Bulk ID Cards</a>

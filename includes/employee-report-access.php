@@ -4,7 +4,9 @@
 //   विभाग प्रमुख (HOD Role, किंवा departments.hod_id म्हणून नेमलेले) — स्वतःचा/नेमलेला विभाग + Super Admin ने दिलेले Extra विभाग/Campus
 //   इतर कर्मचारी — फक्त स्वतःचा अहवाल
 function employeeReportVisibleDeptIds() {
-    global $pdo, $user;
+    global $pdo;
+    $user = currentUser(); // header.php नसलेल्या पानांतूनही (उदा. Print/PDF)
+    if (!$user) { return []; }
     if (hasRole('super_admin') || isManagementOrAbove() || hasPermission('view_staff_track_org_wide')) { return null; }
     $ids = [];
     if (hasAnyCategory(['hod']) && !empty($user['department_id'])) { $ids[] = (int)$user['department_id']; }
@@ -29,4 +31,22 @@ function employeeReportVisibleDeptIds() {
         }
     } catch (PDOException $e) {}
     return array_values(array_unique($ids));
+}
+
+/**
+ * 🔒 सहकाऱ्यांची खाजगी माहिती (Mobile, Email, पत्ता, जन्मतारीख, Profile, यादी Print) कोणाला दिसावी:
+ * विभाग प्रमुख, Campus प्रमुख, Management, Super Admin. साधा कर्मचारी — फक्त स्वतःची.
+ */
+function staffCanSeeColleagueDetails() {
+    global $pdo;
+    $user = currentUser();
+    if (!$user) return false;
+    static $ok = null;
+    if ($ok !== null) return $ok;
+    if (employeeReportVisibleDeptIds() !== []) return $ok = true;
+    require_once __DIR__ . '/campus-heads.php';
+    try {
+        if (!empty(campusHeadInfo($pdo, $user['id'])['central']) || campusHeadDepartmentIds($pdo, $user['id'])) return $ok = true;
+    } catch (Throwable $e) {}
+    return $ok = false;
 }

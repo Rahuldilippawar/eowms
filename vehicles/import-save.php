@@ -22,7 +22,7 @@ if (($_POST['action'] ?? '') === 'apply') {
         exit;
     }
     $rows = json_decode(file_get_contents($file), true) ?: [];
-    $opts = ['swap' => !empty($_POST['swap']), 'fallback_dept' => (int)($_POST['fallback_dept'] ?? 0), 'update' => !empty($_POST['update'])];
+    $opts = ['swap' => !empty($_POST['swap']), 'fallback_dept' => (int)($_POST['fallback_dept'] ?? 0), 'update' => !empty($_POST['update']), 'no_dept_ok' => !empty($_SESSION['vimport']['report'])];
     $res = vehImportAnalyse($pdo, $orgId, $rows, $opts);
     try {
         [$created, $updated, $renewals] = vehImportApply($pdo, $orgId, $res['items']);
@@ -59,6 +59,16 @@ try {
     header('Location: import.php');
     exit;
 }
+// परिवहन विभागाचा Report (दोन ओळींचं Header, From/To तारखा) जसाच्या तसा — Template मध्ये बदलतो; इतर Sheets मधून विमा खर्च
+$reportTitle = null;
+$others = [];
+try {
+    if (strtolower(pathinfo($up['name'], PATHINFO_EXTENSION)) === 'xlsx' || (string)@file_get_contents($up['tmp_name'], false, null, 0, 4) === "PK\x03\x04") {
+        $names = eowmsReadXlsx($up['tmp_name'], 'names');
+        for ($si = 1; $si < min(count($names), 8); $si++) { $others[] = eowmsReadXlsx($up['tmp_name'], $si); }
+    }
+} catch (Throwable $e) {}
+if ($conv = vehImportFromReport($rows, $others)) { $rows = $conv['rows']; $reportTitle = $conv['title']; }
 $rows = array_values(array_filter($rows, fn($r) => implode('', array_map(fn($c) => trim((string)$c), $r)) !== ''));
 if (count($rows) < 2) {
     $_SESSION['form_error'] = 'File मध्ये Header शिवाय एकही ओळ नाही.';
@@ -74,6 +84,6 @@ if (count($rows) > 2001) {
 foreach (glob($tmpDir . '/vimport-*.json') ?: [] as $old) { if (filemtime($old) < time() - 86400) { @unlink($old); } }
 $tok = bin2hex(random_bytes(16));
 file_put_contents($tmpDir . '/vimport-' . $tok . '.json', json_encode($rows, JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION));
-$_SESSION['vimport'] = ['token' => $tok, 'org' => $orgId, 'name' => mb_substr($up['name'], 0, 120), 'at' => time()];
+$_SESSION['vimport'] = ['token' => $tok, 'org' => $orgId, 'name' => mb_substr($up['name'], 0, 120), 'at' => time(), 'report' => $reportTitle !== null, 'hint' => mb_substr((string)$reportTitle, 0, 200)];
 header('Location: import.php?preview=1');
 exit;

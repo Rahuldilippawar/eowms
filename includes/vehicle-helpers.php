@@ -6,7 +6,7 @@
  * नसेल तर नवीन तयार करते — त्यामुळे वाहन पुन्हा Edit केलं तरी Duplicate
  * नोंदी तयार होत नाहीत).
  */
-function syncVehicleRenewals($pdo, $vehicleId, $orgId, $campusId, $departmentId, $vehicleNumber, $renewalDates) {
+function syncVehicleRenewals($pdo, $vehicleId, $orgId, $campusId, $departmentId, $vehicleNumber, $renewalDates, array $extra = []) {
     $labels = [
         'permit' => 'परमिट',
         'puc' => 'PUC (प्रदूषण प्रमाणपत्र)',
@@ -33,14 +33,18 @@ function syncVehicleRenewals($pdo, $vehicleId, $orgId, $campusId, $departmentId,
         }
 
         $itemName = "वाहन {$vehicleNumber} — {$label}";
+        $issued = $extra['issued'][$field] ?? null; $cost = $extra['cost'][$field] ?? null; // Import मधून — कधीपासून व खर्च (असेल तर)
         if ($existing) {
+            if ($issued || $cost) {
+                $pdo->prepare("UPDATE renewal_items SET issued_date = COALESCE(?, issued_date), renewal_cost = COALESCE(?, renewal_cost) WHERE id = ?")->execute([$issued, $cost, $existing['id']]);
+            }
             $pdo->prepare("UPDATE renewal_items SET expiry_date = ?, item_name = ?, campus_id = ?, department_id = ?, regulatory_body = 'RTO/Transport' WHERE id = ?")
                 ->execute([$expiryDate, $itemName, $campusId, $departmentId, $existing['id']]);
         } else {
             $pdo->prepare("
-                INSERT INTO renewal_items (organization_id, campus_id, department_id, vehicle_id, renewal_field, item_type, regulatory_body, item_name, expiry_date)
-                VALUES (?, ?, ?, ?, ?, 'वाहन नूतनीकरण', 'RTO/Transport', ?, ?)
-            ")->execute([$orgId, $campusId, $departmentId, $vehicleId, $field, $itemName, $expiryDate]);
+                INSERT INTO renewal_items (organization_id, campus_id, department_id, vehicle_id, renewal_field, item_type, regulatory_body, item_name, expiry_date, issued_date, renewal_cost)
+                VALUES (?, ?, ?, ?, ?, 'वाहन नूतनीकरण', 'RTO/Transport', ?, ?, ?, ?)
+            ")->execute([$orgId, $campusId, $departmentId, $vehicleId, $field, $itemName, $expiryDate, $issued, $cost]);
         }
     }
 }
