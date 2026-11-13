@@ -19,7 +19,8 @@ function eowmsReadSheet($path, $originalName) {
     return $rows;
 }
 
-function eowmsReadXlsx($path) {
+/** $sheetIdx = कितवी Sheet (0 = पहिली); 'names' दिल्यास Sheets ची नावं परत */
+function eowmsReadXlsx($path, $sheetIdx = 0) {
     if (!class_exists('ZipArchive')) { throw new RuntimeException('Server वर PHP Zip Extension नाही — CSV वापरा.'); }
     $zip = new ZipArchive();
     if ($zip->open($path) !== true) { throw new RuntimeException('Excel File उघडता आली नाही (बिघडलेली?).'); }
@@ -43,12 +44,19 @@ function eowmsReadXlsx($path) {
         }
     }
 
-    // पहिली Sheet — workbook rels वरून खरा मार्ग
-    $sheetPath = 'xl/worksheets/sheet1.xml';
+    // निवडलेली Sheet — workbook rels वरून खरा मार्ग
+    $sheetPath = 'xl/worksheets/sheet' . ((int)$sheetIdx + 1) . '.xml';
     $wb = $xml('xl/workbook.xml');
     $rels = $xml('xl/_rels/workbook.xml.rels');
-    if ($wb && $rels && isset($wb->sheets->sheet[0])) {
-        $rid = (string)$wb->sheets->sheet[0]->attributes('http://schemas.openxmlformats.org/officeDocument/2006/relationships')['id'];
+    if ($sheetIdx === 'names') {
+        $names = [];
+        if ($wb) { foreach ($wb->sheets->sheet as $sh) { $names[] = (string)$sh['name']; } }
+        $zip->close();
+        return $names;
+    }
+    $sheetIdx = (int)$sheetIdx;
+    if ($wb && $rels && isset($wb->sheets->sheet[$sheetIdx])) {
+        $rid = (string)$wb->sheets->sheet[$sheetIdx]->attributes('http://schemas.openxmlformats.org/officeDocument/2006/relationships')['id'];
         foreach ($rels->Relationship as $rel) {
             if ((string)$rel['Id'] === $rid) {
                 $target = ltrim((string)$rel['Target'], '/');

@@ -2317,4 +2317,11 @@ return [
     "व्यवसाय कर वेगळा) — हातात" => ["व्यवसाय कर अलग) — हाथ में", "professional tax separate) — in hand"],
     "सगळे जुळले" => ["सभी मिले", "All matched"],
     "साधी Sheet पण चालते — स्तंभ" => ["साधी Sheet भी चलती है — कॉलम", "A simple sheet works too — columns"],
+    "पण विम्याच्या नोंदीत जातो." => ["भी बीमा की प्रविष्टि में जाता है।", "also goes into the insurance record."],
+    "परिवहन" => ["परिवहन", "Transport"],
+    "परिवहन विभागाचा Report पण जसाच्या तसा चालतो" => ["परिवहन विभाग की Report भी जैसी है वैसी चलती है", "The transport department's report also works as-is"],
+    "विभाग Preview मध्ये निवडा. दुसऱ्या Sheet मधला" => ["विभाग Preview में चुनें। दूसरी Sheet का", "choose the department in Preview. The"],
+    "विभाग निवडलेला नाही — वरून विभाग निवडा" => ["विभाग नहीं चुना — ऊपर से विभाग चुनें", "No department selected — choose one above"],
+    "विमा खर्च" => ["बीमा खर्च", "Insurance cost"],
+    "ही सगळी वाहनं या विभागात" => ["ये सभी वाहन इस विभाग में", "All these vehicles go to this department"],
 ];

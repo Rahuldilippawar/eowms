@@ -88,7 +88,8 @@ function vehImportDetectSwap(array $rows, array $colIndex) {
 function vehImportAnalyse(PDO $pdo, $orgId, array $rows, array $opts) {
     $header = array_map(fn($h) => strtolower(trim((string)$h)), $rows[0] ?? []);
     $colIndex = array_flip($header);
-    $missing = array_values(array_diff(['department_name', 'vehicle_number'], $header));
+    // विभागाचा स्तंभ नसला तरी चालेल — Preview मध्ये निवडलेला विभाग (उदा. परिवहन) सगळ्यांना
+    $missing = array_values(array_diff(isset($colIndex['department_name']) || !empty($opts['fallback_dept']) || !empty($opts['no_dept_ok']) ? ['vehicle_number'] : ['department_name', 'vehicle_number'], $header));
     if ($missing) { return ['items' => [], 'missingCols' => $missing, 'colIndex' => $colIndex]; }
 
     $depts = $pdo->prepare("SELECT id, name_local, name, campus_id FROM departments WHERE organization_id = ? AND is_active = 1");
@@ -118,9 +119,9 @@ function vehImportAnalyse(PDO $pdo, $orgId, array $rows, array $opts) {
         $dept = $deptByName[mb_strtolower($deptName)] ?? null;
         if (!$dept && !empty($opts['fallback_dept']) && isset($deptById[$opts['fallback_dept']])) {
             $dept = $deptById[$opts['fallback_dept']];
-            $it['notes'][] = '"' . $deptName . '" विभाग सापडला नाही — "' . ($dept['name_local'] ?: $dept['name']) . '" मध्ये';
+            if ($deptName !== '') { $it['notes'][] = '"' . $deptName . '" विभाग सापडला नाही — "' . ($dept['name_local'] ?: $dept['name']) . '" मध्ये'; }
         }
-        if (!$dept) { $it['errors'][] = '"' . $deptName . '" हा विभाग सापडला नाही — वरून विभाग निवडा'; }
+        if (!$dept) { $it['errors'][] = $deptName !== '' ? '"' . $deptName . '" हा विभाग सापडला नाही — वरून विभाग निवडा' : 'विभाग निवडलेला नाही — वरून विभाग निवडा'; }
         $it['dept'] = $dept;
         $it['deptName'] = $dept ? ($dept['name_local'] ?: $dept['name']) : $deptName;
 
@@ -141,6 +142,17 @@ function vehImportAnalyse(PDO $pdo, $orgId, array $rows, array $opts) {
             $it['kinds'][$col] = $kind;
             if ($note) { $it['dateNotes'][$col] = $note; }
         }
+
+        // कागदपत्र कधीपासून (From) व विम्याचा खर्च — नूतनीकरण नोंदीत
+        $it['from'] = [];
+        foreach (array_keys(VEH_IMPORT_RENEWAL_COLS) as $short) {
+            if (!isset($colIndex[$short . '_from'])) continue;
+            [$fd] = vehImportDate($get($short . '_from'), !empty($opts['swap']));
+            if ($fd) { $it['from'][$short] = $fd; }
+        }
+        $ic = $get('insurance_cost');
+        $it['insCost'] = is_numeric($ic) && (float)$ic > 0 ? (float)$ic : null;
+        $rm = $str('remark'); if ($rm !== '') { $it['notes'][] = $rm; }
 
         $it['existing'] = $existing[$it['key']] ?? null;
         $it['action'] = $it['errors'] ? 'skip' : ($it['existing'] ? (!empty($opts['update']) ? 'update' : 'skip-existing') : 'create');
@@ -184,7 +196,8 @@ function vehImportApply(PDO $pdo, $orgId, array $items) {
             }
             $rd = [];
             foreach (VEH_IMPORT_RENEWAL_COLS as $short => $col) { $rd[$short] = $merged[$col] ?? null; if ($rd[$short]) { $renewals++; } }
-            syncVehicleRenewals($pdo, $vid, $orgId, $dept['campus_id'], $dept['id'], $it['number'], $rd);
+            syncVehicleRenewals($pdo, $vid, $orgId, $dept['campus_id'], $dept['id'], $it['number'], $rd,
+                ['issued' => $it['from'] ?? [], 'cost' => !empty($it['insCost']) ? ['insurance' => $it['insCost']] : []]);
         }
         $pdo->commit();
     } catch (Throwable $e) {
@@ -192,4 +205,76 @@ function vehImportApply(PDO $pdo, $orgId, array $items) {
         throw $e;
     }
     return [$created, $updated, $renewals];
+}
+
+/**
+ * 📄 परिवहन विभागाचा Report (Excel) जसाच्या तसा — "Sr.No | Vehical No | Type of Vehical | Seating Capacity | Engine No. | Chassis No. |
+ * Permit (From/To) | Insurance (From/To) | MV Tax | Green Tax | Fitness Certificate | PUC" — दोन ओळींचं Header.
+ * Template च्या स्वरूपात बदलतो (विभाग नाही — तो Preview मध्ये निवडायचा). इतर Sheets मधून "Insurance Cost" पण घेतो.
+ * परत: null (हा Report नाही) किंवा ['rows' => [header, ...], 'title' => शीर्षक-ओळ]
+ */
+function vehImportFromReport(array $rows, array $otherSheets = []) {
+    $norm = fn($v) => strtolower(trim(preg_replace('/\s+/', ' ', (string)$v)));
+    $hdr = null;
+    foreach (array_slice($rows, 0, 15, true) as $i => $r) {
+        $t = $norm(implode(' | ', $r));
+        if (preg_match('/vehi[c]?a?l(e)? ?no/', $t) && str_contains($t, 'type of vehi')) { $hdr = $i; break; }
+    }
+    if ($hdr === null) return null;
+    $h1 = array_map($norm, $rows[$hdr]);
+    $h2 = array_map($norm, $rows[$hdr + 1] ?? []);
+    $title = '';
+    for ($i = 0; $i < $hdr; $i++) { $t = trim(implode(' ', array_filter(array_map('strval', $rows[$i]), fn($v) => trim($v) !== ''))); if ($t !== '') { $title = $title ?: $t; } }
+    $find = function (array $words) use ($h1) { foreach ($h1 as $c => $h) { foreach ($words as $w) { if ($h !== '' && str_contains($h, $w)) return $c; } } return null; };
+    $col = ['vehicle_number' => $find(['vehical no', 'vehicle no', 'vehicle number', 'reg']), 'vehicle_type' => $find(['type of vehi']), 'passenger_capacity' => $find(['seating', 'capacity']),
+        'engine_no' => $find(['engine']), 'chassis_no' => $find(['chassis']), 'model' => $find(['model', 'make']), 'fuel_type' => $find(['fuel'])];
+    // कागदपत्र गट: शीर्षकाखाली From/To असे दोन स्तंभ (To नसेल तर एकच)
+    $docs = ['permit' => ['permit'], 'insurance' => ['insurance'], 'mv_tax' => ['mv tax', 'm.v. tax', 'motor vehicle tax'], 'green_tax' => ['green tax'], 'fitness' => ['fitness'], 'puc' => ['puc', 'pollution'], 'road_tax' => ['road tax']];
+    $docCol = [];
+    foreach ($docs as $k => $w) {
+        $c = $find($w); if ($c === null || ($k === 'insurance' && str_contains($h1[$c], 'cost'))) continue;
+        $from = $c; $to = null;
+        if (str_starts_with($h2[$c] ?? '', 'from') && str_starts_with($h2[$c + 1] ?? '', 'to')) { $to = $c + 1; } elseif (str_starts_with($h2[$c] ?? '', 'to')) { $to = $c; $from = null; } else { $to = $c; $from = null; }
+        $docCol[$k] = [$from, $to];
+    }
+    $costCol = $find(['insurance cost', 'premium']);
+    // इतर Sheets मधला विमा खर्च (वाहन क्रमांकानुसार)
+    $costs = [];
+    foreach ($otherSheets as $sh) {
+        foreach (array_slice($sh, 0, 10, true) as $i => $r) {
+            $hn = array_map($norm, $r);
+            $cc = null; $vc = null;
+            foreach ($hn as $c => $h) { if (str_contains($h, 'insurance cost') || $h === 'premium') $cc = $c; if (preg_match('/vehi[c]?a?l(e)? ?no/', $h)) $vc = $c; }
+            if ($cc === null || $vc === null) continue;
+            foreach (array_slice($sh, $i + 1) as $rr) {
+                $k = vehImportKey($rr[$vc] ?? ''); $v = $rr[$cc] ?? '';
+                if ($k !== '' && is_numeric($v) && (float)$v > 0) $costs[$k] = (float)$v;
+            }
+            break;
+        }
+    }
+    $out = [['department_name', 'vehicle_number', 'vehicle_type', 'model', 'passenger_capacity', 'engine_no', 'chassis_no', 'fuel_type',
+        'permit_validity', 'insurance_validity', 'mv_tax_validity', 'green_tax_validity', 'fitness_validity', 'puc_validity', 'road_tax_validity',
+        'permit_from', 'insurance_from', 'mv_tax_from', 'green_tax_from', 'fitness_from', 'puc_from', 'road_tax_from', 'insurance_cost', 'remark']];
+    $g = fn($r, $c) => $c === null ? '' : ($r[$c] ?? '');
+    foreach (array_slice($rows, $hdr + 2) as $r) {
+        $num = trim((string)$g($r, $col['vehicle_number']));
+        if ($num === '' || !preg_match('/[A-Za-z]{2}.*\d/', $num)) continue; // सही/तळटीप ओळी
+        $cap = $g($r, $col['passenger_capacity']);
+        $remark = is_numeric($cap) || trim((string)$cap) === '' ? '' : trim((string)$cap);
+        $line = ['', $num, trim((string)$g($r, $col['vehicle_type'])), trim((string)$g($r, $col['model'])), is_numeric($cap) ? $cap : '',
+            trim((string)$g($r, $col['engine_no'])), trim((string)$g($r, $col['chassis_no'])), trim((string)$g($r, $col['fuel_type']))];
+        $from = [];
+        foreach (['permit', 'insurance', 'mv_tax', 'green_tax', 'fitness', 'puc', 'road_tax'] as $k) {
+            [$fc, $tc] = $docCol[$k] ?? [null, null];
+            $tv = $g($r, $tc); $fv = $g($r, $fc);
+            // "To" रिकामं आणि "From" मध्येच मुदत/आजीवन लिहिलेली (उदा. 24 NOV.2037, One time tax) — तीच मुदत
+            if (trim((string)$tv) === '' && trim((string)$fv) !== '') { $tv = $fv; $fv = ''; }
+            $line[] = $tv; $from[] = $fv;
+        }
+        $key = vehImportKey($num);
+        $cost = $costCol !== null && is_numeric($g($r, $costCol)) ? (float)$g($r, $costCol) : ($costs[$key] ?? '');
+        $out[] = array_merge($line, $from, [$cost, $remark]);
+    }
+    return count($out) > 1 ? ['rows' => $out, 'title' => $title] : null;
 }

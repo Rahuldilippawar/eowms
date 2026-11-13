@@ -17,13 +17,20 @@ if (isset($_GET['preview']) && !empty($_SESSION['vimport']['token']) && (int)$_S
         $swap = isset($_GET['swap']) ? $_GET['swap'] === '1' : $detect['suggest'];
         $update = isset($_GET['update']) ? $_GET['update'] === '1' : true;
         $fallback = (int)($_GET['fallback_dept'] ?? 0);
-        $dStmt = $pdo->prepare("SELECT id, name_local, name FROM departments WHERE organization_id = ? AND is_active = 1 ORDER BY name_local");
+        $dStmt = $pdo->prepare("SELECT d.id, d.name_local, d.name, c.name campus FROM departments d LEFT JOIN campuses c ON c.id = d.campus_id WHERE d.organization_id = ? AND d.is_active = 1 ORDER BY c.name, d.name_local");
         $dStmt->execute([$orgId]);
         $departments = $dStmt->fetchAll();
-        if (!$fallback) { // वाहन/वाहतूक विभाग आपोआप सुचवतो
-            foreach ($departments as $d) { if (preg_match('/वाहन|वाहतूक|transport|vehicle/iu', ($d['name_local'] ?? '') . ' ' . $d['name'])) { $fallback = (int)$d['id']; break; } }
+        if (!$fallback) { // वाहन/वाहतूक/परिवहन विभाग आपोआप सुचवतो — Report च्या शीर्षकातलं ठिकाण (उदा. SHAHAPUR) ज्या Campus मध्ये, तो आधी
+            $hint = mb_strtolower((string)($_SESSION['vimport']['hint'] ?? ''));
+            $best = -1;
+            foreach ($departments as $d) {
+                if (!preg_match('/वाहन|वाहतूक|परिवहन|transport|vehicle/iu', ($d['name_local'] ?? '') . ' ' . $d['name'])) continue;
+                $score = 0;
+                foreach (preg_split('/[^\p{L}\p{N}]+/u', mb_strtolower((string)$d['campus'])) as $w) { if (mb_strlen($w) > 3 && $hint !== '' && str_contains($hint, $w)) $score++; }
+                if ($score > $best) { $best = $score; $fallback = (int)$d['id']; }
+            }
         }
-        $res = vehImportAnalyse($pdo, $orgId, $rows, ['swap' => $swap, 'fallback_dept' => $fallback, 'update' => $update]);
+        $res = vehImportAnalyse($pdo, $orgId, $rows, ['swap' => $swap, 'fallback_dept' => $fallback, 'update' => $update, 'no_dept_ok' => !empty($_SESSION['vimport']['report'])]);
         $preview = compact('rows', 'detect', 'swap', 'update', 'fallback', 'departments', 'res');
     }
 }
@@ -100,10 +107,10 @@ $soon = date('Y-m-d', strtotime('+30 days'));
         </div>
         <div class="col-lg-4">
           <div class="vi-opt" style="flex-direction:column;gap:6px;">
-            <b>File मधला विभाग सापडला नाही तर हा विभाग वापरा</b>
+            <b><?= !empty($_SESSION['vimport']['report']) ? 'ही सगळी वाहनं या विभागात' : 'File मधला विभाग सापडला नाही तर हा विभाग वापरा' ?></b>
             <select class="form-select-custom" onchange="location.href='<?= h($qs(['fallback_dept' => ''])) ?>'.replace('fallback_dept=', 'fallback_dept=' + this.value)">
               <option value="0">— निवडा —</option>
-              <?php foreach ($preview['departments'] as $d): ?><option value="<?= (int)$d['id'] ?>" <?= $preview['fallback'] === (int)$d['id'] ? 'selected' : '' ?>><?= h($d['name_local'] ?: $d['name']) ?></option><?php endforeach; ?>
+              <?php foreach ($preview['departments'] as $d): ?><option value="<?= (int)$d['id'] ?>" <?= $preview['fallback'] === (int)$d['id'] ? 'selected' : '' ?>><?= h(($d['name_local'] ?: $d['name']) . ($d['campus'] ? ' — ' . $d['campus'] : ' — ट्रस्ट')) ?></option><?php endforeach; ?>
             </select>
           </div>
         </div>
@@ -112,7 +119,7 @@ $soon = date('Y-m-d', strtotime('+30 days'));
     <div style="overflow-x:auto;">
       <table class="rtable vi-table">
         <thead><tr><th>#</th><th>स्थिती</th><th>वाहन क्र.</th><th>प्रकार / Model</th><th>क्षमता</th><th>इंधन</th><th>विभाग</th>
-          <?php foreach ($colLabel as $col => $lbl): if (isset($preview['res']['colIndex'][$col])): ?><th><?= h($lbl) ?></th><?php endif; endforeach; ?><th>सूचना</th></tr></thead>
+          <?php foreach ($colLabel as $col => $lbl): if (isset($preview['res']['colIndex'][$col])): ?><th><?= h($lbl) ?></th><?php endif; endforeach; ?><?php if (isset($preview['res']['colIndex']['insurance_cost'])): ?><th>विमा खर्च</th><?php endif; ?><th>सूचना</th></tr></thead>
         <tbody>
         <?php foreach ($items as $it): ?>
           <tr>
@@ -130,6 +137,7 @@ $soon = date('Y-m-d', strtotime('+30 days'));
                 <?php elseif ($kind === 'bad'): ?><span class="vi-d exp" title="<?= h($note) ?>">? ⓘ</span>
                 <?php else: ?><span style="color:var(--text-dim);">—</span><?php endif; ?></td>
             <?php endforeach; ?>
+            <?php if (isset($preview['res']['colIndex']['insurance_cost'])): ?><td class="font-mono"><?= !empty($it['insCost']) ? '₹' . number_format($it['insCost']) : '—' ?></td><?php endif; ?>
             <td style="white-space:normal;min-width:220px;font-size:11.5px;">
               <?php foreach ($it['errors'] as $e): ?><div style="color:var(--rose);">✗ <?= h($e) ?></div><?php endforeach; ?>
               <?php foreach ($it['notes'] as $e): ?><div style="color:var(--text-dim);">• <?= h($e) ?></div><?php endforeach; ?>
@@ -160,7 +168,7 @@ $soon = date('Y-m-d', strtotime('+30 days'));
     <div class="panel">
       <div class="panel-head"><div class="title"><?= $preview ? 'दुसरी File निवडा' : 'Excel / CSV फाईल अपलोड करा' ?></div></div>
       <form method="POST" action="import-save.php" enctype="multipart/form-data" style="padding:22px 24px;">
-        <div class="upload-box mb-3"><input type="file" name="csv_file" accept=".xlsx,.csv,.txt" required style="width:100%;"></div>
+        <div class="upload-box mb-3"><input type="file" name="csv_file" accept=".xlsx,.xls,.csv,.txt" required style="width:100%;"></div>
         <button type="submit" class="btn" style="background:var(--rail);color:#fff;border-radius:9px;font-size:13.5px;padding:9px 20px;font-weight:600;">
           <i class="fa-solid fa-magnifying-glass me-1"></i>तपासा (Preview)
         </button>
@@ -175,6 +183,7 @@ $soon = date('Y-m-d', strtotime('+30 days'));
         <ul style="font-size:11.5px;color:var(--text-dim);padding-left:16px;line-height:1.7;">
           <li>Columns: <span class="font-mono">department_name, vehicle_number, vehicle_type, model, date_of_registration, chassis_no, engine_no, vehicle_class, passenger_capacity, fuel_type, permit_validity, puc_validity, insurance_validity, fitness_validity, road_tax_validity, green_tax_validity, mv_tax_validity</span></li>
           <li><span class="font-mono">department_name, vehicle_number</span> — अनिवार्य (बाकी Columns नसले तरी चालतात)</li>
+          <li>📄 <b>परिवहन विभागाचा Report पण जसाच्या तसा चालतो</b> — <i>Sr.No, Vehical No, Type of Vehical, Seating Capacity, Engine No., Chassis No., Permit / Insurance / MV Tax / Green Tax / Fitness / PUC (From–To)</i>; विभाग Preview मध्ये निवडा. दुसऱ्या Sheet मधला <i>Insurance Cost</i> पण विम्याच्या नोंदीत जातो.</li>
           <li>तारखा कोणत्याही पद्धतीने: <b>25/11/2022</b>, <b>24 Nov 2037</b>, <b>2027-02-04</b> किंवा Excel ची तारीख. <b>NA</b> / रिकामं = लागू नाही; <b>LTT / One time tax</b> = आजीवन</li>
           <li><span class="font-mono">fuel_type</span> — Petrol / Diesel / CNG / Electric (Petrol/CNG → CNG)</li>
           <li>वाहन क्रमांक जागा/रेषा वगळून जुळवतो — <span class="font-mono">MH-17 AG-3785</span> = <span class="font-mono">MH17AG3785</span></li>
