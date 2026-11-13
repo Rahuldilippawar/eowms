@@ -149,10 +149,67 @@ if ($staffMember['role'] !== 'super_admin' && superAdminExistsOtherThan($pdo, (i
         <label class="form-label-custom"><?= h(t('s284')) ?></label>
         <input type="text" name="new_password" class="form-control-custom" placeholder="••••••">
       </div>
+      <?php require_once __DIR__ . '/../includes/salary-helpers.php';
+      if (salaryReady($pdo)):
+        $salCur = salaryCurrent($pdo, activeOrgId(), [$staffId])[$staffId] ?? null;
+        $sv = fn($k) => $salCur ? (float)$salCur[$k] : ($k === 'gross' ? (float)$staffMember['salary'] : 0);
+        $sf = fn($k) => $salCur ? !empty($salCur[$k]) : !empty($staffMember[$k]); ?>
+      <div class="col-12" id="salary">
+        <div style="border:1px solid var(--line);border-radius:12px;padding:14px 16px;">
+          <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px;">
+            <b style="font-size:13.5px;">💰 पगार रचना <span style="font-weight:400;font-size:11.5px;color:var(--text-dim);">— 🔒 फक्त Management ला दिसेल</span></b>
+            <span style="font-size:11.5px;color:var(--text-dim);"><?= $salCur ? 'लागू: ' . date('d/m/Y', strtotime($salCur['effective_from'])) . ($salCur['source'] === 'import' ? ' · Excel आयात' : '') : 'अजून रचना नाही' ?></span>
+          </div>
+          <input type="hidden" name="salary" id="salGross" value="<?= h($staffMember['salary']) ?>">
+          <input type="hidden" name="sal_struct" value="1">
+          <div class="row g-2">
+            <?php foreach (['basic' => 'Basic', 'hra' => 'HRA', 'ta' => 'प्रवास भत्ता (TA)', 'medical' => 'वैद्यकीय भत्ता', 'other_allow' => 'इतर भत्ता'] as $k => $l): ?>
+              <div class="col-6 col-md"><label class="form-label-custom" style="font-size:11.5px;"><?= h($l) ?></label><input type="number" step="0.01" min="0" name="sal_<?= $k ?>" class="form-control-custom sal-part" value="<?= $sv($k) ? h((string)round($sv($k), 2)) : '' ?>"></div>
+            <?php endforeach; ?>
+            <div class="col-6 col-md"><label class="form-label-custom" style="font-size:11.5px;">एकूण (Gross)</label><input type="number" step="0.01" min="0" id="salTotal" class="form-control-custom" style="font-weight:700;" value="<?= $sv('gross') ? h((string)round($sv('gross'), 2)) : '' ?>"></div>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center;margin-top:10px;font-size:12.5px;">
+            <a href="#" id="salSplit" style="color:var(--rail);font-weight:600;text-decoration:none;">⚡ एकूण वरून आपोआप वाटणी (60/15/15/10)</a>
+            <label><input type="checkbox" name="sal_pf" value="1" <?= $sf('pf_applicable') ? 'checked' : '' ?>> PF</label>
+            <label><input type="checkbox" name="sal_esic" value="1" <?= $sf('esic_applicable') ? 'checked' : '' ?>> ESIC</label>
+            <label><input type="checkbox" name="sal_pt" value="1" <?= !$salCur || !empty($salCur['pt_applicable']) ? 'checked' : '' ?>> व्यवसाय कर</label>
+            <label><input type="checkbox" name="sal_hc" value="1" <?= $sf('is_handicap') ? 'checked' : '' ?>> दिव्यांग</label>
+            <span class="ms-auto">कधीपासून <input type="date" name="sal_from" value="<?= date('Y-m-01') ?>" style="border:1px solid var(--line);border-radius:7px;padding:3px 6px;"></span>
+          </div>
+          <div id="salNet" style="font-size:12px;color:var(--text-dim);margin-top:6px;"></div>
+        </div>
+      </div>
+      <script>
+      (function () {
+        var parts = document.querySelectorAll('.sal-part'), tot = document.getElementById('salTotal'), hid = document.getElementById('salGross'), net = document.getElementById('salNet');
+        var g = function (n) { var e = document.querySelector('[name="' + n + '"]'); return e ? parseFloat(e.value) || 0 : 0; };
+        function calc() {
+          var sum = 0; parts.forEach(function (p) { sum += parseFloat(p.value) || 0; });
+          if (sum > 0) tot.value = Math.round(sum * 100) / 100;
+          var G = parseFloat(tot.value) || 0, B = g('sal_basic') || G; hid.value = G || '';
+          var pf = document.querySelector('[name=sal_pf]').checked ? Math.round(Math.min(B, 15000) * .12) : 0;
+          var es = document.querySelector('[name=sal_esic]').checked && G <= 21000 ? Math.ceil(G * .0075) : 0;
+          net.textContent = G ? 'अंदाजे कपात: PF ₹' + pf + ' · ESIC ₹' + es + ' · (व्यवसाय कर वेगळा) — हातात ≈ ₹' + Math.round(G - pf - es).toLocaleString('en-IN') : '';
+        }
+        parts.forEach(function (p) { p.addEventListener('input', calc); });
+        document.querySelectorAll('[name=sal_pf],[name=sal_esic]').forEach(function (c) { c.addEventListener('change', calc); });
+        tot.addEventListener('input', function () { hid.value = tot.value; calc(); });
+        document.getElementById('salSplit').addEventListener('click', function (e) {
+          e.preventDefault(); var G = parseFloat(tot.value) || 0; if (!G) { tot.focus(); return; }
+          var r = { basic: .6, hra: .15, ta: .15, medical: .1 }, s = 0;
+          Object.keys(r).forEach(function (k) { var v = Math.round(G * r[k] * 100) / 100; document.querySelector('[name=sal_' + k + ']').value = v; s += v; });
+          var b = document.querySelector('[name=sal_basic]'); b.value = Math.round((parseFloat(b.value) + G - s) * 100) / 100;
+          document.querySelector('[name=sal_other_allow]').value = ''; calc();
+        });
+        calc();
+      })();
+      </script>
+      <?php else: ?>
       <div class="col-md-4">
         <label class="form-label-custom">पगार (₹) — फक्त Management ला दिसेल</label>
         <input type="number" step="0.01" name="salary" class="form-control-custom" value="<?= h($staffMember['salary']) ?>">
       </div>
+      <?php endif; ?>
       <?php if (hasRole('super_admin')): ?>
       <div class="col-12">
         <label style="display:flex;align-items:center;gap:10px;background:var(--rail-soft);border-radius:10px;padding:12px 16px;cursor:pointer;">

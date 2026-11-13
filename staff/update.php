@@ -149,6 +149,27 @@ if ($newPassword !== '') {
 }
 staffExtraSave($pdo, $id, $extraF); // 🪪 ओळख, बँक, पत्ता, कर्मचारी क्रमांक
 
+// 💰 पगार रचना — बदल असेल तरच नवीन नोंद (कधीपासून तारखेसह; इतिहास राहतो)
+if (!empty($_POST['sal_struct'])) {
+    require_once __DIR__ . '/../includes/salary-helpers.php';
+    $sp = fn($k) => max(0, (float)($_POST['sal_' . $k] ?? 0));
+    $salRow = ['basic' => $sp('basic'), 'hra' => $sp('hra'), 'ta' => $sp('ta'), 'medical' => $sp('medical'), 'other_allow' => $sp('other_allow'),
+        'gross' => (float)($salary ?? 0), 'pf_applicable' => !empty($_POST['sal_pf']), 'esic_applicable' => !empty($_POST['sal_esic']),
+        'pt_applicable' => !empty($_POST['sal_pt']), 'is_handicap' => !empty($_POST['sal_hc'])];
+    $partsSum = $salRow['basic'] + $salRow['hra'] + $salRow['ta'] + $salRow['medical'] + $salRow['other_allow'];
+    if ($partsSum > 0) { $salRow['gross'] = $partsSum; }
+    elseif ($salRow['gross'] > 0) { $salRow['basic'] = $salRow['gross']; }
+    if (salaryReady($pdo) && $salRow['gross'] > 0) {
+        $salFrom = preg_match('/^\d{4}-\d{2}-\d{2}$/', $_POST['sal_from'] ?? '') ? $_POST['sal_from'] : date('Y-m-01');
+        if ($salFrom > date('Y-m-d')) { // पुढच्या तारखेपासून — आजचा पगार तसाच राहू द्या
+            $pdo->prepare("UPDATE users SET salary = ? WHERE id = ?")->execute([$targetRow['salary'], $id]);
+        }
+        if (salarySave($pdo, activeOrgId(), $id, $salRow, $salFrom, 'manual', $user['id'] ?? null) !== 'same') {
+            logActivity('पगार रचना बदलली', 'user', $id, $name . ' — ₹' . number_format($salRow['gross']) . ' (लागू ' . $salFrom . ')');
+        }
+    }
+}
+
 logActivity('कर्मचारी संपादित केला', 'user', $id, "$name — role: $role, active: $isActive");
 
 // 🖐️ Biometric PIN — बदलला / सक्रिय-निष्क्रिय / "पुन्हा पाठवा" तर सगळ्या चालू Machines वर आपोआप
