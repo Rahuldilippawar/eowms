@@ -194,27 +194,22 @@ if ($showGrouped) {
 <div class="page-eyebrow"><?= h(activeOrgName()) ?></div>
 <div class="d-flex justify-content-between align-items-start mb-1">
   <div class="page-title mb-0"><?= h(t('s67')) ?></div>
-  <div class="d-flex gap-2">
-    <a href="calendar.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13.5px;padding:9px 18px;">
-      <i class="fa-solid fa-calendar-days me-1"></i>Calendar
-    </a>
-    <a href="cost-analysis.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13.5px;padding:9px 18px;">
-      <i class="fa-solid fa-money-bill-trend-up me-1"></i>खर्च-कल
-    </a>
-    <a href="import.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13.5px;padding:9px 18px;">
-      <i class="fa-solid fa-file-import me-1"></i>Import
-    </a>
-    <?php if (hasRole('super_admin')): ?>
-    <a href="clear-vehicles.php" class="btn" title="नूतनीकरणातून सर्व वाहनांच्या नोंदी हटवा" style="border:1px solid var(--rose);color:var(--rose);border-radius:9px;font-size:13.5px;padding:9px 14px;">
-      <i class="fa-solid fa-car-burst me-1"></i>वाहन नोंदी हटवा
-    </a>
-    <?php endif; ?>
-    <a href="report.php<?= $filterDeptId ? '?department_id=' . h($filterDeptId) : '' ?>" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13.5px;padding:9px 18px;">
-      <i class="fa-solid fa-chart-column me-1"></i>अहवाल
-    </a>
-    <a href="create.php" class="btn" style="background:var(--rail);color:#fff;border-radius:9px;font-size:13.5px;padding:9px 20px;font-weight:600;">
+  <div class="d-flex gap-2 align-items-center rn-actions">
+    <a href="create.php" class="btn" style="background:var(--rail);color:#fff;border-radius:9px;font-size:13.5px;padding:9px 18px;font-weight:600;white-space:nowrap;">
       <i class="fa-solid fa-plus me-1"></i>नवीन नोंद
     </a>
+    <details class="rn-more">
+      <summary title="अधिक"><i class="fa-solid fa-ellipsis"></i> अधिक</summary>
+      <div class="rn-more-menu">
+        <a href="calendar.php"><i class="fa-solid fa-calendar-days"></i> Calendar</a>
+        <a href="cost-analysis.php"><i class="fa-solid fa-money-bill-trend-up"></i> खर्च-कल</a>
+        <a href="report.php<?= $filterDeptId ? '?department_id=' . h($filterDeptId) : '' ?>"><i class="fa-solid fa-chart-column"></i> अहवाल</a>
+        <a href="import.php"><i class="fa-solid fa-file-import"></i> Import</a>
+        <?php if (hasRole('super_admin')): ?>
+        <a href="clear-vehicles.php" style="color:var(--rose);" title="नूतनीकरणातून सर्व वाहनांच्या नोंदी हटवा"><i class="fa-solid fa-car-burst"></i> वाहन नोंदी हटवा</a>
+        <?php endif; ?>
+      </div>
+    </details>
   </div>
 </div>
 
@@ -231,13 +226,12 @@ if ($showGrouped) {
 <div class="rn-hero">
   <div class="rn-ring" style="--p:<?= (int)$compliancePct ?>;--c:<?= $compliancePct >= 95 ? '#4ADE80' : ($compliancePct >= 80 ? '#FBBF24' : '#F87171') ?>;"><span><b><?= (int)$compliancePct ?>%</b><small>Compliance</small></span></div>
   <div class="rn-hk">
-    <div class="rn-k"><div class="v"><?= $countAll ?></div><div class="l">एकूण नोंदी</div></div>
+    <div class="rn-k"><div class="v"><?= $countAll ?></div><div class="l">एकूण</div></div>
     <div class="rn-k"><div class="v" style="color:#86EFAC;"><?= $countHealthy ?></div><div class="l">सुस्थितीत</div></div>
-    <div class="rn-k"><div class="v" style="color:#FCD34D;"><?= (int)($buckets['n30'] ?? 0) ?></div><div class="l">30 दिवसांत संपणार</div></div>
-    <div class="rn-k"><div class="v" style="color:#FCA5A5;"><?= $countExpired ?></div><div class="l">मुदत संपली</div></div>
-    <div class="rn-k"><div class="v">₹<?= number_format((float)($buckets['cost30'] ?? 0)) ?></div><div class="l">30 दिवसांचा खर्च</div></div>
-    <?php if (($buckets['no_doc'] ?? null) !== null && $buckets['no_doc'] > 0): ?><div class="rn-k"><div class="v" style="color:#C4B5FD;"><?= (int)$buckets['no_doc'] ?></div><div class="l">प्रमाणपत्र नाही</div></div><?php endif; ?>
+    <div class="rn-k"><div class="v" style="color:#FCD34D;"><?= (int)($buckets['n30'] ?? 0) ?></div><div class="l">30 दिवसांत</div></div>
+    <div class="rn-k"><div class="v" style="color:#FCA5A5;"><?= $countExpired ?></div><div class="l">संपली</div></div>
   </div>
+  <div class="rn-hsub">💰 30 दिवसांचा खर्च <b>₹<?= number_format((float)($buckets['cost30'] ?? 0)) ?></b><?php if (($buckets['no_doc'] ?? null) !== null && $buckets['no_doc'] > 0): ?> · 📄 प्रमाणपत्र नाही <b><?= (int)$buckets['no_doc'] ?></b><?php endif; ?></div>
 </div>
 <?php if ($insight): ?><div class="rn-tip <?= $insight[1] ?>"><span><?= $insight[0] ?></span><div><b>स्मार्ट निष्कर्ष:</b> <?= h($insight[2]) ?></div></div><?php endif; ?>
 
@@ -254,6 +248,10 @@ if ($showGrouped) {
 </div>
 <?php endif; ?>
 
+<?php if ($countAll > 0 || $typeCounts || $riskDepts || !empty($regBodyOverview)): ?>
+<details class="rn-ana" id="rnAna">
+  <summary><span>📊 विश्लेषण</span><small>प्रकारनिहाय · जोखमीचे विभाग · शासकीय Compliance · 12 महिन्यांचा खर्च-अंदाज</small><i class="fa-solid fa-chevron-down"></i></summary>
+  <div class="rn-ana-body">
 <?php if ($typeCounts || $riskDepts): ?>
 <div class="row g-3 mb-3">
   <?php if ($typeCounts): ?>
@@ -306,14 +304,7 @@ if ($showGrouped) {
 
 <?php if ($countAll > 0): ?>
 <div class="row g-3 mt-2 mb-1">
-  <div class="col-lg-4">
-    <div class="panel h-100">
-      <div class="panel-head d-flex justify-content-between align-items-center"><div class="title">नूतनीकरण स्थिती</div>
-        <?php if ($compliancePct !== null): ?><span class="rn-compliance <?= $compliancePct >= 95 ? 'ok' : ($compliancePct >= 80 ? 'warn' : 'bad') ?>" title="मुदत न संपलेल्या नोंदींचं प्रमाण">Compliance <?= $compliancePct ?>%</span><?php endif; ?></div>
-      <div style="padding:16px 18px;"><canvas id="renewalStatusChart" height="130"></canvas></div>
-    </div>
-  </div>
-  <div class="col-lg-8">
+  <div class="col-12">
     <div class="panel h-100">
       <div class="panel-head d-flex justify-content-between align-items-center flex-wrap gap-2">
         <div><div class="title">💰 पुढील १२ महिन्यांचा नूतनीकरण-खर्च अंदाज</div><div class="sub">कोणत्या महिन्यात किती रक्कम लागेल — आधीच Budget ठरवा</div></div>
@@ -322,6 +313,14 @@ if ($showGrouped) {
       <div style="padding:12px 18px;height:220px;position:relative;"><canvas id="renewalForecastChart"></canvas></div>
     </div>
   </div>
+  </div><?php // row (खर्च-अंदाज) ?>
+<?php endif; ?>
+  </div>
+</details>
+<?php endif; ?>
+
+<?php if ($countAll > 0 && $actionItems): ?>
+<div class="row g-3 mb-2">
   <?php if ($actionItems): ?>
   <div class="col-12">
     <div class="panel" style="border-left:4px solid var(--rose);">
@@ -339,9 +338,13 @@ if ($showGrouped) {
   </div>
   <?php endif; ?>
 </div>
+<?php endif; ?>
+<?php if ($countAll > 0): ?>
 <script>
 window.addEventListener('DOMContentLoaded', function () {
   if (typeof Chart === 'undefined') return;
+  var ana = document.getElementById('rnAna'), drawn = false;
+  function draw() { if (drawn || !ana || !ana.open) return; drawn = true;
   var fc = <?= json_encode(array_values($forecast), JSON_UNESCAPED_UNICODE) ?>;
   var dim = getComputedStyle(document.documentElement).getPropertyValue('--text-dim').trim() || '#6B7080';
   var line = getComputedStyle(document.documentElement).getPropertyValue('--line').trim() || '#E4E6EC';
@@ -352,6 +355,11 @@ window.addEventListener('DOMContentLoaded', function () {
       plugins: { legend: { display: false }, tooltip: { callbacks: { label: function (c) { return ' ₹' + c.raw.toLocaleString('en-IN') + ' · ' + fc[c.dataIndex].cnt + ' नोंदी'; } } } },
       scales: { x: { grid: { display: false }, ticks: { color: dim, font: { size: 10.5 } } }, y: { beginAtZero: true, ticks: { color: dim, callback: function (v) { return '₹' + Number(v).toLocaleString('en-IN'); } }, grid: { color: line } } } }
   });
+  }
+  // 📊 विश्लेषण उघडं/बंद — लक्षात ठेवा; उघडल्यावरच Chart काढा
+  try { if (localStorage.getItem('rnAnaOpen') === '1') ana.open = true; } catch (e) {}
+  ana.addEventListener('toggle', function () { try { localStorage.setItem('rnAnaOpen', ana.open ? '1' : '0'); } catch (e) {} draw(); });
+  draw();
 });
 </script>
 <?php endif; ?>
@@ -433,7 +441,7 @@ window.addEventListener('DOMContentLoaded', function () {
 <?php endif; ?>
 
 <?php foreach ($sections as $section): if ($showGrouped && empty($section['items'])) continue; ?>
-<div class="panel <?= $showGrouped ? 'mb-3' : '' ?>">
+<div class="panel rn-list <?= $showGrouped ? 'mb-3' : '' ?>">
   <?php if ($section['title']): ?>
     <div class="panel-head"><div class="title">🏢 <?= h($section['title']) ?></div><div class="sub"><?= count($section['items']) ?> नोंदी</div></div>
   <?php endif; ?>
@@ -453,7 +461,7 @@ window.addEventListener('DOMContentLoaded', function () {
         $chip = $statusInfo['chip'];
       ?>
         <tr class="rn-row" data-days="<?= $days ?>" data-name="<?= h(mb_strtolower($item['item_name'])) ?>" data-dept="<?= h($item['dept_name'] ?: $item['dept_name_en']) ?>" data-type="<?= h($item['item_type']) ?>" data-exp="<?= h($item['expiry_date']) ?>" data-ref="<?= h((string)$item['reference_no']) ?>" data-vendor="<?= h((string)$item['vendor_name']) ?>" data-cost="<?= h((string)$item['renewal_cost']) ?>" data-status="<?= h($statusInfo['label']) ?>">
-          <td style="font-weight:500;">
+          <td class="rc-name" style="font-weight:500;">
             <?= h($item['item_name']) ?>
             <?php if ($item['regulatory_body']): ?>
               <span style="font-size:9.5px;background:var(--rail-soft);color:var(--rail);padding:1px 7px;border-radius:6px;font-weight:700;margin-left:4px;">🏛️ <?= h($item['regulatory_body']) ?></span>
@@ -471,14 +479,14 @@ window.addEventListener('DOMContentLoaded', function () {
               </div>
             <?php endif; ?>
           </td>
-          <td><span style="background:var(--canvas);border-radius:7px;padding:3px 10px;font-size:11.5px;font-weight:600;white-space:nowrap;"><?= renewalTypeIcon($item['item_type']) ?> <?= h($item['item_type']) ?></span></td>
-          <?php if (!$showGrouped): ?><td><?= h($item['dept_name'] ?: $item['dept_name_en']) ?></td><?php endif; ?>
-          <td class="font-mono"><?= h($item['reference_no'] ?: '—') ?></td>
-          <td class="font-mono"><?= date('d M Y', strtotime($item['expiry_date'])) ?></td>
-          <td><span class="font-mono" style="font-weight:600;color:var(--<?= $color ?>);"><?= h($label) ?></span>
+          <td class="rc-type"><span style="background:var(--canvas);border-radius:7px;padding:3px 10px;font-size:11.5px;font-weight:600;white-space:nowrap;"><?= renewalTypeIcon($item['item_type']) ?> <?= h($item['item_type']) ?></span></td>
+          <?php if (!$showGrouped): ?><td class="rc-dept"><?= h($item['dept_name'] ?: $item['dept_name_en']) ?></td><?php endif; ?>
+          <td class="font-mono rc-ref <?= $item['reference_no'] ? '' : 'rc-none' ?>"><?= h($item['reference_no'] ?: '—') ?></td>
+          <td class="font-mono rc-exp"><?= date('d M Y', strtotime($item['expiry_date'])) ?></td>
+          <td class="rc-days"><span class="font-mono" style="font-weight:600;color:var(--<?= $color ?>);"><?= h($label) ?></span>
             <div class="rn-life" title="उरलेली मुदत"><i style="width:<?= $days < 0 ? 100 : max(4, min(100, (int)round(100 - $days / 3.65))) ?>%;background:var(--<?= $color ?>);"></i></div></td>
-          <td><span class="status-chip <?= $chip ?>"><?= h($statusInfo['label']) ?></span></td>
-          <td>
+          <td class="rc-st"><span class="status-chip <?= $chip ?>"><?= h($statusInfo['label']) ?></span></td>
+          <td class="rc-act">
             <button type="button" class="btn btn-sm" style="border:1px solid var(--line);border-radius:7px;font-size:12px;padding:5px 12px;"
               data-bs-toggle="modal" data-bs-target="#renewModal<?= $item['id'] ?>"><?= h(t('s165')) ?></button>
             <a href="edit.php?id=<?= $item['id'] ?>" style="font-size:11px;color:var(--text-dim);margin-left:4px;" title="संपादित करा / प्रमाणपत्र"><i class="fa-solid fa-pen"></i></a>
@@ -519,28 +527,7 @@ window.addEventListener('DOMContentLoaded', function () {
 </div>
 <?php endforeach; ?>
 
-<?php if ($countAll > 0): ?>
-<script>
-window.addEventListener('DOMContentLoaded', function () {
-if (typeof Chart === 'undefined') return;   // Chart.js Load झाला नाही (Network) — पान चालू राहावं
-new Chart(document.getElementById('renewalStatusChart'), {
-  type: 'doughnut',
-  data: {
-    labels: ['सुस्थितीत', 'लवकरच', 'मुदत संपली'],
-    datasets: [{
-      data: [<?= $countHealthy ?>, <?= $countDue ?>, <?= $countExpired ?>],
-      backgroundColor: ['#1B8A83', '#C97F1D', '#B23A48'],
-      borderWidth: 2, borderColor: '#fff'
-    }]
-  },
-  options: {
-    plugins: { legend: { position: 'bottom', labels: { font: { family: "'Noto Sans Devanagari'", size: 11 }, boxWidth: 10 } } },
-    cutout: '60%'
-  }
-});
-});
-</script>
-<?php endif; ?>
+
 
 <style>
   .rn-hero{display:flex;gap:18px;align-items:center;flex-wrap:wrap;border-radius:18px;padding:16px 20px;margin:10px 0 10px;color:#fff;
@@ -570,7 +557,40 @@ new Chart(document.getElementById('renewalStatusChart'), {
   .rn-risk:last-child{border-bottom:0;} .rn-risk small{display:block;font-size:11px;color:var(--text-dim);}
   .rn-tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;} .rn-tools .form-control-custom{max-width:320px;}
   .rn-life{height:4px;border-radius:99px;background:var(--canvas);overflow:hidden;margin-top:4px;width:90px;} .rn-life i{display:block;height:100%;border-radius:99px;}
-  @media (max-width:700px){ .rn-timeline{flex-wrap:wrap;} .rn-tl{flex:1 1 calc(33% - 6px) !important;min-width:0;} .rn-ring{margin:0 auto;} }
+  .rn-hsub{flex-basis:100%;font-size:12px;color:rgba(255,255,255,.75);} .rn-hsub b{color:#fff;}
+  .rn-more{position:relative;} .rn-more summary{list-style:none;cursor:pointer;border:1px solid var(--line);border-radius:9px;font-size:13.5px;padding:8px 14px;background:var(--surface,#fff);white-space:nowrap;}
+  .rn-more summary::-webkit-details-marker{display:none;}
+  .rn-more-menu{position:absolute;right:0;top:calc(100% + 6px);z-index:50;min-width:190px;background:var(--surface,#fff);border:1px solid var(--line);border-radius:12px;box-shadow:0 14px 30px -12px rgba(16,22,43,.25);padding:6px;}
+  .rn-more-menu a{display:flex;gap:10px;align-items:center;padding:9px 12px;border-radius:8px;text-decoration:none;color:var(--text);font-size:13.5px;}
+  .rn-more-menu a:hover{background:var(--canvas);} .rn-more-menu i{width:16px;color:var(--text-dim);}
+  .rn-ana{background:var(--surface,#fff);border:1px solid var(--line);border-radius:14px;margin-bottom:12px;}
+  .rn-ana > summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:11px 16px;}
+  .rn-ana > summary::-webkit-details-marker{display:none;}
+  .rn-ana > summary span{font-weight:700;font-size:14px;white-space:nowrap;} .rn-ana > summary small{color:var(--text-dim);font-size:11.5px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .rn-ana > summary i{color:var(--text-dim);transition:transform .2s;} .rn-ana[open] > summary i{transform:rotate(180deg);}
+  .rn-ana-body{padding:0 12px 12px;} .rn-ana-body .panel{box-shadow:none;}
+  .rn-action-grid{display:flex !important;gap:10px;overflow-x:auto;padding:10px 14px 14px;scroll-snap-type:x mandatory;}
+  .rn-action-grid .rn-action{flex:0 0 230px;scroll-snap-align:start;}
+  @media (max-width:700px){
+    .rn-timeline{flex-wrap:wrap;} .rn-tl{flex:1 1 calc(33% - 6px) !important;min-width:0;padding:6px 8px;} .rn-tl b{font-size:16px;} .rn-tl span{font-size:10.5px;}
+    .rn-hero{gap:10px;padding:12px;} .rn-ring{width:64px;height:64px;flex-basis:64px;} .rn-ring span{width:50px;height:50px;} .rn-ring b{font-size:14px;} .rn-ring small{font-size:7px;}
+    .rn-hk{grid-template-columns:repeat(4,1fr);gap:5px;} .rn-k{padding:6px 6px;text-align:center;} .rn-k .v{font-size:16px;} .rn-k .l{font-size:9.5px;}
+    .rn-actions .btn{padding:8px 12px !important;} .page-title{font-size:20px;}
+    .rn-action-grid .rn-action{flex-basis:78%;}
+    /* तक्ता → Cards */
+    .rn-list table.rtable{min-width:0 !important;}
+    .rn-list .rtable thead{display:none;} .rn-list .rtable,.rn-list .rtable tbody{display:block;width:100%;}
+    .rn-list .rtable tr.rn-row{display:flex;flex-wrap:wrap;align-items:center;gap:5px 8px;padding:10px 14px;border-bottom:1px solid var(--line);}
+    .rn-list .rtable tr.rn-row td{display:block;border:0 !important;padding:0 !important;font-size:12px;position:static !important;box-shadow:none !important;background:transparent !important;width:auto !important;}
+    .rn-list .rtable tr.rn-row td.rc-name{flex:1 1 60%;order:1;font-size:13.5px;line-height:1.3;}
+    .rn-list .rtable tr.rn-row td.rc-days{order:2;text-align:right;font-size:12.5px;} .rn-list .rn-life{width:64px;margin-left:auto;}
+    .rn-list .rtable tr.rn-row td.rc-type{order:3;} .rn-list .rtable tr.rn-row td.rc-exp{order:4;color:var(--text-dim);}
+    .rn-list .rtable tr.rn-row td.rc-dept{order:5;color:var(--text-dim);} .rn-list .rtable tr.rn-row td.rc-ref{order:6;color:var(--text-dim);font-size:11px;}
+    .rn-list .rtable tr.rn-row td.rc-none{display:none;}
+    .rn-list .rtable tr.rn-row td.rc-st{order:7;} .rn-list .rtable tr.rn-row td.rc-st .status-chip{font-size:10.5px;padding:2px 8px;}
+    .rn-list .rtable tr.rn-row td.rc-act{order:8;margin-left:auto;display:flex;align-items:center;gap:4px;}
+    .rn-list .rtable tr.rn-row td.rc-act .btn{padding:3px 10px !important;font-size:11.5px !important;}
+  }
 </style>
 <script>
 (function () {   // 🔍 शोध · ↕ क्रम · 📊 Excel — दिसणाऱ्या नोंदींवर

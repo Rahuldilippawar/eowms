@@ -2332,4 +2332,8 @@ return [
     "कागदपत्र अहवाल" => ["दस्तावेज़ रिपोर्ट", "Documents report"],
     "आजीवन (LTT / One time) — नूतनीकरण लागत नाही" => ["आजीवन (LTT / One time) — नवीनीकरण नहीं लगता", "Lifetime (LTT / One time) — no renewal needed"],
     "उदा. सबब सदर वाहने संस्थे अंतर्गत वापरली जातात." => ["उदा. ये वाहन संस्था के अंदर ही उपयोग होते हैं।", "e.g. These vehicles are used only within the institution."],
+    "अधिक" => ["अधिक", "More"],
+    "जोखमीचे विभाग" => ["जोखिम वाले विभाग", "Riskiest departments"],
+    "शासकीय" => ["शासकीय", "Government"],
+    "महिन्यांचा खर्च-अंदाज" => ["महीनों का खर्च-अनुमान", "month cost forecast"],
 ];
