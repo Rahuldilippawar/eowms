@@ -2324,4 +2324,10 @@ return [
     "विभाग निवडलेला नाही — वरून विभाग निवडा" => ["विभाग नहीं चुना — ऊपर से विभाग चुनें", "No department selected — choose one above"],
     "विमा खर्च" => ["बीमा खर्च", "Insurance cost"],
     "ही सगळी वाहनं या विभागात" => ["ये सभी वाहन इस विभाग में", "All these vehicles go to this department"],
+    "हा अहवाल फक्त परिवहन विभाग व व्यवस्थापनासाठी." => ["यह रिपोर्ट केवल परिवहन विभाग व प्रबंधन के लिए है।", "This report is only for the transport department and management."],
+    "वाहन नाही" => ["वाहन नहीं", "No vehicles"],
+    "लागू नाही / नोंद नाही" => ["लागू नहीं / दर्ज नहीं", "not applicable / not recorded"],
+    "वाहन कागदपत्र अहवाल" => ["वाहन दस्तावेज़ रिपोर्ट", "Vehicle documents report"],
+    "निष्क्रिय पण" => ["निष्क्रिय भी", "include inactive"],
+    "कागदपत्र अहवाल" => ["दस्तावेज़ रिपोर्ट", "Documents report"],
 ];
