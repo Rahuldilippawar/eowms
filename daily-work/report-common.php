@@ -79,7 +79,8 @@ function dwReportContext($pdo, $user) {
  * कामाच्या नोंदी (विभाग/व्यक्तिगत Scope) — वापरलेलं साहित्य व कर्मचारी-नावांसह, नेहमी याच संस्थेच्या
  * $filterDeptId: विभाग-Scope मध्ये तो विभाग; Organization-Scope मध्ये ऐच्छिक Filter
  */
-function dwReportRecords($pdo, $ctx, $user, $limit = null) {
+/** Scope/कालावधी/विभागानुसार WHERE (wr alias) */
+function dwReportWhere($ctx, $user) {
     $where = "wr.organization_id = ? AND wr.work_date BETWEEN ? AND ?";
     $params = [$ctx['org_id'], $ctx['start'], $ctx['end']];
     if ($ctx['scope'] === 'personal') {
@@ -89,6 +90,55 @@ function dwReportRecords($pdo, $ctx, $user, $limit = null) {
         $where .= " AND wr.department_id = ?";
         $params[] = $ctx['department_id'];
     }
+    return [$where, $params];
+}
+
+/** संपूर्ण कालावधीचे आकडे — एकूण/स्थिती/खर्च/कर्मचारी, दिवसागणिक trend, सर्वाधिक काम करणारे */
+function dwReportStats($pdo, $ctx, $user) {
+    [$where, $params] = dwReportWhere($ctx, $user);
+    $st = $pdo->prepare("SELECT COUNT(*) total, SUM(wr.status='completed') done, SUM(wr.status='in_progress') prog, SUM(wr.status='pending') pend,
+        SUM(wr.priority IN ('urgent','high') AND wr.status <> 'completed') hot, COALESCE(SUM(wr.actual_cost),0) cost, MIN(wr.work_date) first_d
+        FROM work_records wr WHERE $where");
+    $st->execute($params);
+    $k = array_map('floatval', $st->fetch(PDO::FETCH_ASSOC) ?: []);
+    $st = $pdo->prepare("SELECT COUNT(DISTINCT wt.user_id) FROM work_records wr JOIN work_record_team wt ON wt.work_record_id = wr.id WHERE $where");
+    $st->execute($params);
+    $k['staff'] = (int)$st->fetchColumn();
+    // trend — ३१ दिवसांपर्यंत दिवसागणिक, त्यापुढे महिन्यागणिक
+    $start = $ctx['start'];
+    if ($ctx['period'] === 'all') {
+        $fd = $pdo->prepare("SELECT MIN(wr.work_date) FROM work_records wr WHERE $where");
+        $fd->execute($params); $start = $fd->fetchColumn() ?: $ctx['end'];
+    }
+    $end = min($ctx['end'], date('Y-m-d')) >= $start ? min($ctx['end'], date('Y-m-d')) : $ctx['end'];
+    $days = (int)((strtotime($end) - strtotime($start)) / 86400) + 1;
+    $monthly = $days > 31;
+    $grp = $monthly ? "DATE_FORMAT(wr.work_date,'%Y-%m')" : "wr.work_date";
+    $st = $pdo->prepare("SELECT $grp g, COUNT(*) c, SUM(wr.status='completed') d FROM work_records wr WHERE $where GROUP BY g");
+    $st->execute($params);
+    $map = [];
+    foreach ($st->fetchAll() as $r) { $map[$r['g']] = [(int)$r['c'], (int)$r['d']]; }
+    $trend = [];
+    if ($monthly) {
+        for ($t = strtotime(date('Y-m-01', strtotime($start))); $t <= strtotime($end); $t = strtotime('+1 month', $t)) {
+            $g = date('Y-m', $t); $trend[] = ['k' => $g, 'l' => date('M y', $t), 'c' => $map[$g][0] ?? 0, 'd' => $map[$g][1] ?? 0];
+        }
+    } else {
+        for ($t = strtotime($start); $t <= strtotime($end); $t += 86400) {
+            $g = date('Y-m-d', $t); $trend[] = ['k' => $g, 'l' => date('d M', $t), 'c' => $map[$g][0] ?? 0, 'd' => $map[$g][1] ?? 0];
+        }
+    }
+    $top = [];
+    if ($ctx['scope'] !== 'personal') {
+        $st = $pdo->prepare("SELECT u.name, COUNT(*) c, SUM(wr.status='completed') d FROM work_records wr JOIN work_record_team wt ON wt.work_record_id = wr.id JOIN users u ON u.id = wt.user_id WHERE $where GROUP BY u.id, u.name ORDER BY c DESC, u.name LIMIT 5");
+        $st->execute($params);
+        $top = $st->fetchAll();
+    }
+    return ['k' => $k, 'trend' => $trend, 'monthly' => $monthly, 'top' => $top];
+}
+
+function dwReportRecords($pdo, $ctx, $user, $limit = null) {
+    [$where, $params] = dwReportWhere($ctx, $user);
     $limitSql = $limit ? " LIMIT " . (int)$limit : "";
     $base = "SELECT wr.*, d.name_local AS dept_name, d.name AS dept_name_en,
           (SELECT GROUP_CONCAT(u2.name SEPARATOR ', ') FROM work_record_team wt2 JOIN users u2 ON u2.id = wt2.user_id WHERE wt2.work_record_id = wr.id) AS emp_name";
