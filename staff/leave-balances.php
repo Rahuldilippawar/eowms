@@ -12,12 +12,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'set_one') {
         $userId = (int)($_POST['user_id'] ?? 0);
         $leaveTypeId = (int)($_POST['leave_type_id'] ?? 0);
-        $allocated = (float)($_POST['allocated_days'] ?? 0);
-        $pdo->prepare("
-            INSERT INTO leave_balances (user_id, leave_type_id, year, allocated_days) VALUES (?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE allocated_days = VALUES(allocated_days)
-        ")->execute([$userId, $leaveTypeId, $year, $allocated]);
-        $_SESSION['flash'] = 'Balance जतन झाला.';
+        $allocated = max(0, (float)($_POST['allocated_days'] ?? 0));
+        // कर्मचारी व रजा-प्रकार याच संस्थेचे असतील तरच (नाहीतर Foreign-Key Error ऐवजी स्पष्ट संदेश)
+        $chk = $pdo->prepare("SELECT (SELECT COUNT(*) FROM users WHERE id = ? AND organization_id = ?) + (SELECT COUNT(*) FROM leave_types WHERE id = ? AND organization_id = ?)");
+        $chk->execute([$userId, $orgId, $leaveTypeId, $orgId]);
+        if ((int)$chk->fetchColumn() !== 2 || $year < 2000 || $year > 2100) {
+            $_SESSION['flash'] = '⚠️ कर्मचारी / रजा-प्रकार सापडला नाही — पान Refresh करून पुन्हा प्रयत्न करा.';
+        } else {
+            $pdo->prepare("
+                INSERT INTO leave_balances (user_id, leave_type_id, year, allocated_days) VALUES (?, ?, ?, ?)
+                ON DUPLICATE KEY UPDATE allocated_days = VALUES(allocated_days)
+            ")->execute([$userId, $leaveTypeId, $year, $allocated]);
+            $_SESSION['flash'] = 'Balance जतन झाला.';
+        }
     } elseif ($action === 'bulk_allocate') {
         // सगळ्या Active Staff ला, सगळ्या Active Leave-प्रकारांचा त्यांचा Default
         // Annual-Quota या वर्षासाठी आपोआप Allocate करतो (आधीच असेल तर वगळतो)
