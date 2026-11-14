@@ -72,7 +72,7 @@ smartTiles([
     ['label' => 'सक्रिय कर्मचारी', 'value' => array_sum(array_column($active, 'staff_active')), 'sub' => $noDeptStaff ? $noDeptStaff . ' विभागाविना' : 'सर्वांना विभाग आहे', 'tone' => $noDeptStaff ? 'warn' : 'ok'],
     ['label' => 'HOD नसलेले', 'value' => count($noHod) + count($badHod), 'sub' => count($badHod) ? count($badHod) . ' चुकीचे HOD' : 'सक्रिय विभागांपैकी', 'tone' => count($badHod) ? 'bad' : (count($noHod) ? 'warn' : 'ok')],
     ['label' => 'मुदतबाह्य Tasks', 'value' => $overdueTot, 'sub' => 'सर्व विभाग मिळून', 'tone' => $overdueTot ? 'bad' : 'ok'],
-    ['label' => 'शांत विभाग', 'value' => count($idle), 'sub' => '३० दिवसांत काम नाही', 'tone' => $idle ? 'warn' : 'ok'],
+    ['label' => 'शांत विभाग', 'value' => count($idle), 'sub' => 'मागील ३० दिवसांत काम नाही', 'tone' => $idle ? 'warn' : 'ok'],
 ]);
 smartAlerts($alerts);
 ?>
