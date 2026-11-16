@@ -552,7 +552,7 @@ function navGroupHead($id, $key, $activeGroup, $icon, $label, $badge = 0) {
           </a>
         <?php endif; ?>
         <?php foreach ($myItLabs as $myLab): ?>
-          <a href="<?= $rp ?>it/assets.php?lab_id=<?= (int)$myLab['id'] ?>" class="tree-node <?= $currentDir === 'it' && in_array($currentPage, ['assets.php', 'asset-view.php', 'asset-edit.php']) ? 'active' : '' ?>">
+          <a href="<?= $rp ?>it/lab.php?id=<?= (int)$myLab['id'] ?>" class="tree-node <?= $currentDir === 'it' && in_array($currentPage, ['lab.php', 'assets.php', 'asset-view.php', 'asset-edit.php']) ? 'active' : '' ?>">
             <i class="fa-solid fa-computer fa-fw"></i><span>माझी Lab — <?= h($myLab['lab_name']) ?></span>
           </a>
         <?php endforeach; ?>

@@ -1583,6 +1583,13 @@ CREATE TABLE it_assets (
   power_status ENUM('on','off') DEFAULT 'off',
   power_status_updated_at TIMESTAMP NULL,
   power_status_updated_by INT NULL,
+  screen_status ENUM('ok','fault') NULL,
+  cpu_status ENUM('ok','fault') NULL,
+  keyboard_status ENUM('ok','fault') NULL,
+  mouse_status ENUM('ok','fault') NULL,
+  internet_status ENUM('ok','slow','down') NULL,
+  last_check_at DATETIME NULL,
+  last_check_by INT NULL,
   remarks VARCHAR(255) NULL,
   added_by INT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -1605,6 +1612,28 @@ CREATE TABLE it_asset_transfers (
   FOREIGN KEY (to_lab_id) REFERENCES it_labs(id) ON DELETE CASCADE,
   FOREIGN KEY (transferred_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
+
+CREATE TABLE it_machine_checks (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  organization_id INT NOT NULL,
+  lab_id INT NOT NULL,
+  asset_id INT NOT NULL,
+  check_date DATE NOT NULL,
+  power ENUM('on','off') NOT NULL DEFAULT 'on',
+  screen ENUM('ok','fault') NOT NULL DEFAULT 'ok',
+  cpu ENUM('ok','fault') NOT NULL DEFAULT 'ok',
+  keyboard ENUM('ok','fault') NOT NULL DEFAULT 'ok',
+  mouse ENUM('ok','fault') NOT NULL DEFAULT 'ok',
+  internet ENUM('ok','slow','down') NOT NULL DEFAULT 'ok',
+  remarks VARCHAR(255) NULL,
+  checked_by INT NULL,
+  checked_at DATETIME NOT NULL,
+  UNIQUE KEY uniq_asset_day (asset_id, check_date),
+  INDEX idx_lab_day (lab_id, check_date),
+  FOREIGN KEY (asset_id) REFERENCES it_assets(id) ON DELETE CASCADE,
+  FOREIGN KEY (lab_id) REFERENCES it_labs(id) ON DELETE CASCADE,
+  FOREIGN KEY (checked_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE it_repair_tickets (
   id INT AUTO_INCREMENT PRIMARY KEY,
