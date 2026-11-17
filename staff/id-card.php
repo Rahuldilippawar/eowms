@@ -18,7 +18,7 @@ $stmt->execute([$id, $orgId]);
 $emp = $stmt->fetch();
 if (!$emp) { die('कर्मचारी सापडला नाही.'); }
 
-if ((int)$emp['id'] !== (int)$user['id'] && !isManagementOrAbove() && !hasRole('super_admin')) {
+if ((int)$emp['id'] !== (int)$user['id'] && !isManagementOrAbove() && !hasRole('super_admin') && !hasPermission('manage_hr')) {
     http_response_code(403);
     die('तुम्हाला हे ID Card बघण्याची परवानगी नाही.');
 }

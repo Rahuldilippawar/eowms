@@ -5,13 +5,14 @@ $user = currentUser();
 $orgId = activeOrgId();
 
 $action = $_POST['action'] ?? '';
+require_once __DIR__ . '/../includes/hr-access.php';
 
 if ($action === 'delete_document') {
     $docId = (int)($_POST['doc_id'] ?? 0);
     $docStmt = $pdo->prepare("SELECT user_id, file_path FROM staff_documents WHERE id = ?");
     $docStmt->execute([$docId]);
     $doc = $docStmt->fetch();
-    if ($doc && ((int)$doc['user_id'] === (int)$user['id'] || hasRole('super_admin'))) {
+    if ($doc && ((int)$doc['user_id'] === (int)$user['id'] || hasRole('super_admin') || hrCanManageUserId((int)$doc['user_id']))) {
         $pdo->prepare("DELETE FROM staff_documents WHERE id = ?")->execute([$docId]);
         $filePath = __DIR__ . '/../' . $doc['file_path'];
         if (is_file($filePath)) { unlink($filePath); }
@@ -23,7 +24,7 @@ if ($action === 'delete_document') {
 
 if ($action === 'add_achievement') {
     $targetId = (int)($_POST['user_id'] ?? 0);
-    $canEdit = $targetId === (int)$user['id'] || hasRole('super_admin');
+    $canEdit = $targetId === (int)$user['id'] || hasRole('super_admin') || hrCanManageUserId($targetId);
     if ($canEdit) {
         $title = trim($_POST['title'] ?? '');
         $description = trim($_POST['description'] ?? '');
@@ -44,7 +45,7 @@ if ($action === 'delete_achievement') {
     $achStmt = $pdo->prepare("SELECT user_id FROM staff_achievements WHERE id = ?");
     $achStmt->execute([$achId]);
     $ach = $achStmt->fetch();
-    if ($ach && ((int)$ach['user_id'] === (int)$user['id'] || hasRole('super_admin'))) {
+    if ($ach && ((int)$ach['user_id'] === (int)$user['id'] || hasRole('super_admin') || hrCanManageUserId((int)$ach['user_id']))) {
         $pdo->prepare("DELETE FROM staff_achievements WHERE id = ?")->execute([$achId]);
         $_SESSION['flash'] = 'काढलं गेलं.';
     }

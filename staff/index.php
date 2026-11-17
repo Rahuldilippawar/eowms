@@ -240,13 +240,16 @@ try {
   <div class="d-flex gap-2">
     <?php if ($canSeeDetails): ?><a href="list-print.php" class="btn" style="border:1px solid var(--rail);color:var(--rail);border-radius:9px;font-size:13px;padding:9px 16px;font-weight:600;"><i class="fa-solid fa-print me-1"></i>यादी Print / PDF</a><?php endif; ?>
     <a href="employee-report.php" class="btn" style="border:1px solid var(--rail);color:var(--rail);border-radius:9px;font-size:13px;padding:9px 16px;font-weight:600;"><i class="fa-solid fa-file-lines me-1"></i>कर्मचारी अहवाल</a>
-    <?php if (isManagementOrAbove() || hasRole('super_admin')): ?>
+    <?php require_once __DIR__ . '/../includes/hr-access.php'; $hrUser = canManageHr(); ?>
+    <?php if (isManagementOrAbove() || hasRole('super_admin') || $hrUser): ?>
       <a href="id-cards-bulk.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13.5px;padding:9px 18px;"><i class="fa-solid fa-id-card me-1"></i>Bulk ID Cards</a>
     <?php endif; ?>
     <?php if (hasRole('super_admin')): ?>
       <a href="../roles/user-access.php" class="btn" style="border:1px solid var(--amber);color:var(--amber);border-radius:9px;font-size:13.5px;padding:9px 18px;"><i class="fa-solid fa-user-shield me-1"></i>👤 व्यक्तीनुसार अधिकार</a>
       <a href="extra-access.php" class="btn" style="border:1px solid var(--amber);color:var(--amber);border-radius:9px;font-size:13.5px;padding:9px 18px;"><i class="fa-solid fa-unlock-keyhole me-1"></i>🔓 Extra विभाग Access</a>
       <a href="extra-campus-access.php" class="btn" style="border:1px solid var(--amber);color:var(--amber);border-radius:9px;font-size:13.5px;padding:9px 18px;"><i class="fa-solid fa-building-columns me-1"></i>🏫 Extra Campus Access</a>
+    <?php endif; ?>
+    <?php if ($hrUser): ?>
       <a href="import.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:13.5px;padding:9px 18px;"><i class="fa-solid fa-file-csv me-1"></i>CSV Import</a>
       <a href="create.php" class="btn" style="background:var(--rail);color:#fff;border-radius:9px;font-size:13.5px;padding:9px 18px;font-weight:600;"><i class="fa-solid fa-user-plus me-1"></i><?= h(t('s253')) ?></a>
     <?php endif; ?>
@@ -351,7 +354,7 @@ smartAlerts($alerts);
 <div class="panel">
   <table class="rtable" id="stTable" data-no-filter>
     <thead>
-      <tr><th><?= h(t('s6')) ?></th><th><?= h(t('s1')) ?></th><th><?= h(t('s45')) ?></th><th>Role</th><th>शेवटचं Login</th><th>माहिती</th><th><?= h(t('s2')) ?></th><?php if (hasRole('super_admin')): ?><th></th><?php endif; ?></tr>
+      <tr><th><?= h(t('s6')) ?></th><th><?= h(t('s1')) ?></th><th><?= h(t('s45')) ?></th><th>Role</th><th>शेवटचं Login</th><th>माहिती</th><th><?= h(t('s2')) ?></th><?php if ($hrUser): ?><th></th><?php endif; ?></tr>
     </thead>
     <tbody>
       <?php if (empty($staffList)): ?>
@@ -397,10 +400,13 @@ smartAlerts($alerts);
           <td style="font-size:12px;white-space:nowrap;" title="<?= $ll ? date('d/m/Y h:i A', $ll) : '' ?>"><?php if (!$ll): ?><span style="color:var(--rose);">कधीच नाही</span><?php else: $dd = (int)floor((time() - $ll) / 86400); ?><span style="color:<?= $dd > 30 ? 'var(--rose)' : ($dd > 7 ? 'var(--amber)' : 'var(--text-dim)') ?>;"><?= $dd === 0 ? 'आज' : ($dd === 1 ? 'काल' : $dd . ' दिवसांपूर्वी') ?></span><?php endif; ?></td>
           <td style="min-width:90px;" title="<?= $person['_missing'] ? h('नाही: ' . implode(', ', $person['_missing'])) : 'पूर्ण माहिती' ?>"><div class="st-pct"><i style="width:<?= $person['_pct'] ?>%;background:<?= $person['_pct'] >= 90 ? '#16A34A' : ($person['_pct'] >= 60 ? '#F59E0B' : '#DC2626') ?>;"></i></div><small style="font-size:10.5px;color:var(--text-dim);"><?= $person['_pct'] ?>%</small></td>
           <td><?php if ($person['is_active']): ?><span class="status-chip done"><?= h(t('s4')) ?></span><?php else: ?><span class="status-chip overdue"><?= h(t('s5')) ?></span><?php endif; ?></td>
-          <?php if (hasRole('super_admin')): ?>
+          <?php if ($hrUser): ?>
             <td>
+              <?php if (hasRole('super_admin') || ((int)$person['id'] !== (int)$user['id'] && hrCanEditUserRole($person['role']))): ?>
               <a href="edit.php?id=<?= $person['id'] ?>" onclick="event.stopPropagation()" class="btn btn-sm" style="border:1px solid var(--line);border-radius:7px;font-size:12px;padding:5px 12px;"><i class="fa-solid fa-pen me-1"></i>Edit</a>
-              <?php if ($person['role'] !== 'super_admin'): ?>
+              <?php endif; ?>
+              <?php if (!hasRole('super_admin')): /* 🗑️ Delete — फक्त Super Admin */ ?>
+              <?php elseif ($person['role'] !== 'super_admin'): ?>
                 <button type="button" class="btn btn-sm" style="border:1px solid var(--rose);color:var(--rose);border-radius:7px;font-size:12px;padding:5px 12px;"
                   data-bs-toggle="modal" data-bs-target="#deleteModal" data-del-id="<?= (int)$person['id'] ?>" data-del-name="<?= h($person['name']) ?>"><i class="fa-solid fa-trash me-1"></i>Delete</button>
               <?php else: ?>

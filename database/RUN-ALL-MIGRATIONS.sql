@@ -4738,3 +4738,46 @@ ALTER TABLE vehicles
 -- ⚡ वेग — Activity Log लाखो नोंदींवर: व्यक्तीनुसार व कृतीनुसार (Login/View as…) शोध Index वरून
 ALTER TABLE activity_logs ADD INDEX idx_user_created (user_id, created_at);
 ALTER TABLE activity_logs ADD INDEX idx_org_action (organization_id, action(40), created_at);
+
+-- ============================================================
+-- FROM: migration-it-lab-checks.sql
+-- ============================================================
+-- 🖥️ Computer Lab — प्रत्येक Machine ची रोजची तपासणी (Screen / CPU / Keyboard / Mouse / Power / Internet)
+ALTER TABLE it_assets
+  ADD COLUMN screen_status ENUM('ok','fault') NULL,
+  ADD COLUMN cpu_status ENUM('ok','fault') NULL,
+  ADD COLUMN keyboard_status ENUM('ok','fault') NULL,
+  ADD COLUMN mouse_status ENUM('ok','fault') NULL,
+  ADD COLUMN internet_status ENUM('ok','slow','down') NULL,
+  ADD COLUMN last_check_at DATETIME NULL,
+  ADD COLUMN last_check_by INT NULL;
+
+CREATE TABLE it_machine_checks (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  organization_id INT NOT NULL,
+  lab_id INT NOT NULL,
+  asset_id INT NOT NULL,
+  check_date DATE NOT NULL,
+  power ENUM('on','off') NOT NULL DEFAULT 'on',
+  screen ENUM('ok','fault') NOT NULL DEFAULT 'ok',
+  cpu ENUM('ok','fault') NOT NULL DEFAULT 'ok',
+  keyboard ENUM('ok','fault') NOT NULL DEFAULT 'ok',
+  mouse ENUM('ok','fault') NOT NULL DEFAULT 'ok',
+  internet ENUM('ok','slow','down') NOT NULL DEFAULT 'ok',
+  remarks VARCHAR(255) NULL,
+  checked_by INT NULL,
+  checked_at DATETIME NOT NULL,
+  UNIQUE KEY uniq_asset_day (asset_id, check_date),
+  INDEX idx_lab_day (lab_id, check_date),
+  FOREIGN KEY (asset_id) REFERENCES it_assets(id) ON DELETE CASCADE,
+  FOREIGN KEY (lab_id) REFERENCES it_labs(id) ON DELETE CASCADE,
+  FOREIGN KEY (checked_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
+-- FROM: migration-hr-permissions.sql
+-- ============================================================
+-- 👥 HR व्यवस्थापन व पगार — Super Admin न बनवता एका व्यक्तीला (पदे व्यवस्थापन → व्यक्तीनुसार Access)
+INSERT IGNORE INTO permissions (permission_key, label, label_local, sort_order) VALUES
+  ('manage_hr', 'HR management — add/edit/import staff, attendance, leave balances & types, holidays, shifts (not Super Admin / Management accounts)', 'HR व्यवस्थापन — कर्मचारी जोडणे/बदलणे/Import, हजेरी, रजा, सुट्ट्या, Shift (Super Admin / Management खाती सोडून)', 46),
+  ('manage_salary', 'Salary — view and edit salary structure, salary import and report', 'पगार — पगार रचना पाहणे/बदलणे, Salary Import व अहवाल', 47);

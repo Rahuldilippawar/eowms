@@ -3,7 +3,7 @@ require_once __DIR__ . '/../includes/auth.php';
 requireLogin('../');
 $user = currentUser();
 $orgId = activeOrgId();
-$isMgmt = hasPermission('view_org_wide_dashboards') || hasRole('super_admin');
+$isMgmt = hasPermission('view_org_wide_dashboards') || hasRole('super_admin') || hasPermission('manage_hr');
 
 $pageTitle = 'मासिक Attendance Summary';
 $rootPath = '../';

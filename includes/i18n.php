@@ -111,7 +111,7 @@ function i18nTranslateRun($run, $lang, $dict, $depth = 0) {
     if ($key === '') return $run;
     $lead = substr($run, 0, strlen($run) - strlen(ltrim($run)));
     $trail = substr($run, strlen(rtrim($run)));
-    if (isset($dict[$key])) return $lead . $dict[$key] . $trail;
+    if (isset($dict[$key])) return $lead . i18nDigits($dict[$key], $lang) . $trail; // English मध्ये १२ → 12
     // HTML मधलं &quot; / &amp; — शब्दकोशात साधं " असतं; उलगडून पूर्ण प्रक्रिया, मग परत Escape
     if ($depth < 9 && strpos($key, '&') !== false) {
         $dk = html_entity_decode($key, ENT_QUOTES | ENT_HTML5, 'UTF-8');
@@ -161,10 +161,11 @@ function i18nText($text, $lang = null, $jsSafe = false) {
     $lang = $lang ?: i18nLang();
     if ($lang === 'mr' || $text === '' || !preg_match('/[\x{0900}-\x{097F}]/u', $text)) return $text;
     $dict = i18nDict($lang);
-    return preg_replace_callback(i18nRunPattern(), function ($m) use ($lang, $dict, $jsSafe) {
+    $out = preg_replace_callback(i18nRunPattern(), function ($m) use ($lang, $dict, $jsSafe) {
         $t = i18nTranslateRun($m[0], $lang, $dict);
         return $jsSafe ? strtr($t, ["'" => '’', '"' => '”', '\\' => '/', "\n" => ' ', '`' => '’']) : $t;
     }, $text);
+    return i18nDigits($out, $lang); // English मध्ये उरलेले देवनागरी अंक (उदा. "३० days") → 30
 }
 
 /** संपूर्ण HTML पान — फक्त दिसणारा मजकूर व ठराविक Attributes; Form मधला Data नाही */

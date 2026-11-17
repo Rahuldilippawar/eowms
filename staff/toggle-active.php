@@ -2,7 +2,8 @@
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/bio-helpers.php';
 requireLogin('../');
-requireRole(['super_admin'], '../');
+require_once __DIR__ . '/../includes/hr-access.php';
+requireHrAccess('../'); // Super Admin किंवा HR व्यवस्थापन परवानगी
 $user = currentUser();
 
 $id = (int)($_POST['id'] ?? 0);
@@ -14,6 +15,13 @@ $target = $stmt->fetch();
 
 if (!$target) {
     header('Location: index.php');
+    exit;
+}
+
+// 🔒 HR (Super Admin नसलेला) — Super Admin / Management खाती व स्वतःचं खातं नाही
+if (!hasRole('super_admin') && (!hrCanEditUserRole($target['role']) || (int)$target['id'] === (int)($user['id'] ?? 0))) {
+    $_SESSION['form_error'] = 'हे खातं फक्त Super Admin सक्रिय / निष्क्रिय करू शकतो.';
+    header('Location: profile.php?id=' . $id);
     exit;
 }
 

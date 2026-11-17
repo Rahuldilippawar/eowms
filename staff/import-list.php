@@ -5,7 +5,8 @@
 //      Emp Id = Biometric PIN, HOD नेमणूक; नवीन Login (Username/Password) ची यादी Download
 require_once __DIR__ . '/../includes/auth.php';
 requireLogin('../');
-requireRole(['super_admin'], '../');
+require_once __DIR__ . '/../includes/hr-access.php';
+requireHrAccess('../'); // Super Admin किंवा HR व्यवस्थापन परवानगी
 require_once __DIR__ . '/../includes/sheet-reader.php';
 require_once __DIR__ . '/../includes/emp-list-import.php';
 $orgId = activeOrgId();

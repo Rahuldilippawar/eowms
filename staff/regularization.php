@@ -3,7 +3,7 @@ require_once __DIR__ . '/../includes/auth.php';
 requireLogin('../');
 $user = currentUser();
 $orgId = activeOrgId();
-$canApprove = hasCategory('hod') || hasPermission('view_org_wide_dashboards') || hasRole('super_admin');
+$canApprove = hasCategory('hod') || hasPermission('view_org_wide_dashboards') || hasRole('super_admin') || hasPermission('manage_hr');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
@@ -33,7 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $reqStmt->execute([$reqId, $orgId]);
         $req = $reqStmt->fetch();
         // HOD फक्त स्वतःच्या विभागाच्या (आणि स्वतःच्या नव्हे) विनंत्यांवर निर्णय घेऊ शकतो
-        $isMgmtApprover = hasPermission('view_org_wide_dashboards') || hasRole('super_admin');
+        $isMgmtApprover = hasPermission('view_org_wide_dashboards') || hasRole('super_admin') || hasPermission('manage_hr');
         if ($req && !$isMgmtApprover && ((int)$req['requester_dept_id'] !== (int)($user['department_id'] ?? 0) || (int)$req['user_id'] === (int)$user['id'])) {
             $req = null;
         }
@@ -73,7 +73,7 @@ $myRequests = $myReqStmt->fetchAll();
 
 $pendingApprovals = [];
 if ($canApprove) {
-    $isMgmt = hasPermission('view_org_wide_dashboards') || hasRole('super_admin');
+    $isMgmt = hasPermission('view_org_wide_dashboards') || hasRole('super_admin') || hasPermission('manage_hr');
     $sql = "
         SELECT r.*, u.name AS staff_name, d.name_local AS dept_name
         FROM attendance_regularization_requests r JOIN users u ON u.id = r.user_id LEFT JOIN departments d ON d.id = u.department_id

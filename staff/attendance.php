@@ -3,7 +3,7 @@ require_once __DIR__ . '/../includes/auth.php';
 requireLogin('../');
 $user = currentUser();
 $orgId = activeOrgId();
-$isMgmt = hasPermission('view_org_wide_dashboards') || hasRole('super_admin');
+$isMgmt = hasPermission('view_org_wide_dashboards') || hasRole('super_admin') || hasPermission('manage_hr');
 $canManage = $isMgmt || hasPermission('manage_attendance');
 
 $pageTitle = 'Staff Attendance';
@@ -49,12 +49,12 @@ $statusChips = ['present' => 'done', 'absent' => 'overdue', 'half_day' => 'pendi
       <a href="attendance-monthly-grid.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:12.5px;padding:8px 16px;">📋 Monthly Grid</a>
       <a href="attendance-manual.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:12.5px;padding:8px 16px;">✏️ Manual Entry</a>
     <?php endif; ?>
-    <?php if (hasRole('super_admin')): ?>
+    <?php if (hasRole('super_admin') || hasPermission('manage_hr')): ?>
       <a href="shift-settings.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:12.5px;padding:8px 16px;">⏰ Shift Settings</a>
       <a href="leave-types.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:12.5px;padding:8px 16px;">🏖️ रजा-प्रकार</a>
       <a href="leave-balances.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:12.5px;padding:8px 16px;">📊 रजा-शिल्लक</a>
       <a href="holidays.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:12.5px;padding:8px 16px;">🎉 सुट्ट्या</a>
-      <a href="../biometric/devices.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:12.5px;padding:8px 16px;">⚙️ Biometric Machines</a>
+<?php if (hasRole('super_admin')): ?><a href="../biometric/devices.php" class="btn" style="border:1px solid var(--line);border-radius:9px;font-size:12.5px;padding:8px 16px;">⚙️ Biometric Machines</a><?php endif; ?>
     <?php endif; ?>
   </div>
 </div>

@@ -5,7 +5,8 @@ $user = currentUser();
 $orgId = activeOrgId();
 
 $targetId = (int)($_POST['user_id'] ?? 0);
-$canEdit = $targetId === (int)$user['id'] || hasRole('super_admin');
+require_once __DIR__ . '/../includes/hr-access.php';
+$canEdit = $targetId === (int)$user['id'] || hasRole('super_admin') || hrCanManageUserId($targetId);
 if (!$canEdit) { http_response_code(403); die('परवानगी नाही.'); }
 
 $docType = trim($_POST['document_type'] ?? '');

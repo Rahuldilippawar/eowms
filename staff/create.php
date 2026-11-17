@@ -6,7 +6,8 @@ require_once __DIR__ . '/../includes/staff-dept-picker.php';
 require_once __DIR__ . '/../includes/mailer.php';
 require_once __DIR__ . '/../includes/bio-helpers.php';
 requireLogin('../');
-requireRole(['super_admin'], '../');
+require_once __DIR__ . '/../includes/hr-access.php';
+requireHrAccess('../'); // Super Admin किंवा HR व्यवस्थापन परवानगी
 $user = currentUser();
 
 $error = null;
@@ -29,7 +30,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $orgId = activeOrgId();
 
-    if ($role === 'super_admin' && superAdminExistsOtherThan($pdo, 0)) {
+    if (!canManageSalary()) { $salary = null; } // पगार — फक्त पगार परवानगी असलेल्यांनी
+    if (!hrCanAssignRole($role)) {
+        $error = 'हे पद (Super Admin / Management) फक्त Super Admin देऊ शकतो.';
+    } elseif ($role === 'super_admin' && superAdminExistsOtherThan($pdo, 0)) {
         $error = 'Super Admin एकच असतो — दुसरा Super Admin बनवता येणार नाही. Management साठी President / GM वगैरे पद निवडा.';
     } elseif (!$name || !$email) {
         $error = t('s573');
@@ -134,6 +138,8 @@ try {
 
 // 👑 एकच Super Admin — आधीच असल्यास पर्यायच दाखवत नाही
 if (superAdminExistsOtherThan($pdo, 0)) { $allRoles = array_values(array_filter($allRoles, fn($r) => $r['role_key'] !== 'super_admin')); }
+// 👥 HR (Super Admin नसलेला) — फक्त Staff / HOD श्रेणीची पदं
+$allRoles = array_values(array_filter($allRoles, fn($r) => hrCanAssignRole($r['role_key'])));
 
 $pageTitle = t('s574');
 $rootPath = '../';
