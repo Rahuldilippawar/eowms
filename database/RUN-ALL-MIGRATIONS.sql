@@ -4773,3 +4773,11 @@ CREATE TABLE it_machine_checks (
   FOREIGN KEY (lab_id) REFERENCES it_labs(id) ON DELETE CASCADE,
   FOREIGN KEY (checked_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
+-- FROM: migration-hr-permissions.sql
+-- ============================================================
+-- 👥 HR व्यवस्थापन व पगार — Super Admin न बनवता एका व्यक्तीला (पदे व्यवस्थापन → व्यक्तीनुसार Access)
+INSERT IGNORE INTO permissions (permission_key, label, label_local, sort_order) VALUES
+  ('manage_hr', 'HR management — add/edit/import staff, attendance, leave balances & types, holidays, shifts (not Super Admin / Management accounts)', 'HR व्यवस्थापन — कर्मचारी जोडणे/बदलणे/Import, हजेरी, रजा, सुट्ट्या, Shift (Super Admin / Management खाती सोडून)', 46),
+  ('manage_salary', 'Salary — view and edit salary structure, salary import and report', 'पगार — पगार रचना पाहणे/बदलणे, Salary Import व अहवाल', 47);

@@ -2,7 +2,8 @@
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/bio-helpers.php';
 requireLogin('../');
-requireRole(['super_admin'], '../');
+require_once __DIR__ . '/../includes/hr-access.php';
+requireHrAccess('../'); // Super Admin किंवा HR व्यवस्थापन परवानगी
 $user = currentUser();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -23,6 +24,18 @@ $unlockAccount = isset($_POST['unlock_account']);
 $salary = trim($_POST['salary'] ?? '') !== '' ? (float)$_POST['salary'] : null;
 $joiningDate = ($_POST['joining_date'] ?? '') ?: null;
 $dateOfBirth = ($_POST['date_of_birth'] ?? '') ?: null;
+
+// 🔒 HR (Super Admin नसलेला) — Super Admin / Management खाती, स्वतःचं खातं, किंवा ते पद देणं — नाही (कोणताही बदल होण्याआधी)
+if (!hasRole('super_admin')) {
+    $hrT = $pdo->prepare("SELECT role FROM users WHERE id = ? AND organization_id = ?");
+    $hrT->execute([$id, activeOrgId()]);
+    $hrTargetRole = $hrT->fetchColumn();
+    if ($hrTargetRole === false || !hrCanEditUserRole((string)$hrTargetRole) || !hrCanAssignRole($role) || $id === (int)($user['id'] ?? 0)) {
+        $_SESSION['form_error'] = 'हा बदल फक्त Super Admin करू शकतो (Super Admin / Management पद किंवा स्वतःचं खातं).';
+        header('Location: index.php');
+        exit;
+    }
+}
 
 // 🪪 ओळख, बँक व पत्ता + कर्मचारी क्रमांक — आधी तपासा (चूक असेल तर काहीच जतन न करता परत)
 require_once __DIR__ . '/../includes/staff-extra-fields.php';
@@ -110,6 +123,9 @@ if (empty($dept['campus_id'])) {
 $departmentId = $departmentId ?: null;
 $targetCurrentRole = $targetRow['role'] ?? null;
 $wasActive = (int)($targetRow['is_active'] ?? 1);
+
+// 💰 पगार परवानगी नसेल तर पगार जसाच्या तसा
+if (!canManageSalary()) { $salary = $targetRow['salary']; unset($_POST['sal_struct']); }
 
 // 👑 एकच Super Admin — दुसऱ्या कोणाला Super Admin बनवता येत नाही
 if ($role === 'super_admin' && $targetCurrentRole !== 'super_admin' && superAdminExistsOtherThan($pdo, $id)) {

@@ -3,7 +3,8 @@ $pageTitle = 'पगार अहवाल';
 $rootPath = '../';
 require_once __DIR__ . '/../includes/header.php';
 
-if (!isManagementOrAbove() && !hasRole('super_admin')) {
+require_once __DIR__ . '/../includes/hr-access.php';
+if (!isManagementOrAbove() && !canManageSalary()) {
     http_response_code(403);
     die('<div style="font-family:sans-serif;padding:40px;">तुम्हाला पगार अहवाल पाहण्याची परवानगी नाही. <a href="../index.php">Dashboard var परत जा</a></div>');
 }

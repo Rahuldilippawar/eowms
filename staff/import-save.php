@@ -2,7 +2,8 @@
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/mailer.php';
 requireLogin('../');
-requireRole(['super_admin'], '../');
+require_once __DIR__ . '/../includes/hr-access.php';
+requireHrAccess('../'); // Super Admin किंवा HR व्यवस्थापन परवानगी
 $user = currentUser();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST' || empty($_FILES['csv_file']['tmp_name'])) {
@@ -114,7 +115,7 @@ foreach ($sheetRows as $row) {
     // Secure default: generate a strong password unless the CSV explicitly supplied one
     $plainPassword = !empty($data['password'] ?? null) ? trim($data['password']) : randomPassword(10);
 
-    $salary = !empty($data['salary'] ?? null) ? (float)trim($data['salary']) : null;
+    $salary = canManageSalary() && !empty($data['salary'] ?? null) ? (float)trim($data['salary']) : null;
     $joiningDateRaw = trim($data['joining_date'] ?? '');
     $joiningDate = ($joiningDateRaw && strtotime($joiningDateRaw)) ? date('Y-m-d', strtotime($joiningDateRaw)) : date('Y-m-d');
     $mobile = trim($data['mobile'] ?? '') ?: null;

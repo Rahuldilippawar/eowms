@@ -400,7 +400,8 @@ function navGroupHead($id, $key, $activeGroup, $icon, $label, $badge = 0) {
     <?php navSectionStart(); ?>
     <?= navGroupHead('navGroupStaff', 'staff', $activeGroup, 'fa-solid fa-users', 'कर्मचारी', $navBadge['leaveApprovals']) ?>
     <div class="collapse nav-group-body <?= navGroupOpen('staff', $activeGroup) ?>" id="navGroupStaff">
-      <?php if (hasPermission('view_staff_directory') || hasCategory('hod')): ?>
+      <?php $navHr = hasPermission('manage_hr'); $navSal = hasPermission('manage_salary'); // 👥 HR व्यवस्थापन / पगार (व्यक्तीनुसार Access) ?>
+      <?php if (hasPermission('view_staff_directory') || hasCategory('hod') || $navHr): ?>
         <a href="<?= $rp ?>staff/index.php" class="tree-node <?= $currentDir === 'staff' && $currentPage === 'index.php' ? 'active' : '' ?>">
           <i class="fa-solid fa-address-book fa-fw"></i><span><?= h(t('nav_staff_directory')) ?></span>
         </a>
@@ -414,16 +415,23 @@ function navGroupHead($id, $key, $activeGroup, $icon, $label, $badge = 0) {
       <a href="<?= $rp ?>staff/my-leaves.php" class="tree-node <?= $currentDir === 'staff' && in_array($currentPage, ['my-leaves.php','leave-apply.php']) ? 'active' : '' ?>">
         <i class="fa-solid fa-umbrella-beach fa-fw"></i><span>रजा व्यवस्थापन</span>
       </a>
-      <?php /* staff/leave-approvals.php मधलीच अट — दोन्ही ठिकाणी सारखीच */ if (hasCategory('hod') || hasPermission('view_org_wide_dashboards') || hasRole('super_admin')): ?>
+      <?php /* staff/leave-approvals.php मधलीच अट — दोन्ही ठिकाणी सारखीच */ if (hasCategory('hod') || hasPermission('view_org_wide_dashboards') || hasRole('super_admin') || $navHr): ?>
         <a href="<?= $rp ?>staff/leave-approvals.php" class="tree-node <?= $currentDir === 'staff' && $currentPage === 'leave-approvals.php' ? 'active' : '' ?>">
           <i class="fa-solid fa-clipboard-check fa-fw"></i><span>रजा-अर्ज मंजुरी</span>
           <?= navCount($navBadge['leaveApprovals']) ?>
         </a>
       <?php endif; ?>
-      <?php if (isManagementOrAbove()): ?>
+      <?php if (isManagementOrAbove() || $navSal): ?>
         <a href="<?= $rp ?>staff/salary-report.php" class="tree-node <?= $currentDir === 'staff' && $currentPage === 'salary-report.php' ? 'active' : '' ?>">
           <i class="fa-solid fa-money-bill-wave fa-fw"></i><span>पगार अहवाल</span>
         </a>
+      <?php endif; ?>
+      <?php if ($navHr && !hasRole('super_admin')): ?>
+        <a href="<?= $rp ?>staff/leave-balances.php" class="tree-node <?= $currentDir === 'staff' && in_array($currentPage, ['leave-balances.php', 'leave-types.php', 'holidays.php', 'shift-settings.php'], true) ? 'active' : '' ?>">
+          <i class="fa-solid fa-user-gear fa-fw"></i><span>HR — रजा, सुट्ट्या, Shift</span>
+        </a>
+      <?php endif; ?>
+      <?php if (isManagementOrAbove()): ?>
         <a href="<?= $rp ?>staff/movement-report.php" class="tree-node <?= $currentDir === 'staff' && $currentPage === 'movement-report.php' ? 'active' : '' ?>">
           <i class="fa-solid fa-people-arrows fa-fw"></i><span>कर्मचारी Movement</span>
         </a>

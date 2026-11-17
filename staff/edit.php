@@ -3,7 +3,8 @@ $pageTitle = 'कर्मचारी संपादित करा';
 $rootPath = '../';
 require_once __DIR__ . '/../includes/header.php';
 require_once __DIR__ . '/../includes/staff-dept-picker.php';
-requireRole(['super_admin'], '../');
+require_once __DIR__ . '/../includes/hr-access.php';
+requireHrAccess('../'); // Super Admin किंवा HR व्यवस्थापन परवानगी
 
 $staffId = (int)($_GET['id'] ?? 0);
 $stmt = $pdo->prepare("SELECT * FROM users WHERE id = ? AND organization_id = ?");
@@ -12,6 +13,11 @@ $staffMember = $stmt->fetch();
 
 if (!$staffMember) {
     die(t('s436'));
+}
+// 🔒 HR (Super Admin नसलेला) — Super Admin / Management खाती व स्वतःचं खातं बदलू शकत नाही
+if (!hasRole('super_admin') && (!hrCanEditUserRole($staffMember['role']) || (int)$staffMember['id'] === (int)(currentUser()['id'] ?? 0))) {
+    http_response_code(403);
+    die('<div style="font-family:sans-serif;padding:40px;">हे खातं फक्त Super Admin बदलू शकतो (Super Admin / Management किंवा स्वतःचं खातं). <a href="index.php">कर्मचारी यादी</a></div>');
 }
 
 $stmt = $pdo->prepare("SELECT * FROM departments WHERE organization_id = ? AND is_active = 1 ORDER BY name_local");
@@ -34,6 +40,7 @@ try {
 }
 // 👑 एकच Super Admin — जो आधीच Super Admin आहे त्याच्याशिवाय कोणालाही हे पद देता येत नाही
 if ($staffMember['role'] !== 'super_admin' && superAdminExistsOtherThan($pdo, (int)$staffMember['id'])) { unset($roles['super_admin']); }
+foreach (array_keys($roles) as $rk) { if (!hrCanAssignRole($rk)) unset($roles[$rk]); } // 👥 HR — फक्त Staff / HOD पदं
 ?>
 
 <div class="page-eyebrow">Super Admin</div>
@@ -150,7 +157,8 @@ if ($staffMember['role'] !== 'super_admin' && superAdminExistsOtherThan($pdo, (i
         <input type="text" name="new_password" class="form-control-custom" placeholder="••••••">
       </div>
       <?php require_once __DIR__ . '/../includes/salary-helpers.php';
-      if (salaryReady($pdo)):
+      if (!canManageSalary()): /* 💰 पगार — फक्त पगार परवानगी असलेल्यांना दिसतो */
+      elseif (salaryReady($pdo)):
         $salCur = salaryCurrent($pdo, activeOrgId(), [$staffId])[$staffId] ?? null;
         $sv = fn($k) => $salCur ? (float)$salCur[$k] : ($k === 'gross' ? (float)$staffMember['salary'] : 0);
         $sf = fn($k) => $salCur ? !empty($salCur[$k]) : !empty($staffMember[$k]); ?>

@@ -2451,4 +2451,12 @@ return [
     "उघडं" => ["खुला", "open"],
     "📜 इतिहास" => ["📜 इतिहास", "📜 History"],
     "Lab तपासणी" => ["Lab जाँच", "Lab check"],
+    "HR — रजा, सुट्ट्या, Shift" => ["HR — अवकाश, छुट्टियाँ, Shift", "HR — Leave, holidays, shifts"],
+    "हा बदल फक्त Super Admin करू शकतो (Super Admin / Management पद किंवा स्वतःचं खातं)." => ["यह बदलाव केवल Super Admin कर सकता है (Super Admin / Management पद या अपना खाता)।", "Only the Super Admin can make this change (Super Admin / Management role or your own account)."],
+    "हे खातं फक्त Super Admin बदलू शकतो (Super Admin / Management किंवा स्वतःचं खातं)." => ["यह खाता केवल Super Admin बदल सकता है (Super Admin / Management या अपना खाता)।", "Only the Super Admin can change this account (Super Admin / Management or your own account)."],
+    "हे खातं फक्त Super Admin सक्रिय / निष्क्रिय करू शकतो." => ["यह खाता केवल Super Admin सक्रिय / निष्क्रिय कर सकता है।", "Only the Super Admin can activate / deactivate this account."],
+    "हे पद (Super Admin / Management) फक्त Super Admin देऊ शकतो." => ["यह पद (Super Admin / Management) केवल Super Admin दे सकता है।", "Only the Super Admin can assign this role (Super Admin / Management)."],
+    "हे पान फक्त Super Admin किंवा HR व्यवस्थापन परवानगी असलेल्यांसाठी आहे." => ["यह पेज केवल Super Admin या HR प्रबंधन अनुमति वालों के लिए है।", "This page is only for the Super Admin or people with HR management permission."],
+    "HR व्यवस्थापन — कर्मचारी जोडणे/बदलणे/Import, हजेरी, रजा, सुट्ट्या, Shift (Super Admin / Management खाती सोडून)" => ["HR प्रबंधन — कर्मचारी जोड़ना/बदलना/Import, हाज़िरी, अवकाश, छुट्टियाँ, Shift (Super Admin / Management खाते छोड़कर)", "HR management — add/edit/import staff, attendance, leave, holidays, shifts (except Super Admin / Management accounts)"],
+    "पगार — पगार रचना पाहणे/बदलणे, Salary Import व अहवाल" => ["वेतन — वेतन संरचना देखना/बदलना, Salary Import व रिपोर्ट", "Salary — view/edit salary structure, salary import and report"],
 ];

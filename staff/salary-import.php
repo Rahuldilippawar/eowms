@@ -2,7 +2,8 @@
 // 💰 पगार रचना आयात — जुन्या Software ची "Employee Salary Detail" Excel (.xls/.xlsx/CSV) → Emp Id ने कर्मचाऱ्यांशी जुळवून
 require_once __DIR__ . '/../includes/auth.php';
 requireLogin('../');
-if (!isManagementOrAbove() && !hasRole('super_admin')) { http_response_code(403); die('पगार माहिती फक्त Management व Super Admin साठी.'); }
+require_once __DIR__ . '/../includes/hr-access.php';
+if (!isManagementOrAbove() && !canManageSalary()) { http_response_code(403); die('पगार माहिती फक्त Management व Super Admin साठी.'); }
 require_once __DIR__ . '/../includes/salary-helpers.php';
 require_once __DIR__ . '/../includes/sheet-reader.php';
 $orgId = activeOrgId();

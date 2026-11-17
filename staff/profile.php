@@ -77,7 +77,9 @@ $isOwnProfile = (int)$user['id'] === $empId;
 require_once __DIR__ . '/../includes/employee-report-access.php';
 $reportDeptIds = employeeReportVisibleDeptIds();
 $canReport = $isOwnProfile || $reportDeptIds === null || in_array((int)($emp['department_id'] ?? 0), $reportDeptIds, true);
-$canEditProfile = $isOwnProfile || hasRole('super_admin');
+require_once __DIR__ . '/../includes/hr-access.php';
+$hrCanThis = !hasRole('super_admin') && hrCanManageUserId($empId); // 👥 HR — Staff/HOD खाती
+$canEditProfile = $isOwnProfile || hasRole('super_admin') || $hrCanThis;
 
 // 1. Profile Completeness Meter
 $completenessFields = [
@@ -156,9 +158,9 @@ $statusChip = ['pending' => 'pending', 'in_progress' => 'pending', 'completed' =
     <?php if ($isOwnProfile): ?>
       <a href="#account" class="btn btn-sm" style="border:1px solid var(--rail);color:var(--rail);border-radius:9px;font-size:12.5px;padding:8px 16px;font-weight:600;"><i class="fa-solid fa-lock me-1"></i>पासवर्ड / फोटो</a>
     <?php endif; ?>
-    <?php if (hasRole('super_admin')): ?>
+    <?php if (hasRole('super_admin') || $hrCanThis): ?>
       <a href="edit.php?id=<?= $emp['id'] ?>" class="btn btn-sm" style="border:1px solid var(--line);border-radius:9px;font-size:12.5px;padding:8px 16px;"><i class="fa-solid fa-pen me-1"></i>Edit</a>
-      <a href="../roles/user-access.php?user_id=<?= $emp['id'] ?>" class="btn btn-sm" style="border:1px solid var(--amber);color:var(--amber);border-radius:9px;font-size:12.5px;padding:8px 16px;"><i class="fa-solid fa-user-shield me-1"></i>Access</a>
+      <?php if (hasRole('super_admin')): ?><a href="../roles/user-access.php?user_id=<?= $emp['id'] ?>" class="btn btn-sm" style="border:1px solid var(--amber);color:var(--amber);border-radius:9px;font-size:12.5px;padding:8px 16px;"><i class="fa-solid fa-user-shield me-1"></i>Access</a><?php endif; ?>
       <form method="POST" action="toggle-active.php" onsubmit="return confirm('<?= $emp['is_active'] ? 'हे खाते निष्क्रिय करायचे?' : 'हे खाते सक्रिय करायचे?' ?>');">
         <input type="hidden" name="id" value="<?= $emp['id'] ?>">
         <?php if ($emp['is_active']): ?>
@@ -214,7 +216,7 @@ $statusChip = ['pending' => 'pending', 'in_progress' => 'pending', 'completed' =
             <?php if ($emp['left_date']): ?>
               <tr><td style="color:var(--text-dim);">सोडल्याचा दिनांक</td><td style="color:var(--rose);"><?= h(date('d M Y', strtotime($emp['left_date']))) ?></td></tr>
             <?php endif; ?>
-            <?php if (isManagementOrAbove() || hasRole('super_admin')): ?>
+            <?php if (isManagementOrAbove() || canManageSalary()): ?>
               <tr><td style="color:var(--text-dim);">पगार (₹)</td><td style="font-weight:600;color:var(--rail);"><?= $emp['salary'] !== null ? '₹' . number_format($emp['salary'], 0) : '—' ?></td></tr>
             <?php endif; ?>
           </tbody>

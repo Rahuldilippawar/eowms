@@ -2,7 +2,8 @@
 $pageTitle = 'कर्मचारी CSV आयात';
 $rootPath = '../';
 require_once __DIR__ . '/../includes/header.php';
-requireRole(['super_admin'], '../');
+require_once __DIR__ . '/../includes/hr-access.php';
+requireHrAccess('../'); // Super Admin किंवा HR व्यवस्थापन परवानगी
 ?>
 
 <div class="page-eyebrow">Super Admin</div>

@@ -281,7 +281,9 @@ INSERT INTO permissions (permission_key, label, label_local, sort_order) VALUES
 ('manage_room_booking', 'Manage bookable rooms', 'Room/Hall Booking व्यवस्थापन', 40),
 ('manage_grievances', 'View and resolve grievances', 'तक्रार निवारण व्यवस्थापन', 42),
 ('manage_dept_finance', 'Record department material purchases and track payments', 'विभाग Finance — Material Purchase व Payment', 45),
-('manage_gaushala', 'Manage Gaushala — cattle registry, health, milk, fodder, breeding, sponsorship', 'गौशाळा व्यवस्थापन', 44);
+('manage_gaushala', 'Manage Gaushala — cattle registry, health, milk, fodder, breeding, sponsorship', 'गौशाळा व्यवस्थापन', 44),
+('manage_hr', 'HR management — add/edit/import staff, attendance, leave balances & types, holidays, shifts (not Super Admin / Management accounts)', 'HR व्यवस्थापन — कर्मचारी जोडणे/बदलणे/Import, हजेरी, रजा, सुट्ट्या, Shift (Super Admin / Management खाती सोडून)', 46),
+('manage_salary', 'Salary — view and edit salary structure, salary import and report', 'पगार — पगार रचना पाहणे/बदलणे, Salary Import व अहवाल', 47);
 
 INSERT INTO role_permissions (role_key, permission_key)
 SELECT role_key, 'manage_it' FROM role_definitions WHERE category = 'management';

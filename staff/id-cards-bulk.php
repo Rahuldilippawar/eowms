@@ -5,7 +5,7 @@ require_once __DIR__ . '/../includes/id-card.php';
 requireLogin('../');
 $user = currentUser();
 
-if (!isManagementOrAbove() && !hasRole('super_admin')) {
+if (!isManagementOrAbove() && !hasRole('super_admin') && !hasPermission('manage_hr')) {
     http_response_code(403);
     die('तुम्हाला Bulk ID Cards तयार करण्याची परवानगी नाही.');
 }

@@ -7,7 +7,7 @@ function employeeReportVisibleDeptIds() {
     global $pdo;
     $user = currentUser(); // header.php नसलेल्या पानांतूनही (उदा. Print/PDF)
     if (!$user) { return []; }
-    if (hasRole('super_admin') || isManagementOrAbove() || hasPermission('view_staff_track_org_wide')) { return null; }
+    if (hasRole('super_admin') || isManagementOrAbove() || hasPermission('view_staff_track_org_wide') || hasPermission('manage_hr')) { return null; }
     $ids = [];
     if (hasAnyCategory(['hod']) && !empty($user['department_id'])) { $ids[] = (int)$user['department_id']; }
     try {

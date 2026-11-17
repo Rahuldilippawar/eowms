@@ -356,7 +356,7 @@ function getVisibleDepartmentIdsForStaffTracking() {
     if (!$user) { return []; }
 
     // Tier 5: संपूर्ण संस्था
-    if (hasRole('super_admin') || hasPermission('view_staff_track_org_wide') || hasPermission('view_staff_directory')) {
+    if (hasRole('super_admin') || hasPermission('view_staff_track_org_wide') || hasPermission('view_staff_directory') || hasPermission('manage_hr')) {
         return null;
     }
 
@@ -627,6 +627,9 @@ function recordLockActive() {
 function recordLockIsBlocked($scriptPath, $method, array $post) {
     $dir = basename(dirname($scriptPath));
     if ($dir === 'account') { return false; }
+    // 👥 HR व्यवस्थापन परवानगी — कर्मचारी व HR पानांवर बदल (त्या पानांचे स्वतःचे नियम: Super Admin / Management खाती नाहीत; Delete नाही)
+    if ($dir === 'staff' && in_array(basename($scriptPath), ['edit.php', 'update.php', 'toggle-active.php', 'leave-types.php', 'holidays.php', 'leave-balances.php', 'shift-settings.php', 'profile-actions.php', 'profile-document-upload.php', 'profile-emergency-contact.php', 'import-list.php'], true)
+        && function_exists('hasPermission') && hasPermission('manage_hr')) { return false; }
     if (preg_match(RECORD_LOCK_SCRIPT_RE, basename($scriptPath))) { return true; }
     if (strtoupper((string)$method) !== 'POST') { return false; }
     foreach (['action', 'op', 'do', 'act', 'mode'] as $k) {
