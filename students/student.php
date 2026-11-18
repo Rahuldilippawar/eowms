@@ -3,6 +3,7 @@
 require_once __DIR__ . '/../includes/auth.php';
 requireLogin('../');
 require_once __DIR__ . '/../includes/students-helpers.php';
+require_once __DIR__ . '/../includes/photo-helpers.php';
 $user = currentUser();
 $orgId = activeOrgId();
 if (!studentsReady($pdo)) { header('Location: index.php'); exit; }
@@ -62,8 +63,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canManage) {
     elseif ($in['aadhaar'] && strlen($in['aadhaar']) !== 12) $error = 'आधार क्रमांक 12 अंकी हवा.';
     elseif ($in['email'] !== '' && !filter_var($in['email'], FILTER_VALIDATE_EMAIL)) $error = 'Email बरोबर नाही.';
     elseif ($in['admission_no'] !== '' && $dup->fetchColumn()) $error = 'हा प्रवेश क्रमांक आधीच दुसऱ्या विद्यार्थ्याला आहे.';
+    $photo = null;
+    if (!$error) { [$photo, $perr] = eowmsSavePhotoUpload($_FILES['photo'] ?? null, 'students', 'stu', 700); if ($perr) $error = $perr; }
     if (!$error) {
         $newId = studentSave($pdo, $orgId, $id, $in, $user['id']);
+        if ($photo) $pdo->prepare("UPDATE students SET photo_path = ? WHERE id = ? AND organization_id = ?")->execute([$photo, $newId, $orgId]);
         logActivity($id ? 'विद्यार्थी माहिती बदलली' : 'नवीन विद्यार्थी जोडला', 'student', $newId, $in['name']);
         $_SESSION['flash'] = '✓ ' . $in['name'] . ' — जतन झालं.';
         header('Location: ' . (!empty($_POST['add_another']) ? 'student.php?' . http_build_query(['campus' => $in['campus_id'], 'class' => $in['class_name'], 'div' => $in['division'], 'year' => $in['academic_year']]) : 'student.php?id=' . $newId)); exit;
@@ -90,7 +94,8 @@ require_once __DIR__ . '/../includes/header.php';
 <div class="page-eyebrow"><a href="index.php" style="color:inherit;text-decoration:none;">🎓 विद्यार्थी</a></div>
 <?php if ($stu && $id): ?>
   <div class="sf-card">
-    <div class="sf-av"><?= h(mb_strtoupper(mb_substr($stu['name'], 0, 1))) ?></div>
+    <?php $hasPh = !empty($stu['photo_path']) && eowmsPhotoExists($stu['photo_path']); ?>
+    <div class="sf-av" style="<?= $hasPh ? 'overflow:hidden;' : '' ?>"><?php if ($hasPh): ?><img src="../<?= h($stu['photo_path']) ?>" alt="" style="width:100%;height:100%;object-fit:cover;"><?php else: ?><?= h(mb_strtoupper(mb_substr($stu['name'], 0, 1))) ?><?php endif; ?></div>
     <div>
       <div class="page-title mb-0"><?= h($stu['name']) ?><?= !$stu['is_active'] ? ' <span class="status-chip overdue" style="font-size:11px;">सोडले' . ($stu['left_date'] ? ' · ' . h(date('d/m/Y', strtotime($stu['left_date']))) : '') . '</span>' : '' ?></div>
       <div>
@@ -100,6 +105,7 @@ require_once __DIR__ . '/../includes/header.php';
         <span class="sf-chip"><?= h($stu['academic_year']) ?></span>
         <span class="sf-chip">🏫 <?= h($stu['campus_name'] ?? '') ?></span>
       </div>
+      <a href="id-cards.php?id=<?= (int)$id ?>" target="_blank" class="btn btn-sm mt-2" style="background:var(--rail);color:#fff;border-radius:8px;font-weight:600;">🪪 ID Card</a>
     </div>
   </div>
 <?php else: ?>
@@ -109,13 +115,14 @@ require_once __DIR__ . '/../includes/header.php';
 <?php if ($error): ?><div class="alert alert-danger" style="border-radius:10px;font-size:13px;">⚠️ <?= h($error) ?></div><?php endif; ?>
 
 <div class="panel">
-  <form method="POST" style="padding:16px 20px;">
+  <form method="POST" enctype="multipart/form-data" style="padding:16px 20px;">
     <input type="hidden" name="action" value="save"><input type="hidden" name="id" value="<?= (int)$id ?>">
     <fieldset <?= $edit ? '' : 'disabled' ?>>
     <div class="row g-2">
       <div class="col-md-6"><label class="form-label-custom">विद्यार्थ्याचे पूर्ण नाव *</label><input type="text" name="name" value="<?= h($v('name')) ?>" class="form-control-custom" required autocapitalize="words" placeholder="आडनाव नाव वडिलांचे नाव"></div>
       <div class="col-6 col-md-3"><label class="form-label-custom">प्रवेश / GR क्र.</label><input type="text" name="admission_no" value="<?= h($v('admission_no')) ?>" class="form-control-custom" placeholder="रिकामे = आपोआप"></div>
       <div class="col-6 col-md-3"><label class="form-label-custom">Roll No</label><input type="text" name="roll_no" value="<?= h($v('roll_no')) ?>" class="form-control-custom"></div>
+      <?php if ($edit): ?><div class="col-md-6"><label class="form-label-custom">📷 फोटो (ID Card साठी)</label><input type="file" name="photo" accept="image/png,image/jpeg,image/webp" class="form-control-custom"></div><?php endif; ?>
     </div>
     <div class="sf-sec">🏫 वर्ग</div>
     <div class="row g-2">
