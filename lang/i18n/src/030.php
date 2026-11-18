@@ -2633,4 +2633,9 @@ return [
     "फिरवा" => ["घुमाएँ", "Rotate"],
     "हा फोटो उघडत नाही — JPG / PNG निवडा." => ["यह फोटो नहीं खुलता — JPG / PNG चुनें।", "This photo cannot be opened — choose a JPG / PNG."],
     "Cards छापल्याची नोंद झाली" => ["Cards छपाई का रिकॉर्ड हुआ", "cards recorded as printed"],
+    "सही — फक्त एकदाच Upload करा" => ["हस्ताक्षर — केवल एक बार Upload करें", "signature — upload only once"],
+    "एकदा जतन केल्यावर प्रत्येक Card वर आपोआप येतात. बाकी" => ["एक बार सहेजने पर हर Card पर अपने आप आते हैं। बाकी", "Once saved they appear on every card automatically. Pending"],
+    "सही Upload करा" => ["हस्ताक्षर Upload करें", "signature upload"],
+    "आत्ता Upload केलेला Logo / सही" => ["अभी Upload किया Logo / हस्ताक्षर", "Apply the logo / signature uploaded now to"],
+    "ला लावा (एकदाच Upload)" => ["पर लगाएँ (एक बार Upload)", "(upload once)"],
 ];

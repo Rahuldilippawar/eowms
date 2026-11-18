@@ -48,7 +48,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
             signature_path=VALUES(signature_path), sign_label=VALUES(sign_label), color=VALUES(color), show_qr=VALUES(show_qr), show_blood=VALUES(show_blood), updated_by=VALUES(updated_by), updated_at=NOW()")
             ->execute([$cid, $orgId, $cut('top_line', 120), $cut('title', 200), $cut('subtitle', 120), $logo === null ? $old['logo_path'] : ($logo ?: null),
                 $sign === null ? $old['signature_path'] : ($sign ?: null), $cut('sign_label', 60), $color, !empty($_POST['show_qr']) ? 1 : 0, !empty($_POST['show_blood']) ? 1 : 0, currentUser()['id']]);
-        logActivity('विद्यार्थी ID Card Design बदलले', 'campus', $cid, '');
+        // एकदाच Upload — हाच Logo / सही सगळ्या College / School ला (नवीन Upload केलेलंच; बाकी Design तसंच)
+        if (!empty($_POST['apply_all']) && ($logo || $sign)) {
+            $others = $pdo->prepare("SELECT id FROM campuses WHERE organization_id = ? AND id <> ?");
+            $others->execute([$orgId, $cid]);
+            $cp = $pdo->prepare("INSERT INTO student_card_settings (campus_id, organization_id, logo_path, signature_path, updated_by, updated_at) VALUES (?,?,?,?,?,NOW())
+                ON DUPLICATE KEY UPDATE logo_path = COALESCE(VALUES(logo_path), logo_path), signature_path = COALESCE(VALUES(signature_path), signature_path), updated_by = VALUES(updated_by), updated_at = NOW()");
+            foreach ($others->fetchAll(PDO::FETCH_COLUMN) as $oc) $cp->execute([$oc, $orgId, $logo ?: null, $sign ?: null, currentUser()['id']]);
+        }
+        logActivity('विद्यार्थी ID Card Design बदलले', 'campus', $cid, !empty($_POST['apply_all']) ? 'सर्व College' : '');
         $_SESSION['flash'] = $err ? '⚠️ ' . $err : '✓ ID Card Design जतन झालं.';
     }
     header('Location: id-cards.php?' . http_build_query(array_filter(['campus' => $cid, 'year' => $_POST['year'] ?? '', 'class' => $_POST['class'] ?? '', 'div' => $_POST['div'] ?? ''], fn($v) => $v !== '' && $v !== 0)) . '#design'); exit;
@@ -296,6 +304,29 @@ require_once __DIR__ . '/../includes/smart-insights.php';
 </div>
 <?php endif; ?>
 
+<?php
+// 🖼️ Logo / ✍️ सही एकदाच — ज्या College चे विद्यार्थी आहेत पण Logo किंवा सही नाही त्यांची आठवण
+$needSetup = [];
+if ($canManage) {
+    $cq = $pdo->prepare("SELECT DISTINCT campus_id FROM students WHERE organization_id = ? AND is_active = 1");
+    $cq->execute([$orgId]);
+    foreach ($cq->fetchAll(PDO::FETCH_COLUMN) as $cid) {
+        $d = $designs[(int)$cid] ?? null;
+        if ($d && (!$d['logo'] || !$d['sign']) && isset($campuses[(int)$cid])) $needSetup[(int)$cid] = $d;
+    }
+}
+?>
+<?php if ($needSetup): ?>
+<div class="panel mb-3" style="border:1.5px dashed var(--rail);">
+  <div style="padding:14px 18px;" class="d-flex flex-wrap align-items-center gap-2 justify-content-between">
+    <div><div style="font-weight:700;font-size:14px;">🖼️ College Logo व ✍️ Principal सही — फक्त एकदाच Upload करा</div>
+      <div style="font-size:12.5px;color:var(--text-dim);">एकदा जतन केल्यावर प्रत्येक Card वर आपोआप येतात. बाकी:
+        <?php foreach ($needSetup as $cid => $d): ?><a href="id-cards.php?campus=<?= $cid ?>#design" class="sf-chip" style="display:inline-block;font-size:12px;border-radius:99px;padding:2px 9px;background:var(--canvas);margin:2px;text-decoration:none;color:inherit;"><?= h($campuses[$cid]) ?>: <?= $d['logo'] ? '✓' : '✕' ?> Logo · <?= $d['sign'] ? '✓' : '✕' ?> सही</a><?php endforeach; ?>
+      </div></div>
+    <a href="id-cards.php?campus=<?= (int)array_key_first($needSetup) ?>#design" class="btn btn-sm" style="background:var(--rail);color:#fff;border-radius:8px;font-weight:600;">⬆ Logo / सही Upload करा</a>
+  </div>
+</div>
+<?php endif; ?>
 <?= smartTiles([
     ['label' => 'Cards तयार होतील', 'value' => count($list), 'sub' => $f['class'] !== '' ? h($f['class'] . ($f['div'] !== '' ? ' - ' . $f['div'] : '')) : 'निवडलेल्या वर्षाचे सर्व सक्रिय', 'tone' => 'ok'],
     ['label' => 'फोटो नाही', 'value' => count($noPhoto), 'sub' => count($noPhoto) ? 'Card वर आद्याक्षरं दिसतील' : 'सगळ्यांचे फोटो आहेत', 'tone' => count($noPhoto) ? 'warn' : 'ok'],
@@ -391,6 +422,7 @@ require_once __DIR__ . '/../includes/smart-insights.php';
         <?php if (!empty($dsSaved['logo_path'])): ?><label style="font-size:12px;"><input type="checkbox" name="remove_logo" value="1"> Logo काढा</label><?php endif; ?></div>
       <div class="col-md-4"><label class="form-label-custom">Principal सही (पांढऱ्या कागदावरचा फोटो) <?= $ds['sign'] ? '✓' : '' ?></label><input type="file" name="signature" accept="image/png,image/jpeg,image/webp" class="form-control-custom">
         <?php if (!empty($dsSaved['signature_path'])): ?><label style="font-size:12px;"><input type="checkbox" name="remove_sign" value="1"> सही काढा</label><?php endif; ?></div>
+      <?php if (count($campuses) > 1): ?><div class="col-12" style="font-size:13px;"><label class="d-flex align-items-center gap-2"><input type="checkbox" name="apply_all" value="1" style="accent-color:var(--rail);width:16px;height:16px;"> आत्ता Upload केलेला Logo / सही <b>सर्व College / School</b> ला लावा (एकदाच Upload)</label></div><?php endif; ?>
       <div class="col-md-2 col-6"><label class="form-label-custom">सहीखाली</label><input type="text" name="sign_label" class="form-control-custom" maxlength="60" value="<?= h($dsSaved['sign_label'] ?? '') ?>" placeholder="PRINCIPAL"></div>
       <div class="col-md-2 col-6"><label class="form-label-custom">रंग</label><input type="color" name="color" class="form-control form-control-color" style="width:100%;height:38px;" value="<?= h($ds['color']) ?>"></div>
       <div class="col-12 d-flex flex-wrap gap-3" style="font-size:13px;">
