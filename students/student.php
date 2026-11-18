@@ -109,8 +109,8 @@ require_once __DIR__ . '/../includes/header.php';
       <a href="id-cards.php?id=<?= (int)$id ?>" target="_blank" class="btn btn-sm mt-2" style="background:var(--rail);color:#fff;border-radius:8px;font-weight:600;">🪪 ID Card</a>
       <?php $bp = null; try { $q = $pdo->prepare("SELECT * FROM student_bus_passes WHERE organization_id = ? AND student_id = ? AND status = 'active' ORDER BY valid_till DESC, id DESC LIMIT 1"); $q->execute([$orgId, $id]); $bp = $q->fetch(); } catch (PDOException $e) {} ?>
       <?php if ($bp): $bpOk = $bp['valid_till'] >= date('Y-m-d'); ?>
-        <a href="bus-passes.php?print=1&amp;ids=<?= (int)$bp['id'] ?>" target="_blank" class="sf-chip mt-2" style="text-decoration:none;color:inherit;<?= $bpOk ? '' : 'background:#FEE2E2;' ?>">🚌 <?= h($bp['from_place']) ?> → <?= h($bp['to_place']) ?> · <?= $bpOk ? 'valid ' : 'संपला ' ?><?= h(date('d/m/Y', strtotime($bp['valid_till']))) ?></a>
-      <?php else: ?><a href="bus-passes.php?<?= h(http_build_query(['campus' => $stu['campus_id'], 'year' => $stu['academic_year'], 'class' => (string)$stu['class_name'], 'div' => (string)$stu['division']])) ?>#issue" class="sf-chip mt-2" style="text-decoration:none;color:inherit;">🚌 बस पास द्या</a><?php endif; ?>
+        <a href="../bus-pass/index.php?print=1&amp;ids=<?= (int)$bp['id'] ?>" target="_blank" class="sf-chip mt-2" style="text-decoration:none;color:inherit;<?= $bpOk ? '' : 'background:#FEE2E2;' ?>">🚌 <?= h($bp['from_place']) ?> → <?= h($bp['to_place']) ?> · <?= $bpOk ? 'valid ' : 'संपला ' ?><?= h(date('d/m/Y', strtotime($bp['valid_till']))) ?></a>
+      <?php else: ?><a href="../bus-pass/index.php?<?= h(http_build_query(['campus' => $stu['campus_id'], 'year' => $stu['academic_year'], 'class' => (string)$stu['class_name'], 'div' => (string)$stu['division']])) ?>#issue" class="sf-chip mt-2" style="text-decoration:none;color:inherit;">🚌 बस पास द्या</a><?php endif; ?>
       <?php if ($cardPr && (int)$cardPr['n']): ?><span class="sf-chip mt-2">🖨️ Card छापलं <?= h(date('d/m/Y', strtotime($cardPr['last']))) ?><?= (int)$cardPr['n'] > 1 ? ' · ' . (int)$cardPr['n'] . ' वेळा' : '' ?></span><?php endif; ?>
     </div>
   </div>
