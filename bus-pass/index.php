@@ -117,6 +117,19 @@ if (!empty($_GET['print']) && $ready) {
     $layout = ($_GET['layout'] ?? '') === 'pvc' ? 'pvc' : 'a4';
     $rows = [];
     if ($ids) { $st = $pdo->prepare($passSql . " AND p.id IN (" . implode(',', array_slice($ids, 0, 1000)) . ") ORDER BY s.class_name, s.division, CAST(s.roll_no AS UNSIGNED), s.name"); $st->execute($pp); $rows = $st->fetchAll(); }
+    elseif (!empty($_GET['all'])) {
+        // 🖨️ एकदम सगळे — निवडलेल्या College / वर्ष / वर्ग / तुकडीतल्या प्रत्येक विद्यार्थ्याचा सध्याचा चालू पास
+        $asql = $passSql . " AND s.is_active = 1 AND p.status = 'active' AND p.valid_till >= CURDATE()
+            AND p.id = (SELECT p2.id FROM student_bus_passes p2 WHERE p2.bus_student_id = p.bus_student_id AND p2.status = 'active' ORDER BY p2.valid_till DESC, p2.id DESC LIMIT 1)";
+        $ap = $pp;
+        if ($f['campus']) { $asql .= " AND s.campus_id = ?"; $ap[] = $f['campus']; }
+        if (($_GET['year'] ?? '') !== '') { $asql .= " AND s.academic_year = ?"; $ap[] = (string)$_GET['year']; }
+        if (isset($_GET['class'])) { $asql .= " AND COALESCE(s.class_name,'') = ?"; $ap[] = (string)$_GET['class']; }
+        if (isset($_GET['div'])) { $asql .= " AND COALESCE(s.division,'') = ?"; $ap[] = (string)$_GET['div']; }
+        $st = $pdo->prepare($asql . " ORDER BY s.class_name, s.division, CAST(s.roll_no AS UNSIGNED), s.name LIMIT 3000");
+        $st->execute($ap);
+        $rows = $st->fetchAll();
+    }
     $designs = studentCardSettingsAll($pdo, $orgId, $org);
     ?>
 <!DOCTYPE html>
@@ -271,7 +284,10 @@ require_once __DIR__ . '/../includes/smart-insights.php';
 <?php endif; ?>
 <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
   <div class="page-title mb-0">🚌 बस पास</div>
-  <?php if ($printIds): ?><a href="<?= h($qs(['print' => 1, 'ids' => $printIds])) ?>" target="_blank" class="btn" style="background:#16A34A;color:#fff;border-radius:10px;font-weight:700;">🖨️ आत्ता दिलेले पास Print करा</a><?php endif; ?>
+  <div class="d-flex gap-2 flex-wrap">
+    <?php if ($printIds): ?><a href="<?= h($qs(['print' => 1, 'ids' => $printIds])) ?>" target="_blank" class="btn" style="background:#16A34A;color:#fff;border-radius:10px;font-weight:700;">🖨️ आत्ता दिलेले पास Print करा</a><?php endif; ?>
+    <?php $allN = $kpi['active'] + $kpi['expiring']; if ($ready && $allN): ?><a href="<?= h('index.php?' . http_build_query(array_filter(['print' => 1, 'all' => 1, 'campus' => $f['campus'] ?: null, 'year' => $f['year'] !== '' ? $f['year'] : null], fn($v) => $v !== null) + ($f['class'] !== '' || $f['div'] !== '' ? ['class' => $f['class'], 'div' => $f['div']] : []))) ?>" target="_blank" class="btn" style="border:1.5px solid var(--rail);color:var(--rail);border-radius:10px;font-weight:700;">🖨️ <?= $f['class'] !== '' ? h($f['class'] . ($f['div'] !== '' ? ' - ' . $f['div'] : '')) . ' —' : '' ?> सगळ्यांचे पास एकदम Print (<?= (int)$allN ?>)</a><?php endif; ?>
+  </div>
 </div>
 
 <?php if (!$ready): ?>

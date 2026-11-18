@@ -129,6 +129,8 @@ require_once __DIR__ . '/../includes/header.php';
         <?php if ($v('from_place')): ?><span class="sf-chip">🚏 <?= h($v('from_place')) ?> ⇄ <?= h($v('to_place') ?: '—') ?></span><?php endif; ?>
         <?php if ($v('student_id')): ?><span class="sf-chip">🎓 विद्यार्थी विभागाशी जोडलेले</span><?php endif; ?>
       </div>
+      <?php $curPass = null; foreach ($passes ?? [] as $pp0) { if ($pp0['status'] === 'active' && $pp0['valid_till'] >= date('Y-m-d')) { $curPass = $pp0; break; } } ?>
+      <?php if ($curPass): ?><a href="index.php?print=1&amp;ids=<?= (int)$curPass['id'] ?>" target="_blank" class="btn btn-sm mt-2 me-1" style="background:#16A34A;color:#fff;border-radius:8px;font-weight:600;">🖨️ पास Print</a><?php endif; ?>
       <?php if ($canManage && $v('is_active', 1)): ?><a href="index.php?<?= h(http_build_query(array_filter(['campus' => $v('campus_id'), 'year' => $v('academic_year'), 'class' => (string)$v('class_name'), 'div' => (string)$v('division')], fn($x) => $x !== null && $x !== ''))) ?>#issue" class="btn btn-sm mt-2" style="background:var(--rail);color:#fff;border-radius:8px;font-weight:600;">🚌 पास द्या / नूतनीकरण</a><?php endif; ?>
     </div>
   </div>

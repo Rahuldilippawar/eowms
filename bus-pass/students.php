@@ -150,6 +150,7 @@ require_once __DIR__ . '/../includes/smart-insights.php';
       <a href="import.php">📥 Excel / CSV Import</a>
       <?php if ($canPull): ?><a href="#pull">🎓 विद्यार्थी विभागातून</a><?php endif; ?>
     <?php endif; ?>
+    <?php if ((int)$kpi['withp']): ?><a href="<?= h('index.php?' . http_build_query(array_filter(['print' => 1, 'all' => 1, 'campus' => $f['campus'] ?: null, 'year' => $f['year'] !== '' ? $f['year'] : null], fn($v) => $v !== null) + ($f['class'] !== '' || $f['div'] !== '' ? ['class' => $f['class'], 'div' => $f['div']] : []))) ?>" target="_blank">🖨️ सगळ्यांचे पास Print</a><?php endif; ?>
     <a href="<?= h($qs(['export' => 'csv'])) ?>">📊 Excel</a>
   </div>
 </div>
