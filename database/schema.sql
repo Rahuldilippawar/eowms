@@ -283,7 +283,8 @@ INSERT INTO permissions (permission_key, label, label_local, sort_order) VALUES
 ('manage_dept_finance', 'Record department material purchases and track payments', 'विभाग Finance — Material Purchase व Payment', 45),
 ('manage_gaushala', 'Manage Gaushala — cattle registry, health, milk, fodder, breeding, sponsorship', 'गौशाळा व्यवस्थापन', 44),
 ('manage_hr', 'HR management — add/edit/import staff, attendance, leave balances & types, holidays, shifts (not Super Admin / Management accounts)', 'HR व्यवस्थापन — कर्मचारी जोडणे/बदलणे/Import, हजेरी, रजा, सुट्ट्या, Shift (Super Admin / Management खाती सोडून)', 46),
-('manage_salary', 'Salary — view and edit salary structure, salary import and report', 'पगार — पगार रचना पाहणे/बदलणे, Salary Import व अहवाल', 47);
+('manage_salary', 'Salary — view and edit salary structure, salary import and report', 'पगार — पगार रचना पाहणे/बदलणे, Salary Import व अहवाल', 47),
+('manage_students', 'Students — add, edit, import and view the student register', 'विद्यार्थी — यादी पाहणे, जोडणे, बदलणे, Import', 48);
 
 INSERT INTO role_permissions (role_key, permission_key)
 SELECT role_key, 'manage_it' FROM role_definitions WHERE category = 'management';
@@ -2233,16 +2234,33 @@ CREATE TABLE students (
   id INT AUTO_INCREMENT PRIMARY KEY,
   organization_id INT NOT NULL,
   campus_id INT NOT NULL,
-  department_id INT NOT NULL,
-  roll_no VARCHAR(30) NOT NULL,
+  department_id INT NULL,
+  roll_no VARCHAR(30) NULL,
   admission_no VARCHAR(50) NOT NULL,
   name VARCHAR(255) NOT NULL,
-  year_of_study TINYINT NOT NULL,
+  year_of_study TINYINT NULL,
   academic_year VARCHAR(20) NOT NULL,
   mobile VARCHAR(15) NULL,
   parent_mobile VARCHAR(15) NULL,
   email VARCHAR(255) NULL,
-  password_hash VARCHAR(255) NOT NULL,
+  class_name VARCHAR(60) NULL,
+  division VARCHAR(20) NULL,
+  course VARCHAR(120) NULL,
+  gender ENUM('M','F','O') NULL,
+  date_of_birth DATE NULL,
+  category VARCHAR(40) NULL,
+  aadhaar VARCHAR(20) NULL,
+  blood_group VARCHAR(6) NULL,
+  father_name VARCHAR(150) NULL,
+  mother_name VARCHAR(150) NULL,
+  address VARCHAR(500) NULL,
+  admission_date DATE NULL,
+  left_date DATE NULL,
+  remarks VARCHAR(255) NULL,
+  photo_path VARCHAR(255) NULL,
+  import_batch VARCHAR(40) NULL,
+  updated_at DATETIME NULL,
+  password_hash VARCHAR(255) NULL,
   must_change_password TINYINT(1) DEFAULT 1,
   failed_login_attempts INT DEFAULT 0,
   locked_until DATETIME NULL,
@@ -2253,8 +2271,10 @@ CREATE TABLE students (
   FOREIGN KEY (campus_id) REFERENCES campuses(id) ON DELETE CASCADE,
   FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE CASCADE,
   FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
-  UNIQUE KEY uniq_roll (campus_id, department_id, academic_year, roll_no),
-  UNIQUE KEY uniq_admission_no (organization_id, admission_no)
+  INDEX idx_stu_roll (campus_id, academic_year, roll_no),
+  UNIQUE KEY uniq_admission_no (organization_id, admission_no),
+  INDEX idx_stu_class (organization_id, campus_id, academic_year, class_name, division),
+  INDEX idx_stu_name (organization_id, name)
 ) ENGINE=InnoDB;
 
 CREATE TABLE virtual_classrooms (

@@ -95,7 +95,7 @@ $dirToGroup = [
     'letters' => 'letters', 'requests' => 'letters', 'emergency' => 'letters',
     'messages' => 'communication', 'grievances' => 'communication',
     'renewals' => 'compliance', 'sop' => 'compliance',
-    'staff' => 'staff',
+    'staff' => 'staff', 'students' => 'staff',
     'biometric' => 'staff',
     'hostels' => 'hostel', 'residency' => 'hostel',
     'meditation' => 'activities', 'music' => 'activities', 'events' => 'activities', 'guests' => 'activities',
@@ -424,6 +424,11 @@ function navGroupHead($id, $key, $activeGroup, $icon, $label, $badge = 0) {
       <?php if (isManagementOrAbove() || $navSal): ?>
         <a href="<?= $rp ?>staff/salary-report.php" class="tree-node <?= $currentDir === 'staff' && $currentPage === 'salary-report.php' ? 'active' : '' ?>">
           <i class="fa-solid fa-money-bill-wave fa-fw"></i><span>पगार अहवाल</span>
+        </a>
+      <?php endif; ?>
+      <?php if (hasRole('super_admin') || hasPermission('manage_students') || isManagementOrAbove() || hasCategory('hod')): // 🎓 विद्यार्थी (HOD — स्वतःच्या विभागाचे) ?>
+        <a href="<?= $rp ?>students/index.php" class="tree-node <?= $currentDir === 'students' ? 'active' : '' ?>">
+          <i class="fa-solid fa-user-graduate fa-fw"></i><span>विद्यार्थी</span>
         </a>
       <?php endif; ?>
       <?php if ($navHr && !hasRole('super_admin')): ?>
