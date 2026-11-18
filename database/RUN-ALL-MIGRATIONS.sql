@@ -4781,3 +4781,37 @@ CREATE TABLE it_machine_checks (
 INSERT IGNORE INTO permissions (permission_key, label, label_local, sort_order) VALUES
   ('manage_hr', 'HR management — add/edit/import staff, attendance, leave balances & types, holidays, shifts (not Super Admin / Management accounts)', 'HR व्यवस्थापन — कर्मचारी जोडणे/बदलणे/Import, हजेरी, रजा, सुट्ट्या, Shift (Super Admin / Management खाती सोडून)', 46),
   ('manage_salary', 'Salary — view and edit salary structure, salary import and report', 'पगार — पगार रचना पाहणे/बदलणे, Salary Import व अहवाल', 47);
+
+-- ============================================================
+-- FROM: migration-students-register.sql
+-- ============================================================
+-- 🎓 विद्यार्थी — यादी, Import (Excel/CSV), वर्ग/तुकडी; शाळा व कॉलेज दोन्हीसाठी (विभाग / Roll No ऐच्छिक)
+ALTER TABLE students MODIFY department_id INT NULL;
+ALTER TABLE students MODIFY roll_no VARCHAR(30) NULL;
+ALTER TABLE students MODIFY year_of_study TINYINT NULL;
+ALTER TABLE students MODIFY password_hash VARCHAR(255) NULL;
+ALTER TABLE students
+  ADD COLUMN class_name VARCHAR(60) NULL,
+  ADD COLUMN division VARCHAR(20) NULL,
+  ADD COLUMN course VARCHAR(120) NULL,
+  ADD COLUMN gender ENUM('M','F','O') NULL,
+  ADD COLUMN date_of_birth DATE NULL,
+  ADD COLUMN category VARCHAR(40) NULL,
+  ADD COLUMN aadhaar VARCHAR(20) NULL,
+  ADD COLUMN blood_group VARCHAR(6) NULL,
+  ADD COLUMN father_name VARCHAR(150) NULL,
+  ADD COLUMN mother_name VARCHAR(150) NULL,
+  ADD COLUMN address VARCHAR(500) NULL,
+  ADD COLUMN admission_date DATE NULL,
+  ADD COLUMN left_date DATE NULL,
+  ADD COLUMN remarks VARCHAR(255) NULL,
+  ADD COLUMN photo_path VARCHAR(255) NULL,
+  ADD COLUMN import_batch VARCHAR(40) NULL,
+  ADD COLUMN updated_at DATETIME NULL;
+ALTER TABLE students ADD INDEX idx_stu_class (organization_id, campus_id, academic_year, class_name, division);
+ALTER TABLE students ADD INDEX idx_stu_name (organization_id, name);
+-- एकाच विभागात वेगवेगळ्या वर्गांत तोच Roll No असू शकतो (FY 1, SY 1) — Unique नको
+ALTER TABLE students ADD INDEX idx_stu_roll (campus_id, academic_year, roll_no);
+ALTER TABLE students DROP INDEX uniq_roll;
+INSERT IGNORE INTO permissions (permission_key, label, label_local, sort_order) VALUES
+  ('manage_students', 'Students — add, edit, import and view the student register', 'विद्यार्थी — यादी पाहणे, जोडणे, बदलणे, Import', 48);
