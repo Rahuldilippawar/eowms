@@ -444,6 +444,15 @@ function navGroupHead($id, $key, $activeGroup, $icon, $label, $badge = 0) {
     </div>
     <?php navSectionEnd('मनुष्यबळ (HR)', 'fa-solid fa-people-group'); ?>
 
+    <!-- ==================== 🚌 विद्यार्थी वाहतूक — बस पास (स्वतंत्र विभाग) ==================== -->
+    <?php navSectionStart(); ?>
+    <?php if (hasRole('super_admin') || hasPermission('manage_bus_passes') || hasPermission('manage_students') || hasPermission('student_id_cards') || isManagementOrAbove() || hasCategory('hod')): ?>
+      <a href="<?= $rp ?>bus-pass/index.php" class="tree-node <?= $currentDir === 'bus-pass' ? 'active' : '' ?>">
+        <i class="fa-solid fa-bus fa-fw"></i><span>बस पास</span>
+      </a>
+    <?php endif; ?>
+    <?php navSectionEnd('विद्यार्थी वाहतूक', 'fa-solid fa-bus'); ?>
+
     <!-- ==================== 🏢 संस्था कामकाज — सुविधा, उपक्रम, मालमत्ता, तांत्रिक, आर्थिक ==================== -->
     <?php navSectionStart(); ?>
     <?php // पूर्वीचे "विभाग Budget" + "Material Purchase व Payment" — आता एकच; दोन्हीपैकी कुठलीही परवानगी पुरेशी ?>

@@ -4878,3 +4878,10 @@ CREATE TABLE IF NOT EXISTS student_bus_passes (
   INDEX idx_bp_student (student_id, valid_till),
   INDEX idx_bp_valid (organization_id, status, valid_till)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
+-- FROM: migration-bus-pass-permission.sql
+-- ============================================================
+-- 🚌 बस पास — स्वतंत्र विभाग; फक्त बस पास देणाऱ्या व्यक्तीसाठी वेगळी परवानगी (विद्यार्थी यादी / ID Cards नाही)
+INSERT IGNORE INTO permissions (permission_key, label, label_local, sort_order) VALUES
+  ('manage_bus_passes', 'Bus passes — issue, renew, cancel and print student bus passes', 'बस पास — देणे, नूतनीकरण, रद्द, Print', 50);
