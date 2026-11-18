@@ -2295,6 +2295,28 @@ CREATE TABLE student_card_settings (
   updated_at DATETIME NULL,
   INDEX idx_scs_org (organization_id)
 ) ENGINE=InnoDB;
+-- 🚌 विद्यार्थी बस पास — कुठून → कुठपर्यंत, कधीपासून → कधीपर्यंत
+CREATE TABLE student_bus_passes (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  organization_id INT NOT NULL,
+  student_id INT NOT NULL,
+  pass_no VARCHAR(40) NOT NULL,
+  from_place VARCHAR(120) NOT NULL,
+  to_place VARCHAR(120) NOT NULL,
+  route_name VARCHAR(120) NULL,
+  valid_from DATE NOT NULL,
+  valid_till DATE NOT NULL,
+  fee DECIMAL(10,2) NULL,
+  status ENUM('active','cancelled') NOT NULL DEFAULT 'active',
+  remarks VARCHAR(255) NULL,
+  issued_by INT NULL,
+  issued_at DATETIME NOT NULL,
+  cancelled_at DATETIME NULL,
+  UNIQUE KEY uniq_bp_no (organization_id, pass_no),
+  INDEX idx_bp_student (student_id, valid_till),
+  INDEX idx_bp_valid (organization_id, status, valid_till)
+) ENGINE=InnoDB;
+
 -- 🪪 कोणाचं Card कधी छापलं (पुन्हा छपाई / हरवलेलं Card ओळखायला)
 CREATE TABLE student_card_prints (
   id INT AUTO_INCREMENT PRIMARY KEY,

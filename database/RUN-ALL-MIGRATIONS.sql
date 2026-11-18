@@ -4853,3 +4853,28 @@ CREATE TABLE IF NOT EXISTS student_card_prints (
 -- 🪪 फक्त विद्यार्थी यादी पाहणे + ID Cards (फोटो, Design, Print) — विद्यार्थी बदलणे / Import नाही
 INSERT IGNORE INTO permissions (permission_key, label, label_local, sort_order) VALUES
   ('student_id_cards', 'Student ID cards — view students, add photos, card design and print', 'विद्यार्थी व ID Cards — यादी पाहणे, फोटो, Card Design, Print', 49);
+
+-- ============================================================
+-- FROM: migration-student-bus-pass.sql
+-- ============================================================
+-- 🚌 विद्यार्थी बस पास — कुठून → कुठपर्यंत, कधीपासून → कधीपर्यंत; नूतनीकरण = नवीन नोंद (इतिहास राहतो)
+CREATE TABLE IF NOT EXISTS student_bus_passes (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  organization_id INT NOT NULL,
+  student_id INT NOT NULL,
+  pass_no VARCHAR(40) NOT NULL,
+  from_place VARCHAR(120) NOT NULL,
+  to_place VARCHAR(120) NOT NULL,
+  route_name VARCHAR(120) NULL,
+  valid_from DATE NOT NULL,
+  valid_till DATE NOT NULL,
+  fee DECIMAL(10,2) NULL,
+  status ENUM('active','cancelled') NOT NULL DEFAULT 'active',
+  remarks VARCHAR(255) NULL,
+  issued_by INT NULL,
+  issued_at DATETIME NOT NULL,
+  cancelled_at DATETIME NULL,
+  UNIQUE KEY uniq_bp_no (organization_id, pass_no),
+  INDEX idx_bp_student (student_id, valid_till),
+  INDEX idx_bp_valid (organization_id, status, valid_till)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
