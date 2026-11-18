@@ -284,7 +284,8 @@ INSERT INTO permissions (permission_key, label, label_local, sort_order) VALUES
 ('manage_gaushala', 'Manage Gaushala — cattle registry, health, milk, fodder, breeding, sponsorship', 'गौशाळा व्यवस्थापन', 44),
 ('manage_hr', 'HR management — add/edit/import staff, attendance, leave balances & types, holidays, shifts (not Super Admin / Management accounts)', 'HR व्यवस्थापन — कर्मचारी जोडणे/बदलणे/Import, हजेरी, रजा, सुट्ट्या, Shift (Super Admin / Management खाती सोडून)', 46),
 ('manage_salary', 'Salary — view and edit salary structure, salary import and report', 'पगार — पगार रचना पाहणे/बदलणे, Salary Import व अहवाल', 47),
-('manage_students', 'Students — add, edit, import and view the student register', 'विद्यार्थी — यादी पाहणे, जोडणे, बदलणे, Import', 48);
+('manage_students', 'Students — add, edit, import and view the student register', 'विद्यार्थी — यादी पाहणे, जोडणे, बदलणे, Import', 48),
+('student_id_cards', 'Student ID cards — view students, add photos, card design and print', 'विद्यार्थी व ID Cards — यादी पाहणे, फोटो, Card Design, Print', 49);
 
 INSERT INTO role_permissions (role_key, permission_key)
 SELECT role_key, 'manage_it' FROM role_definitions WHERE category = 'management';

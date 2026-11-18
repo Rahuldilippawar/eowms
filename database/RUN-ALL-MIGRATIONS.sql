@@ -4846,3 +4846,10 @@ CREATE TABLE IF NOT EXISTS student_card_prints (
   INDEX idx_scp_student (student_id, printed_at),
   INDEX idx_scp_org (organization_id, printed_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
+-- FROM: migration-student-id-card-permission.sql
+-- ============================================================
+-- 🪪 फक्त विद्यार्थी यादी पाहणे + ID Cards (फोटो, Design, Print) — विद्यार्थी बदलणे / Import नाही
+INSERT IGNORE INTO permissions (permission_key, label, label_local, sort_order) VALUES
+  ('student_id_cards', 'Student ID cards — view students, add photos, card design and print', 'विद्यार्थी व ID Cards — यादी पाहणे, फोटो, Card Design, Print', 49);

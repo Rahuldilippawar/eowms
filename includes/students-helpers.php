@@ -17,6 +17,11 @@ function canManageStudents() {
     return hasRole('super_admin') || hasPermission('manage_students');
 }
 
+/** 🪪 विद्यार्थी यादी पाहणे + ID Cards (फोटो, Card Design, Print) — manage_students किंवा फक्त student_id_cards परवानगी */
+function canStudentCards() {
+    return canManageStudents() || hasPermission('student_id_cards');
+}
+
 /**
  * कोणते विद्यार्थी दिसतात: null = सगळे (Super Admin, Management, manage_students);
  * नाहीतर ['campus' => [...], 'dept' => [...]] — HOD ला स्वतःच्या विभागाचे; कोणी नाही तर [] (पान बंद)
@@ -24,7 +29,7 @@ function canManageStudents() {
 function studentVisibleScope(PDO $pdo) {
     $u = currentUser();
     if (!$u) return [];
-    if (canManageStudents() || isManagementOrAbove()) return null;
+    if (canStudentCards() || isManagementOrAbove()) return null;
     $dept = [];
     if (hasAnyCategory(['hod']) && !empty($u['department_id'])) $dept[] = (int)$u['department_id'];
     try {

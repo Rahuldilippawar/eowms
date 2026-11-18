@@ -21,7 +21,7 @@ $layout = ($_GET['layout'] ?? '') === 'pvc' ? 'pvc' : 'a4';
 $size = ($_GET['size'] ?? '') === 'lg' ? 'lg' : 'cr80';
 $design = ($_GET['design'] ?? '') === 'modern' ? 'modern' : 'classic';
 $side = in_array($_GET['side'] ?? '', ['front', 'back', 'both'], true) ? $_GET['side'] : ($design === 'classic' ? 'front' : 'both');
-$canManage = canManageStudents();
+$canManage = canStudentCards(); // फोटो, Card Design, Print — manage_students किंवा student_id_cards
 $org = $pdo->prepare("SELECT * FROM organizations WHERE id = ?");
 $org->execute([$orgId]);
 $org = $org->fetch() ?: [];
