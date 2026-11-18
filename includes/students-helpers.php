@@ -17,9 +17,9 @@ function canManageStudents() {
     return hasRole('super_admin') || hasPermission('manage_students');
 }
 
-/** 🚌 बस पास देणे / नूतनीकरण / Print — विद्यार्थी परवानग्या किंवा फक्त manage_bus_passes */
+/** 🚌 बस पास देणे / नूतनीकरण / Print — फक्त Super Admin किंवा manage_bus_passes (विद्यार्थी विभागाशी संबंध नाही) */
 function canBusPass() {
-    return canStudentCards() || hasPermission('manage_bus_passes');
+    return hasRole('super_admin') || hasPermission('manage_bus_passes');
 }
 
 /** 🪪 विद्यार्थी यादी पाहणे + ID Cards (फोटो, Card Design, Print) — manage_students किंवा फक्त student_id_cards परवानगी */

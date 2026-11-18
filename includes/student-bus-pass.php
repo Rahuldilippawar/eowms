@@ -125,12 +125,25 @@ function busPassSig($orgId, $id, $validTill) {
     return substr(hash_hmac('sha256', 'buspass|' . (int)$orgId . '|' . (int)$id . '|' . (string)$validTill, appSecret()), 0, 12);
 }
 
-function busPassVerifyUrl($orgId, $id, $validTill) {
+/** शैक्षणिक वर्ष "2026-27" → ['2026-06-01', '2027-05-31'] (चुकीचं / रिकामं असेल तर चालू वर्ष) */
+function busAcademicRange($ay) {
+    if (!preg_match('/^(\d{4})\s*[-\/]\s*\d{2,4}$/', trim((string)$ay), $m)) { $ay = studentCurrentAcademicYear(); preg_match('/^(\d{4})/', $ay, $m); }
+    $y = (int)$m[1];
+    return [$y . '-06-01', ($y + 1) . '-05-31', $y . '-' . substr((string)($y + 1), -2)];
+}
+
+/** पास दिलेला नसलेल्या बस विद्यार्थ्याचा QR — शैक्षणिक वर्षासाठी (Signature: विद्यार्थी + वर्ष) */
+function busStudentSig($orgId, $bsId, $ay) {
+    return substr(hash_hmac('sha256', 'busstu|' . (int)$orgId . '|' . (int)$bsId . '|' . (string)$ay, appSecret()), 0, 12);
+}
+
+function busPassVerifyUrl($orgId, $id, $validTill, $bsId = 0, $ay = '') {
     $base = siteBaseUrl();
     if (!empty($_SERVER['HTTP_HOST'])) {
         $https = !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
         $base = ($https ? 'https://' : 'http://') . $_SERVER['HTTP_HOST'] . rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'])), '/') . '/';
     }
+    if (!$id && $bsId) return $base . 'students/verify-pass.php?org=' . (int)$orgId . '&bs=' . (int)$bsId . '&ay=' . rawurlencode($ay) . '&s=' . busStudentSig($orgId, $bsId, $ay);
     return $base . 'students/verify-pass.php?org=' . (int)$orgId . '&id=' . (int)$id . '&s=' . busPassSig($orgId, $id, $validTill);
 }
 
@@ -183,9 +196,9 @@ function busPassIssue(PDO $pdo, $orgId, $busStudentId, array $d, $userId) {
 
 /** पास + बस विद्यार्थी (फोटो: बस-नोंदीचा, नसेल तर विद्यार्थी विभागाचा) — यादी, Print, तपासणीसाठी एकच SELECT */
 function busPassSelectSql() {
-    return "SELECT p.*, s.name, s.class_name, s.division, s.course, s.admission_no, s.roll_no, COALESCE(NULLIF(s.photo_path,''), sx.photo_path) photo_path,
+    return "SELECT p.*, s.name, s.class_name, s.division, s.course, s.admission_no, s.roll_no, s.photo_path,
             s.campus_id, s.is_active stu_active, s.parent_mobile, s.mobile, s.academic_year, c.name campus_name
-        FROM student_bus_passes p JOIN bus_students s ON s.id = p.bus_student_id LEFT JOIN students sx ON sx.id = s.student_id LEFT JOIN campuses c ON c.id = s.campus_id";
+        FROM student_bus_passes p JOIN bus_students s ON s.id = p.bus_student_id LEFT JOIN campuses c ON c.id = s.campus_id";
 }
 
 /** महिन्यांची पट्टी — शैक्षणिक वर्ष (जून → मे); पास ज्या महिन्यांत valid ते रंगीत. Conductor ला एका नजरेत कळतं. */
@@ -219,7 +232,8 @@ function busPassCard(array $p, array $set, $rootPath = '../') {
       <div class="bpc-title" data-fit="2"><?= $h($set['title']) ?></div>
       <?php if (($set['subtitle'] ?? '') !== ''): ?><div class="bpc-subt"><?= $h($set['subtitle']) ?></div><?php endif; ?>
     </div>
-    <div class="bpc-tag"><div class="bpc-tag-t"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 16c0 .9.4 1.7 1 2.2V20a1 1 0 0 0 1 1h1a1 1 0 0 0 1-1v-1h8v1a1 1 0 0 0 1 1h1a1 1 0 0 0 1-1v-1.8c.6-.5 1-1.3 1-2.2V6c0-3.5-3.6-4-8-4S4 2.5 4 6v10zm3.5 1A1.5 1.5 0 1 1 9 15.5 1.5 1.5 0 0 1 7.5 17zm9 0a1.5 1.5 0 1 1 1.5-1.5 1.5 1.5 0 0 1-1.5 1.5zM18 11H6V6h12v5z"/></svg>BUS PASS</div><b><?= $h($p['pass_no']) ?></b></div>
+    <?php $isAy = !empty($p['ay']); ?>
+    <div class="bpc-tag"><div class="bpc-tag-t"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 16c0 .9.4 1.7 1 2.2V20a1 1 0 0 0 1 1h1a1 1 0 0 0 1-1v-1h8v1a1 1 0 0 0 1 1h1a1 1 0 0 0 1-1v-1.8c.6-.5 1-1.3 1-2.2V6c0-3.5-3.6-4-8-4S4 2.5 4 6v10zm3.5 1A1.5 1.5 0 1 1 9 15.5 1.5 1.5 0 0 1 7.5 17zm9 0a1.5 1.5 0 1 1 1.5-1.5 1.5 1.5 0 0 1-1.5 1.5zM18 11H6V6h12v5z"/></svg>BUS PASS</div><b><?= $isAy ? 'AY ' . $h($p['ay']) : $h($p['pass_no']) ?></b></div>
   </div>
   <div class="bpc-body">
     <div class="bpc-left">
@@ -241,10 +255,14 @@ function busPassCard(array $p, array $set, $rootPath = '../') {
         <div class="bpc-pl bpc-to"><span>DESTINATION</span><b data-fit="3" data-fit-min="0.48"><?= $h($p['to_place']) ?></b></div>
       </div>
       <div class="bpc-months"><?php foreach (busPassMonths($p['valid_from'], $p['valid_till']) as $c): ?><i class="<?= $c['on'] ? 'on' : '' ?><?= $c['now'] ? ' now' : '' ?>"><?= $h($c['m']) ?></i><?php endforeach; ?></div>
+      <?php if ($isAy): ?>
+      <div class="bpc-valid"><span>VALID · ACADEMIC YEAR</span><b class="till"><?= $h($p['ay']) ?></b></div>
+      <?php else: ?>
       <div class="bpc-valid"><span>VALID</span><b><?= $h($d($p['valid_from'])) ?></b><span>→</span><b class="till"><?= $h($d($p['valid_till'])) ?></b></div>
+      <?php endif; ?>
     </div>
     <div class="bpc-side">
-      <div class="bpc-qr"><?= idCardQrSvg(busPassVerifyUrl($p['organization_id'], $p['id'], $p['valid_till'])) ?><div>SCAN TO VERIFY</div></div>
+      <div class="bpc-qr"><?= idCardQrSvg(busPassVerifyUrl($p['organization_id'], $p['id'], $p['valid_till'], (int)($p['bus_student_id'] ?? 0), (string)($p['ay'] ?? ''))) ?><div>SCAN TO VERIFY</div></div>
       <div class="bpc-sign"><?php if ($set['sign']): ?><img src="<?= $h($rootPath . $set['sign']) ?>" alt=""><?php endif; ?><div><?= $h($set['sign_label']) ?></div></div>
     </div>
   </div>
@@ -256,3 +274,40 @@ function busPassCard(array $p, array $set, $rootPath = '../') {
 </div>
 <?php return ob_get_clean();
 }
+
+/* ================= ₹ बस शुल्क — जमा, पावती ================= */
+
+function busFeeReady(PDO $pdo) {
+    static $ok = null;
+    if ($ok !== null) return $ok;
+    try { $pdo->query("SELECT 1 FROM bus_fee_payments LIMIT 0"); return $ok = true; } catch (PDOException $e) { return $ok = false; }
+}
+
+/** पुढची पावती: BF-2026-00001 */
+function busFeeNextReceipt(PDO $pdo, $orgId) {
+    $prefix = 'BF-' . date('Y') . '-';
+    $st = $pdo->prepare("SELECT receipt_no FROM bus_fee_payments WHERE organization_id = ? AND receipt_no LIKE ? ORDER BY id DESC LIMIT 1");
+    $st->execute([$orgId, $prefix . '%']);
+    return $prefix . str_pad((string)((int)substr((string)$st->fetchColumn(), strlen($prefix)) + 1), 5, '0', STR_PAD_LEFT);
+}
+
+/** ₹ जमा: पावती + विद्यार्थ्याचं paid_fee वाढवतो. परत: पावती id */
+function busFeeCollect(PDO $pdo, $orgId, $bsId, $amount, $paidOn, $mode, $note, $userId) {
+    $no = busFeeNextReceipt($pdo, $orgId);
+    $pdo->prepare("INSERT INTO bus_fee_payments (organization_id, bus_student_id, receipt_no, amount, paid_on, mode, note, created_by, created_at) VALUES (?,?,?,?,?,?,?,?,NOW())")
+        ->execute([$orgId, $bsId, $no, $amount, $paidOn, $mode ?: null, $note ?: null, $userId]);
+    $rid = (int)$pdo->lastInsertId();
+    $pdo->prepare("UPDATE bus_students SET paid_fee = COALESCE(paid_fee, 0) + ?, updated_at = NOW() WHERE id = ? AND organization_id = ?")->execute([$amount, $bsId, $orgId]);
+    return $rid;
+}
+
+function busFeeModes() { return ['cash' => 'रोख', 'upi' => 'UPI', 'bank' => 'Bank / NEFT', 'cheque' => 'Cheque', 'other' => 'इतर']; }
+
+/** ₹ 1,23,456 (भारतीय पद्धत) */
+function busInr($n) {
+    $n = (float)$n; $neg = $n < 0; $n = abs(round($n));
+    $s = (string)$n; $last3 = substr($s, -3); $rest = substr($s, 0, -3);
+    if ($rest !== '') $last3 = preg_replace('/\B(?=(\d{2})+(?!\d))/', ',', $rest) . ',' . $last3;
+    return ($neg ? '-' : '') . '₹' . $last3;
+}
+

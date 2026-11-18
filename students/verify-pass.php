@@ -2,10 +2,13 @@
 // 🚌 बस पास तपासणी — QR Scan केल्यावर (Login लागत नाही). Signature जुळलं तरच माहिती; मोबाईल/पत्ता/जन्मतारीख कधीच नाही.
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/photo-helpers.php';
+require_once __DIR__ . '/../includes/students-helpers.php';
 require_once __DIR__ . '/../includes/student-bus-pass.php';
 
 $orgId = (int)($_GET['org'] ?? 0);
 $id = (int)($_GET['id'] ?? 0);
+$bsId = (int)($_GET['bs'] ?? 0); // पास न दिलेला बस विद्यार्थी — शैक्षणिक वर्षाचा पास
+$ay = is_string($_GET['ay'] ?? null) ? substr($_GET['ay'], 0, 10) : '';
 $sig = is_string($_GET['s'] ?? null) ? $_GET['s'] : '';
 $p = null;
 $limited = publicFormRateLimited('verify_bus_pass', 60, 600);
@@ -17,7 +20,20 @@ if ($id && $orgId && $sig !== '' && !$limited) {
         $p = $st->fetch();
     } catch (PDOException $e) { $p = null; }
 }
-$genuine = $p && hash_equals(busPassSig($p['organization_id'], $p['id'], $p['valid_till']), $sig);
+if (!$id && $bsId && $orgId && $sig !== '' && !$limited) {
+    publicFormRecordSubmission('verify_bus_pass');
+    try {
+        $st = $pdo->prepare("SELECT s.*, s.is_active stu_active, c.name campus_name, o.name org_name FROM bus_students s JOIN organizations o ON o.id = s.organization_id LEFT JOIN campuses c ON c.id = s.campus_id WHERE s.id = ? AND s.organization_id = ?");
+        $st->execute([$bsId, $orgId]);
+        if ($p = $st->fetch()) {
+            [$f0, $t0] = busAcademicRange($ay);
+            $p += ['pass_no' => 'AY ' . $ay, 'valid_from' => $f0, 'valid_till' => $t0, 'status' => 'active'];
+            if (!$p['from_place']) $p['from_place'] = busSource($pdo, $orgId);
+            $p['ay'] = $ay;
+        }
+    } catch (PDOException $e) { $p = null; }
+}
+$genuine = $p && (!empty($p['ay']) ? hash_equals(busStudentSig($p['organization_id'], $p['id'], $p['ay']), $sig) : hash_equals(busPassSig($p['organization_id'], $p['id'], $p['valid_till']), $sig));
 $state = $limited ? 'limited' : (!$genuine ? 'invalid' : busPassState($p));
 if ($genuine && !$p['stu_active'] && in_array($state, ['active', 'expiring', 'upcoming'], true)) $state = 'cancelled';
 $ok = in_array($state, ['active', 'expiring'], true);
@@ -62,7 +78,7 @@ $tone = $ok ? 'valid' : ($state === 'upcoming' || $state === 'expiring' ? 'warnx
         <div><span>पास क्र.</span><b><?= h($p['pass_no']) ?></b></div>
         <div><span>मार्ग (जाणे-येणे)</span><b><?= h($p['from_place']) ?> ⇄ <?= h($p['to_place']) ?></b></div>
         <?php if ($p['route_name']): ?><div><span>मार्ग / बस</span><b><?= h($p['route_name']) ?></b></div><?php endif; ?>
-        <div><span>Valid</span><b style="color:<?= $ok ? '#15803D' : '#BE123C' ?>;"><?= h(date('d/m/Y', strtotime($p['valid_from']))) ?> → <?= h(date('d/m/Y', strtotime($p['valid_till']))) ?></b></div>
+        <div><span>Valid</span><b style="color:<?= $ok ? '#15803D' : '#BE123C' ?>;"><?= !empty($p['ay']) ? 'शैक्षणिक वर्ष ' . h($p['ay']) : h(date('d/m/Y', strtotime($p['valid_from']))) . ' → ' . h(date('d/m/Y', strtotime($p['valid_till']))) ?></b></div>
         <?php if ($p['class_name']): ?><div><span>Class</span><b><?= h($p['class_name']) ?></b></div><?php endif; ?>
         <?php if ($p['division'] || $p['course']): ?><div><span>Division</span><b><?= h($p['division'] ?: $p['course']) ?></b></div><?php endif; ?>
         <div><span>Reg No</span><b><?= h($p['admission_no']) ?></b></div>

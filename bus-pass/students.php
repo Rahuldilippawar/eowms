@@ -16,40 +16,6 @@ $campusRows = $pdo->prepare("SELECT id, name, city FROM campuses WHERE organizat
 $campusRows->execute([$orgId]);
 $campusRows = $campusRows->fetchAll(PDO::FETCH_UNIQUE);
 
-// विद्यार्थी विभागातून आणणे — फक्त ज्यांना तो विभाग दिसतो (त्यांच्या दृश्यमर्यादेतले विद्यार्थी)
-$stuScope = studentsReady($pdo) ? studentVisibleScope($pdo) : [];
-$canPull = $canManage && $stuScope !== [];
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canManage) {
-    $action = $_POST['action'] ?? '';
-    if ($action === 'pull' && $canPull) {
-        $p = [$orgId];
-        $sql = "SELECT s.* FROM students s WHERE s.organization_id = ? AND s.is_active = 1" . studentScopeSql($stuScope, $p);
-        foreach (['campus' => 's.campus_id', 'year' => 's.academic_year'] as $k => $col) { if (($_POST['p_' . $k] ?? '') !== '') { $sql .= " AND $col = ?"; $p[] = $_POST['p_' . $k]; } }
-        if (($_POST['p_campus'] ?? '') === '') { $_SESSION['flash'] = '⚠️ वर्ग निवडा.'; header('Location: students.php#pull'); exit; }
-        $sql .= " AND COALESCE(s.class_name,'') = ? AND COALESCE(s.division,'') = ?"; $p[] = (string)($_POST['p_class'] ?? ''); $p[] = (string)($_POST['p_div'] ?? '');
-        $st = $pdo->prepare($sql . " LIMIT 3000");
-        $st->execute($p);
-        $to = mb_substr(trim((string)($_POST['p_to'] ?? '')), 0, 120);
-        $n = 0; $had = 0;
-        $pdo->beginTransaction();
-        foreach ($st->fetchAll() as $s) {
-            $row = ['student_id' => (int)$s['id'], 'campus_id' => $s['campus_id'], 'name' => $s['name'], 'admission_no' => $s['admission_no'], 'roll_no' => $s['roll_no'], 'class_name' => $s['class_name'],
-                'division' => $s['division'], 'course' => $s['course'], 'academic_year' => $s['academic_year'], 'gender' => $s['gender'], 'date_of_birth' => $s['date_of_birth'], 'mobile' => $s['mobile'],
-                'parent_mobile' => $s['parent_mobile'], 'address' => $s['address'], 'blood_group' => $s['blood_group']];
-            if (busStudentFind($pdo, $orgId, $row)) { $had++; continue; }
-            $row['from_place'] = busSource($pdo, $orgId);
-            if ($to !== '') $row['to_place'] = busPlace($to);
-            busStudentSave($pdo, $orgId, 0, $row, $user['id']);
-            $n++;
-        }
-        $pdo->commit();
-        if ($n) logActivity('बस विद्यार्थी — विद्यार्थी विभागातून आणले', 'organization', $orgId, $n . ' विद्यार्थी');
-        $_SESSION['flash'] = '✓ ' . $n . ' विद्यार्थी बस यादीत आले.' . ($had ? ' ' . $had . ' आधीच यादीत होते.' : '');
-        header('Location: students.php?' . http_build_query(array_filter(['campus' => $_POST['p_campus'] ?? '', 'year' => $_POST['p_year'] ?? '', 'class' => $_POST['p_class'] ?? '', 'div' => $_POST['p_div'] ?? '']))); exit;
-    }
-}
-
 $f = ['campus' => (int)($_GET['campus'] ?? 0), 'year' => trim((string)($_GET['year'] ?? '')), 'class' => trim((string)($_GET['class'] ?? '')), 'div' => trim((string)($_GET['div'] ?? '')),
     'q' => trim((string)($_GET['q'] ?? '')), 'pass' => in_array($_GET['pass'] ?? '', ['with', 'without', 'expired', 'due'], true) ? $_GET['pass'] : '', 'status' => ($_GET['status'] ?? '') === 'left' ? 'left' : 'active'];
 $years = $pdo->prepare("SELECT DISTINCT academic_year FROM bus_students WHERE organization_id = ? AND academic_year IS NOT NULL AND academic_year <> '' ORDER BY academic_year DESC");
@@ -105,17 +71,6 @@ $st = $pdo->prepare("SELECT s.*, c.name campus_name, $lastPass lastp $where ORDE
 $st->execute($wp);
 $rows = $st->fetchAll();
 
-// विद्यार्थी विभागातून आणण्यासाठी वर्ग
-$pullClasses = [];
-if ($canPull) {
-    $pp = [$orgId];
-    $q = $pdo->prepare("SELECT s.campus_id, s.academic_year, COALESCE(s.class_name,'') cl, COALESCE(s.division,'') dv, COUNT(*) n,
-            SUM(EXISTS(SELECT 1 FROM bus_students b WHERE b.student_id = s.id)) inbus
-        FROM students s WHERE s.organization_id = ? AND s.is_active = 1" . studentScopeSql($stuScope, $pp) . " GROUP BY s.campus_id, s.academic_year, cl, dv ORDER BY s.academic_year DESC, CAST(cl AS UNSIGNED), cl, dv LIMIT 200");
-    $q->execute($pp);
-    $pullClasses = $q->fetchAll();
-}
-
 $pageTitle = 'बस विद्यार्थी';
 $rootPath = '../';
 require_once __DIR__ . '/../includes/header.php';
@@ -148,13 +103,12 @@ require_once __DIR__ . '/../includes/smart-insights.php';
     <?php if ($canManage): ?>
       <a href="student.php" class="pri">＋ विद्यार्थी जोडा</a>
       <a href="import.php">📥 Excel / CSV Import</a>
-      <?php if ($canPull): ?><a href="#pull">🎓 विद्यार्थी विभागातून</a><?php endif; ?>
     <?php endif; ?>
-    <?php if ((int)$kpi['withp']): ?><a href="<?= h('index.php?' . http_build_query(array_filter(['print' => 1, 'all' => 1, 'campus' => $f['campus'] ?: null, 'year' => $f['year'] !== '' ? $f['year'] : null], fn($v) => $v !== null) + ($f['class'] !== '' || $f['div'] !== '' ? ['class' => $f['class'], 'div' => $f['div']] : []))) ?>" target="_blank">🖨️ सगळ्यांचे पास Print</a><?php endif; ?>
+    <?php if ((int)$kpi['n']): ?><a href="<?= h('index.php?' . http_build_query(array_filter(['print' => 1, 'all' => 1, 'campus' => $f['campus'] ?: null, 'year' => $f['year'] !== '' ? $f['year'] : null], fn($v) => $v !== null) + ($f['class'] !== '' || $f['div'] !== '' ? ['class' => $f['class'], 'div' => $f['div']] : []))) ?>" target="_blank">🖨️ सगळ्या विद्यार्थ्यांचे पास Print</a><?php endif; ?>
     <a href="<?= h($qs(['export' => 'csv'])) ?>">📊 Excel</a>
   </div>
 </div>
-<p style="font-size:12.5px;color:var(--text-dim);margin:-2px 0 12px;">ही यादी फक्त बस पाससाठी आहे — विद्यार्थी विभागापासून वेगळी. इथे जोडलं / बदललं तरी विद्यार्थी विभागात काही बदलत नाही.</p>
+<p style="font-size:12.5px;color:var(--text-dim);margin:-2px 0 12px;">ही यादी फक्त बस पाससाठी आहे — विद्यार्थी विभागाशी काहीही संबंध नाही.</p>
 
 <form method="GET" class="d-flex flex-wrap gap-2 mb-2" data-no-smart-filter>
   <?php if (count($campusRows) > 1): ?>
@@ -219,10 +173,10 @@ require_once __DIR__ . '/../includes/smart-insights.php';
         <tr>
           <td><?php if ($ph): ?><img src="../<?= h($ph) ?>" class="bs-av" alt="" loading="lazy"><?php else: ?><span class="bs-av"><?= h(mb_strtoupper(mb_substr($r['name'], 0, 1))) ?></span><?php endif; ?></td>
           <td class="nm"><a href="student.php?id=<?= (int)$r['id'] ?>" style="color:inherit;text-decoration:none;"><b><?= h($r['name']) ?></b></a>
-            <div style="font-size:11.5px;color:var(--text-dim);"><?= h(trim($r['class_name'] . ($r['division'] ? ' · ' . $r['division'] : '') . ($r['course'] ? ' · ' . $r['course'] : ''))) ?><?= $r['admission_no'] ? ' · Reg. ' . h($r['admission_no']) : '' ?><?= $r['student_id'] ? ' · 🎓' : '' ?></div></td>
+            <div style="font-size:11.5px;color:var(--text-dim);"><?= h(trim($r['class_name'] . ($r['division'] ? ' · ' . $r['division'] : '') . ($r['course'] ? ' · ' . $r['course'] : ''))) ?><?= $r['admission_no'] ? ' · Reg. ' . h($r['admission_no']) : '' ?></div></td>
           <td><b><?= h($r['from_place'] ?: '—') ?></b> ⇄ <?= h($r['to_place'] ?: '—') ?><?= $r['route_name'] ? '<div style="font-size:11px;color:var(--text-dim);">' . h($r['route_name']) . '</div>' : '' ?></td>
           <td style="white-space:nowrap;font-size:12px;"><?php if ($r['total_fee'] !== null): $bal = (float)$r['total_fee'] - (float)$r['paid_fee']; ?><b style="color:<?= $bal > 0 ? '#B91C1C' : '#15803D' ?>;"><?= $bal > 0 ? '₹' . h(number_format($bal)) . ' बाकी' : '✓ पूर्ण' ?></b><div style="color:var(--text-dim);font-size:11px;">₹<?= h(number_format((float)$r['paid_fee'])) ?> / <?= h(number_format((float)$r['total_fee'])) ?></div><?php else: ?><span style="color:var(--text-dim);">—</span><?php endif; ?></td>
-          <td><span class="bp-st <?= $stc ?>"><?= h($stl) ?></span><?= $lp && $lp[1] === 'active' ? ' <a href="index.php?print=1&amp;ids=' . (int)$lp[3] . '" target="_blank" title="Print" style="text-decoration:none;">🖨️</a>' : '' ?></td>
+          <td><span class="bp-st <?= $stc ?>"><?= h($stl) ?></span><?= $lp && $lp[1] === 'active' && $lp[0] >= $today ? ' <a href="index.php?print=1&amp;ids=' . (int)$lp[3] . '" target="_blank" title="Print" style="text-decoration:none;">🖨️</a>' : ($r['is_active'] ? ' <a href="index.php?print=1&amp;all=1&amp;bs=' . (int)$r['id'] . '" target="_blank" title="Print (शैक्षणिक वर्ष)" style="text-decoration:none;">🖨️</a>' : '') ?></td>
           <td class="cp" style="font-size:12px;"><?= h($r['campus_name'] ?? '') ?></td>
           <td style="white-space:nowrap;"><a href="student.php?id=<?= (int)$r['id'] ?>" class="btn btn-sm" style="border:1px solid var(--line);border-radius:7px;font-size:12px;padding:3px 9px;"><?= $canManage ? '✎' : 'पहा' ?></a></td>
         </tr>
@@ -237,35 +191,5 @@ require_once __DIR__ . '/../includes/smart-insights.php';
   <?php endif; ?>
   <?php endif; ?>
 </div>
-
-<?php if ($canPull && $pullClasses): ?>
-<div class="panel" id="pull">
-  <div class="panel-head"><div class="title">🎓 विद्यार्थी विभागातून आणा</div><div class="sub">आधीच यादीत असलेले वगळले जातात. नंतर इथली माहिती स्वतंत्रपणे बदलता येते.</div></div>
-  <form method="POST" style="padding:14px 18px;" data-no-smart-filter onsubmit="return confirm('निवडलेल्या वर्गाचे विद्यार्थी बस यादीत आणायचे?');">
-    <input type="hidden" name="action" value="pull">
-    <div class="row g-2 align-items-end">
-      <div class="col-md-6"><label class="form-label-custom">वर्ग (विद्यार्थी विभागातला)</label>
-        <select id="pullPick" class="form-select-custom" required>
-          <option value="">-- निवडा --</option>
-          <?php foreach ($pullClasses as $pc): $left = (int)$pc['n'] - (int)$pc['inbus']; ?>
-            <option value="<?= h(json_encode([$pc['campus_id'], $pc['academic_year'], $pc['cl'], $pc['dv']])) ?>" <?= $left ? '' : 'disabled' ?>><?= h(($campusRows[$pc['campus_id']]['name'] ?? '') . ' · ' . $pc['academic_year'] . ' · ' . ($pc['cl'] !== '' ? $pc['cl'] : '—') . ($pc['dv'] !== '' ? ' - ' . $pc['dv'] : '')) ?> — <?= $left ? $left . ' नवीन' : 'सगळे आधीच आहेत' ?></option>
-          <?php endforeach; ?>
-        </select></div>
-      <div class="col-md-3"><label class="form-label-custom">🚏 Destination / थांबा (ऐच्छिक)</label><input type="text" name="p_to" class="form-control-custom" maxlength="120" placeholder="नंतर प्रत्येकाचं भरता येतं"></div>
-      <div class="col-md-3"><button type="submit" class="btn w-100" style="background:var(--rail);color:#fff;border-radius:10px;font-weight:600;">⬇ बस यादीत आणा</button></div>
-    </div>
-    <input type="hidden" name="p_campus"><input type="hidden" name="p_year"><input type="hidden" name="p_class"><input type="hidden" name="p_div">
-  </form>
-</div>
-<script>
-  (function () {
-    var s = document.getElementById('pullPick'); if (!s) return;
-    s.addEventListener('change', function () {
-      var v = s.value ? JSON.parse(s.value) : ['', '', '', ''], f = s.form;
-      f.p_campus.value = v[0]; f.p_year.value = v[1]; f.p_class.value = v[2]; f.p_div.value = v[3];
-    });
-  })();
-</script>
-<?php endif; ?>
 
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>
