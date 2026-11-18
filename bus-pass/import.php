@@ -32,13 +32,14 @@ if (isset($_GET['template'])) {
     header('Content-Type: text/csv; charset=utf-8');
     header('Content-Disposition: attachment; filename="bus-students-template.csv"');
     $o = fopen('php://output', 'w'); fwrite($o, "\xEF\xBB\xBF");
-    fputcsv($o, ['GR No', 'Roll No', 'Student Name', 'Class', 'Division', 'Branch', 'From (Village / Stop)', 'To', 'Route / Bus', 'Parent Mobile', 'Date of Birth', 'Blood Group', 'Address']);
-    fputcsv($o, ['2892', '1', 'Agivale Yuvraj Jalandar', 'FE', '', 'AIML', 'Kunde', 'Shahapur', 'Route 3', '9876543210', '19/06/2008', 'B+', 'A.Post.Kunde Tal.Bhiwandi, Dist.Thane']);
+    fputcsv($o, ['Reg No', 'Student Name', 'Class', 'Division', 'Source', 'Destination (Stop)', 'Total Fee', 'Paid Fee', 'Balance Fee', 'Route / Bus', 'Parent Mobile']);
+    fputcsv($o, ['26161436', 'SADGIR DIKSHA RAMDAS', 'DSE', 'COMP', 'AMRIT CAMPUS', 'ATGAON', '13750', '7000', '6750', 'Route 3', '9876543210']);
     fclose($o); exit;
 }
 
 /** एक ओळ → जतनासाठी बस विद्यार्थी (Defaults: College, वर्ष, वर्ग, तुकडी, कुठपर्यंत) */
-$buildRow = function (array $r, array $d) use ($campuses) {
+$busSrc = busSource($pdo, $orgId);
+$buildRow = function (array $r, array $d) use ($campuses, $busSrc) {
     $s = studentRowFromSheet($r, $d['map']);
     if (isset($s['_err'])) return $s;
     $o = $d['opts'];
@@ -51,7 +52,13 @@ $buildRow = function (array $r, array $d) use ($campuses) {
     foreach (['academic_year' => 'year', 'class_name' => 'class', 'division' => 'div', 'to_place' => 'to', 'from_place' => 'from', 'route_name' => 'route'] as $k => $ok) {
         if (empty($s[$k]) && ($o[$ok] ?? '') !== '') $s[$k] = $o[$ok];
     }
-    foreach (['from_place', 'to_place'] as $k) { if (!empty($s[$k])) $s[$k] = nameCase((string)$s[$k]); }
+    if (empty($s['from_place'])) $s['from_place'] = $busSrc; // Source नेहमी (उदा. AMRIT CAMPUS)
+    foreach (['from_place', 'to_place'] as $k) { if (!empty($s[$k]) && !preg_match('/^[A-Z0-9 .,&\-]+$/', (string)$s[$k])) $s[$k] = nameCase((string)$s[$k]); }
+    // ₹ शुल्क: एकूण + बाकी दिलं असेल आणि भरलेलं नसेल तर भरलेलं = एकूण − बाकी
+    $tot = busMoney($s['total_fee'] ?? null); $paid = busMoney($s['paid_fee'] ?? null); $bal = busMoney($s['balance_fee'] ?? null);
+    if ($paid === null && $tot !== null && $bal !== null) $paid = max(0, $tot - $bal);
+    if ($tot === null && $paid !== null && $bal !== null) $tot = $paid + $bal;
+    $s['total_fee'] = $tot; $s['paid_fee'] = $paid; unset($s['balance_fee']);
     return $s;
 };
 
@@ -186,8 +193,8 @@ require_once __DIR__ . '/../includes/header.php';
       <div class="col-6 col-md-3"><label class="form-label-custom">शैक्षणिक वर्ष</label><input type="text" name="year" value="<?= h(studentCurrentAcademicYear()) ?>" class="form-control-custom"></div>
       <div class="col-6 col-md-3"><label class="form-label-custom">इयत्ता / वर्ग <span style="font-weight:400">(File मध्ये नसेल तर)</span></label><input type="text" name="class" class="form-control-custom" placeholder="उदा. 10 वी"></div>
       <div class="col-6 col-md-2"><label class="form-label-custom">तुकडी</label><input type="text" name="div" class="form-control-custom" placeholder="A"></div>
-      <div class="col-6 col-md-4"><label class="form-label-custom">🚏 कुठून <span style="font-weight:400">(File मध्ये नसेल तर)</span></label><input type="text" name="from" class="form-control-custom" maxlength="120" placeholder="उदा. Kunde"></div>
-      <div class="col-6 col-md-4"><label class="form-label-custom">🏫 कुठपर्यंत <span style="font-weight:400">(File मध्ये नसेल तर)</span></label><input type="text" name="to" class="form-control-custom" maxlength="120" value="<?= h(count($campusRows) === 1 ? (current($campusRows)['city'] ?: current($campusRows)['name']) : '') ?>"></div>
+      <div class="col-6 col-md-4"><label class="form-label-custom">🏫 Source (कुठून) <span style="font-weight:400">(File मध्ये नसेल तर)</span></label><input type="text" name="from" class="form-control-custom" maxlength="120" value="<?= h(busSource($pdo, $orgId)) ?>"></div>
+      <div class="col-6 col-md-4"><label class="form-label-custom">🚏 Destination / थांबा <span style="font-weight:400">(File मध्ये नसेल तर)</span></label><input type="text" name="to" class="form-control-custom" maxlength="120"></div>
       <div class="col-6 col-md-4"><label class="form-label-custom">🛣️ मार्ग / बस <span style="font-weight:400">(ऐच्छिक)</span></label><input type="text" name="route" class="form-control-custom" maxlength="120" placeholder="उदा. Route 3"></div>
       <div class="col-12"><label class="form-label-custom">आधीच असलेले बस विद्यार्थी (Gr.No. / Roll / नावानुसार)</label>
         <div class="d-flex gap-3 flex-wrap" style="font-size:13px;">
@@ -257,12 +264,13 @@ require_once __DIR__ . '/../includes/header.php';
   <div class="panel-head"><div class="title">👀 Preview — पहिले <?= count($preview['sample']) ?></div></div>
   <div style="overflow-x:auto;">
   <table class="rtable" style="font-size:12.5px;">
-    <thead><tr><th></th><th>Gr.No.</th><th>नाव</th><th>वर्ग</th><th>कुठून → कुठपर्यंत</th><th>मार्ग</th><th>पालक मोबाईल</th></tr></thead>
+    <thead><tr><th></th><th>Reg No</th><th>नाव</th><th>Class · Division</th><th>Source ⇄ Destination</th><th>₹ एकूण / भरले / बाकी</th></tr></thead>
     <tbody><?php foreach ($preview['sample'] as $s): ?>
       <tr><td><?= $s['_ex'] ? '<span class="status-chip pending">↻</span>' : '<span class="status-chip done">➕</span>' ?></td>
         <td><?= h($s['admission_no'] ?? '') ?: '—' ?></td><td><b><?= h($s['name']) ?></b></td>
         <td><?= h(trim(($s['class_name'] ?? '') . (!empty($s['division']) ? ' - ' . $s['division'] : '') . (!empty($s['course']) ? ' · ' . $s['course'] : ''))) ?></td>
-        <td><?= h(($s['from_place'] ?? '') ?: '—') ?> → <?= h(($s['to_place'] ?? '') ?: '—') ?></td><td><?= h($s['route_name'] ?? '') ?: '—' ?></td><td><?= h($s['parent_mobile'] ?? '') ?: '—' ?></td></tr>
+        <td><?= h(($s['from_place'] ?? '') ?: '—') ?> ⇄ <?= h(($s['to_place'] ?? '') ?: '—') ?></td>
+        <td><?= $s['total_fee'] !== null ? h(number_format((float)$s['total_fee'])) . ' / ' . h(number_format((float)($s['paid_fee'] ?? 0))) . ' / <b>' . h(number_format((float)$s['total_fee'] - (float)($s['paid_fee'] ?? 0))) . '</b>' : '—' ?></td></tr>
     <?php endforeach; ?></tbody>
   </table>
   </div>

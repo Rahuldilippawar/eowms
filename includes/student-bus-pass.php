@@ -25,15 +25,20 @@ function canViewBusPass() { return canBusPass() || isManagementOrAbove(); }
 /** Import Fields — बससाठीचे (कुठून / कुठपर्यंत / मार्ग) आधी, मग विद्यार्थ्यांचे */
 function busStudentImportFields() {
     $f = [
-        'from_place' => ['🚏 कुठून (गाव / थांबा)', '/^from|boarding|pick\s*-?\s*up|bus\s*stop|^stop|village|^गाव|कुठून|थांबा|बस\s*स्थानक/iu'],
-        'to_place'   => ['🏫 कुठपर्यंत', '/^to$|^to\s|destination|drop|कुठपर्यंत|पर्यंत/iu'],
-        'route_name' => ['🛣️ मार्ग / बस', '/route|bus\s*no|vehicle|मार्ग|बस\s*क्र/iu'],
+        'balance_fee' => ['₹ बाकी शुल्क', '/balance|बाकी/iu'],
+        'paid_fee'    => ['₹ भरलेले शुल्क', '/paid|भरलेले|जमा/iu'],
+        'total_fee'   => ['₹ एकूण शुल्क', '/total\s*fee|^fee$|^fees$|एकूण\s*शुल्क|^शुल्क$/iu'],
+        'from_place'  => ['🏫 Source (कुठून)', '/^from|^source|boarding|कुठून/iu'],
+        'to_place'    => ['🚏 Destination / थांबा', '/^to$|^to\s|destination|drop|stop|village|^गाव|थांबा|कुठपर्यंत|पर्यंत|बस\s*स्थानक/iu'],
+        'route_name'  => ['🛣️ मार्ग / बस', '/route|bus\s*no|vehicle|मार्ग|बस\s*क्र/iu'],
     ];
     foreach (studentImportFields() as $k => $v) {
         if (in_array($k, ['admission_date', 'father_name', 'mother_name', 'email', 'category', 'aadhaar', 'department', 'year_of_study'], true)) continue;
         $f[$k] = $v;
     }
-    $f['admission_no'][0] = 'Gr.No. / प्रवेश / ID क्र.';
+    $f['admission_no'] = ['Reg No / Gr.No. / ID', '/regis|reg\.?\s*no|admission|adm\.?\s*no|gr\.?\s*no|g\.r\.|general\s*reg|enrol|prn|student\s*id|प्रवेश\s*क्र|जनरल\s*रजिस्टर|नोंदणी/iu'];
+    // "Division" Column मध्ये शाखा (COMP / AIML) असली तरी तुकडी म्हणूनच — पासवर Class · Division
+    $f['division'] = ['Division / तुकडी', '/div|section|तुकडी/iu'];
     return $f;
 }
 
@@ -58,7 +63,27 @@ function busDefaultTo(PDO $pdo, $orgId, $campusId = 0) {
     return $cache[$k] = count($all) === 1 ? $all[0] : '';
 }
 
-const BUS_STUDENT_COLS = ['campus_id', 'student_id', 'name', 'admission_no', 'roll_no', 'class_name', 'division', 'course', 'academic_year', 'gender', 'date_of_birth', 'mobile', 'parent_mobile', 'address', 'blood_group', 'from_place', 'to_place', 'route_name', 'remarks'];
+const BUS_STUDENT_COLS = ['campus_id', 'student_id', 'name', 'admission_no', 'roll_no', 'class_name', 'division', 'course', 'academic_year', 'gender', 'date_of_birth', 'mobile', 'parent_mobile', 'address', 'blood_group', 'from_place', 'to_place', 'route_name', 'total_fee', 'paid_fee', 'remarks'];
+
+/** 🏫 Source — बस नेहमी इथून (उदा. AMRIT CAMPUS); संस्थेच्या Setting मधून */
+function busSource(PDO $pdo, $orgId) {
+    static $c = [];
+    if (!isset($c[$orgId])) { $v = function_exists('orgSetting') ? trim((string)orgSetting($pdo, $orgId, 'bus_pass_source', '')) : ''; $c[$orgId] = $v !== '' ? $v : 'AMRIT CAMPUS'; }
+    return $c[$orgId];
+}
+
+/** ठिकाणाचं नाव — मोठ्या अक्षरात दिलं असेल (ATGAON, AMRIT CAMPUS) तर तसंच; नाहीतर Title Case */
+function busPlace($v) {
+    $v = trim(preg_replace('/\s+/u', ' ', (string)$v));
+    return $v === '' || preg_match('/^[A-Z0-9 .,&()\-\/]+$/', $v) ? $v : nameCase($v);
+}
+
+/** ₹ रक्कम — "13,750", "₹ 7000.00" → 13750.0; रिकामं → null */
+function busMoney($v) {
+    if ($v === null || $v === '') return null;
+    $n = preg_replace('/[^0-9.\-]/', '', is_float($v) || is_int($v) ? (string)$v : (string)$v);
+    return $n === '' || !is_numeric($n) ? null : round((float)$n, 2);
+}
 
 /** बस विद्यार्थी जतन — $id = 0 नवीन; $onlyFilled = Import मधून बदलताना फक्त भरलेले Fields */
 function busStudentSave(PDO $pdo, $orgId, $id, array $s, $userId, $batch = null, $onlyFilled = false) {
@@ -68,6 +93,7 @@ function busStudentSave(PDO $pdo, $orgId, $id, array $s, $userId, $batch = null,
         if (!array_key_exists($c, $s)) continue;
         $v = $s[$c] === '' ? null : $s[$c];
         if ($v !== null && isset($lens[$c])) $v = mb_substr(trim((string)$v), 0, $lens[$c]);
+        if (in_array($c, ['total_fee', 'paid_fee'], true)) $v = busMoney($v);
         if ($onlyFilled && $v === null) continue;
         $vals[$c] = $v;
     }
@@ -198,14 +224,21 @@ function busPassCard(array $p, array $set, $rootPath = '../') {
   <div class="bpc-body">
     <div class="bpc-left">
       <div class="bpc-photo"><?php if ($photo): ?><img src="<?= $h($rootPath . $photo) ?>" alt=""><?php else: ?><span><?= $h($initials) ?></span><?php endif; ?></div>
-      <div class="bpc-gr">Gr. <?= $h($p['admission_no']) ?></div>
     </div>
     <div class="bpc-main">
       <div class="bpc-name" data-fit="1"><?= $h($p['name']) ?></div>
-      <?php if ($cls !== ''): ?><div class="bpc-sub" data-fit="1"><?= $h($cls) ?></div><?php endif; ?>
+      <div class="bpc-cd">
+        <div><span>CLASS</span><b data-fit="1"><?= $h(($p['class_name'] ?? '') !== '' ? $p['class_name'] : '—') ?></b></div>
+        <div><span>DIVISION</span><b data-fit="1"><?= $h(($p['division'] ?? '') !== '' ? $p['division'] : (($p['course'] ?? '') !== '' ? $p['course'] : '—')) ?></b></div>
+        <?php if (($p['admission_no'] ?? '') !== ''): ?><div><span>REG NO</span><b data-fit="1"><?= $h($p['admission_no']) ?></b></div><?php endif; ?>
+      </div>
       <div class="bpc-route">
-        <div class="bpc-stop"><i class="dot"></i><span>FROM</span><b data-fit="2"><?= $h($p['from_place']) ?></b></div>
-        <div class="bpc-stop bpc-to"><i class="dot"></i><span>TO</span><b data-fit="2"><?= $h($p['to_place']) ?></b></div>
+        <div class="bpc-pl"><span>SOURCE</span><b data-fit="3" data-fit-min="0.48"><?= $h($p['from_place']) ?></b></div>
+        <div class="bpc-ar" title="जाणे-येणे">
+          <svg viewBox="0 0 60 30" aria-hidden="true"><path d="M4 9.5H52M45 3l8 6.5-8 6.5" /><path d="M56 20.5H8M15 14l-8 6.5 8 6.5" /></svg>
+          <em>UP · DOWN</em>
+        </div>
+        <div class="bpc-pl bpc-to"><span>DESTINATION</span><b data-fit="3" data-fit-min="0.48"><?= $h($p['to_place']) ?></b></div>
       </div>
       <div class="bpc-months"><?php foreach (busPassMonths($p['valid_from'], $p['valid_till']) as $c): ?><i class="<?= $c['on'] ? 'on' : '' ?><?= $c['now'] ? ' now' : '' ?>"><?= $h($c['m']) ?></i><?php endforeach; ?></div>
       <div class="bpc-valid"><span>VALID</span><b><?= $h($d($p['valid_from'])) ?></b><span>→</span><b class="till"><?= $h($d($p['valid_till'])) ?></b></div>

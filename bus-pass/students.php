@@ -38,7 +38,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canManage) {
                 'division' => $s['division'], 'course' => $s['course'], 'academic_year' => $s['academic_year'], 'gender' => $s['gender'], 'date_of_birth' => $s['date_of_birth'], 'mobile' => $s['mobile'],
                 'parent_mobile' => $s['parent_mobile'], 'address' => $s['address'], 'blood_group' => $s['blood_group']];
             if (busStudentFind($pdo, $orgId, $row)) { $had++; continue; }
-            $row['to_place'] = $to !== '' ? $to : (busDefaultTo($pdo, $orgId, (int)$s['campus_id']) ?: null);
+            $row['from_place'] = busSource($pdo, $orgId);
+            if ($to !== '') $row['to_place'] = busPlace($to);
             busStudentSave($pdo, $orgId, 0, $row, $user['id']);
             $n++;
         }
@@ -50,7 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canManage) {
 }
 
 $f = ['campus' => (int)($_GET['campus'] ?? 0), 'year' => trim((string)($_GET['year'] ?? '')), 'class' => trim((string)($_GET['class'] ?? '')), 'div' => trim((string)($_GET['div'] ?? '')),
-    'q' => trim((string)($_GET['q'] ?? '')), 'pass' => in_array($_GET['pass'] ?? '', ['with', 'without', 'expired'], true) ? $_GET['pass'] : '', 'status' => ($_GET['status'] ?? '') === 'left' ? 'left' : 'active'];
+    'q' => trim((string)($_GET['q'] ?? '')), 'pass' => in_array($_GET['pass'] ?? '', ['with', 'without', 'expired', 'due'], true) ? $_GET['pass'] : '', 'status' => ($_GET['status'] ?? '') === 'left' ? 'left' : 'active'];
 $years = $pdo->prepare("SELECT DISTINCT academic_year FROM bus_students WHERE organization_id = ? AND academic_year IS NOT NULL AND academic_year <> '' ORDER BY academic_year DESC");
 $years->execute([$orgId]);
 $years = $years->fetchAll(PDO::FETCH_COLUMN);
@@ -70,6 +71,7 @@ $hasValid = "EXISTS(SELECT 1 FROM student_bus_passes p WHERE p.bus_student_id = 
 if ($f['pass'] === 'with') $where .= " AND $hasValid";
 elseif ($f['pass'] === 'without') $where .= " AND NOT $hasValid";
 elseif ($f['pass'] === 'expired') $where .= " AND NOT $hasValid AND EXISTS(SELECT 1 FROM student_bus_passes p WHERE p.bus_student_id = s.id AND p.status = 'active')";
+elseif ($f['pass'] === 'due') $where .= " AND COALESCE(s.total_fee,0) - COALESCE(s.paid_fee,0) > 0";
 
 // 📊 Excel (CSV)
 if (($_GET['export'] ?? '') === 'csv') {
@@ -79,16 +81,17 @@ if (($_GET['export'] ?? '') === 'csv') {
     header('Content-Type: text/csv; charset=utf-8');
     header('Content-Disposition: attachment; filename="bus-students-' . date('Y-m-d') . '.csv"');
     $out = fopen('php://output', 'w'); fwrite($out, "\xEF\xBB\xBF");
-    fputcsv($out, ['Gr.No.', 'Roll No', 'नाव', 'College/School', 'शैक्षणिक वर्ष', 'वर्ग', 'तुकडी', 'शाखा', 'कुठून', 'कुठपर्यंत', 'मार्ग / बस', 'पालक मोबाईल', 'मोबाईल', 'पास क्र.', 'पास valid पर्यंत', 'पास स्थिती']);
+    fputcsv($out, ['Reg No', 'Roll No', 'नाव', 'College/School', 'शैक्षणिक वर्ष', 'Class', 'Division', 'शाखा', 'Source', 'Destination', 'मार्ग / बस', 'एकूण शुल्क', 'भरलेले', 'बाकी', 'पालक मोबाईल', 'मोबाईल', 'पास क्र.', 'पास valid पर्यंत', 'पास स्थिती']);
     while ($r = $st->fetch()) {
         $lp = $r['lastp'] ? explode('|', $r['lastp']) : null;
         fputcsv($out, [$r['admission_no'], $r['roll_no'], $r['name'], $r['campus_name'], $r['academic_year'], $r['class_name'], $r['division'], $r['course'], $r['from_place'], $r['to_place'], $r['route_name'],
-            $r['parent_mobile'], $r['mobile'], $lp[2] ?? '', $lp ? date('d/m/Y', strtotime($lp[0])) : '', $lp ? ($lp[1] === 'cancelled' ? 'रद्द' : ($lp[0] >= date('Y-m-d') ? 'चालू' : 'संपला')) : 'पास नाही']);
+            $r['total_fee'], $r['paid_fee'], $r['total_fee'] !== null ? (float)$r['total_fee'] - (float)$r['paid_fee'] : '', $r['parent_mobile'], $r['mobile'], $lp[2] ?? '', $lp ? date('d/m/Y', strtotime($lp[0])) : '', $lp ? ($lp[1] === 'cancelled' ? 'रद्द' : ($lp[0] >= date('Y-m-d') ? 'चालू' : 'संपला')) : 'पास नाही']);
     }
     fclose($out); exit;
 }
 
-$kpi = $pdo->prepare("SELECT COUNT(*) n, SUM($hasValid) withp, SUM(s.from_place IS NULL OR s.from_place = '') nofrom, SUM(s.parent_mobile IS NULL AND s.mobile IS NULL) nomob $base");
+$kpi = $pdo->prepare("SELECT COUNT(*) n, SUM($hasValid) withp, SUM(s.to_place IS NULL OR s.to_place = '') nofrom, SUM(s.parent_mobile IS NULL AND s.mobile IS NULL) nomob,
+    SUM(COALESCE(s.total_fee,0)) feetot, SUM(COALESCE(s.paid_fee,0)) feepaid, SUM(COALESCE(s.total_fee,0) - COALESCE(s.paid_fee,0) > 0) feedue $base");
 $kpi->execute($bp);
 $kpi = $kpi->fetch();
 $cst = $pdo->prepare("SELECT COALESCE(s.class_name,'') cl, COALESCE(s.division,'') dv, COUNT(*) n, SUM($hasValid) withp $base GROUP BY cl, dv ORDER BY CAST(cl AS UNSIGNED), cl, dv");
@@ -168,6 +171,7 @@ require_once __DIR__ . '/../includes/smart-insights.php';
     <option value="with" <?= $f['pass'] === 'with' ? 'selected' : '' ?>>✅ चालू पास असलेले</option>
     <option value="without" <?= $f['pass'] === 'without' ? 'selected' : '' ?>>⛔ चालू पास नसलेले</option>
     <option value="expired" <?= $f['pass'] === 'expired' ? 'selected' : '' ?>>⌛ पास संपलेले</option>
+    <option value="due" <?= $f['pass'] === 'due' ? 'selected' : '' ?>>₹ शुल्क बाकी असलेले</option>
   </select>
   <select name="status" class="form-select-custom" style="width:auto;" onchange="this.form.submit()">
     <option value="">सक्रिय</option><option value="left" <?= $f['status'] === 'left' ? 'selected' : '' ?>>बस सोडलेले</option>
@@ -180,7 +184,8 @@ require_once __DIR__ . '/../includes/smart-insights.php';
     ['label' => 'बस विद्यार्थी', 'value' => (int)$kpi['n'], 'sub' => $f['year'] !== '' ? h($f['year']) : 'सर्व वर्षे', 'tone' => 'ok'],
     ['label' => 'चालू पास', 'value' => (int)$kpi['withp'], 'sub' => (int)$kpi['n'] ? round((int)$kpi['withp'] * 100 / (int)$kpi['n']) . '%' : '—', 'tone' => 'ok', 'href' => $qs(['pass' => 'with'])],
     ['label' => 'पास नाही', 'value' => (int)$kpi['n'] - (int)$kpi['withp'], 'sub' => 'पास द्या', 'tone' => (int)$kpi['n'] - (int)$kpi['withp'] ? 'warn' : 'ok', 'href' => $qs(['pass' => 'without'])],
-    ['label' => '"कुठून" भरलेलं नाही', 'value' => (int)$kpi['nofrom'], 'sub' => (int)$kpi['nofrom'] ? 'पास देताना भरावं लागेल' : 'सगळ्यांचं आहे', 'tone' => (int)$kpi['nofrom'] ? 'warn' : 'ok'],
+    ['label' => '₹ बाकी शुल्क', 'value' => '₹' . number_format((float)$kpi['feetot'] - (float)$kpi['feepaid']), 'sub' => (float)$kpi['feetot'] ? (int)$kpi['feedue'] . ' विद्यार्थी · भरले ₹' . number_format((float)$kpi['feepaid']) . ' / ₹' . number_format((float)$kpi['feetot']) : 'शुल्क नोंदवलेलं नाही', 'tone' => (float)$kpi['feetot'] - (float)$kpi['feepaid'] > 0 ? 'bad' : 'ok', 'href' => $qs(['pass' => 'due'])],
+    ['label' => 'Destination नाही', 'value' => (int)$kpi['nofrom'], 'sub' => (int)$kpi['nofrom'] ? 'पास देताना भरावं लागेल' : 'सगळ्यांचा थांबा आहे', 'tone' => (int)$kpi['nofrom'] ? 'warn' : 'ok'],
 ]) ?>
 
 <?php if ($classes): ?>
@@ -201,7 +206,7 @@ require_once __DIR__ . '/../includes/smart-insights.php';
   <?php else: ?>
   <div class="table-responsive">
     <table class="table table-sm bs-t mb-0">
-      <thead><tr><th></th><th>विद्यार्थी</th><th>कुठून → कुठपर्यंत</th><th>पास</th><th class="cp">College</th><th></th></tr></thead>
+      <thead><tr><th></th><th>विद्यार्थी</th><th>मार्ग (जाणे ⇄ येणे)</th><th>₹ शुल्क</th><th>पास</th><th class="cp">College</th><th></th></tr></thead>
       <tbody>
       <?php foreach ($rows as $r): $lp = $r['lastp'] ? explode('|', $r['lastp']) : null;
         $ph = !empty($r['photo_path']) && eowmsPhotoExists($r['photo_path']) ? $r['photo_path'] : '';
@@ -213,8 +218,9 @@ require_once __DIR__ . '/../includes/smart-insights.php';
         <tr>
           <td><?php if ($ph): ?><img src="../<?= h($ph) ?>" class="bs-av" alt="" loading="lazy"><?php else: ?><span class="bs-av"><?= h(mb_strtoupper(mb_substr($r['name'], 0, 1))) ?></span><?php endif; ?></td>
           <td class="nm"><a href="student.php?id=<?= (int)$r['id'] ?>" style="color:inherit;text-decoration:none;"><b><?= h($r['name']) ?></b></a>
-            <div style="font-size:11.5px;color:var(--text-dim);"><?= h(trim($r['class_name'] . ($r['division'] ? ' - ' . $r['division'] : '') . ($r['course'] ? ' · ' . $r['course'] : ''))) ?><?= $r['admission_no'] ? ' · Gr. ' . h($r['admission_no']) : '' ?><?= $r['student_id'] ? ' · 🎓' : '' ?></div></td>
-          <td><b><?= h($r['from_place'] ?: '—') ?></b> → <?= h($r['to_place'] ?: '—') ?><?= $r['route_name'] ? '<div style="font-size:11px;color:var(--text-dim);">' . h($r['route_name']) . '</div>' : '' ?></td>
+            <div style="font-size:11.5px;color:var(--text-dim);"><?= h(trim($r['class_name'] . ($r['division'] ? ' · ' . $r['division'] : '') . ($r['course'] ? ' · ' . $r['course'] : ''))) ?><?= $r['admission_no'] ? ' · Reg. ' . h($r['admission_no']) : '' ?><?= $r['student_id'] ? ' · 🎓' : '' ?></div></td>
+          <td><b><?= h($r['from_place'] ?: '—') ?></b> ⇄ <?= h($r['to_place'] ?: '—') ?><?= $r['route_name'] ? '<div style="font-size:11px;color:var(--text-dim);">' . h($r['route_name']) . '</div>' : '' ?></td>
+          <td style="white-space:nowrap;font-size:12px;"><?php if ($r['total_fee'] !== null): $bal = (float)$r['total_fee'] - (float)$r['paid_fee']; ?><b style="color:<?= $bal > 0 ? '#B91C1C' : '#15803D' ?>;"><?= $bal > 0 ? '₹' . h(number_format($bal)) . ' बाकी' : '✓ पूर्ण' ?></b><div style="color:var(--text-dim);font-size:11px;">₹<?= h(number_format((float)$r['paid_fee'])) ?> / <?= h(number_format((float)$r['total_fee'])) ?></div><?php else: ?><span style="color:var(--text-dim);">—</span><?php endif; ?></td>
           <td><span class="bp-st <?= $stc ?>"><?= h($stl) ?></span><?= $lp && $lp[1] === 'active' ? ' <a href="index.php?print=1&amp;ids=' . (int)$lp[3] . '" target="_blank" title="Print" style="text-decoration:none;">🖨️</a>' : '' ?></td>
           <td class="cp" style="font-size:12px;"><?= h($r['campus_name'] ?? '') ?></td>
           <td style="white-space:nowrap;"><a href="student.php?id=<?= (int)$r['id'] ?>" class="btn btn-sm" style="border:1px solid var(--line);border-radius:7px;font-size:12px;padding:3px 9px;"><?= $canManage ? '✎' : 'पहा' ?></a></td>
@@ -244,7 +250,7 @@ require_once __DIR__ . '/../includes/smart-insights.php';
             <option value="<?= h(json_encode([$pc['campus_id'], $pc['academic_year'], $pc['cl'], $pc['dv']])) ?>" <?= $left ? '' : 'disabled' ?>><?= h(($campusRows[$pc['campus_id']]['name'] ?? '') . ' · ' . $pc['academic_year'] . ' · ' . ($pc['cl'] !== '' ? $pc['cl'] : '—') . ($pc['dv'] !== '' ? ' - ' . $pc['dv'] : '')) ?> — <?= $left ? $left . ' नवीन' : 'सगळे आधीच आहेत' ?></option>
           <?php endforeach; ?>
         </select></div>
-      <div class="col-md-3"><label class="form-label-custom">🏫 कुठपर्यंत (ऐच्छिक)</label><input type="text" name="p_to" class="form-control-custom" maxlength="120" placeholder="रिकामं = त्या College चं गाव"></div>
+      <div class="col-md-3"><label class="form-label-custom">🚏 Destination / थांबा (ऐच्छिक)</label><input type="text" name="p_to" class="form-control-custom" maxlength="120" placeholder="नंतर प्रत्येकाचं भरता येतं"></div>
       <div class="col-md-3"><button type="submit" class="btn w-100" style="background:var(--rail);color:#fff;border-radius:10px;font-weight:600;">⬇ बस यादीत आणा</button></div>
     </div>
     <input type="hidden" name="p_campus"><input type="hidden" name="p_year"><input type="hidden" name="p_class"><input type="hidden" name="p_div">

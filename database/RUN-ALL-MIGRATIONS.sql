@@ -4911,6 +4911,8 @@ CREATE TABLE IF NOT EXISTS bus_students (
   from_place VARCHAR(120) NULL,
   to_place VARCHAR(120) NULL,
   route_name VARCHAR(120) NULL,
+  total_fee DECIMAL(10,2) NULL,
+  paid_fee DECIMAL(10,2) NULL,
   photo_path VARCHAR(255) NULL,
   remarks VARCHAR(255) NULL,
   is_active TINYINT(1) NOT NULL DEFAULT 1,
@@ -4923,6 +4925,8 @@ CREATE TABLE IF NOT EXISTS bus_students (
   INDEX idx_bs_adm (organization_id, admission_no),
   INDEX idx_bs_student (student_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+ALTER TABLE bus_students ADD COLUMN total_fee DECIMAL(10,2) NULL AFTER route_name;
+ALTER TABLE bus_students ADD COLUMN paid_fee DECIMAL(10,2) NULL AFTER total_fee;
 ALTER TABLE student_bus_passes ADD COLUMN bus_student_id INT NULL AFTER student_id;
 ALTER TABLE student_bus_passes ADD INDEX idx_bp_bus_student (bus_student_id, valid_till);
 ALTER TABLE student_bus_passes MODIFY student_id INT NULL;

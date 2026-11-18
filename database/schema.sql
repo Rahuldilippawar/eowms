@@ -2319,6 +2319,8 @@ CREATE TABLE bus_students (
   from_place VARCHAR(120) NULL,
   to_place VARCHAR(120) NULL,
   route_name VARCHAR(120) NULL,
+  total_fee DECIMAL(10,2) NULL,
+  paid_fee DECIMAL(10,2) NULL,
   photo_path VARCHAR(255) NULL,
   remarks VARCHAR(255) NULL,
   is_active TINYINT(1) NOT NULL DEFAULT 1,

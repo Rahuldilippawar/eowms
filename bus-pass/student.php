@@ -56,7 +56,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canManage) {
     $in['date_of_birth'] = studentParseDate($in['date_of_birth']);
     $in['mobile'] = $in['mobile'] !== '' ? studentNormMobile($in['mobile']) : null;
     $in['parent_mobile'] = $in['parent_mobile'] !== '' ? studentNormMobile($in['parent_mobile']) : null;
-    foreach (['from_place', 'to_place'] as $k) { if ($in[$k] !== '') $in[$k] = nameCase($in[$k]); }
+    foreach (['from_place', 'to_place'] as $k) { if ($in[$k] !== '') $in[$k] = busPlace($in[$k]); }
+    if ($in['from_place'] === '') $in['from_place'] = busSource($pdo, $orgId);
+    $in['total_fee'] = busMoney($in['total_fee']); $in['paid_fee'] = busMoney($in['paid_fee']);
     if (!$id && (int)($_POST['student_id'] ?? 0)) $in['student_id'] = (int)$_POST['student_id'];
     if (mb_strlen($in['name']) < 2) $error = 'विद्यार्थ्याचे नाव भरा.';
     elseif (($_POST['mobile'] ?? '') !== '' && !$in['mobile']) $error = 'मोबाईल क्रमांक 10 अंकी हवा.';
@@ -83,7 +85,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canManage) {
 
 $v = function ($k, $d = '') use ($stu) { return $stu && isset($stu[$k]) && $stu[$k] !== null ? $stu[$k] : $d; };
 $defCampus = (int)$v('campus_id', (int)($_GET['campus'] ?? 0) ?: (count($campusRows) === 1 ? array_key_first($campusRows) : 0));
-$defTo = $v('to_place', (string)($_GET['to'] ?? '')) ?: busDefaultTo($pdo, $orgId, $defCampus);
+$defTo = $v('to_place', (string)($_GET['to'] ?? ''));
+$defFrom = $v('from_place') ?: busSource($pdo, $orgId);
 $photoNow = '';
 foreach ([$v('photo_path'), $v('stu_photo')] as $pp) { if ($pp && eowmsPhotoExists($pp)) { $photoNow = $pp; break; } }
 $passes = [];
@@ -92,7 +95,7 @@ if ($id) {
     $st->execute([$orgId, $id]);
     $passes = $st->fetchAll();
 }
-$places = $pdo->prepare("SELECT from_place FROM bus_students WHERE organization_id = ? AND from_place IS NOT NULL AND from_place <> '' GROUP BY from_place ORDER BY COUNT(*) DESC LIMIT 80");
+$places = $pdo->prepare("SELECT to_place FROM bus_students WHERE organization_id = ? AND to_place IS NOT NULL AND to_place <> '' GROUP BY to_place ORDER BY COUNT(*) DESC LIMIT 80");
 $places->execute([$orgId]);
 $places = $places->fetchAll(PDO::FETCH_COLUMN);
 $edit = $canManage;
@@ -120,9 +123,10 @@ require_once __DIR__ . '/../includes/header.php';
     <div>
       <div class="page-title mb-0"><?= h($v('name')) ?><?= !$v('is_active', 1) ? ' <span class="status-chip overdue" style="font-size:11px;">बस सोडली</span>' : '' ?></div>
       <div>
-        <?php if ($v('admission_no')): ?><span class="sf-chip">Gr. <?= h($v('admission_no')) ?></span><?php endif; ?>
+        <?php if ($v('admission_no')): ?><span class="sf-chip">Reg. <?= h($v('admission_no')) ?></span><?php endif; ?>
+        <?php if ($v('total_fee') !== ''): $bal = (float)$v('total_fee') - (float)$v('paid_fee', 0); ?><span class="sf-chip" style="<?= $bal > 0 ? 'background:#FEE2E2;color:#991B1B;' : 'background:#DCFCE7;color:#166534;' ?>">₹ <?= $bal > 0 ? 'बाकी ' . h(number_format($bal)) : 'शुल्क पूर्ण' ?></span><?php endif; ?>
         <?php if ($v('class_name')): ?><span class="sf-chip"><?= h($v('class_name') . ($v('division') ? ' - ' . $v('division') : '')) ?></span><?php endif; ?>
-        <?php if ($v('from_place')): ?><span class="sf-chip">🚏 <?= h($v('from_place')) ?> → <?= h($v('to_place') ?: '—') ?></span><?php endif; ?>
+        <?php if ($v('from_place')): ?><span class="sf-chip">🚏 <?= h($v('from_place')) ?> ⇄ <?= h($v('to_place') ?: '—') ?></span><?php endif; ?>
         <?php if ($v('student_id')): ?><span class="sf-chip">🎓 विद्यार्थी विभागाशी जोडलेले</span><?php endif; ?>
       </div>
       <?php if ($canManage && $v('is_active', 1)): ?><a href="index.php?<?= h(http_build_query(array_filter(['campus' => $v('campus_id'), 'year' => $v('academic_year'), 'class' => (string)$v('class_name'), 'div' => (string)$v('division')], fn($x) => $x !== null && $x !== ''))) ?>#issue" class="btn btn-sm mt-2" style="background:var(--rail);color:#fff;border-radius:8px;font-weight:600;">🚌 पास द्या / नूतनीकरण</a><?php endif; ?>
@@ -141,15 +145,21 @@ require_once __DIR__ . '/../includes/header.php';
     <fieldset <?= $edit ? '' : 'disabled' ?>>
     <div class="row g-2">
       <div class="col-md-6"><label class="form-label-custom">विद्यार्थ्याचे पूर्ण नाव *</label><input type="text" name="name" value="<?= h($v('name')) ?>" class="form-control-custom" required autocapitalize="words" placeholder="आडनाव नाव वडिलांचे नाव"></div>
-      <div class="col-6 col-md-3"><label class="form-label-custom">Gr.No. / ID</label><input type="text" name="admission_no" value="<?= h($v('admission_no')) ?>" class="form-control-custom"></div>
+      <div class="col-6 col-md-3"><label class="form-label-custom">Reg No / Gr.No.</label><input type="text" name="admission_no" value="<?= h($v('admission_no')) ?>" class="form-control-custom"></div>
       <div class="col-6 col-md-3"><label class="form-label-custom">Roll No</label><input type="text" name="roll_no" value="<?= h($v('roll_no')) ?>" class="form-control-custom"></div>
     </div>
     <div class="sf-sec">🚌 बस</div>
     <div class="row g-2">
-      <div class="col-md-4"><label class="form-label-custom">🚏 कुठून (गाव / थांबा)</label><input type="text" name="from_place" value="<?= h($v('from_place')) ?>" class="form-control-custom" list="dlPlaces" maxlength="120"></div>
-      <div class="col-md-4"><label class="form-label-custom">🏫 कुठपर्यंत</label><input type="text" name="to_place" value="<?= h($defTo) ?>" class="form-control-custom" maxlength="120"></div>
+      <div class="col-md-4"><label class="form-label-custom">🏫 Source</label><input type="text" name="from_place" value="<?= h($defFrom) ?>" class="form-control-custom" maxlength="120"></div>
+      <div class="col-md-4"><label class="form-label-custom">🚏 Destination / थांबा</label><input type="text" name="to_place" value="<?= h($defTo) ?>" class="form-control-custom" list="dlPlaces" maxlength="120" placeholder="उदा. ATGAON"></div>
       <div class="col-md-4"><label class="form-label-custom">🛣️ मार्ग / बस</label><input type="text" name="route_name" value="<?= h($v('route_name', (string)($_GET['route'] ?? ''))) ?>" class="form-control-custom" maxlength="120" placeholder="उदा. Route 3"></div>
     </div>
+    <div class="row g-2 mt-1">
+      <div class="col-4 col-md-3"><label class="form-label-custom">₹ एकूण शुल्क</label><input type="number" name="total_fee" value="<?= h($v('total_fee') !== '' ? (float)$v('total_fee') + 0 : '') ?>" class="form-control-custom" min="0" step="1" inputmode="numeric"></div>
+      <div class="col-4 col-md-3"><label class="form-label-custom">₹ भरलेले</label><input type="number" name="paid_fee" value="<?= h($v('paid_fee') !== '' ? (float)$v('paid_fee') + 0 : '') ?>" class="form-control-custom" min="0" step="1" inputmode="numeric"></div>
+      <div class="col-4 col-md-3"><label class="form-label-custom">₹ बाकी</label><div class="form-control-custom" style="background:var(--canvas);font-weight:700;" id="feeBal"><?= $v('total_fee') !== '' ? h(number_format((float)$v('total_fee') - (float)$v('paid_fee', 0))) : '—' ?></div></div>
+    </div>
+    <script>(function(){var t=document.querySelector('[name=total_fee]'),p=document.querySelector('[name=paid_fee]'),b=document.getElementById('feeBal');function u(){if(t.value===''){b.textContent='—';return;}var x=(+t.value||0)-(+p.value||0);b.textContent=x.toLocaleString('en-IN');b.style.color=x>0?'#B91C1C':'#15803D';}t.addEventListener('input',u);p.addEventListener('input',u);u();})();</script>
     <datalist id="dlPlaces"><?php foreach ($places as $pl): ?><option value="<?= h($pl) ?>"><?php endforeach; ?></datalist>
     <div class="sf-sec">🏫 वर्ग</div>
     <div class="row g-2">
@@ -192,7 +202,7 @@ require_once __DIR__ . '/../includes/header.php';
   <?php foreach ($passes as $p): $stt = busPassState($p); ?>
     <div class="d-flex align-items-center gap-2 flex-wrap" style="padding:9px 20px;border-top:1px solid var(--line);font-size:13px;">
       <b><?= h($p['pass_no']) ?></b>
-      <span><?= h($p['from_place']) ?> → <?= h($p['to_place']) ?></span>
+      <span><?= h($p['from_place']) ?> ⇄ <?= h($p['to_place']) ?></span>
       <span style="color:var(--text-dim);"><?= h(date('d/m/Y', strtotime($p['valid_from']))) ?> → <?= h(date('d/m/Y', strtotime($p['valid_till']))) ?></span>
       <span class="bp-st <?= in_array($stt, ['active', 'expiring', 'upcoming'], true) ? 'ok' : ($stt === 'expired' ? 'exp' : 'none') ?>"><?= h(busPassStateLabel($stt)) ?></span>
       <a href="index.php?print=1&amp;ids=<?= (int)$p['id'] ?>" target="_blank" class="ms-auto btn btn-sm" style="border:1px solid var(--line);border-radius:7px;font-size:12px;padding:3px 9px;">🖨️ Print</a>

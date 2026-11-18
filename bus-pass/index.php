@@ -64,7 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canIssue && $ready) {
             $own->execute([$sid, $orgId]);
             // मार्ग: वर भरलेला सगळ्यांसाठी; रिकामा असेल तर त्या विद्यार्थ्याचा नोंदलेला मार्ग
             $route = $commonRoute !== '' ? $commonRoute : (string)$own->fetchColumn();
-            $newIds[] = busPassIssue($pdo, $orgId, $sid, ['from_place' => nameCase($from), 'to_place' => nameCase($to), 'route_name' => $route,
+            $newIds[] = busPassIssue($pdo, $orgId, $sid, ['from_place' => busPlace($from), 'to_place' => busPlace($to), 'route_name' => $route,
                 'valid_from' => $vf, 'valid_till' => $vt, 'fee' => trim((string)($_POST['fee'] ?? ''))], $user['id']);
             $n++;
         }
@@ -91,6 +91,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canIssue && $ready) {
         if ($n) logActivity('बस पास नूतनीकरण', 'organization', $orgId, $n . ' पास');
         $_SESSION['flash'] = $n ? '✓ ' . $n . ' पासचं नूतनीकरण झालं (' . date('d/m/Y', strtotime($vf)) . ' → ' . date('d/m/Y', strtotime($vt)) . ').' : '⚠️ पास निवडा.';
         header('Location: ' . ($n ? $qs(['print_ids' => implode(',', $newIds)]) : $back)); exit;
+    }
+    if ($action === 'save_source') {
+        $src = mb_substr(trim((string)($_POST['source'] ?? '')), 0, 120);
+        if ($src !== '' && function_exists('orgSettingSet')) { orgSettingSet($pdo, $orgId, 'bus_pass_source', $src); logActivity('बस पास Source बदलला', 'organization', $orgId, $src); $_SESSION['flash'] = '✓ Source नेहमी: ' . $src; }
+        header('Location: ' . $back); exit;
     }
     if ($action === 'cancel_pass') {
         $pid = (int)($_POST['pass_id'] ?? 0);
@@ -121,7 +126,7 @@ if (!empty($_GET['print']) && $ready) {
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>बस पास (<?= count($rows) ?>)</title>
 <link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700;800&family=Noto+Sans+Devanagari:wght@400;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../assets/css/id-card.css?v=5">
+<link rel="stylesheet" href="../assets/css/id-card.css?v=7">
 <style>
   .bp-sheet{display:flex;flex-wrap:wrap;gap:18px;justify-content:center;padding:22px 16px 40px;}
   @media print{
@@ -152,7 +157,7 @@ if (!empty($_GET['print']) && $ready) {
   <?php foreach (array_chunk($rows, 8) as $chunk): ?><div class="bp-pg"><?php foreach ($chunk as $p): ?><?= busPassCard($p, $designs[(int)$p['campus_id']] ?? studentCardDefaults(['name' => $p['campus_name']], $org)) ?><?php endforeach; ?></div><?php endforeach; ?>
 </div>
 <!--i18n:on-->
-<script src="../assets/js/id-card-fit.js?v=2"></script>
+<script src="../assets/js/id-card-fit.js?v=4"></script>
 <script>
   document.querySelectorAll('.idc-toolbar .grp button').forEach(function (b) {
     b.addEventListener('click', function () {
@@ -255,6 +260,15 @@ require_once __DIR__ . '/../includes/smart-insights.php';
 
 <div class="page-eyebrow">🚌 विद्यार्थी वाहतूक</div>
 <?php $bpTab = 'passes'; require __DIR__ . '/_tabs.php'; ?>
+<?php if ($canIssue && $ready): ?>
+<form method="POST" class="d-flex align-items-center gap-2 flex-wrap mb-2" style="font-size:12.5px;" data-no-smart-filter>
+  <input type="hidden" name="action" value="save_source">
+  <span>🏫 Source नेहमी:</span>
+  <input type="text" name="source" value="<?= h(busSource($pdo, $orgId)) ?>" class="form-control-custom" style="width:auto;min-width:180px;padding:5px 10px;" maxlength="120" required>
+  <button type="submit" class="btn btn-sm" style="border:1px solid var(--line);border-radius:8px;">जतन</button>
+  <span style="color:var(--text-dim);">— प्रत्येक पासवर Source ⇄ विद्यार्थ्याचा थांबा (Destination)</span>
+</form>
+<?php endif; ?>
 <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
   <div class="page-title mb-0">🚌 बस पास</div>
   <?php if ($printIds): ?><a href="<?= h($qs(['print' => 1, 'ids' => $printIds])) ?>" target="_blank" class="btn" style="background:#16A34A;color:#fff;border-radius:10px;font-weight:700;">🖨️ आत्ता दिलेले पास Print करा</a><?php endif; ?>
@@ -313,8 +327,8 @@ require_once __DIR__ . '/../includes/smart-insights.php';
     <input type="hidden" name="action" value="issue">
     <?php foreach (['campus', 'year', 'class', 'div'] as $k): ?><input type="hidden" name="<?= $k ?>" value="<?= h((string)$f[$k]) ?>"><?php endforeach; ?>
     <div class="row g-2 mb-2">
-      <div class="col-md-3 col-6"><label class="form-label-custom">🚏 कुठून (सगळ्यांसाठी)</label><input type="text" name="common_from" class="form-control-custom" list="dlFrom" placeholder="उदा. Kunde"></div>
-      <div class="col-md-3 col-6"><label class="form-label-custom">🏫 कुठपर्यंत (सगळ्यांसाठी)</label><input type="text" name="common_to" class="form-control-custom" list="dlTo" value="<?= h($defTo) ?>" placeholder="प्रत्येकाचं खाली"></div>
+      <div class="col-md-3 col-6"><label class="form-label-custom">🏫 Source (सगळ्यांसाठी)</label><input type="text" name="common_from" class="form-control-custom" list="dlFrom" value="<?= h(busSource($pdo, $orgId)) ?>"></div>
+      <div class="col-md-3 col-6"><label class="form-label-custom">🚏 Destination (सगळ्यांसाठी)</label><input type="text" name="common_to" class="form-control-custom" list="dlTo" placeholder="प्रत्येकाचा थांबा खाली"></div>
       <div class="col-md-2 col-6"><label class="form-label-custom">📅 कधीपासून *</label><input type="date" name="valid_from" class="form-control-custom" value="<?= h($defFrom) ?>" required></div>
       <div class="col-md-2 col-6"><label class="form-label-custom">📅 कधीपर्यंत *</label><input type="date" name="valid_till" class="form-control-custom" value="<?= h($defTill) ?>" required></div>
       <div class="col-md-2 col-6"><label class="form-label-custom">₹ शुल्क</label><input type="number" name="fee" class="form-control-custom" min="0" step="1" placeholder="ऐच्छिक"></div>
@@ -328,7 +342,7 @@ require_once __DIR__ . '/../includes/smart-insights.php';
     </div>
     <div class="table-responsive">
       <table class="table table-sm is-t mb-0">
-        <thead><tr><th style="width:30px;"><input type="checkbox" id="ckAll" checked></th><th>विद्यार्थी</th><th>कुठून</th><th>कुठपर्यंत</th><th>आधीचा पास</th></tr></thead>
+        <thead><tr><th style="width:30px;"><input type="checkbox" id="ckAll" checked></th><th>विद्यार्थी</th><th>Source</th><th>Destination (थांबा)</th><th>आधीचा पास</th></tr></thead>
         <tbody>
         <?php foreach ($issueRows as $r): $lp = $r['lastp'] ? explode('|', $r['lastp']) : null; $has = $lp && $lp[3] === 'active' && $lp[2] >= $today; ?>
           <tr>
@@ -372,13 +386,13 @@ require_once __DIR__ . '/../includes/smart-insights.php';
     <?php foreach (['campus', 'year', 'class', 'div'] as $k): ?><input type="hidden" name="<?= $k ?>" value="<?= h((string)$f[$k]) ?>"><?php endforeach; ?>
     <div class="table-responsive">
       <table class="table table-sm bp-t mb-0">
-        <thead><tr><th style="width:30px;"><input type="checkbox" id="ckList"></th><th>विद्यार्थी</th><th>कुठून → कुठपर्यंत</th><th>Valid</th><th>स्थिती</th><th></th></tr></thead>
+        <thead><tr><th style="width:30px;"><input type="checkbox" id="ckList"></th><th>विद्यार्थी</th><th>मार्ग (जाणे ⇄ येणे)</th><th>Valid</th><th>स्थिती</th><th></th></tr></thead>
         <tbody>
         <?php foreach ($list as $r): $left = (int)floor((strtotime($r['valid_till']) - strtotime($today)) / 86400); ?>
           <tr>
             <td><input type="checkbox" name="pid[]" value="<?= (int)$r['id'] ?>" class="pk"></td>
             <td class="nm"><b><?= h($r['name']) ?></b><div style="font-size:11.5px;color:var(--text-dim);"><?= h(trim($r['class_name'] . ($r['division'] ? ' - ' . $r['division'] : ''))) ?> · <?= h($r['pass_no']) ?></div></td>
-            <td><span class="bp-route"><?= h($r['from_place']) ?><i>→</i><?= h($r['to_place']) ?></span><?= $r['route_name'] ? '<div style="font-size:11px;color:var(--text-dim);">' . h($r['route_name']) . '</div>' : '' ?></td>
+            <td><span class="bp-route"><?= h($r['from_place']) ?><i>⇄</i><?= h($r['to_place']) ?></span><?= $r['route_name'] ? '<div style="font-size:11px;color:var(--text-dim);">' . h($r['route_name']) . '</div>' : '' ?></td>
             <td style="white-space:nowrap;"><?= h(date('d/m/Y', strtotime($r['valid_from']))) ?> → <b><?= h(date('d/m/Y', strtotime($r['valid_till']))) ?></b></td>
             <td><span class="bp-st <?= h($r['state']) ?>"><?= h(busPassStateLabel($r['state'])) ?><?= in_array($r['state'], ['active', 'expiring'], true) ? ' · ' . $left . ' दिवस' : '' ?></span></td>
             <td style="white-space:nowrap;">
