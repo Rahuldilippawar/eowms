@@ -94,7 +94,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canIssue && $ready) {
 }
 
 // ---------- पासची यादी ----------
-$passSql = "SELECT p.*, s.name, s.class_name, s.division, s.course, s.admission_no, s.roll_no, s.photo_path, s.campus_id, s.is_active stu_active, c.name campus_name
+$passSql = "SELECT p.*, s.name, s.class_name, s.division, s.course, s.admission_no, s.roll_no, s.photo_path, s.campus_id, s.is_active stu_active, s.parent_mobile, s.mobile, c.name campus_name
     FROM student_bus_passes p JOIN students s ON s.id = p.student_id LEFT JOIN campuses c ON c.id = s.campus_id WHERE p.organization_id = ?";
 $pp = [$orgId];
 $passSql .= studentScopeSql($scope, $pp);
@@ -114,7 +114,7 @@ if (!empty($_GET['print']) && $ready) {
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>बस पास (<?= count($rows) ?>)</title>
 <link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700;800&family=Noto+Sans+Devanagari:wght@400;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../assets/css/id-card.css?v=4">
+<link rel="stylesheet" href="../assets/css/id-card.css?v=5">
 <style>
   .bp-sheet{display:flex;flex-wrap:wrap;gap:18px;justify-content:center;padding:22px 16px 40px;}
   @media print{
