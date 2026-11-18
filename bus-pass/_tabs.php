@@ -1,7 +1,7 @@
 <?php
 if (!function_exists('canBusPass')) { http_response_code(404); exit; }
 // 🚌 बस पास विभाग — वरचे Tabs (पास / बस विद्यार्थी / Import)
-$bpTabs = ['passes' => ['index.php', '🎫 बस पास'], 'students' => ['students.php', '👥 बस विद्यार्थी'], 'import' => ['import.php', '📥 Import']];
+$bpTabs = ['passes' => ['index.php', '🎫 बस पास'], 'students' => ['students.php', '👥 बस विद्यार्थी'], 'fees' => ['fees.php', '₹ शुल्क अहवाल'], 'import' => ['import.php', '📥 Import']];
 if (!canBusPass()) unset($bpTabs['import']);
 ?>
 <style>

@@ -182,7 +182,37 @@ require_once __DIR__ . '/../includes/header.php';
   </form>
 </div>
 
-<?php if ($id): ?>
+<?php if ($id):
+  $pays = [];
+  if (busFeeReady($pdo)) { $q = $pdo->prepare("SELECT * FROM bus_fee_payments WHERE organization_id = ? AND bus_student_id = ? ORDER BY paid_on DESC, id DESC"); $q->execute([$orgId, $id]); $pays = $q->fetchAll(); }
+  $feeBal = $v('total_fee') !== '' ? (float)$v('total_fee') - (float)$v('paid_fee', 0) : null;
+?>
+<?php if (!empty($_SESSION['bus_receipt'])): $rcpt = (int)$_SESSION['bus_receipt']; unset($_SESSION['bus_receipt']); ?>
+  <div class="alert d-flex align-items-center gap-2 flex-wrap mt-3" style="border-radius:10px;font-size:13.5px;background:#ECFDF5;border:1px solid #A7F3D0;">🧾 पावती तयार आहे <a href="fees.php?receipt=<?= $rcpt ?>" target="_blank" class="btn btn-sm ms-auto" style="background:#16A34A;color:#fff;border-radius:8px;font-weight:700;">🖨️ पावती Print</a></div>
+<?php endif; ?>
+<div class="panel mt-3">
+  <div class="panel-head d-flex justify-content-between flex-wrap gap-2"><div class="title">₹ शुल्क व पावत्या</div>
+    <?php if ($feeBal !== null): ?><div class="sub">एकूण <?= h(busInr($v('total_fee'))) ?> · जमा <?= h(busInr($v('paid_fee', 0))) ?> · <b style="color:<?= $feeBal > 0 ? '#B91C1C' : '#15803D' ?>;">बाकी <?= h(busInr(max(0, $feeBal))) ?></b></div><?php endif; ?></div>
+  <?php if ($canManage && busFeeReady($pdo) && ($feeBal === null || $feeBal > 0)): ?>
+  <form method="POST" action="fees.php" class="d-flex align-items-end gap-2 flex-wrap" style="padding:12px 20px;" data-no-smart-filter>
+    <input type="hidden" name="action" value="collect"><input type="hidden" name="bs" value="<?= (int)$id ?>"><input type="hidden" name="back" value="student.php?id=<?= (int)$id ?>">
+    <div><label class="form-label-custom">₹ रक्कम</label><input type="number" name="amount" class="form-control-custom" min="1" step="1" required value="<?= $feeBal ? (int)round($feeBal) : '' ?>" style="width:130px;font-weight:700;"></div>
+    <div><label class="form-label-custom">दिनांक</label><input type="date" name="paid_on" class="form-control-custom" value="<?= date('Y-m-d') ?>" max="<?= date('Y-m-d') ?>"></div>
+    <div><label class="form-label-custom">पद्धत</label><select name="mode" class="form-select-custom"><?php foreach (busFeeModes() as $mk => $ml): ?><option value="<?= $mk ?>"><?= $ml ?></option><?php endforeach; ?></select></div>
+    <div style="flex:1;min-width:150px;"><label class="form-label-custom">शेरा</label><input type="text" name="note" class="form-control-custom" maxlength="255"></div>
+    <button type="submit" class="btn" style="background:#16A34A;color:#fff;border-radius:10px;font-weight:700;">✓ ₹ जमा</button>
+  </form>
+  <?php endif; ?>
+  <?php foreach ($pays as $py): ?>
+    <div class="d-flex align-items-center gap-2 flex-wrap" style="padding:8px 20px;border-top:1px solid var(--line);font-size:13px;">
+      <b><?= h($py['receipt_no']) ?></b><span style="color:#15803D;font-weight:800;"><?= h(busInr($py['amount'])) ?></span>
+      <span style="color:var(--text-dim);"><?= h(date('d/m/Y', strtotime($py['paid_on']))) ?> · <?= h(busFeeModes()[$py['mode']] ?? '') ?><?= $py['note'] ? ' · ' . h($py['note']) : '' ?></span>
+      <a href="fees.php?receipt=<?= (int)$py['id'] ?>" target="_blank" class="ms-auto" style="text-decoration:none;">🧾 Print</a>
+    </div>
+  <?php endforeach; ?>
+  <?php if (!$pays): ?><div style="padding:10px 20px 14px;font-size:12.5px;color:var(--text-dim);">अजून पावती नाही.<?= $v('paid_fee', 0) > 0 ? ' (Import मधून आलेलं जमा ₹' . number_format((float)$v('paid_fee')) . ' आधीचं आहे.)' : '' ?></div><?php endif; ?>
+</div>
+
 <div class="panel mt-3">
   <div class="panel-head"><div class="title">🎫 पासचा इतिहास (<?= count($passes) ?>)</div></div>
   <?php if (!$passes): ?><div style="padding:14px 20px;font-size:13px;color:var(--text-dim);">अजून पास दिलेला नाही.</div><?php endif; ?>

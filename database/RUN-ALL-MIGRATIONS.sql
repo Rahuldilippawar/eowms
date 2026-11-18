@@ -4941,3 +4941,23 @@ INSERT INTO bus_students (organization_id, campus_id, student_id, name, admissio
   WHERE s.id IN (SELECT DISTINCT student_id FROM student_bus_passes WHERE student_id IS NOT NULL)
     AND NOT EXISTS (SELECT 1 FROM bus_students b WHERE b.student_id = s.id);
 UPDATE student_bus_passes p JOIN bus_students b ON b.student_id = p.student_id SET p.bus_student_id = b.id WHERE p.bus_student_id IS NULL;
+
+-- ============================================================
+-- FROM: migration-bus-fee-payments.sql
+-- ============================================================
+-- 🚌 ₹ बस शुल्क जमा — प्रत्येक जमा रकमेची पावती (क्र., तारीख, पद्धत); bus_students.paid_fee = एकूण जमा
+CREATE TABLE IF NOT EXISTS bus_fee_payments (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  organization_id INT NOT NULL,
+  bus_student_id INT NOT NULL,
+  receipt_no VARCHAR(30) NOT NULL,
+  amount DECIMAL(10,2) NOT NULL,
+  paid_on DATE NOT NULL,
+  mode VARCHAR(20) NULL,
+  note VARCHAR(255) NULL,
+  created_by INT NULL,
+  created_at DATETIME NOT NULL,
+  UNIQUE KEY uniq_bf_receipt (organization_id, receipt_no),
+  INDEX idx_bf_student (bus_student_id, paid_on),
+  INDEX idx_bf_day (organization_id, paid_on)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

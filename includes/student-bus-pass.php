@@ -274,3 +274,40 @@ function busPassCard(array $p, array $set, $rootPath = '../') {
 </div>
 <?php return ob_get_clean();
 }
+
+/* ================= ₹ बस शुल्क — जमा, पावती ================= */
+
+function busFeeReady(PDO $pdo) {
+    static $ok = null;
+    if ($ok !== null) return $ok;
+    try { $pdo->query("SELECT 1 FROM bus_fee_payments LIMIT 0"); return $ok = true; } catch (PDOException $e) { return $ok = false; }
+}
+
+/** पुढची पावती: BF-2026-00001 */
+function busFeeNextReceipt(PDO $pdo, $orgId) {
+    $prefix = 'BF-' . date('Y') . '-';
+    $st = $pdo->prepare("SELECT receipt_no FROM bus_fee_payments WHERE organization_id = ? AND receipt_no LIKE ? ORDER BY id DESC LIMIT 1");
+    $st->execute([$orgId, $prefix . '%']);
+    return $prefix . str_pad((string)((int)substr((string)$st->fetchColumn(), strlen($prefix)) + 1), 5, '0', STR_PAD_LEFT);
+}
+
+/** ₹ जमा: पावती + विद्यार्थ्याचं paid_fee वाढवतो. परत: पावती id */
+function busFeeCollect(PDO $pdo, $orgId, $bsId, $amount, $paidOn, $mode, $note, $userId) {
+    $no = busFeeNextReceipt($pdo, $orgId);
+    $pdo->prepare("INSERT INTO bus_fee_payments (organization_id, bus_student_id, receipt_no, amount, paid_on, mode, note, created_by, created_at) VALUES (?,?,?,?,?,?,?,?,NOW())")
+        ->execute([$orgId, $bsId, $no, $amount, $paidOn, $mode ?: null, $note ?: null, $userId]);
+    $rid = (int)$pdo->lastInsertId();
+    $pdo->prepare("UPDATE bus_students SET paid_fee = COALESCE(paid_fee, 0) + ?, updated_at = NOW() WHERE id = ? AND organization_id = ?")->execute([$amount, $bsId, $orgId]);
+    return $rid;
+}
+
+function busFeeModes() { return ['cash' => 'रोख', 'upi' => 'UPI', 'bank' => 'Bank / NEFT', 'cheque' => 'Cheque', 'other' => 'इतर']; }
+
+/** ₹ 1,23,456 (भारतीय पद्धत) */
+function busInr($n) {
+    $n = (float)$n; $neg = $n < 0; $n = abs(round($n));
+    $s = (string)$n; $last3 = substr($s, -3); $rest = substr($s, 0, -3);
+    if ($rest !== '') $last3 = preg_replace('/\B(?=(\d{2})+(?!\d))/', ',', $rest) . ',' . $last3;
+    return ($neg ? '-' : '') . '₹' . $last3;
+}
+
