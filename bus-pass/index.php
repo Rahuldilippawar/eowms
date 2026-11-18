@@ -7,12 +7,11 @@ require_once __DIR__ . '/../includes/photo-helpers.php';
 require_once __DIR__ . '/../includes/student-bus-pass.php';
 $user = currentUser();
 $orgId = activeOrgId();
-// फक्त बस पास परवानगी (manage_bus_passes) असेल तर सर्व विद्यार्थी — पण विद्यार्थी यादी / ID Cards नाही
-$scope = canBusPass() ? null : studentVisibleScope($pdo);
-if ($scope === []) { http_response_code(403); die('<div style="font-family:sans-serif;padding:40px;">बस पास पाहण्याची परवानगी नाही.</div>'); }
-if (!studentsReady($pdo)) { header('Location: ../students/index.php'); exit; }
+// बस पास विभागाची स्वतःची विद्यार्थी नोंद (bus_students) — विद्यार्थी विभागापासून वेगळी
+if (!canViewBusPass()) { http_response_code(403); die('<div style="font-family:sans-serif;padding:40px;">बस पास पाहण्याची परवानगी नाही.</div>'); }
+$scope = null;
 $canIssue = canBusPass();
-$ready = busPassReady($pdo);
+$ready = busPassReady($pdo) && busStudentsReady($pdo);
 $today = date('Y-m-d');
 
 $org = $pdo->prepare("SELECT * FROM organizations WHERE id = ?");
@@ -24,9 +23,12 @@ $campuses = $campuses->fetchAll(PDO::FETCH_UNIQUE);
 
 $f = ['campus' => (int)($_REQUEST['campus'] ?? 0), 'year' => trim((string)($_REQUEST['year'] ?? '')), 'class' => trim((string)($_REQUEST['class'] ?? '')),
     'div' => trim((string)($_REQUEST['div'] ?? '')), 'state' => (string)($_GET['state'] ?? 'current'), 'q' => trim((string)($_GET['q'] ?? ''))];
-$years = $pdo->prepare("SELECT DISTINCT academic_year FROM students WHERE organization_id = ? ORDER BY academic_year DESC");
-$years->execute([$orgId]);
-$years = $years->fetchAll(PDO::FETCH_COLUMN);
+$years = [];
+if ($ready) {
+    $years = $pdo->prepare("SELECT DISTINCT academic_year FROM bus_students WHERE organization_id = ? AND academic_year IS NOT NULL AND academic_year <> '' ORDER BY academic_year DESC");
+    $years->execute([$orgId]);
+    $years = $years->fetchAll(PDO::FETCH_COLUMN);
+}
 if ($f['year'] === '' && $years) $f['year'] = $years[0];
 $qs = function (array $over = []) use ($f) { $q = array_filter(array_merge(['campus' => $f['campus'] ?: '', 'year' => $f['year'], 'class' => $f['class'], 'div' => $f['div'], 'state' => $f['state'] !== 'current' ? $f['state'] : '', 'q' => $f['q']], $over), fn($v) => $v !== '' && $v !== null); return 'index.php' . ($q ? '?' . http_build_query($q) : ''); };
 $cleanDate = fn($v) => (is_string($v) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $v) && strtotime($v)) ? $v : null;
@@ -45,7 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canIssue && $ready) {
         $pp = [$orgId];
         $okIds = [];
         if ($ids) {
-            $st = $pdo->prepare("SELECT s.id FROM students s WHERE s.organization_id = ? AND s.is_active = 1" . studentScopeSql($scope, $pp) . " AND s.id IN (" . implode(',', $ids) . ")");
+            $st = $pdo->prepare("SELECT s.id FROM bus_students s WHERE s.organization_id = ? AND s.is_active = 1" . studentScopeSql($scope, $pp) . " AND s.id IN (" . implode(',', $ids) . ")");
             $st->execute($pp);
             $okIds = array_map('intval', $st->fetchAll(PDO::FETCH_COLUMN));
         }
@@ -53,11 +55,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canIssue && $ready) {
         $commonTo = mb_substr(trim((string)($_POST['common_to'] ?? '')), 0, 120);
         $n = 0; $skip = 0; $newIds = [];
         $pdo->beginTransaction();
+        $commonRoute = mb_substr(trim((string)($_POST['route_name'] ?? '')), 0, 120);
+        $own = $pdo->prepare("SELECT route_name FROM bus_students WHERE id = ? AND organization_id = ?");
         foreach ($okIds as $sid) {
             $from = mb_substr(trim((string)($_POST['from'][$sid] ?? '')), 0, 120) ?: $commonFrom;
             $to = mb_substr(trim((string)($_POST['to'][$sid] ?? '')), 0, 120) ?: $commonTo;
             if ($from === '' || $to === '') { $skip++; continue; }
-            $newIds[] = busPassIssue($pdo, $orgId, $sid, ['from_place' => nameCase($from), 'to_place' => nameCase($to), 'route_name' => mb_substr(trim((string)($_POST['route_name'] ?? '')), 0, 120),
+            $own->execute([$sid, $orgId]);
+            // मार्ग: वर भरलेला सगळ्यांसाठी; रिकामा असेल तर त्या विद्यार्थ्याचा नोंदलेला मार्ग
+            $route = $commonRoute !== '' ? $commonRoute : (string)$own->fetchColumn();
+            $newIds[] = busPassIssue($pdo, $orgId, $sid, ['from_place' => nameCase($from), 'to_place' => nameCase($to), 'route_name' => $route,
                 'valid_from' => $vf, 'valid_till' => $vt, 'fee' => trim((string)($_POST['fee'] ?? ''))], $user['id']);
             $n++;
         }
@@ -71,11 +78,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canIssue && $ready) {
         $n = 0; $newIds = [];
         if ($ids) {
             $pp = [$orgId];
-            $st = $pdo->prepare("SELECT p.* FROM student_bus_passes p JOIN students s ON s.id = p.student_id WHERE p.organization_id = ? AND s.is_active = 1" . studentScopeSql($scope, $pp) . " AND p.id IN (" . implode(',', $ids) . ")");
+            $st = $pdo->prepare("SELECT p.* FROM student_bus_passes p JOIN bus_students s ON s.id = p.bus_student_id WHERE p.organization_id = ? AND s.is_active = 1" . studentScopeSql($scope, $pp) . " AND p.id IN (" . implode(',', $ids) . ")");
             $st->execute($pp);
             $pdo->beginTransaction();
             foreach ($st->fetchAll() as $old) {
-                $newIds[] = busPassIssue($pdo, $orgId, (int)$old['student_id'], ['from_place' => $old['from_place'], 'to_place' => $old['to_place'], 'route_name' => $old['route_name'],
+                $newIds[] = busPassIssue($pdo, $orgId, (int)$old['bus_student_id'], ['from_place' => $old['from_place'], 'to_place' => $old['to_place'], 'route_name' => $old['route_name'],
                     'valid_from' => $vf, 'valid_till' => $vt, 'fee' => ($_POST['fee'] ?? '') !== '' ? $_POST['fee'] : ($old['fee'] ?? '')], $user['id']);
                 $n++;
             }
@@ -95,8 +102,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canIssue && $ready) {
 }
 
 // ---------- पासची यादी ----------
-$passSql = "SELECT p.*, s.name, s.class_name, s.division, s.course, s.admission_no, s.roll_no, s.photo_path, s.campus_id, s.is_active stu_active, s.parent_mobile, s.mobile, c.name campus_name
-    FROM student_bus_passes p JOIN students s ON s.id = p.student_id LEFT JOIN campuses c ON c.id = s.campus_id WHERE p.organization_id = ?";
+$passSql = busPassSelectSql() . " WHERE p.organization_id = ?";
 $pp = [$orgId];
 $passSql .= studentScopeSql($scope, $pp);
 
@@ -167,7 +173,7 @@ $list = []; $kpi = ['active' => 0, 'expiring' => 0, 'expired' => 0, 'without' =>
 $classes = []; $issueRows = []; $places = ['from' => [], 'to' => []];
 if ($ready) {
     // प्रत्येक विद्यार्थ्याचा सर्वात नवीन पास (रद्द सोडून) — "चालू" यादी व आकडे
-    $lsql = $passSql . " AND s.is_active = 1 AND p.id = (SELECT p2.id FROM student_bus_passes p2 WHERE p2.student_id = p.student_id AND p2.status = 'active' ORDER BY p2.valid_till DESC, p2.id DESC LIMIT 1)";
+    $lsql = $passSql . " AND s.is_active = 1 AND p.id = (SELECT p2.id FROM student_bus_passes p2 WHERE p2.bus_student_id = p.bus_student_id AND p2.status = 'active' ORDER BY p2.valid_till DESC, p2.id DESC LIMIT 1)";
     $lp = $pp;
     if ($f['campus']) { $lsql .= " AND s.campus_id = ?"; $lp[] = $f['campus']; }
     if ($f['year'] !== '') { $lsql .= " AND s.academic_year = ?"; $lp[] = $f['year']; }
@@ -190,8 +196,8 @@ if ($ready) {
     // वर्ग chips + पास देण्यासाठी विद्यार्थी (वर्ग निवडल्यावर)
     $cp = [$orgId];
     $csql = "SELECT COALESCE(s.class_name,'') cl, COALESCE(s.division,'') dv, COUNT(*) n,
-        SUM(EXISTS(SELECT 1 FROM student_bus_passes b WHERE b.student_id = s.id AND b.status = 'active' AND b.valid_till >= CURDATE())) withp
-        FROM students s WHERE s.organization_id = ? AND s.is_active = 1" . studentScopeSql($scope, $cp);
+        SUM(EXISTS(SELECT 1 FROM student_bus_passes b WHERE b.bus_student_id = s.id AND b.status = 'active' AND b.valid_till >= CURDATE())) withp
+        FROM bus_students s WHERE s.organization_id = ? AND s.is_active = 1" . studentScopeSql($scope, $cp);
     if ($f['campus']) { $csql .= " AND s.campus_id = ?"; $cp[] = $f['campus']; }
     if ($f['year'] !== '') { $csql .= " AND s.academic_year = ?"; $cp[] = $f['year']; }
     $cst = $pdo->prepare($csql . " GROUP BY cl, dv ORDER BY CAST(cl AS UNSIGNED), cl, dv");
@@ -200,9 +206,9 @@ if ($ready) {
     $kpi['without'] = array_sum(array_column($classes, 'n')) - array_sum(array_column($classes, 'withp'));
     if ($f['class'] !== '' && $canIssue) {
         $ip = [$orgId, $f['class'], $f['div']];
-        $isql = "SELECT s.id, s.name, s.roll_no, s.admission_no, s.address, s.campus_id,
-                (SELECT CONCAT_WS('|', b.from_place, b.to_place, b.valid_till, b.status, b.pass_no) FROM student_bus_passes b WHERE b.student_id = s.id ORDER BY b.valid_till DESC, b.id DESC LIMIT 1) lastp
-            FROM students s WHERE s.organization_id = ? AND s.is_active = 1 AND COALESCE(s.class_name,'') = ? AND COALESCE(s.division,'') = ?" . studentScopeSql($scope, $ip);
+        $isql = "SELECT s.id, s.name, s.roll_no, s.admission_no, s.address, s.campus_id, s.from_place, s.to_place,
+                (SELECT CONCAT_WS('|', b.from_place, b.to_place, b.valid_till, b.status, b.pass_no) FROM student_bus_passes b WHERE b.bus_student_id = s.id ORDER BY b.valid_till DESC, b.id DESC LIMIT 1) lastp
+            FROM bus_students s WHERE s.organization_id = ? AND s.is_active = 1 AND COALESCE(s.class_name,'') = ? AND COALESCE(s.division,'') = ?" . studentScopeSql($scope, $ip);
         if ($f['campus']) { $isql .= " AND s.campus_id = ?"; $ip[] = $f['campus']; }
         if ($f['year'] !== '') { $isql .= " AND s.academic_year = ?"; $ip[] = $f['year']; }
         $st = $pdo->prepare($isql . " ORDER BY CAST(s.roll_no AS UNSIGNED), s.roll_no, s.name");
@@ -210,13 +216,13 @@ if ($ready) {
         $issueRows = $st->fetchAll();
     }
     // आधी वापरलेली ठिकाणं (सुचवण्यासाठी)
-    $st = $pdo->prepare("SELECT from_place, COUNT(*) n FROM student_bus_passes WHERE organization_id = ? GROUP BY from_place ORDER BY n DESC LIMIT 60");
+    $st = $pdo->prepare("SELECT from_place, COUNT(*) n FROM bus_students WHERE organization_id = ? AND from_place IS NOT NULL AND from_place <> '' GROUP BY from_place ORDER BY n DESC LIMIT 80");
     $st->execute([$orgId]); $places['from'] = $st->fetchAll(PDO::FETCH_COLUMN);
-    $st = $pdo->prepare("SELECT to_place, COUNT(*) n FROM student_bus_passes WHERE organization_id = ? GROUP BY to_place ORDER BY n DESC LIMIT 30");
+    $st = $pdo->prepare("SELECT to_place, COUNT(*) n FROM bus_students WHERE organization_id = ? AND to_place IS NOT NULL AND to_place <> '' GROUP BY to_place ORDER BY n DESC LIMIT 30");
     $st->execute([$orgId]); $places['to'] = $st->fetchAll(PDO::FETCH_COLUMN);
 }
 [$defFrom, $defTill] = busPassDefaultDates();
-$defTo = $f['campus'] && isset($campuses[$f['campus']]) ? ($campuses[$f['campus']]['city'] ?: $campuses[$f['campus']]['name']) : (count($campuses) === 1 ? (current($campuses)['city'] ?: current($campuses)['name']) : '');
+$defTo = $ready ? busDefaultTo($pdo, $orgId, $f['campus']) : '';
 $printIds = preg_replace('/[^0-9,]/', '', (string)($_GET['print_ids'] ?? ''));
 
 $pageTitle = 'बस पास';
@@ -247,7 +253,8 @@ require_once __DIR__ . '/../includes/smart-insights.php';
   }
 </style>
 
-<div class="page-eyebrow">🚌 विद्यार्थी वाहतूक<?php if (studentVisibleScope($pdo) !== []): ?> · <a href="../students/index.php" style="color:inherit;">🎓 विद्यार्थी</a><?php endif; ?></div>
+<div class="page-eyebrow">🚌 विद्यार्थी वाहतूक</div>
+<?php $bpTab = 'passes'; require __DIR__ . '/_tabs.php'; ?>
 <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
   <div class="page-title mb-0">🚌 बस पास</div>
   <?php if ($printIds): ?><a href="<?= h($qs(['print' => 1, 'ids' => $printIds])) ?>" target="_blank" class="btn" style="background:#16A34A;color:#fff;border-radius:10px;font-weight:700;">🖨️ आत्ता दिलेले पास Print करा</a><?php endif; ?>
@@ -271,7 +278,17 @@ require_once __DIR__ . '/../includes/smart-insights.php';
   <?php foreach (['class', 'div', 'state'] as $k): if ($f[$k] !== '' && !($k === 'state' && $f[$k] === 'current')): ?><input type="hidden" name="<?= $k ?>" value="<?= h($f[$k]) ?>"><?php endif; endforeach; ?>
 </form>
 
-<?php if ($classes): ?>
+<?php if (!$classes): ?>
+  <div class="panel mb-3" style="padding:26px 20px;text-align:center;">
+    <div style="font-size:15px;font-weight:700;margin-bottom:6px;">👥 बस पाससाठी अजून विद्यार्थी नाहीत</div>
+    <div style="font-size:13px;color:var(--text-dim);margin-bottom:12px;">आधी बस विद्यार्थ्यांची नोंद करा — Excel/CSV ने एकदम, एक-एक, किंवा विद्यार्थी विभागातून.</div>
+    <?php if ($canIssue): ?><div class="d-flex justify-content-center gap-2 flex-wrap">
+      <a href="import.php" class="btn" style="background:var(--rail);color:#fff;border-radius:10px;font-weight:600;">📥 Excel / CSV Import</a>
+      <a href="student.php" class="btn" style="border:1px solid var(--line);border-radius:10px;">＋ विद्यार्थी जोडा</a>
+      <a href="students.php#pull" class="btn" style="border:1px solid var(--line);border-radius:10px;">🎓 विद्यार्थी विभागातून घ्या</a>
+    </div><?php endif; ?>
+  </div>
+<?php else: ?>
 <div class="cl-chips">
   <a href="<?= h($qs(['class' => '', 'div' => ''])) ?>" class="<?= $f['class'] === '' ? 'on' : '' ?>">सर्व वर्ग</a>
   <?php foreach ($classes as $c): $on = $f['class'] === $c['cl'] && $f['div'] === $c['dv']; ?>
@@ -297,11 +314,11 @@ require_once __DIR__ . '/../includes/smart-insights.php';
     <?php foreach (['campus', 'year', 'class', 'div'] as $k): ?><input type="hidden" name="<?= $k ?>" value="<?= h((string)$f[$k]) ?>"><?php endforeach; ?>
     <div class="row g-2 mb-2">
       <div class="col-md-3 col-6"><label class="form-label-custom">🚏 कुठून (सगळ्यांसाठी)</label><input type="text" name="common_from" class="form-control-custom" list="dlFrom" placeholder="उदा. Kunde"></div>
-      <div class="col-md-3 col-6"><label class="form-label-custom">🏫 कुठपर्यंत *</label><input type="text" name="common_to" class="form-control-custom" list="dlTo" value="<?= h($defTo) ?>" required></div>
+      <div class="col-md-3 col-6"><label class="form-label-custom">🏫 कुठपर्यंत (सगळ्यांसाठी)</label><input type="text" name="common_to" class="form-control-custom" list="dlTo" value="<?= h($defTo) ?>" placeholder="प्रत्येकाचं खाली"></div>
       <div class="col-md-2 col-6"><label class="form-label-custom">📅 कधीपासून *</label><input type="date" name="valid_from" class="form-control-custom" value="<?= h($defFrom) ?>" required></div>
       <div class="col-md-2 col-6"><label class="form-label-custom">📅 कधीपर्यंत *</label><input type="date" name="valid_till" class="form-control-custom" value="<?= h($defTill) ?>" required></div>
       <div class="col-md-2 col-6"><label class="form-label-custom">₹ शुल्क</label><input type="number" name="fee" class="form-control-custom" min="0" step="1" placeholder="ऐच्छिक"></div>
-      <div class="col-md-4 col-6"><label class="form-label-custom">🛣️ मार्ग / बस (ऐच्छिक)</label><input type="text" name="route_name" class="form-control-custom" maxlength="120" placeholder="उदा. Route 3 · MH-04 AB 1234"></div>
+      <div class="col-md-4 col-6"><label class="form-label-custom">🛣️ मार्ग / बस (ऐच्छिक)</label><input type="text" name="route_name" class="form-control-custom" maxlength="120" placeholder="रिकामं = प्रत्येकाचा नोंदलेला मार्ग"></div>
       <div class="col-md-8 d-flex align-items-end gap-2 flex-wrap" style="font-size:12px;">
         <button type="button" class="btn btn-sm" style="border:1px solid var(--line);border-radius:8px;" data-quick="month">1 महिना</button>
         <button type="button" class="btn btn-sm" style="border:1px solid var(--line);border-radius:8px;" data-quick="3month">3 महिने</button>
@@ -317,8 +334,8 @@ require_once __DIR__ . '/../includes/smart-insights.php';
           <tr>
             <td class="ck"><input type="checkbox" name="sid[]" value="<?= (int)$r['id'] ?>" <?= $has ? '' : 'checked' ?>></td>
             <td class="nm"><b><?= h(($r['roll_no'] !== null && $r['roll_no'] !== '' ? $r['roll_no'] . '. ' : '') . $r['name']) ?></b> <span style="font-size:11px;color:var(--text-dim);">Gr. <?= h($r['admission_no']) ?></span></td>
-            <td><input type="text" name="from[<?= (int)$r['id'] ?>]" class="form-control-custom form-control-sm" list="dlFrom" value="<?= h($lp[0] ?? '') ?>" placeholder="वरचं वापरा"></td>
-            <td><input type="text" name="to[<?= (int)$r['id'] ?>]" class="form-control-custom form-control-sm" list="dlTo" value="<?= h($lp[1] ?? '') ?>" placeholder="वरचं वापरा"></td>
+            <td><input type="text" name="from[<?= (int)$r['id'] ?>]" class="form-control-custom form-control-sm" list="dlFrom" value="<?= h($r['from_place'] ?: ($lp[0] ?? '')) ?>" placeholder="वरचं वापरा"></td>
+            <td><input type="text" name="to[<?= (int)$r['id'] ?>]" class="form-control-custom form-control-sm" list="dlTo" value="<?= h($r['to_place'] ?: ($lp[1] ?? '')) ?>" placeholder="वरचं वापरा"></td>
             <td class="is-last"><?= $lp ? ($has ? '✅ चालू · ' : ($lp[3] === 'cancelled' ? 'रद्द · ' : '⌛ संपला · ')) . h(date('d/m/Y', strtotime($lp[2]))) : '—' ?></td>
           </tr>
         <?php endforeach; ?>

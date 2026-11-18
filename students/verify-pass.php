@@ -12,9 +12,7 @@ $limited = publicFormRateLimited('verify_bus_pass', 60, 600);
 if ($id && $orgId && $sig !== '' && !$limited) {
     publicFormRecordSubmission('verify_bus_pass');
     try {
-        $st = $pdo->prepare("SELECT p.*, s.name, s.class_name, s.division, s.course, s.admission_no, s.photo_path, s.is_active stu_active, c.name campus_name, o.name org_name
-            FROM student_bus_passes p JOIN students s ON s.id = p.student_id JOIN organizations o ON o.id = p.organization_id LEFT JOIN campuses c ON c.id = s.campus_id
-            WHERE p.id = ? AND p.organization_id = ?");
+        $st = $pdo->prepare("SELECT x.*, o.name org_name FROM (" . busPassSelectSql() . " WHERE p.id = ? AND p.organization_id = ?) x JOIN organizations o ON o.id = x.organization_id");
         $st->execute([$id, $orgId]);
         $p = $st->fetch();
     } catch (PDOException $e) { $p = null; }

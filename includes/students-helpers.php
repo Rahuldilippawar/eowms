@@ -93,8 +93,8 @@ function studentImportFields() {
 }
 
 /** Header ओळ शोधा (पहिल्या 10 ओळींत ≥ 2 ओळखीचे Columns) व प्रत्येक Column चा अंदाज */
-function studentGuessHeader(array $rows) {
-    $fields = studentImportFields();
+function studentGuessHeader(array $rows, $fields = null) {
+    $fields = $fields ?: studentImportFields();
     $best = [0, -1, []];
     foreach (array_slice($rows, 0, 10, true) as $i => $r) {
         $map = []; $used = []; $hits = 0;

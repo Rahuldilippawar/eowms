@@ -4885,3 +4885,55 @@ CREATE TABLE IF NOT EXISTS student_bus_passes (
 -- 🚌 बस पास — स्वतंत्र विभाग; फक्त बस पास देणाऱ्या व्यक्तीसाठी वेगळी परवानगी (विद्यार्थी यादी / ID Cards नाही)
 INSERT IGNORE INTO permissions (permission_key, label, label_local, sort_order) VALUES
   ('manage_bus_passes', 'Bus passes — issue, renew, cancel and print student bus passes', 'बस पास — देणे, नूतनीकरण, रद्द, Print', 50);
+
+-- ============================================================
+-- FROM: migration-bus-students.sql
+-- ============================================================
+-- 🚌 बस पास — स्वतःची विद्यार्थी नोंद (विद्यार्थी विभागापासून वेगळी): जोडणे, Import, कुठून/कुठपर्यंत/मार्ग
+CREATE TABLE IF NOT EXISTS bus_students (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  organization_id INT NOT NULL,
+  campus_id INT NULL,
+  student_id INT NULL,
+  name VARCHAR(255) NOT NULL,
+  admission_no VARCHAR(50) NULL,
+  roll_no VARCHAR(30) NULL,
+  class_name VARCHAR(60) NULL,
+  division VARCHAR(20) NULL,
+  course VARCHAR(120) NULL,
+  academic_year VARCHAR(20) NULL,
+  gender ENUM('M','F','O') NULL,
+  date_of_birth DATE NULL,
+  mobile VARCHAR(20) NULL,
+  parent_mobile VARCHAR(20) NULL,
+  address VARCHAR(500) NULL,
+  blood_group VARCHAR(6) NULL,
+  from_place VARCHAR(120) NULL,
+  to_place VARCHAR(120) NULL,
+  route_name VARCHAR(120) NULL,
+  photo_path VARCHAR(255) NULL,
+  remarks VARCHAR(255) NULL,
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  import_batch VARCHAR(40) NULL,
+  created_by INT NULL,
+  created_at DATETIME NULL,
+  updated_at DATETIME NULL,
+  INDEX idx_bs_class (organization_id, campus_id, academic_year, class_name, division),
+  INDEX idx_bs_name (organization_id, name),
+  INDEX idx_bs_adm (organization_id, admission_no),
+  INDEX idx_bs_student (student_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+ALTER TABLE student_bus_passes ADD COLUMN bus_student_id INT NULL AFTER student_id;
+ALTER TABLE student_bus_passes ADD INDEX idx_bp_bus_student (bus_student_id, valid_till);
+ALTER TABLE student_bus_passes MODIFY student_id INT NULL;
+-- आधी दिलेले पास: त्या विद्यार्थ्यांची बस-नोंद तयार करून पास तिला जोडतो (पास, QR तसेच चालतात)
+INSERT INTO bus_students (organization_id, campus_id, student_id, name, admission_no, roll_no, class_name, division, course, academic_year, gender, date_of_birth, mobile, parent_mobile, address, blood_group, from_place, to_place, route_name, photo_path, is_active, created_at)
+  SELECT s.organization_id, s.campus_id, s.id, s.name, s.admission_no, s.roll_no, s.class_name, s.division, s.course, s.academic_year, s.gender, s.date_of_birth, s.mobile, s.parent_mobile, s.address, s.blood_group,
+    (SELECT p.from_place FROM student_bus_passes p WHERE p.student_id = s.id ORDER BY p.id DESC LIMIT 1),
+    (SELECT p.to_place FROM student_bus_passes p WHERE p.student_id = s.id ORDER BY p.id DESC LIMIT 1),
+    (SELECT p.route_name FROM student_bus_passes p WHERE p.student_id = s.id ORDER BY p.id DESC LIMIT 1),
+    s.photo_path, s.is_active, NOW()
+  FROM students s
+  WHERE s.id IN (SELECT DISTINCT student_id FROM student_bus_passes WHERE student_id IS NOT NULL)
+    AND NOT EXISTS (SELECT 1 FROM bus_students b WHERE b.student_id = s.id);
+UPDATE student_bus_passes p JOIN bus_students b ON b.student_id = p.student_id SET p.bus_student_id = b.id WHERE p.bus_student_id IS NULL;
