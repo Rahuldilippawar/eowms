@@ -79,6 +79,8 @@ function studentCardDefaults(array $campus, array $org, array $saved = []) {
         'sign' => $sign && eowmsPhotoExistsSafe($sign) ? $sign : '',
         'sign_label' => ($saved['sign_label'] ?? '') !== '' ? $saved['sign_label'] : 'PRINCIPAL',
         'color' => preg_match('/^#[0-9a-f]{6}$/i', $color) ? $color : '#3769AC',
+        'show_qr' => !isset($saved['show_qr']) || (int)$saved['show_qr'] === 1,
+        'show_blood' => !isset($saved['show_blood']) || (int)$saved['show_blood'] === 1,
     ];
 }
 
@@ -104,28 +106,32 @@ function studentCardClassic(array $c, $rootPath = '../') {
     $initials = mb_strtoupper(mb_substr(trim($c['name']), 0, 1) . (preg_match('/\s(\S)/u', trim($c['name']), $m) ? $m[1] : ''));
     $cls = trim(($c['rawClass'] ?? '') !== '' ? $c['rawClass'] : $c['class']);
     ob_start(); ?>
-<div class="sic<?= $c['active'] ? '' : ' idc-inactive' ?><?= $set['logo'] ? '' : ' sic-nologo' ?>" style="--sc:<?= $h($set['color']) ?>;">
+<div class="sic<?= $c['active'] ? '' : ' idc-inactive' ?><?= $set['logo'] ? '' : ' sic-nologo' ?>" style="--sc:<?= $h($set['color']) ?>;" data-sid="<?= (int)$c['id'] ?>">
   <div class="sic-head">
     <?php if ($set['top_line'] !== ''): ?><div class="sic-top"><?= $h($set['top_line']) ?></div><?php endif; ?>
-    <div class="sic-title"><?= $h($set['title']) ?></div>
+    <div class="sic-title" data-fit="3"><?= $h($set['title']) ?></div>
     <?php if ($set['subtitle'] !== ''): ?><div class="sic-sub"><?= $h($set['subtitle']) ?></div><?php endif; ?>
   </div>
   <?php if ($set['logo']): ?><div class="sic-logo"><img src="<?= $h($rootPath . $set['logo']) ?>" alt=""></div><?php endif; ?>
-  <div class="sic-photo"><?php if ($c['photo']): ?><img src="<?= $h($rootPath . $c['photo']) ?>" alt=""><?php else: ?><span><?= $h($initials) ?></span><?php endif; ?></div>
-  <div class="sic-name"><?= $h($c['name']) ?></div>
+  <div class="sic-mid">
+    <div class="sic-side"><?php if ($set['show_blood'] && $c['blood'] !== '—'): ?><div class="sic-blood" title="Blood Group"><svg viewBox="0 0 20 26" aria-hidden="true"><path d="M10 0C10 0 0 11 0 17a10 9 0 0 0 20 0C20 11 10 0 10 0z"/></svg><b><?= $h($c['blood']) ?></b></div><?php endif; ?></div>
+    <div class="sic-photo"><?php if ($c['photo']): ?><img src="<?= $h($rootPath . $c['photo']) ?>" alt=""><?php else: ?><span><?= $h($initials) ?></span><?php endif; ?></div>
+    <div class="sic-side"><?php if ($set['show_qr']): ?><div class="sic-qr"><?= idCardQrSvg($c['verify']) ?><div>SCAN</div></div><?php endif; ?></div>
+  </div>
+  <div class="sic-name" data-fit="2"><?= $h($c['name']) ?></div>
   <div class="sic-grid">
-    <div><span>Class :</span><b><?= $h($cls) ?></b></div>
-    <?php if ($c['course'] !== '' || $c['division'] === ''): ?><div><span>Branch :</span><b><?= $h($c['course'] !== '' ? $c['course'] : '—') ?></b></div>
+    <div><span>Class :</span><b data-fit="1"><?= $h($cls) ?></b></div>
+    <?php if ($c['course'] !== '' || $c['division'] === ''): ?><div><span>Branch :</span><b data-fit="1"><?= $h($c['course'] !== '' ? $c['course'] : '—') ?></b></div>
     <?php else: ?><div><span>Div. :</span><b><?= $h($c['division']) ?></b></div><?php endif; ?>
     <div><span>DOB :</span><b><?= $h($c['dob']) ?></b></div>
     <div><span>Gr.No.:</span><b><?= $h($c['code']) ?></b></div>
   </div>
   <div class="sic-addr">
     <svg viewBox="0 0 24 32" aria-hidden="true"><path d="M12 0C5.4 0 0 5.2 0 11.7 0 20.5 12 32 12 32s12-11.5 12-20.3C24 5.2 18.6 0 12 0z" fill="#E8503A"/><circle cx="12" cy="11.5" r="4.6" fill="#fff"/><ellipse cx="12" cy="30" rx="8" ry="2" fill="#3FA34D" opacity=".85"/></svg>
-    <div><?= $h($c['address'] !== '' ? $c['address'] : '—') ?></div>
+    <div data-fit="2"><?= $h($c['address'] !== '' ? $c['address'] : '—') ?></div>
   </div>
   <div class="sic-foot">
-    <div class="sic-contact"><span>Contact No.:</span> <b><?= $h($c['contact'] !== '' ? $c['contact'] : '—') ?></b></div>
+    <div class="sic-contact"><span>Contact No.:</span> <b data-fit="1"><?= $h($c['contact'] !== '' ? $c['contact'] : '—') ?></b></div>
     <div class="sic-sign"><?php if ($set['sign']): ?><img src="<?= $h($rootPath . $set['sign']) ?>" alt=""><?php endif; ?><div><?= $h($set['sign_label']) ?></div></div>
   </div>
 </div>

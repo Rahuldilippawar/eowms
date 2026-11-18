@@ -105,7 +105,9 @@ require_once __DIR__ . '/../includes/header.php';
         <span class="sf-chip"><?= h($stu['academic_year']) ?></span>
         <span class="sf-chip">🏫 <?= h($stu['campus_name'] ?? '') ?></span>
       </div>
+      <?php $cardPr = null; try { $q = $pdo->prepare("SELECT COUNT(*) n, MAX(printed_at) last FROM student_card_prints WHERE organization_id = ? AND student_id = ?"); $q->execute([$orgId, $id]); $cardPr = $q->fetch(); } catch (PDOException $e) {} ?>
       <a href="id-cards.php?id=<?= (int)$id ?>" target="_blank" class="btn btn-sm mt-2" style="background:var(--rail);color:#fff;border-radius:8px;font-weight:600;">🪪 ID Card</a>
+      <?php if ($cardPr && (int)$cardPr['n']): ?><span class="sf-chip mt-2">🖨️ Card छापलं <?= h(date('d/m/Y', strtotime($cardPr['last']))) ?><?= (int)$cardPr['n'] > 1 ? ' · ' . (int)$cardPr['n'] . ' वेळा' : '' ?></span><?php endif; ?>
     </div>
   </div>
 <?php else: ?>
@@ -122,7 +124,7 @@ require_once __DIR__ . '/../includes/header.php';
       <div class="col-md-6"><label class="form-label-custom">विद्यार्थ्याचे पूर्ण नाव *</label><input type="text" name="name" value="<?= h($v('name')) ?>" class="form-control-custom" required autocapitalize="words" placeholder="आडनाव नाव वडिलांचे नाव"></div>
       <div class="col-6 col-md-3"><label class="form-label-custom">प्रवेश / GR क्र.</label><input type="text" name="admission_no" value="<?= h($v('admission_no')) ?>" class="form-control-custom" placeholder="रिकामे = आपोआप"></div>
       <div class="col-6 col-md-3"><label class="form-label-custom">Roll No</label><input type="text" name="roll_no" value="<?= h($v('roll_no')) ?>" class="form-control-custom"></div>
-      <?php if ($edit): ?><div class="col-md-6"><label class="form-label-custom">📷 फोटो (ID Card साठी)</label><input type="file" name="photo" accept="image/png,image/jpeg,image/webp" class="form-control-custom"></div><?php endif; ?>
+      <?php if ($edit): ?><div class="col-md-6"><label class="form-label-custom">📷 फोटो (ID Card साठी)</label><input type="file" name="photo" accept="image/png,image/jpeg,image/webp" class="form-control-custom" data-crop></div><?php endif; ?>
     </div>
     <div class="sf-sec">🏫 वर्ग</div>
     <div class="row g-2">
@@ -185,4 +187,5 @@ require_once __DIR__ . '/../includes/header.php';
 </div>
 <?php endif; ?>
 
+<script src="../assets/js/photo-crop.js?v=1"></script>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

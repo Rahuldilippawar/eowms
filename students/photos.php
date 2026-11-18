@@ -163,7 +163,7 @@ require_once __DIR__ . '/../includes/header.php';
         <div class="nm"><?= h($r['name']) ?></div>
         <div class="cd"><?= $r['roll_no'] !== null && $r['roll_no'] !== '' ? 'Roll ' . h($r['roll_no']) . ' · ' : '' ?><?= h($r['admission_no']) ?></div>
         <span class="tick">✓</span>
-        <input type="file" accept="image/*">
+        <input type="file" accept="image/*" data-crop>
       </label>
     <?php endforeach; ?>
   </div>
@@ -181,14 +181,14 @@ require_once __DIR__ . '/../includes/header.php';
   </form>
 </div>
 
+<script src="../assets/js/photo-crop.js?v=1"></script>
 <script>
 (function () {
   var done = document.getElementById('phDone'), bar = document.getElementById('phBar'), total = document.querySelectorAll('.ph-t').length;
   document.querySelectorAll('.ph-t input[type=file]').forEach(function (inp) {
-    inp.addEventListener('change', function () {
-      if (!inp.files.length) return;
+    inp.addEventListener('cropped', function (e) {
       var t = inp.closest('.ph-t'), fd = new FormData();
-      fd.append('action', 'one'); fd.append('student_id', t.dataset.id); fd.append('photo', inp.files[0]);
+      fd.append('action', 'one'); fd.append('student_id', t.dataset.id); fd.append('photo', e.detail.blob, 'photo.jpg');
       t.classList.add('busy');
       fetch('photos.php', { method: 'POST', body: fd, headers: { 'X-Requested-With': 'fetch' } }).then(function (r) { return r.json(); }).then(function (j) {
         t.classList.remove('busy');
