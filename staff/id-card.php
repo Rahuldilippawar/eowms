@@ -37,7 +37,7 @@ $side = in_array($_GET['side'] ?? '', ['front', 'back'], true) ? $_GET['side'] :
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ID Card — <?= h($emp['name']) ?></title>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&family=Noto+Sans+Devanagari:wght@400;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../assets/css/id-card.css?v=1">
+<link rel="stylesheet" href="../assets/css/id-card.css?v=2">
 </head>
 <body class="idc-page">
 <div class="idc-toolbar">
