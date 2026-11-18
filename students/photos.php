@@ -7,7 +7,7 @@ requireLogin('../');
 require_once __DIR__ . '/../includes/students-helpers.php';
 require_once __DIR__ . '/../includes/photo-helpers.php';
 $orgId = activeOrgId();
-if (!canManageStudents()) { http_response_code(403); die('<div style="font-family:sans-serif;padding:40px;">विद्यार्थी फोटो टाकण्याची परवानगी नाही.</div>'); }
+if (!canStudentCards()) { http_response_code(403); die('<div style="font-family:sans-serif;padding:40px;">विद्यार्थी फोटो टाकण्याची परवानगी नाही.</div>'); }
 if (!studentsReady($pdo)) { header('Location: index.php'); exit; }
 
 $f = ['campus' => (int)($_REQUEST['campus'] ?? 0), 'year' => trim((string)($_REQUEST['year'] ?? '')), 'class' => trim((string)($_REQUEST['class'] ?? '')), 'div' => trim((string)($_REQUEST['div'] ?? ''))];

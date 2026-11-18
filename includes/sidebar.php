@@ -426,7 +426,7 @@ function navGroupHead($id, $key, $activeGroup, $icon, $label, $badge = 0) {
           <i class="fa-solid fa-money-bill-wave fa-fw"></i><span>पगार अहवाल</span>
         </a>
       <?php endif; ?>
-      <?php if (hasRole('super_admin') || hasPermission('manage_students') || isManagementOrAbove() || hasCategory('hod')): // 🎓 विद्यार्थी (HOD — स्वतःच्या विभागाचे) ?>
+      <?php if (hasRole('super_admin') || hasPermission('manage_students') || hasPermission('student_id_cards') || isManagementOrAbove() || hasCategory('hod')): // 🎓 विद्यार्थी (HOD — स्वतःच्या विभागाचे) ?>
         <a href="<?= $rp ?>students/index.php" class="tree-node <?= $currentDir === 'students' ? 'active' : '' ?>">
           <i class="fa-solid fa-user-graduate fa-fw"></i><span>विद्यार्थी</span>
         </a>
