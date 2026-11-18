@@ -213,6 +213,32 @@ function busPassMonths($from, $till) {
     return $cells;
 }
 
+/** 🚌 पिवळी School Bus — बाजूने (स्वतःचं चित्र, Print मध्ये स्पष्ट) */
+function busPassBusSvg($cls = '') {
+    $win = '';
+    for ($i = 0; $i < 5; $i++) $win .= '<rect x="' . (11 + $i * 14) . '" y="13" width="11" height="11" rx="1.6" fill="url(#bpcGl)" stroke="#1F2937" stroke-width="1.1"/>';
+    return '<svg class="' . htmlspecialchars($cls, ENT_QUOTES) . '" viewBox="0 0 124 60" aria-hidden="true">'
+        . '<defs><linearGradient id="bpcBy" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFD84D"/><stop offset=".55" stop-color="#FFC107"/><stop offset="1" stop-color="#F0A500"/></linearGradient>'
+        . '<linearGradient id="bpcGl" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E3F4FF"/><stop offset="1" stop-color="#8CC8EE"/></linearGradient></defs>'
+        . '<ellipse cx="62" cy="55" rx="56" ry="3.2" fill="rgba(0,0,0,.22)"/>'
+        . '<path d="M9 7h83c3 0 5 2 5 5v8h11c3.4 0 6 1.4 7.6 4.2l3.4 6V44c0 1.7-1.3 3-3 3H7c-2.2 0-4-1.8-4-4V13c0-3.3 2.7-6 6-6z" fill="url(#bpcBy)" stroke="#1F2937" stroke-width="1.6" stroke-linejoin="round"/>'
+        . '<path d="M7 7.6h85" stroke="#FFE88A" stroke-width="1.4"/>'
+        . $win
+        . '<rect x="81" y="11.5" width="12.5" height="31" rx="1.4" fill="url(#bpcGl)" stroke="#1F2937" stroke-width="1.1"/><path d="M87.2 11.5v31" stroke="#1F2937" stroke-width="1"/>'
+        . '<path d="M97 21h11.2c2.2 0 4 1 5 2.8l2.6 5.2H97z" fill="url(#bpcGl)" stroke="#1F2937" stroke-width="1.1" stroke-linejoin="round"/>'
+        . '<rect x="3.6" y="29" width="77" height="2.4" fill="#1F2937"/><rect x="3.6" y="34.4" width="77" height="1.3" fill="#1F2937"/><rect x="93.5" y="33" width="25" height="1.3" fill="#1F2937"/>'
+        . '<rect x="1.5" y="42" width="7" height="4" rx="1" fill="#374151"/><rect x="111" y="42" width="10" height="4" rx="1" fill="#374151"/>'
+        . '<circle cx="117.4" cy="36.5" r="2" fill="#FFF7AE" stroke="#1F2937" stroke-width=".8"/><rect x="4.2" y="14" width="2.6" height="5" rx=".8" fill="#E53935"/>'
+        . '<circle cx="25" cy="46.5" r="7.2" fill="#1F2937"/><circle cx="25" cy="46.5" r="3.2" fill="#D1D5DB"/><circle cx="99" cy="46.5" r="7.2" fill="#1F2937"/><circle cx="99" cy="46.5" r="3.2" fill="#D1D5DB"/>'
+        . '</svg>';
+}
+
+/** Admin ने Upload केलेला बसचा फोटो (नसेल तर पिवळ्या बसचं चित्र) */
+function busPassPhoto(PDO $pdo, $orgId) {
+    $v = function_exists('orgSetting') ? trim((string)orgSetting($pdo, $orgId, 'bus_pass_photo', '')) : '';
+    return ($v !== '' && eowmsPhotoExistsSafe($v)) ? $v : '';
+}
+
 /** एक बस पास (Card) — $p = pass + student fields (name, class_name, division, course, admission_no, photo_path, campus_name, parent_mobile, mobile) */
 function busPassCard(array $p, array $set, $rootPath = '../') {
     $h = fn($x) => htmlspecialchars((string)$x, ENT_QUOTES, 'UTF-8');
@@ -233,7 +259,7 @@ function busPassCard(array $p, array $set, $rootPath = '../') {
       <?php if (($set['subtitle'] ?? '') !== ''): ?><div class="bpc-subt"><?= $h($set['subtitle']) ?></div><?php endif; ?>
     </div>
     <?php $isAy = !empty($p['ay']); ?>
-    <div class="bpc-tag"><div class="bpc-tag-t"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 16c0 .9.4 1.7 1 2.2V20a1 1 0 0 0 1 1h1a1 1 0 0 0 1-1v-1h8v1a1 1 0 0 0 1 1h1a1 1 0 0 0 1-1v-1.8c.6-.5 1-1.3 1-2.2V6c0-3.5-3.6-4-8-4S4 2.5 4 6v10zm3.5 1A1.5 1.5 0 1 1 9 15.5 1.5 1.5 0 0 1 7.5 17zm9 0a1.5 1.5 0 1 1 1.5-1.5 1.5 1.5 0 0 1-1.5 1.5zM18 11H6V6h12v5z"/></svg>BUS PASS</div><b><?= $isAy ? 'AY ' . $h($p['ay']) : $h($p['pass_no']) ?></b></div>
+    <div class="bpc-tag"><div class="bpc-bus"><?php if (!empty($set['bus_photo'])): ?><img src="<?= $h($rootPath . $set['bus_photo']) ?>" alt=""><?php else: ?><?= busPassBusSvg() ?><?php endif; ?></div><div class="bpc-tag-t">BUS PASS</div><b><?= $isAy ? 'AY ' . $h($p['ay']) : $h($p['pass_no']) ?></b></div>
   </div>
   <div class="bpc-body">
     <div class="bpc-left">
@@ -249,7 +275,7 @@ function busPassCard(array $p, array $set, $rootPath = '../') {
       <div class="bpc-route">
         <div class="bpc-pl"><span>SOURCE</span><b data-fit="3" data-fit-min="0.48"><?= $h($p['from_place']) ?></b></div>
         <div class="bpc-ar" title="जाणे-येणे">
-          <svg viewBox="0 0 60 30" aria-hidden="true"><path d="M4 9.5H52M45 3l8 6.5-8 6.5" /><path d="M56 20.5H8M15 14l-8 6.5 8 6.5" /></svg>
+          <div class="bpc-road"><svg class="bpc-arr" viewBox="0 0 60 12" aria-hidden="true"><path d="M8 6H52M46 1.5 52.5 6 46 10.5M14 1.5 7.5 6 14 10.5"/></svg><?= busPassBusSvg('bpc-mini') ?></div>
           <em>UP · DOWN</em>
         </div>
         <div class="bpc-pl bpc-to"><span>DESTINATION</span><b data-fit="3" data-fit-min="0.48"><?= $h($p['to_place']) ?></b></div>
@@ -267,7 +293,7 @@ function busPassCard(array $p, array $set, $rootPath = '../') {
     </div>
   </div>
   <div class="bpc-foot">
-    <span data-fit="1"><?= ($p['route_name'] ?? '') !== '' ? '🛣️ ' . $h($p['route_name']) : '🛣️ ' . $h($p['from_place']) . ' – ' . $h($p['to_place']) ?></span>
+    <span data-fit="1"><?= busPassBusSvg('bpc-fbus') ?><?= ($p['route_name'] ?? '') !== '' ? $h($p['route_name']) : $h($p['from_place']) . ' ⇄ ' . $h($p['to_place']) ?></span>
     <?php if ($phone !== ''): ?><span class="ph">☎ Parent <?= $h($phone) ?></span><?php endif; ?>
   </div>
   <?php if (in_array($state, ['expired', 'cancelled'], true)): ?><div class="bpc-stamp"><?= $state === 'expired' ? 'EXPIRED' : 'CANCELLED' ?></div><?php endif; ?>

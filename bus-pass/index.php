@@ -95,6 +95,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canIssue && $ready) {
     if ($action === 'save_source') {
         $src = mb_substr(trim((string)($_POST['source'] ?? '')), 0, 120);
         if ($src !== '' && function_exists('orgSettingSet')) { orgSettingSet($pdo, $orgId, 'bus_pass_source', $src); logActivity('बस पास Source बदलला', 'organization', $orgId, $src); $_SESSION['flash'] = '✓ Source नेहमी: ' . $src; }
+        if (function_exists('orgSettingSet')) {
+            [$bph, $bpErr] = eowmsSavePhotoUpload($_FILES['bus_photo'] ?? null, 'idcard', 'bus_', 700);
+            if ($bpErr) $_SESSION['flash'] = '⚠️ ' . $bpErr;
+            elseif ($bph) { orgSettingSet($pdo, $orgId, 'bus_pass_photo', $bph); logActivity('बस पासवरचा बसचा फोटो बदलला', 'organization', $orgId, $bph); $_SESSION['flash'] .= ' · ✓ बसचा फोटो लावला.'; }
+            elseif (!empty($_POST['remove_bus_photo'])) { orgSettingSet($pdo, $orgId, 'bus_pass_photo', ''); $_SESSION['flash'] .= ' · पिवळ्या बसचं चित्र परत लावलं.'; }
+        }
         header('Location: ' . $back); exit;
     }
     if ($action === 'cancel_pass') {
@@ -148,6 +154,8 @@ if (!empty($_GET['print']) && $ready) {
         }
     }
     $designs = studentCardSettingsAll($pdo, $orgId, $org);
+    $busPhoto = busPassPhoto($pdo, $orgId);
+    foreach ($designs as $dk => $dv) $designs[$dk]['bus_photo'] = $busPhoto;
     ?>
 <!DOCTYPE html>
 <html lang="mr">
@@ -156,7 +164,7 @@ if (!empty($_GET['print']) && $ready) {
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>बस पास (<?= count($rows) ?>)</title>
 <link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700;800&family=Noto+Sans+Devanagari:wght@400;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../assets/css/id-card.css?v=7">
+<link rel="stylesheet" href="../assets/css/id-card.css?v=8">
 <style>
   .bp-sheet{display:flex;flex-wrap:wrap;gap:18px;justify-content:center;padding:22px 16px 40px;}
   @media print{
@@ -184,7 +192,7 @@ if (!empty($_GET['print']) && $ready) {
 <div class="idc-hint">A4 वर एका पानावर 8 पास (कापायच्या रेषांसह) · Card Printer वर प्रत्येक पास वेगळं 86×54 mm पान. QR Scan केल्यावर पास चालू आहे का ते दिसतं.</div>
 <!--i18n:off-->
 <div class="bp-sheet idc-sheet" id="bpSheet">
-  <?php foreach (array_chunk($rows, 8) as $chunk): ?><div class="bp-pg"><?php foreach ($chunk as $p): ?><?= busPassCard($p, $designs[(int)$p['campus_id']] ?? studentCardDefaults(['name' => $p['campus_name']], $org)) ?><?php endforeach; ?></div><?php endforeach; ?>
+  <?php foreach (array_chunk($rows, 8) as $chunk): ?><div class="bp-pg"><?php foreach ($chunk as $p): ?><?= busPassCard($p, $designs[(int)$p['campus_id']] ?? (studentCardDefaults(['name' => $p['campus_name']], $org) + ['bus_photo' => $busPhoto])) ?><?php endforeach; ?></div><?php endforeach; ?>
 </div>
 <!--i18n:on-->
 <script src="../assets/js/id-card-fit.js?v=4"></script>
@@ -286,21 +294,36 @@ require_once __DIR__ . '/../includes/smart-insights.php';
     .is-t td.ck{display:inline-block;} .is-t td.nm{display:inline-block;}
     .bp-bar{bottom:70px;}
   }
+  .bp-ttl-bus{width:54px;height:auto;flex-shrink:0;}
+  .bp-set{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;font-size:12.5px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 14px;}
+  .bp-set-bus{width:86px;height:46px;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#14213D,#0B1328);border-radius:10px;box-shadow:0 0 0 2px #F5B700;flex-shrink:0;overflow:hidden;}
+  .bp-set-bus svg{width:72px;height:auto;} .bp-set-bus img{width:100%;height:100%;object-fit:cover;}
+  .bp-set-f{display:flex;flex-direction:column;gap:3px;min-width:180px;flex:1;} .bp-set-f > label{font-weight:600;}
+  .bp-set-f .form-control-custom{padding:5px 10px;}
+  .bp-set .btn{border:1px solid var(--line);border-radius:8px;}
 </style>
 
 <div class="page-eyebrow">🚌 विद्यार्थी वाहतूक</div>
 <?php $bpTab = 'passes'; require __DIR__ . '/_tabs.php'; ?>
 <?php if ($canIssue && $ready): ?>
-<form method="POST" class="d-flex align-items-center gap-2 flex-wrap mb-2" style="font-size:12.5px;" data-no-smart-filter>
+<?php $curBusPhoto = busPassPhoto($pdo, $orgId); ?>
+<form method="POST" enctype="multipart/form-data" class="bp-set mb-2" data-no-smart-filter>
   <input type="hidden" name="action" value="save_source">
-  <span>🏫 Source नेहमी:</span>
-  <input type="text" name="source" value="<?= h(busSource($pdo, $orgId)) ?>" class="form-control-custom" style="width:auto;min-width:180px;padding:5px 10px;" maxlength="120" required>
-  <button type="submit" class="btn btn-sm" style="border:1px solid var(--line);border-radius:8px;">जतन</button>
-  <span style="color:var(--text-dim);">— प्रत्येक पासवर Source ⇄ विद्यार्थ्याचा थांबा (Destination)</span>
+  <div class="bp-set-bus"><?php if ($curBusPhoto): ?><img src="../<?= h($curBusPhoto) ?>" alt=""><?php else: ?><?= busPassBusSvg() ?><?php endif; ?></div>
+  <div class="bp-set-f">
+    <label>🏫 Source नेहमी</label>
+    <input type="text" name="source" value="<?= h(busSource($pdo, $orgId)) ?>" class="form-control-custom" maxlength="120" required>
+  </div>
+  <div class="bp-set-f">
+    <label>🚌 पासवर बसचा फोटो <span style="color:var(--text-dim);font-weight:400;">(नसेल तर पिवळी बस)</span></label>
+    <input type="file" name="bus_photo" accept="image/png,image/jpeg,image/webp" class="form-control-custom">
+    <?php if ($curBusPhoto): ?><label style="font-size:12px;font-weight:400;"><input type="checkbox" name="remove_bus_photo" value="1"> फोटो काढा — पिवळी बस वापरा</label><?php endif; ?>
+  </div>
+  <button type="submit" class="btn btn-sm">जतन</button>
 </form>
 <?php endif; ?>
 <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
-  <div class="page-title mb-0">🚌 बस पास</div>
+  <div class="page-title mb-0 d-flex align-items-center gap-2"><?= busPassBusSvg('bp-ttl-bus') ?>बस पास</div>
   <div class="d-flex gap-2 flex-wrap">
     <?php if ($printIds): ?><a href="<?= h($qs(['print' => 1, 'ids' => $printIds])) ?>" target="_blank" class="btn" style="background:#16A34A;color:#fff;border-radius:10px;font-weight:700;">🖨️ आत्ता दिलेले पास Print करा</a><?php endif; ?>
     <?php $allN = 0; foreach ($classes as $c0) { if ($f['class'] === '' && $f['div'] === '' || ($c0['cl'] === $f['class'] && $c0['dv'] === $f['div'])) $allN += (int)$c0['n']; } if ($ready && $allN): ?><a href="<?= h('index.php?' . http_build_query(array_filter(['print' => 1, 'all' => 1, 'campus' => $f['campus'] ?: null, 'year' => $f['year'] !== '' ? $f['year'] : null], fn($v) => $v !== null) + ($f['class'] !== '' || $f['div'] !== '' ? ['class' => $f['class'], 'div' => $f['div']] : []))) ?>" target="_blank" class="btn" style="border:1.5px solid var(--rail);color:var(--rail);border-radius:10px;font-weight:700;">🖨️ <?= $f['class'] !== '' ? h($f['class'] . ($f['div'] !== '' ? ' - ' . $f['div'] : '')) . ' —' : '' ?> सगळ्या विद्यार्थ्यांचे पास एकदम Print (<?= (int)$allN ?>)</a><?php endif; ?>

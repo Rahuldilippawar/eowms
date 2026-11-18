@@ -210,7 +210,7 @@ require_once __DIR__ . '/../includes/header.php';
       <a href="fees.php?receipt=<?= (int)$py['id'] ?>" target="_blank" class="ms-auto" style="text-decoration:none;">🧾 Print</a>
     </div>
   <?php endforeach; ?>
-  <?php if (!$pays): ?><div style="padding:10px 20px 14px;font-size:12.5px;color:var(--text-dim);">अजून पावती नाही.<?= $v('paid_fee', 0) > 0 ? ' (Import मधून आलेलं जमा ₹' . number_format((float)$v('paid_fee')) . ' आधीचं आहे.)' : '' ?></div><?php endif; ?>
+  <?php if (!$pays): ?><div style="padding:10px 20px 14px;font-size:12.5px;color:var(--text-dim);"><span>अजून पावती नाही.</span><?= $v('paid_fee', 0) > 0 ? ' · <span>आधीचं जमा (Import मधून)</span> ₹' . number_format((float)$v('paid_fee')) : '' ?></div><?php endif; ?>
 </div>
 
 <div class="panel mt-3">
