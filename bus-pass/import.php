@@ -69,7 +69,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($campus && !isset($campuses[$campus])) $campus = 0;
         if (empty($_FILES['file']['tmp_name']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) { $_SESSION['flash'] = '⚠️ File निवडा.'; header('Location: import.php'); exit; }
         if ($_FILES['file']['size'] > 8 * 1024 * 1024) { $_SESSION['flash'] = '⚠️ File 8 MB पेक्षा मोठी आहे.'; header('Location: import.php'); exit; }
-        try { $rows = eowmsReadSheet($_FILES['file']['tmp_name'], $_FILES['file']['name']); }
+        $isPdf = strtolower(pathinfo((string)$_FILES['file']['name'], PATHINFO_EXTENSION)) === 'pdf';
+        if ($isPdf) {
+            // 📄 Bus Fee Register ची PDF थेट — Regis No, Name, Class, Division, Stop, Total / Paid / Balance Fee, College
+            require_once __DIR__ . '/../includes/pdf-table.php';
+            $rows = pdfBusFeeRegister((string)file_get_contents($_FILES['file']['tmp_name']));
+            if (!$rows) { $_SESSION['flash'] = '⚠️ ही PDF वाचता आली नाही (Scan केलेली / वेगळ्या रचनेची). कृपया Excel किंवा CSV वापरा.'; header('Location: import.php'); exit; }
+        }
+        else try { $rows = eowmsReadSheet($_FILES['file']['tmp_name'], $_FILES['file']['name']); }
         catch (Throwable $e) { $_SESSION['flash'] = '⚠️ File वाचता आली नाही: ' . $e->getMessage(); header('Location: import.php'); exit; }
         $rows = array_values(array_filter($rows, fn($r) => is_array($r) && count(array_filter($r, fn($c) => trim((string)$c) !== '')) > 0));
         if (count($rows) < 2) { $_SESSION['flash'] = '⚠️ File मध्ये विद्यार्थी सापडले नाहीत.'; header('Location: import.php'); exit; }
@@ -186,7 +193,7 @@ require_once __DIR__ . '/../includes/header.php';
   <form method="POST" enctype="multipart/form-data" style="padding:16px 20px;">
     <input type="hidden" name="action" value="upload">
     <div class="row g-2">
-      <div class="col-md-6"><label class="form-label-custom">यादीची File (Excel .xlsx / .xls किंवा CSV) *</label><input type="file" name="file" accept=".csv,.xlsx,.xls" class="form-control-custom" required></div>
+      <div class="col-md-6"><label class="form-label-custom">यादीची File (Excel .xlsx / .xls, CSV किंवा Bus Fee Register ची PDF) *</label><input type="file" name="file" accept=".csv,.xlsx,.xls,.pdf" class="form-control-custom" required></div>
       <div class="col-md-6"><label class="form-label-custom">College / School</label>
         <select name="campus" class="form-select-custom"><option value="">— (File मधून / नाही) —</option>
           <?php foreach ($campuses as $cid => $cn): ?><option value="<?= $cid ?>" <?= count($campuses) === 1 ? 'selected' : '' ?>><?= h($cn) ?></option><?php endforeach; ?></select></div>

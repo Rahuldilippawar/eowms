@@ -2820,4 +2820,6 @@ return [
     "मार्ग (जाणे-येणे)" => ["मार्ग (आना-जाना)", "Route (to and fro)"],
     "सगळ्यांचे पास एकदम" => ["सबके पास एक साथ", "All passes at once —"],
     "सगळ्यांचे पास" => ["सबके पास", "All passes"],
+    "ही PDF वाचता आली नाही (Scan केलेली / वेगळ्या रचनेची). कृपया Excel किंवा CSV वापरा." => ["यह PDF पढ़ी नहीं जा सकी (Scan की गई / अलग संरचना)। कृपया Excel या CSV का उपयोग करें।", "This PDF could not be read (scanned / different layout). Please use Excel or CSV."],
+    "यादीची File (Excel .xlsx / .xls, CSV किंवा Bus Fee Register ची PDF)" => ["सूची की File (Excel .xlsx / .xls, CSV या Bus Fee Register की PDF)", "List file (Excel .xlsx / .xls, CSV or Bus Fee Register PDF)"],
 ];
