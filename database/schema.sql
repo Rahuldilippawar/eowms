@@ -2277,6 +2277,34 @@ CREATE TABLE students (
   INDEX idx_stu_name (organization_id, name)
 ) ENGINE=InnoDB;
 
+-- 🪪 विद्यार्थी ID Card — प्रत्येक College/School चं Design
+CREATE TABLE student_card_settings (
+  campus_id INT NOT NULL PRIMARY KEY,
+  organization_id INT NOT NULL,
+  top_line VARCHAR(120) NULL,
+  title VARCHAR(200) NULL,
+  subtitle VARCHAR(120) NULL,
+  logo_path VARCHAR(255) NULL,
+  signature_path VARCHAR(255) NULL,
+  sign_label VARCHAR(60) NULL,
+  color VARCHAR(7) NULL,
+  show_qr TINYINT(1) NOT NULL DEFAULT 1,
+  show_blood TINYINT(1) NOT NULL DEFAULT 1,
+  updated_by INT NULL,
+  updated_at DATETIME NULL,
+  INDEX idx_scs_org (organization_id)
+) ENGINE=InnoDB;
+-- 🪪 कोणाचं Card कधी छापलं (पुन्हा छपाई / हरवलेलं Card ओळखायला)
+CREATE TABLE student_card_prints (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  organization_id INT NOT NULL,
+  student_id INT NOT NULL,
+  printed_by INT NULL,
+  printed_at DATETIME NOT NULL,
+  INDEX idx_scp_student (student_id, printed_at),
+  INDEX idx_scp_org (organization_id, printed_at)
+) ENGINE=InnoDB;
+
 CREATE TABLE virtual_classrooms (
   id INT AUTO_INCREMENT PRIMARY KEY,
   organization_id INT NOT NULL,
