@@ -4,7 +4,6 @@ require_once __DIR__ . '/../includes/auth.php';
 requireLogin('../');
 require_once __DIR__ . '/../includes/students-helpers.php';
 require_once __DIR__ . '/../includes/photo-helpers.php';
-require_once __DIR__ . '/../includes/student-bus-pass.php';
 $user = currentUser();
 $orgId = activeOrgId();
 if (!studentsReady($pdo)) { header('Location: index.php'); exit; }
@@ -108,10 +107,6 @@ require_once __DIR__ . '/../includes/header.php';
       </div>
       <?php $cardPr = null; try { $q = $pdo->prepare("SELECT COUNT(*) n, MAX(printed_at) last FROM student_card_prints WHERE organization_id = ? AND student_id = ?"); $q->execute([$orgId, $id]); $cardPr = $q->fetch(); } catch (PDOException $e) {} ?>
       <a href="id-cards.php?id=<?= (int)$id ?>" target="_blank" class="btn btn-sm mt-2" style="background:var(--rail);color:#fff;border-radius:8px;font-weight:600;">🪪 ID Card</a>
-      <?php $bp = null; try { $q = $pdo->prepare("SELECT p.* FROM student_bus_passes p JOIN bus_students b ON b.id = p.bus_student_id WHERE p.organization_id = ? AND b.student_id = ? AND p.status = 'active' ORDER BY p.valid_till DESC, p.id DESC LIMIT 1"); $q->execute([$orgId, $id]); $bp = $q->fetch(); } catch (PDOException $e) {} ?>
-      <?php if ($bp && canViewBusPass()): $bpOk = $bp['valid_till'] >= date('Y-m-d'); ?>
-        <a href="../bus-pass/index.php?print=1&amp;ids=<?= (int)$bp['id'] ?>" target="_blank" class="sf-chip mt-2" style="text-decoration:none;color:inherit;<?= $bpOk ? '' : 'background:#FEE2E2;' ?>">🚌 <?= h($bp['from_place']) ?> ⇄ <?= h($bp['to_place']) ?> · <?= $bpOk ? 'valid ' : 'संपला ' ?><?= h(date('d/m/Y', strtotime($bp['valid_till']))) ?></a>
-      <?php elseif (canBusPass() && $stu['is_active']): ?><a href="../bus-pass/student.php?from_student=<?= (int)$id ?>" class="sf-chip mt-2" style="text-decoration:none;color:inherit;">🚌 बस पाससाठी नोंद करा</a><?php endif; ?>
       <?php if ($cardPr && (int)$cardPr['n']): ?><span class="sf-chip mt-2">🖨️ Card छापलं <?= h(date('d/m/Y', strtotime($cardPr['last']))) ?><?= (int)$cardPr['n'] > 1 ? ' · ' . (int)$cardPr['n'] . ' वेळा' : '' ?></span><?php endif; ?>
     </div>
   </div>

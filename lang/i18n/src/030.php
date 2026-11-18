@@ -2822,4 +2822,10 @@ return [
     "सगळ्यांचे पास" => ["सबके पास", "All passes"],
     "ही PDF वाचता आली नाही (Scan केलेली / वेगळ्या रचनेची). कृपया Excel किंवा CSV वापरा." => ["यह PDF पढ़ी नहीं जा सकी (Scan की गई / अलग संरचना)। कृपया Excel या CSV का उपयोग करें।", "This PDF could not be read (scanned / different layout). Please use Excel or CSV."],
     "यादीची File (Excel .xlsx / .xls, CSV किंवा Bus Fee Register ची PDF)" => ["सूची की File (Excel .xlsx / .xls, CSV या Bus Fee Register की PDF)", "List file (Excel .xlsx / .xls, CSV or Bus Fee Register PDF)"],
+    "सगळ्या विद्यार्थ्यांचे पास एकदम" => ["सभी छात्रों के पास एक साथ", "All students' passes at once —"],
+    "आधी बस विद्यार्थ्यांची नोंद करा — Excel / CSV / PDF ने एकदम, किंवा एक-एक." => ["पहले बस छात्रों का पंजीकरण करें — Excel / CSV / PDF से एक साथ, या एक-एक करके।", "First register bus students — all at once via Excel / CSV / PDF, or one by one."],
+    "पास Print (शैक्षणिक वर्ष)" => ["पास Print (शैक्षणिक वर्ष)", "Print pass (academic year)"],
+    "सगळ्या विद्यार्थ्यांचे पास" => ["सभी छात्रों के पास", "All students' passes"],
+    "ही यादी फक्त बस पाससाठी आहे — विद्यार्थी विभागाशी काहीही संबंध नाही." => ["यह सूची केवल बस पास के लिए है — छात्र विभाग से कोई संबंध नहीं।", "This list is only for bus passes — it has no connection with the students module."],
+    "शैक्षणिक वर्ष)" => ["शैक्षणिक वर्ष)", "academic year)"],
 ];

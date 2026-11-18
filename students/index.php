@@ -135,7 +135,6 @@ require_once __DIR__ . '/../includes/header.php';
       <a href="import.php">📥 Excel / CSV Import</a>
     <?php endif; ?>
     <a href="<?= h('id-cards.php' . $qs(['gender' => null, 'status' => null, 'q' => null])) ?>">🪪 ID Cards</a>
-    <?php if (function_exists('canViewBusPass') ? canViewBusPass() : canBusPass()): ?><a href="../bus-pass/index.php">🚌 बस पास</a><?php endif; ?>
     <?php if (canStudentCards()): ?><a href="<?= h('photos.php' . $qs(['gender' => null, 'status' => null, 'q' => null])) ?>">📷 फोटो</a><?php endif; ?>
     <a href="<?= h($qs(['export' => 'csv'])) ?>">📊 Excel</a>
   </div>

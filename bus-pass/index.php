@@ -118,17 +118,34 @@ if (!empty($_GET['print']) && $ready) {
     $rows = [];
     if ($ids) { $st = $pdo->prepare($passSql . " AND p.id IN (" . implode(',', array_slice($ids, 0, 1000)) . ") ORDER BY s.class_name, s.division, CAST(s.roll_no AS UNSIGNED), s.name"); $st->execute($pp); $rows = $st->fetchAll(); }
     elseif (!empty($_GET['all'])) {
-        // 🖨️ एकदम सगळे — निवडलेल्या College / वर्ष / वर्ग / तुकडीतल्या प्रत्येक विद्यार्थ्याचा सध्याचा चालू पास
-        $asql = $passSql . " AND s.is_active = 1 AND p.status = 'active' AND p.valid_till >= CURDATE()
-            AND p.id = (SELECT p2.id FROM student_bus_passes p2 WHERE p2.bus_student_id = p.bus_student_id AND p2.status = 'active' ORDER BY p2.valid_till DESC, p2.id DESC LIMIT 1)";
-        $ap = $pp;
+        // 🖨️ एकदम सगळे — निवडलेल्या College / वर्ष / वर्ग / तुकडीतला प्रत्येक बस विद्यार्थी:
+        // चालू पास असेल तर तो; नसेल तर शैक्षणिक वर्षाचा पास (Validity = शैक्षणिक वर्ष)
+        $asql = "SELECT s.*, s.id bus_student_id, s.is_active stu_active, c.name campus_name,
+                (SELECT p2.id FROM student_bus_passes p2 WHERE p2.bus_student_id = s.id AND p2.status = 'active' AND p2.valid_till >= CURDATE() ORDER BY p2.valid_till DESC, p2.id DESC LIMIT 1) pid
+            FROM bus_students s LEFT JOIN campuses c ON c.id = s.campus_id WHERE s.organization_id = ? AND s.is_active = 1";
+        $ap = [$orgId];
         if ($f['campus']) { $asql .= " AND s.campus_id = ?"; $ap[] = $f['campus']; }
         if (($_GET['year'] ?? '') !== '') { $asql .= " AND s.academic_year = ?"; $ap[] = (string)$_GET['year']; }
         if (isset($_GET['class'])) { $asql .= " AND COALESCE(s.class_name,'') = ?"; $ap[] = (string)$_GET['class']; }
         if (isset($_GET['div'])) { $asql .= " AND COALESCE(s.division,'') = ?"; $ap[] = (string)$_GET['div']; }
+        if (!empty($_GET['bs'])) { $asql .= " AND s.id = ?"; $ap[] = (int)$_GET['bs']; } // एकच विद्यार्थी
         $st = $pdo->prepare($asql . " ORDER BY s.class_name, s.division, CAST(s.roll_no AS UNSIGNED), s.name LIMIT 3000");
         $st->execute($ap);
-        $rows = $st->fetchAll();
+        $stuRows = $st->fetchAll();
+        $pids = array_filter(array_map('intval', array_column($stuRows, 'pid')));
+        $passById = [];
+        if ($pids) { $q = $pdo->prepare($passSql . " AND p.id IN (" . implode(',', $pids) . ")"); $q->execute($pp); foreach ($q->fetchAll() as $r) $passById[(int)$r['id']] = $r; }
+        $src = busSource($pdo, $orgId);
+        foreach ($stuRows as $s0) {
+            if ($s0['pid'] && isset($passById[(int)$s0['pid']])) { $rows[] = $passById[(int)$s0['pid']]; continue; }
+            [$ayFrom, $ayTill, $ay] = busAcademicRange($s0['academic_year']);
+            $rows[] = $s0 + ['ay' => $ay, 'pass_no' => '', 'valid_from' => $ayFrom, 'valid_till' => $ayTill, 'status' => 'active',
+                'from_place' => $s0['from_place'] ?: $src, 'to_place' => $s0['to_place'] ?: '—'];
+            $rows[count($rows) - 1]['id'] = 0;
+            $rows[count($rows) - 1]['organization_id'] = $orgId;
+            $rows[count($rows) - 1]['from_place'] = $s0['from_place'] ?: $src;
+            $rows[count($rows) - 1]['to_place'] = $s0['to_place'] ?: '—';
+        }
     }
     $designs = studentCardSettingsAll($pdo, $orgId, $org);
     ?>
@@ -286,7 +303,7 @@ require_once __DIR__ . '/../includes/smart-insights.php';
   <div class="page-title mb-0">🚌 बस पास</div>
   <div class="d-flex gap-2 flex-wrap">
     <?php if ($printIds): ?><a href="<?= h($qs(['print' => 1, 'ids' => $printIds])) ?>" target="_blank" class="btn" style="background:#16A34A;color:#fff;border-radius:10px;font-weight:700;">🖨️ आत्ता दिलेले पास Print करा</a><?php endif; ?>
-    <?php $allN = $kpi['active'] + $kpi['expiring']; if ($ready && $allN): ?><a href="<?= h('index.php?' . http_build_query(array_filter(['print' => 1, 'all' => 1, 'campus' => $f['campus'] ?: null, 'year' => $f['year'] !== '' ? $f['year'] : null], fn($v) => $v !== null) + ($f['class'] !== '' || $f['div'] !== '' ? ['class' => $f['class'], 'div' => $f['div']] : []))) ?>" target="_blank" class="btn" style="border:1.5px solid var(--rail);color:var(--rail);border-radius:10px;font-weight:700;">🖨️ <?= $f['class'] !== '' ? h($f['class'] . ($f['div'] !== '' ? ' - ' . $f['div'] : '')) . ' —' : '' ?> सगळ्यांचे पास एकदम Print (<?= (int)$allN ?>)</a><?php endif; ?>
+    <?php $allN = 0; foreach ($classes as $c0) { if ($f['class'] === '' && $f['div'] === '' || ($c0['cl'] === $f['class'] && $c0['dv'] === $f['div'])) $allN += (int)$c0['n']; } if ($ready && $allN): ?><a href="<?= h('index.php?' . http_build_query(array_filter(['print' => 1, 'all' => 1, 'campus' => $f['campus'] ?: null, 'year' => $f['year'] !== '' ? $f['year'] : null], fn($v) => $v !== null) + ($f['class'] !== '' || $f['div'] !== '' ? ['class' => $f['class'], 'div' => $f['div']] : []))) ?>" target="_blank" class="btn" style="border:1.5px solid var(--rail);color:var(--rail);border-radius:10px;font-weight:700;">🖨️ <?= $f['class'] !== '' ? h($f['class'] . ($f['div'] !== '' ? ' - ' . $f['div'] : '')) . ' —' : '' ?> सगळ्या विद्यार्थ्यांचे पास एकदम Print (<?= (int)$allN ?>)</a><?php endif; ?>
   </div>
 </div>
 
@@ -311,11 +328,10 @@ require_once __DIR__ . '/../includes/smart-insights.php';
 <?php if (!$classes): ?>
   <div class="panel mb-3" style="padding:26px 20px;text-align:center;">
     <div style="font-size:15px;font-weight:700;margin-bottom:6px;">👥 बस पाससाठी अजून विद्यार्थी नाहीत</div>
-    <div style="font-size:13px;color:var(--text-dim);margin-bottom:12px;">आधी बस विद्यार्थ्यांची नोंद करा — Excel/CSV ने एकदम, एक-एक, किंवा विद्यार्थी विभागातून.</div>
+    <div style="font-size:13px;color:var(--text-dim);margin-bottom:12px;">आधी बस विद्यार्थ्यांची नोंद करा — Excel / CSV / PDF ने एकदम, किंवा एक-एक.</div>
     <?php if ($canIssue): ?><div class="d-flex justify-content-center gap-2 flex-wrap">
       <a href="import.php" class="btn" style="background:var(--rail);color:#fff;border-radius:10px;font-weight:600;">📥 Excel / CSV Import</a>
       <a href="student.php" class="btn" style="border:1px solid var(--line);border-radius:10px;">＋ विद्यार्थी जोडा</a>
-      <a href="students.php#pull" class="btn" style="border:1px solid var(--line);border-radius:10px;">🎓 विद्यार्थी विभागातून घ्या</a>
     </div><?php endif; ?>
   </div>
 <?php else: ?>

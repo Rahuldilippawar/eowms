@@ -18,24 +18,11 @@ $campusRows = $campusRows->fetchAll(PDO::FETCH_UNIQUE);
 
 $stu = null;
 if ($id) {
-    $st = $pdo->prepare("SELECT s.*, c.name campus_name, sx.photo_path stu_photo FROM bus_students s LEFT JOIN campuses c ON c.id = s.campus_id LEFT JOIN students sx ON sx.id = s.student_id WHERE s.organization_id = ? AND s.id = ?");
+    $st = $pdo->prepare("SELECT s.*, c.name campus_name FROM bus_students s LEFT JOIN campuses c ON c.id = s.campus_id WHERE s.organization_id = ? AND s.id = ?");
     $st->execute([$orgId, $id]);
     $stu = $st->fetch();
     if (!$stu) { $_SESSION['flash'] = '⚠️ विद्यार्थी सापडला नाही.'; header('Location: students.php'); exit; }
 } elseif (!$canManage) { header('Location: students.php'); exit; }
-
-// 🎓 विद्यार्थी विभागातून भरून (?from_student=ID) — त्या विभागाची परवानगी असेल तर
-$fromStudent = (int)($_GET['from_student'] ?? 0);
-if (!$id && $fromStudent && studentsReady($pdo) && ($scope = studentVisibleScope($pdo)) !== []) {
-    $p = [$orgId, $fromStudent];
-    $q = $pdo->prepare("SELECT s.* FROM students s WHERE s.organization_id = ? AND s.id = ?" . studentScopeSql($scope, $p));
-    $q->execute($p);
-    if ($src = $q->fetch()) {
-        if ($ex = busStudentFind($pdo, $orgId, ['student_id' => $src['id'], 'name' => $src['name']])) { header('Location: student.php?id=' . $ex); exit; }
-        $stu = ['student_id' => $src['id']] + array_intersect_key($src, array_flip(['campus_id', 'name', 'admission_no', 'roll_no', 'class_name', 'division', 'course', 'academic_year', 'gender', 'date_of_birth', 'mobile', 'parent_mobile', 'address', 'blood_group', 'photo_path']));
-        $stu['stu_photo'] = $src['photo_path']; $stu['photo_path'] = null;
-    }
-}
 
 $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canManage) {
@@ -59,7 +46,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canManage) {
     foreach (['from_place', 'to_place'] as $k) { if ($in[$k] !== '') $in[$k] = busPlace($in[$k]); }
     if ($in['from_place'] === '') $in['from_place'] = busSource($pdo, $orgId);
     $in['total_fee'] = busMoney($in['total_fee']); $in['paid_fee'] = busMoney($in['paid_fee']);
-    if (!$id && (int)($_POST['student_id'] ?? 0)) $in['student_id'] = (int)$_POST['student_id'];
     if (mb_strlen($in['name']) < 2) $error = 'विद्यार्थ्याचे नाव भरा.';
     elseif (($_POST['mobile'] ?? '') !== '' && !$in['mobile']) $error = 'मोबाईल क्रमांक 10 अंकी हवा.';
     elseif (($_POST['parent_mobile'] ?? '') !== '' && !$in['parent_mobile']) $error = 'पालकांचा मोबाईल 10 अंकी हवा.';
@@ -88,7 +74,7 @@ $defCampus = (int)$v('campus_id', (int)($_GET['campus'] ?? 0) ?: (count($campusR
 $defTo = $v('to_place', (string)($_GET['to'] ?? ''));
 $defFrom = $v('from_place') ?: busSource($pdo, $orgId);
 $photoNow = '';
-foreach ([$v('photo_path'), $v('stu_photo')] as $pp) { if ($pp && eowmsPhotoExists($pp)) { $photoNow = $pp; break; } }
+foreach ([$v('photo_path')] as $pp) { if ($pp && eowmsPhotoExists($pp)) { $photoNow = $pp; break; } }
 $passes = [];
 if ($id) {
     $st = $pdo->prepare("SELECT * FROM student_bus_passes WHERE organization_id = ? AND bus_student_id = ? ORDER BY valid_till DESC, id DESC LIMIT 20");
@@ -127,15 +113,15 @@ require_once __DIR__ . '/../includes/header.php';
         <?php if ($v('total_fee') !== ''): $bal = (float)$v('total_fee') - (float)$v('paid_fee', 0); ?><span class="sf-chip" style="<?= $bal > 0 ? 'background:#FEE2E2;color:#991B1B;' : 'background:#DCFCE7;color:#166534;' ?>">₹ <?= $bal > 0 ? 'बाकी ' . h(number_format($bal)) : 'शुल्क पूर्ण' ?></span><?php endif; ?>
         <?php if ($v('class_name')): ?><span class="sf-chip"><?= h($v('class_name') . ($v('division') ? ' - ' . $v('division') : '')) ?></span><?php endif; ?>
         <?php if ($v('from_place')): ?><span class="sf-chip">🚏 <?= h($v('from_place')) ?> ⇄ <?= h($v('to_place') ?: '—') ?></span><?php endif; ?>
-        <?php if ($v('student_id')): ?><span class="sf-chip">🎓 विद्यार्थी विभागाशी जोडलेले</span><?php endif; ?>
       </div>
       <?php $curPass = null; foreach ($passes ?? [] as $pp0) { if ($pp0['status'] === 'active' && $pp0['valid_till'] >= date('Y-m-d')) { $curPass = $pp0; break; } } ?>
-      <?php if ($curPass): ?><a href="index.php?print=1&amp;ids=<?= (int)$curPass['id'] ?>" target="_blank" class="btn btn-sm mt-2 me-1" style="background:#16A34A;color:#fff;border-radius:8px;font-weight:600;">🖨️ पास Print</a><?php endif; ?>
+      <?php if ($curPass): ?><a href="index.php?print=1&amp;ids=<?= (int)$curPass['id'] ?>" target="_blank" class="btn btn-sm mt-2 me-1" style="background:#16A34A;color:#fff;border-radius:8px;font-weight:600;">🖨️ पास Print</a>
+      <?php elseif ($v('is_active', 1)): ?><a href="index.php?print=1&amp;all=1&amp;bs=<?= (int)$id ?>" target="_blank" class="btn btn-sm mt-2 me-1" style="background:#16A34A;color:#fff;border-radius:8px;font-weight:600;">🖨️ पास Print (शैक्षणिक वर्ष)</a><?php endif; ?>
       <?php if ($canManage && $v('is_active', 1)): ?><a href="index.php?<?= h(http_build_query(array_filter(['campus' => $v('campus_id'), 'year' => $v('academic_year'), 'class' => (string)$v('class_name'), 'div' => (string)$v('division')], fn($x) => $x !== null && $x !== ''))) ?>#issue" class="btn btn-sm mt-2" style="background:var(--rail);color:#fff;border-radius:8px;font-weight:600;">🚌 पास द्या / नूतनीकरण</a><?php endif; ?>
     </div>
   </div>
 <?php else: ?>
-  <div class="page-title">＋ नवीन बस विद्यार्थी<?= $v('student_id') ? ' <span style="font-size:13px;font-weight:600;color:var(--text-dim);">— 🎓 विद्यार्थी विभागातून भरलं</span>' : '' ?></div>
+  <div class="page-title">＋ नवीन बस विद्यार्थी</div>
 <?php endif; ?>
 
 <?php if ($error): ?><div class="alert alert-danger" style="border-radius:10px;font-size:13px;">⚠️ <?= h($error) ?></div><?php endif; ?>
@@ -143,7 +129,6 @@ require_once __DIR__ . '/../includes/header.php';
 <div class="panel">
   <form method="POST" enctype="multipart/form-data" style="padding:16px 20px;">
     <input type="hidden" name="action" value="save"><input type="hidden" name="id" value="<?= (int)$id ?>">
-    <?php if (!$id && $v('student_id')): ?><input type="hidden" name="student_id" value="<?= (int)$v('student_id') ?>"><?php endif; ?>
     <fieldset <?= $edit ? '' : 'disabled' ?>>
     <div class="row g-2">
       <div class="col-md-6"><label class="form-label-custom">विद्यार्थ्याचे पूर्ण नाव *</label><input type="text" name="name" value="<?= h($v('name')) ?>" class="form-control-custom" required autocapitalize="words" placeholder="आडनाव नाव वडिलांचे नाव"></div>
