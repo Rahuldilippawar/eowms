@@ -12,9 +12,7 @@ $limited = publicFormRateLimited('verify_bus_pass', 60, 600);
 if ($id && $orgId && $sig !== '' && !$limited) {
     publicFormRecordSubmission('verify_bus_pass');
     try {
-        $st = $pdo->prepare("SELECT p.*, s.name, s.class_name, s.division, s.course, s.admission_no, s.photo_path, s.is_active stu_active, c.name campus_name, o.name org_name
-            FROM student_bus_passes p JOIN students s ON s.id = p.student_id JOIN organizations o ON o.id = p.organization_id LEFT JOIN campuses c ON c.id = s.campus_id
-            WHERE p.id = ? AND p.organization_id = ?");
+        $st = $pdo->prepare("SELECT x.*, o.name org_name FROM (" . busPassSelectSql() . " WHERE p.id = ? AND p.organization_id = ?) x JOIN organizations o ON o.id = x.organization_id");
         $st->execute([$id, $orgId]);
         $p = $st->fetch();
     } catch (PDOException $e) { $p = null; }
@@ -62,11 +60,12 @@ $tone = $ok ? 'valid' : ($state === 'upcoming' || $state === 'expiring' ? 'warnx
       <div class="name"><?= h($p['name']) ?></div>
       <div class="rows">
         <div><span>पास क्र.</span><b><?= h($p['pass_no']) ?></b></div>
-        <div><span>कुठून → कुठपर्यंत</span><b><?= h($p['from_place']) ?> → <?= h($p['to_place']) ?></b></div>
+        <div><span>मार्ग (जाणे-येणे)</span><b><?= h($p['from_place']) ?> ⇄ <?= h($p['to_place']) ?></b></div>
         <?php if ($p['route_name']): ?><div><span>मार्ग / बस</span><b><?= h($p['route_name']) ?></b></div><?php endif; ?>
         <div><span>Valid</span><b style="color:<?= $ok ? '#15803D' : '#BE123C' ?>;"><?= h(date('d/m/Y', strtotime($p['valid_from']))) ?> → <?= h(date('d/m/Y', strtotime($p['valid_till']))) ?></b></div>
-        <?php if ($cls !== ''): ?><div><span>वर्ग</span><b><?= h($cls) ?></b></div><?php endif; ?>
-        <div><span>Gr.No.</span><b><?= h($p['admission_no']) ?></b></div>
+        <?php if ($p['class_name']): ?><div><span>Class</span><b><?= h($p['class_name']) ?></b></div><?php endif; ?>
+        <?php if ($p['division'] || $p['course']): ?><div><span>Division</span><b><?= h($p['division'] ?: $p['course']) ?></b></div><?php endif; ?>
+        <div><span>Reg No</span><b><?= h($p['admission_no']) ?></b></div>
       </div>
       <div class="note">फोटो पासवरच्या फोटोशी जुळतो का ते पाहा. ही माहिती थेट संस्थेच्या प्रणालीतून आत्ता घेतली आहे.</div>
     </div>

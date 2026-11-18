@@ -446,7 +446,7 @@ function navGroupHead($id, $key, $activeGroup, $icon, $label, $badge = 0) {
 
     <!-- ==================== 🚌 विद्यार्थी वाहतूक — बस पास (स्वतंत्र विभाग) ==================== -->
     <?php navSectionStart(); ?>
-    <?php if (hasRole('super_admin') || hasPermission('manage_bus_passes') || hasPermission('manage_students') || hasPermission('student_id_cards') || isManagementOrAbove() || hasCategory('hod')): ?>
+    <?php if (hasRole('super_admin') || hasPermission('manage_bus_passes') || hasPermission('manage_students') || hasPermission('student_id_cards') || isManagementOrAbove()): ?>
       <a href="<?= $rp ?>bus-pass/index.php" class="tree-node <?= $currentDir === 'bus-pass' ? 'active' : '' ?>">
         <i class="fa-solid fa-bus fa-fw"></i><span>बस पास</span>
       </a>

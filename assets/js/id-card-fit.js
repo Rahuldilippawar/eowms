@@ -4,9 +4,11 @@
     (root || document).querySelectorAll('[data-fit]').forEach(function (el) {
       el.style.fontSize = '';
       var size = parseFloat(getComputedStyle(el).fontSize), min = size * 0.62, single = el.dataset.fit === '1', guard = 0;
-      var over = function () { return single ? el.scrollWidth > el.clientWidth + 1 : el.scrollHeight > el.clientHeight + 1; };
+      // बहु-ओळ: उंची तसेच रुंदी (एखादा लांब शब्द तुटू नये — तो पूर्ण बसेपर्यंत अक्षरं लहान)
+      var over = function () { return single ? el.scrollWidth > el.clientWidth + 1 : (el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth); };
       if (single) el.style.textOverflow = 'clip';
       if (single) min = size * 0.5;
+      if (el.dataset.fitMin) min = size * parseFloat(el.dataset.fitMin);
       while (over() && size > min && guard++ < 50) { size -= 0.3; el.style.fontSize = size + 'px'; }
     });
     // पूर्ण Card मावत नसेल (लांब नाव + लांब पत्ता) — फोटो व Logo थोडे लहान करून सगळं आत बसवतो

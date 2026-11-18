@@ -2297,10 +2297,48 @@ CREATE TABLE student_card_settings (
   INDEX idx_scs_org (organization_id)
 ) ENGINE=InnoDB;
 -- 🚌 विद्यार्थी बस पास — कुठून → कुठपर्यंत, कधीपासून → कधीपर्यंत
+-- 🚌 बस पास — स्वतःची विद्यार्थी नोंद (विद्यार्थी विभागापासून वेगळी)
+CREATE TABLE bus_students (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  organization_id INT NOT NULL,
+  campus_id INT NULL,
+  student_id INT NULL,
+  name VARCHAR(255) NOT NULL,
+  admission_no VARCHAR(50) NULL,
+  roll_no VARCHAR(30) NULL,
+  class_name VARCHAR(60) NULL,
+  division VARCHAR(20) NULL,
+  course VARCHAR(120) NULL,
+  academic_year VARCHAR(20) NULL,
+  gender ENUM('M','F','O') NULL,
+  date_of_birth DATE NULL,
+  mobile VARCHAR(20) NULL,
+  parent_mobile VARCHAR(20) NULL,
+  address VARCHAR(500) NULL,
+  blood_group VARCHAR(6) NULL,
+  from_place VARCHAR(120) NULL,
+  to_place VARCHAR(120) NULL,
+  route_name VARCHAR(120) NULL,
+  total_fee DECIMAL(10,2) NULL,
+  paid_fee DECIMAL(10,2) NULL,
+  photo_path VARCHAR(255) NULL,
+  remarks VARCHAR(255) NULL,
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  import_batch VARCHAR(40) NULL,
+  created_by INT NULL,
+  created_at DATETIME NULL,
+  updated_at DATETIME NULL,
+  INDEX idx_bs_class (organization_id, campus_id, academic_year, class_name, division),
+  INDEX idx_bs_name (organization_id, name),
+  INDEX idx_bs_adm (organization_id, admission_no),
+  INDEX idx_bs_student (student_id)
+) ENGINE=InnoDB;
+
 CREATE TABLE student_bus_passes (
   id INT AUTO_INCREMENT PRIMARY KEY,
   organization_id INT NOT NULL,
-  student_id INT NOT NULL,
+  student_id INT NULL,
+  bus_student_id INT NULL,
   pass_no VARCHAR(40) NOT NULL,
   from_place VARCHAR(120) NOT NULL,
   to_place VARCHAR(120) NOT NULL,
@@ -2315,6 +2353,7 @@ CREATE TABLE student_bus_passes (
   cancelled_at DATETIME NULL,
   UNIQUE KEY uniq_bp_no (organization_id, pass_no),
   INDEX idx_bp_student (student_id, valid_till),
+  INDEX idx_bp_bus_student (bus_student_id, valid_till),
   INDEX idx_bp_valid (organization_id, status, valid_till)
 ) ENGINE=InnoDB;
 

@@ -194,7 +194,7 @@ if (!empty($_GET['generate']) || $f['id']) {
 </div>
 <!--i18n:on-->
 <div class="idc-toast" id="toast"></div>
-<script src="../assets/js/id-card-fit.js?v=2"></script>
+<script src="../assets/js/id-card-fit.js?v=4"></script>
 <script>
   (function () {
     var sheet = document.getElementById('idcSheet'), csrf = <?= json_encode(function_exists('csrfToken') ? csrfToken() : '') ?>;
@@ -277,7 +277,7 @@ require_once __DIR__ . '/../includes/smart-insights.php';
 </style>
 <link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../assets/css/id-card.css?v=4">
-<script src="../assets/js/id-card-fit.js?v=2"></script>
+<script src="../assets/js/id-card-fit.js?v=4"></script>
 
 <div class="page-eyebrow"><a href="index.php" style="color:inherit;text-decoration:none;">🎓 विद्यार्थी</a></div>
 <div class="page-title">🪪 विद्यार्थी ID Cards</div>
