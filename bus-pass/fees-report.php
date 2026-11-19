@@ -1,5 +1,5 @@
 <?php
-// 📄 बस शुल्क — Smart अहवाल (A4 Print / PDF): सारांश, वसुली %, निरीक्षणं, वर्ग-तुकडी व थांबानिहाय, बाकीदार यादी, कालावधीतील वसुली (पद्धतनिहाय, दिवसनिहाय, पावत्या)
+// 📄 बस शुल्क — Smart अहवाल (A4 Print / PDF): सारांश, वसुली %, निरीक्षणं, वर्ग-तुकडीनिहाय, बाकीदार यादी
 require_once __DIR__ . '/../includes/auth.php';
 requireLogin('../');
 require_once __DIR__ . '/../includes/students-helpers.php';
@@ -21,13 +21,10 @@ $years = $pdo->prepare("SELECT DISTINCT academic_year FROM bus_students WHERE or
 $years->execute([$orgId]);
 $years = $years->fetchAll(PDO::FETCH_COLUMN);
 
-$d = fn($k) => (is_string($_GET[$k] ?? null) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $_GET[$k])) ? $_GET[$k] : null;
 $rf = [
     'campus' => (int)($_GET['campus'] ?? 0), 'year' => trim((string)($_GET['year'] ?? ($years[0] ?? ''))),
     'class' => trim((string)($_GET['class'] ?? '')), 'div' => trim((string)($_GET['div'] ?? '')), 'stop' => trim((string)($_GET['stop'] ?? '')),
-    'from' => $d('from') ?? date('Y-m-01'), 'to' => $d('to') ?? date('Y-m-d'),
 ];
-if ($rf['from'] > $rf['to']) [$rf['from'], $rf['to']] = [$rf['to'], $rf['from']];
 
 $base = " FROM bus_students s WHERE s.organization_id = ? AND s.is_active = 1";
 $bp = [$orgId];
@@ -47,31 +44,11 @@ $q = $pdo->prepare("SELECT COALESCE(s.class_name,'') cl, COALESCE(s.division,'')
     SUM(s.total_fee > 0 AND COALESCE(s.paid_fee,0) = 0) unpaid $base GROUP BY cl, dv ORDER BY cl, dv");
 $q->execute($bp);
 $byClass = $q->fetchAll();
-$q = $pdo->prepare("SELECT COALESCE(NULLIF(s.to_place,''),'—') stop, COUNT(*) n, SUM(COALESCE(s.total_fee,0)) tot, SUM(COALESCE(s.paid_fee,0)) paid, SUM($bal > 0) pend $base GROUP BY stop ORDER BY SUM($bal) DESC");
-$q->execute($bp);
-$byStop = $q->fetchAll();
 $lastPay = $payReady ? "(SELECT MAX(r.paid_on) FROM bus_fee_payments r WHERE r.bus_student_id = s.id)" : "NULL";
 $q = $pdo->prepare("SELECT s.name, s.admission_no, s.class_name, s.division, s.to_place, s.parent_mobile, s.mobile, s.total_fee, s.paid_fee, $bal bal, $lastPay last_pay $base AND $bal > 0 ORDER BY $bal DESC, s.class_name, s.name");
 $q->execute($bp);
 $pendRows = $q->fetchAll();
 
-// कालावधीतील वसुली (पावत्या)
-$coll = ['sum' => 0, 'n' => 0, 'students' => 0]; $byMode = []; $byDay = []; $receipts = [];
-if ($payReady) {
-    $pw = " FROM bus_fee_payments r JOIN bus_students s ON s.id = r.bus_student_id WHERE r.organization_id = ? AND r.paid_on BETWEEN ? AND ?";
-    $pp = [$orgId, $rf['from'], $rf['to']];
-    if ($rf['campus']) { $pw .= " AND s.campus_id = ?"; $pp[] = $rf['campus']; }
-    if ($rf['year'] !== '') { $pw .= " AND s.academic_year = ?"; $pp[] = $rf['year']; }
-    if ($rf['class'] !== '' || $rf['div'] !== '') { $pw .= " AND COALESCE(s.class_name,'') = ? AND COALESCE(s.division,'') = ?"; $pp[] = $rf['class']; $pp[] = $rf['div']; }
-    if ($rf['stop'] !== '') { $pw .= " AND COALESCE(s.to_place,'') = ?"; $pp[] = $rf['stop']; }
-    $q = $pdo->prepare("SELECT COALESCE(SUM(r.amount),0) sum, COUNT(*) n, COUNT(DISTINCT r.bus_student_id) students $pw"); $q->execute($pp); $coll = $q->fetch();
-    $q = $pdo->prepare("SELECT COALESCE(r.mode,'other') m, SUM(r.amount) a, COUNT(*) n $pw GROUP BY m ORDER BY a DESC"); $q->execute($pp); $byMode = $q->fetchAll();
-    $q = $pdo->prepare("SELECT r.paid_on d, SUM(r.amount) a, COUNT(*) n $pw GROUP BY r.paid_on ORDER BY r.paid_on"); $q->execute($pp); $byDay = $q->fetchAll();
-    $q = $pdo->prepare("SELECT r.receipt_no, r.paid_on, r.amount, r.mode, r.note, s.name, s.admission_no, s.class_name, s.division, u.name by_name
-        FROM bus_fee_payments r JOIN bus_students s ON s.id = r.bus_student_id LEFT JOIN users u ON u.id = r.created_by" . substr($pw, strpos($pw, ' WHERE')) . " ORDER BY r.paid_on, r.id");
-    $q->execute($pp); $receipts = $q->fetchAll();
-}
-$modes = busFeeModes();
 
 // 💡 निरीक्षणं
 $ins = [];
@@ -84,7 +61,6 @@ if ($K['n']) {
     if ((int)$K['unpaid']) $ins[] = ['⛔', '<b>' . (int)$K['unpaid'] . '</b> विद्यार्थ्यांनी अजून एकही रुपया भरलेला नाही — आधी त्यांच्याशी संपर्क करा.'];
     $big = array_filter($pendRows, fn($r) => (float)$r['bal'] >= 10000);
     if ($big) $ins[] = ['💰', '<b>' . count($big) . '</b> विद्यार्थ्यांचं ₹10,000 पेक्षा जास्त बाकी — एकूण ' . busInr(array_sum(array_column($big, 'bal'))) . '.'];
-    if ($payReady) $ins[] = ['📅', date('d/m', strtotime($rf['from'])) . ' – ' . date('d/m/Y', strtotime($rf['to'])) . ' मध्ये <b>' . busInr($coll['sum']) . '</b> वसूल (' . (int)$coll['n'] . ' पावत्या, ' . (int)$coll['students'] . ' विद्यार्थी).'];
     if ((int)$K['nofee']) $ins[] = ['⚠️', (int)$K['nofee'] . ' विद्यार्थ्यांचं एकूण शुल्क नोंदलेलं नाही — ते आकड्यांत धरलेले नाहीत.'];
 }
 $filterTxt = implode(' · ', array_filter([
@@ -129,8 +105,6 @@ $h = fn($x) => htmlspecialchars((string)$x, ENT_QUOTES, 'UTF-8');
   .red{color:#B91C1C;font-weight:700;} .grn{color:#15803D;font-weight:700;} .dim{color:#777;}
   .ins{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;} .ins div{display:flex;gap:7px;font-size:11.5px;line-height:1.5;background:#FAFBFE;border:1px solid #EEF1F7;border-radius:8px;padding:6px 8px;}
   .tag{font-size:10px;font-weight:700;padding:1px 6px;border-radius:99px;white-space:nowrap;} .tag.u{background:#FEE2E2;color:#991B1B;} .tag.p{background:#FEF3C7;color:#92400E;}
-  .modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;} .modes div{border:1px solid #E3E7F0;border-radius:10px;padding:7px 9px;} .modes span{font-size:10.5px;color:#666;} .modes b{display:block;font-size:14px;}
-  .days{display:flex;align-items:flex-end;gap:2px;height:70px;margin-top:6px;border-bottom:1px solid #D9DFEA;} .days i{flex:1;background:#3769AC;border-radius:2px 2px 0 0;min-height:2px;}
   .sig{display:flex;justify-content:space-between;margin-top:34px;font-size:11.5px;} .sig div{width:30%;border-top:1px solid #333;text-align:center;padding-top:4px;}
   .foot{margin-top:14px;font-size:10px;color:#888;text-align:center;}
   .pgb{break-before:page;page-break-before:always;}
@@ -146,10 +120,9 @@ $h = fn($x) => htmlspecialchars((string)$x, ENT_QUOTES, 'UTF-8');
   <select name="year"><option value="">सर्व वर्षे</option><?php foreach ($years as $y): ?><option <?= $rf['year'] === $y ? 'selected' : '' ?>><?= $h($y) ?></option><?php endforeach; ?></select>
   <?php if ($rf['class'] !== '' || $rf['div'] !== ''): ?><input type="hidden" name="class" value="<?= $h($rf['class']) ?>"><input type="hidden" name="div" value="<?= $h($rf['div']) ?>"><?php endif; ?>
   <?php if ($rf['stop'] !== ''): ?><input type="hidden" name="stop" value="<?= $h($rf['stop']) ?>"><?php endif; ?>
-  <label>वसुली <input type="date" name="from" value="<?= $h($rf['from']) ?>"> ते <input type="date" name="to" value="<?= $h($rf['to']) ?>"></label>
   <button type="submit">लागू करा</button>
   <span style="color:#C9CCE0;">भाग:</span>
-  <?php foreach (['ins' => 'निरीक्षणं', 'cls' => 'वर्गनिहाय', 'stp' => 'थांबानिहाय', 'pnd' => 'बाकीदार', 'col' => 'वसुली', 'rcp' => 'पावत्या'] as $sk => $sl): ?><label><input type="checkbox" data-sec="<?= $sk ?>" checked> <?= $sl ?></label><?php endforeach; ?>
+  <?php foreach (['ins' => 'निरीक्षणं', 'cls' => 'वर्गनिहाय', 'pnd' => 'बाकीदार'] as $sk => $sl): ?><label><input type="checkbox" data-sec="<?= $sk ?>" checked> <?= $sl ?></label><?php endforeach; ?>
   <button type="button" class="print" onclick="window.print()">🖨️ Print / PDF</button>
 </form>
 
@@ -157,7 +130,7 @@ $h = fn($x) => htmlspecialchars((string)$x, ENT_QUOTES, 'UTF-8');
   <div class="hd">
     <?php if (!empty($org['logo_path']) && eowmsPhotoExists($org['logo_path'])): ?><img src="../<?= $h($org['logo_path']) ?>" alt=""><?php endif; ?>
     <div class="t"><div class="org"><?= $h($org['name']) ?></div><div class="ti">🚌 बस शुल्क अहवाल</div></div>
-    <div class="meta">दिनांक: <b><?= date('d/m/Y h:i A') ?></b><br>तयार केला: <?= $h($me['name'] ?? '') ?><br>वसुली कालावधी: <?= date('d/m/Y', strtotime($rf['from'])) ?> – <?= date('d/m/Y', strtotime($rf['to'])) ?></div>
+    <div class="meta">दिनांक: <b><?= date('d/m/Y h:i A') ?></b><br>तयार केला: <?= $h($me['name'] ?? '') ?></div>
   </div>
   <div class="flt">🔎 <?= $h($filterTxt) ?></div>
 
@@ -178,7 +151,6 @@ $h = fn($x) => htmlspecialchars((string)$x, ENT_QUOTES, 'UTF-8');
       <b>विद्यार्थ्यांची स्थिती</b>
       <div class="seg"><i style="width:<?= round($K['full'] * 100 / $nAll, 2) ?>%;background:#16A34A;"></i><i style="width:<?= round($K['partial'] * 100 / $nAll, 2) ?>%;background:#F59E0B;"></i><i style="width:<?= round($K['unpaid'] * 100 / $nAll, 2) ?>%;background:#EF4444;"></i></div>
       <div class="lg"><span><em style="background:#16A34A;"></em>पूर्ण भरलं <b><?= (int)$K['full'] ?></b></span><span><em style="background:#F59E0B;"></em>अर्धवट <b><?= (int)$K['partial'] ?></b></span><span><em style="background:#EF4444;"></em>काहीच नाही <b><?= (int)$K['unpaid'] ?></b></span><?php if ((int)$K['nofee']): ?><span class="dim">शुल्क नोंद नाही <?= (int)$K['nofee'] ?></span><?php endif; ?></div>
-      <?php if ($payReady): ?><div style="margin-top:8px;font-size:11.5px;">📅 कालावधीतील वसुली: <b class="grn"><?= $h(busInr($coll['sum'])) ?></b> · <?= (int)$coll['n'] ?> पावत्या</div><?php endif; ?>
     </div>
   </div>
 
@@ -194,14 +166,6 @@ $h = fn($x) => htmlspecialchars((string)$x, ENT_QUOTES, 'UTF-8');
     </tbody></table>
   </section>
 
-  <section data-s="stp">
-    <h2>🚏 थांबानिहाय (Destination) <small><?= count($byStop) ?> थांबे</small></h2>
-    <table><thead><tr><th>थांबा</th><th class="n">विद्यार्थी</th><th class="n">एकूण</th><th class="n">जमा</th><th class="n">बाकी</th><th>वसुली</th></tr></thead><tbody>
-    <?php foreach ($byStop as $s): $sb = (float)$s['tot'] - (float)$s['paid']; $sp = $pctBar($s['paid'], $s['tot']); ?>
-      <tr><td><b><?= $h($s['stop']) ?></b></td><td class="n"><?= (int)$s['n'] ?></td><td class="n"><?= $h(busInr($s['tot'])) ?></td><td class="n grn"><?= $h(busInr($s['paid'])) ?></td><td class="n <?= $sb > 0 ? 'red' : '' ?>"><?= $h(busInr(max(0, $sb))) ?></td><td><span class="pb"><i style="width:<?= $sp ?>%;"></i></span><?= $sp ?>%</td></tr>
-    <?php endforeach; ?>
-    </tbody></table>
-  </section>
 
   <section data-s="pnd" class="pgb">
     <h2>⏳ बाकीदार यादी <small><?= count($pendRows) ?> विद्यार्थी · <?= $h(busInr($pend)) ?> · सर्वात जास्त बाकी वर</small></h2>
@@ -215,33 +179,6 @@ $h = fn($x) => htmlspecialchars((string)$x, ENT_QUOTES, 'UTF-8');
     <?php if (!$pendRows): ?><tr><td colspan="10" class="grn">🎉 कोणाचंही बाकी नाही.</td></tr><?php endif; ?>
     </tbody></table>
   </section>
-
-  <?php if ($payReady): ?>
-  <section data-s="col">
-    <h2>📅 कालावधीतील वसुली <small><?= date('d/m/Y', strtotime($rf['from'])) ?> – <?= date('d/m/Y', strtotime($rf['to'])) ?></small></h2>
-    <div class="modes">
-      <div><span>एकूण वसुली</span><b class="grn"><?= $h(busInr($coll['sum'])) ?></b><span><?= (int)$coll['n'] ?> पावत्या · <?= (int)$coll['students'] ?> विद्यार्थी</span></div>
-      <?php foreach ($byMode as $m): ?><div><span><?= $h($modes[$m['m']] ?? $m['m']) ?></span><b><?= $h(busInr($m['a'])) ?></b><span><?= (int)$m['n'] ?> पावत्या · <?= $coll['sum'] > 0 ? round($m['a'] * 100 / $coll['sum']) : 0 ?>%</span></div><?php endforeach; ?>
-    </div>
-    <?php if ($byDay): $dmax = max(1, ...array_map(fn($x) => (float)$x['a'], $byDay)); ?>
-      <div class="days" title="दिवसनिहाय वसुली"><?php foreach ($byDay as $x): ?><i style="height:<?= max(3, round($x['a'] * 100 / $dmax)) ?>%;" title="<?= date('d/m', strtotime($x['d'])) ?> — <?= $h(busInr($x['a'])) ?>"></i><?php endforeach; ?></div>
-      <table style="margin-top:6px;"><thead><tr><th>दिनांक</th><th class="n">पावत्या</th><th class="n">रक्कम</th></tr></thead><tbody>
-      <?php foreach ($byDay as $x): ?><tr><td><?= date('d/m/Y (D)', strtotime($x['d'])) ?></td><td class="n"><?= (int)$x['n'] ?></td><td class="n grn"><?= $h(busInr($x['a'])) ?></td></tr><?php endforeach; ?>
-        <tr class="tot"><td>एकूण</td><td class="n"><?= (int)$coll['n'] ?></td><td class="n"><?= $h(busInr($coll['sum'])) ?></td></tr>
-      </tbody></table>
-    <?php else: ?><p class="dim">या कालावधीत एकही पावती नाही.</p><?php endif; ?>
-  </section>
-
-  <section data-s="rcp">
-    <?php if ($receipts): ?>
-    <h2>🧾 पावत्या <small><?= count($receipts) ?></small></h2>
-    <table><thead><tr><th>पावती क्र.</th><th>दिनांक</th><th>विद्यार्थी</th><th>वर्ग</th><th>पद्धत</th><th>शेरा</th><th>स्वीकारणारे</th><th class="n">रक्कम</th></tr></thead><tbody>
-    <?php foreach ($receipts as $r): ?><tr><td><b><?= $h($r['receipt_no']) ?></b></td><td><?= date('d/m/Y', strtotime($r['paid_on'])) ?></td><td><?= $h($r['name']) ?> <span class="dim"><?= $h($r['admission_no']) ?></span></td><td><?= $h(trim(($r['class_name'] ?? '') . ' - ' . ($r['division'] ?? ''), ' -')) ?></td><td><?= $h($modes[$r['mode']] ?? $r['mode']) ?></td><td class="dim"><?= $h($r['note']) ?></td><td class="dim"><?= $h($r['by_name']) ?></td><td class="n grn"><?= $h(busInr($r['amount'])) ?></td></tr><?php endforeach; ?>
-      <tr class="tot"><td colspan="7">एकूण</td><td class="n"><?= $h(busInr($coll['sum'])) ?></td></tr>
-    </tbody></table>
-    <?php endif; ?>
-  </section>
-  <?php endif; ?>
 
   <div class="sig"><div>लेखापाल</div><div>वाहतूक प्रमुख</div><div>प्राचार्य</div></div>
   <div class="foot">हा अहवाल E-Admin मधून <?= date('d/m/Y h:i A') ?> ला आपोआप तयार झाला · आकडे त्या वेळचे.</div>
