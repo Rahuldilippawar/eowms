@@ -218,6 +218,7 @@ require_once __DIR__ . '/../includes/smart-insights.php';
 <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
   <div class="page-title mb-0">₹ बस शुल्क अहवाल</div>
   <div class="fe-act">
+    <a href="<?= h('fees-report.php?' . http_build_query(array_filter(['campus' => $f['campus'] ?: '', 'year' => $f['year'], 'class' => $f['class'], 'div' => $f['div'], 'stop' => $f['stop']], fn($v) => $v !== '' && $v !== null))) ?>" target="_blank" style="background:linear-gradient(90deg,#3769AC,#16A34A);color:#fff;border:0;">📄 Smart अहवाल (PDF)</a>
     <a href="<?= h($qs(['export' => 'csv'])) ?>">📊 Excel</a>
     <button type="button" onclick="window.print()">🖨️ अहवाल Print</button>
   </div>
