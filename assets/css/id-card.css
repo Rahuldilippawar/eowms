@@ -57,8 +57,9 @@
 .idc-back{padding:.2in .14in .1in;display:flex;flex-direction:column;}
 .idc-back > *{position:relative;z-index:1;flex-shrink:0;}
 .idc-back > .idc-slot,.idc-back > .idc-band{position:absolute;}
-.idc-wm-soul{position:absolute !important;z-index:0 !important;left:50%;top:.5in;bottom:.5in;transform:translateX(-50%);width:1.3in;display:flex;justify-content:center;pointer-events:none;opacity:.15;}
-.idc-wm-soul img{height:100%;width:auto;object-fit:contain;filter:saturate(.8);}
+.idc-wm-soul{position:absolute !important;z-index:0 !important;left:50%;top:.56in;bottom:1.12in;transform:translateX(-50%);width:1.4in;display:flex;justify-content:center;pointer-events:none;opacity:.38;}
+.idc-wm-soul img{height:100%;width:auto;object-fit:contain;}
+.idc-back .idc-meta,.idc-back .idc-rules{text-shadow:0 0 .02in #fff,0 0 .02in #fff,0 0 .03in #fff;}
 .idc-back-head{display:flex;align-items:center;gap:.07in;padding-bottom:.06in;border-bottom:.015in solid #EEE8F3;}
 .idc-logo-sm{position:static !important;width:.3in;height:.3in;flex-shrink:0;box-shadow:0 0 0 .015in var(--p2);}
 .idc-back-org{font-size:6.6pt;font-weight:800;color:var(--p1);line-height:1.15;max-height:3.5em;overflow:hidden;overflow-wrap:normal;}
