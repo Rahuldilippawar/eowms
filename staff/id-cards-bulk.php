@@ -44,7 +44,7 @@ if (!empty($_GET['generate'])) {
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Bulk ID Cards (<?= count($employees) ?>)</title>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&family=Noto+Sans+Devanagari:wght@400;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../assets/css/id-card.css?v=5">
+<link rel="stylesheet" href="../assets/css/id-card.css?v=6">
 <style>
   .idc-bulk{display:flex;flex-wrap:wrap;gap:22px;justify-content:center;padding:22px 16px 40px;}
   .idc-bulk .idc-pair{gap:8px;}

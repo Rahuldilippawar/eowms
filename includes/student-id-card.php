@@ -206,8 +206,10 @@ function studentCardBack(array $c, $rootPath = '../') {
     <li>हे Card हस्तांतरणीय नाही.</li>
     <li>हरवल्यास त्वरित कार्यालयाला कळवा.</li>
   </ul>
-  <div class="idc-qr-big"><?= idCardQrSvg($c['verify']) ?><div>SCAN TO VERIFY</div></div>
-  <div class="idc-barcode"><?= idCardBarcodeSvg($c['code']) ?><div class="idc-mono"><?= $h($c['code']) ?></div></div>
+  <div class="idc-codes">
+    <div class="idc-qr-big"><?= idCardQrSvg($c['verify']) ?><div>SCAN TO VERIFY</div></div>
+    <div class="idc-barcode"><?= idCardBarcodeSvg($c['code']) ?><div class="idc-mono"><?= $h($c['code']) ?></div></div>
+  </div>
   <div class="idc-return">
     <b><?= $h($c['campus']) ?></b>
     <?php if ($c['branch']): ?><div><?= $h($c['branch']) ?></div><?php endif; ?>

@@ -121,10 +121,11 @@ function idCardBack(array $c, $rootPath = '../') {
     $h = fn($x) => htmlspecialchars((string)$x, ENT_QUOTES, 'UTF-8');
     ob_start(); ?>
 <div class="idc idc-back">
+  <div class="idc-wm-soul" aria-hidden="true"><img src="<?= $h($rootPath) ?>assets/brand/idcard-soul.png" alt=""></div>
   <div class="idc-slot idc-slot-dark"></div>
   <div class="idc-back-head">
     <div class="idc-logo idc-logo-sm"><?php if ($c['orgLogo']): ?><img src="<?= $h($rootPath . $c['orgLogo']) ?>" alt=""><?php else: ?><span><?= $h(mb_substr($c['org'], 0, 2)) ?></span><?php endif; ?></div>
-    <div><div class="idc-back-org"><?= $h($c['org']) ?></div><div class="idc-back-sub">Employee Identity Card</div></div>
+    <div style="min-width:0;flex:1;"><div class="idc-back-org" data-fit="3" data-fit-min="0.7"><?= $h($c['org']) ?></div><div class="idc-back-sub">Employee Identity Card</div></div>
   </div>
   <div class="idc-box">
     <div class="idc-box-t">🚑 Emergency Contact</div>
@@ -146,8 +147,10 @@ function idCardBack(array $c, $rootPath = '../') {
     <li>हरवल्यास त्वरित कार्यालयाला कळवा.</li>
     <li>सापडल्यास कृपया खालील पत्त्यावर परत करा.</li>
   </ul>
-  <div class="idc-qr-big"><?= idCardQrSvg($c['verify']) ?><div>SCAN TO VERIFY</div></div>
-  <div class="idc-barcode"><?= idCardBarcodeSvg($c['code']) ?><div class="idc-mono"><?= $h($c['code']) ?></div></div>
+  <div class="idc-codes">
+    <div class="idc-qr-big"><?= idCardQrSvg($c['verify']) ?><div>SCAN TO VERIFY</div></div>
+    <div class="idc-barcode"><?= idCardBarcodeSvg($c['code']) ?><div class="idc-mono"><?= $h($c['code']) ?></div></div>
+  </div>
   <div class="idc-return">
     <b><?= $h($c['campus']) ?></b>
     <?php if ($c['branch']): ?><div><?= $h($c['branch']) ?></div><?php endif; ?>

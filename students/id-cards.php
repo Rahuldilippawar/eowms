@@ -133,7 +133,7 @@ if (!empty($_GET['generate']) || $f['id']) {
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title><?= $single ? 'ID Card — ' . h($single['name']) : 'विद्यार्थी ID Cards (' . count($list) . ')' ?></title>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&family=Roboto+Condensed:wght@400;700;800&family=Noto+Sans+Devanagari:wght@400;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../assets/css/id-card.css?v=5">
+<link rel="stylesheet" href="../assets/css/id-card.css?v=6">
 <style>
   .idc-bulk{display:flex;flex-wrap:wrap;gap:22px;justify-content:center;padding:22px 16px 40px;}
   .idc-bulk .idc-pair{gap:8px;flex-direction:column;align-items:center;}
@@ -276,7 +276,7 @@ require_once __DIR__ . '/../includes/smart-insights.php';
   .pv-wrap{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;padding:14px 10px 18px;background:#ECEAF1;border-radius:0 0 14px 14px;}
 </style>
 <link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../assets/css/id-card.css?v=5">
+<link rel="stylesheet" href="../assets/css/id-card.css?v=6">
 <script src="../assets/js/id-card-fit.js?v=4"></script>
 
 <div class="page-eyebrow"><a href="index.php" style="color:inherit;text-decoration:none;">🎓 विद्यार्थी</a></div>
