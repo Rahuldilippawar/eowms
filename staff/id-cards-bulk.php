@@ -28,7 +28,6 @@ $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $all = $stmt->fetchAll();
 $noPhoto = array_values(array_filter($all, fn($e) => empty($e['photo_path'])));
-$noEmergency = count(array_filter($all, fn($e) => empty($e['emergency_contact_mobile'])));
 $employees = $onlyPhoto ? array_values(array_filter($all, fn($e) => !empty($e['photo_path']))) : $all;
 
 if (!empty($_GET['generate'])) {
@@ -44,7 +43,7 @@ if (!empty($_GET['generate'])) {
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Bulk ID Cards (<?= count($employees) ?>)</title>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&family=Noto+Sans+Devanagari:wght@400;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../assets/css/id-card.css?v=4">
+<link rel="stylesheet" href="../assets/css/id-card.css?v=8">
 <style>
   .idc-bulk{display:flex;flex-wrap:wrap;gap:22px;justify-content:center;padding:22px 16px 40px;}
   .idc-bulk .idc-pair{gap:8px;}
@@ -70,6 +69,7 @@ if (!empty($_GET['generate'])) {
   <?php endforeach; ?>
 </div>
 <!--i18n:on-->
+<script src="../assets/js/id-card-fit.js?v=4"></script>
 </body>
 </html>
     <?php
@@ -101,7 +101,6 @@ require_once __DIR__ . '/../includes/smart-insights.php';
 <?= smartTiles([
     ['label' => 'Cards तयार होतील', 'value' => count($employees), 'sub' => $deptId || $codes ? 'निवडलेल्या अटींनुसार' : 'सर्व Active कर्मचारी', 'tone' => 'ok'],
     ['label' => 'फोटो नाही', 'value' => count($noPhoto), 'sub' => count($noPhoto) ? 'Card वर फक्त आद्याक्षरं दिसतील' : 'सगळ्यांचे फोटो आहेत', 'tone' => count($noPhoto) ? 'warn' : 'ok'],
-    ['label' => 'Emergency Contact नाही', 'value' => $noEmergency, 'sub' => 'Back वर हाताने लिहायची जागा', 'tone' => $noEmergency ? 'warn' : 'ok'],
 ]) ?>
 
 <div class="row g-3">

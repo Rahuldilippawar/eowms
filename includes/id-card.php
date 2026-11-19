@@ -2,7 +2,7 @@
 /**
  * 🪪 कर्मचारी ID Card — एकच Renderer (एकट्याचं Card आणि Bulk दोन्हीसाठी).
  *  - Front: संस्था, फोटो, नाव, पद, विभाग, Employee ID, सुरक्षित QR
- *  - Back: Emergency Contact, संस्थेचा पत्ता, नियम, Barcode (Gate Scanner), मोठा QR
+ *  - Back: संस्थेचा पत्ता, नियम, Barcode (Gate Scanner), मोठा QR
  *  - QR मध्ये Signature (HMAC) — बनावट/बदललेलं Card Verify पानावर लगेच ओळखता येतं
  *  - QR व Barcode Server वरच तयार होतात (बाहेरची Website नाही)
  */
@@ -70,9 +70,6 @@ function idCardData(array $emp, array $org) {
         'dob' => !empty($emp['date_of_birth']) ? date('d.m.Y', strtotime($emp['date_of_birth'])) : '—',
         'issued' => date('d.m.Y'),
         'photo' => $emp['photo_path'] ?? '',
-        'emName' => $emp['emergency_contact_name'] ?? '',
-        'emRel' => $emp['emergency_contact_relation'] ?? '',
-        'emMobile' => $emp['emergency_contact_mobile'] ?? '',
         'active' => (int)($emp['is_active'] ?? 1) === 1,
         'org' => $org['name'] ?? '',
         'orgLogo' => $org['logo_path'] ?? '',
@@ -92,8 +89,8 @@ function idCardFront(array $c, $rootPath = '../') {
     <div class="idc-slot"></div>
     <div class="idc-logo"><?php if ($c['orgLogo']): ?><img src="<?= $h($rootPath . $c['orgLogo']) ?>" alt=""><?php else: ?><span><?= $h(mb_substr($c['org'], 0, 2)) ?></span><?php endif; ?></div>
     <div class="idc-mantra">॥ आत्मा मालिक ॥</div>
-    <div class="idc-org"><?= $h($c['org']) ?></div>
-    <div class="idc-campus"><?= $h($c['campus']) ?></div>
+    <div class="idc-org" data-fit="2" data-fit-min="0.7"><?= $h($c['org']) ?></div>
+    <div class="idc-campus" data-fit="2" data-fit-min="0.55"><?= $h($c['campus']) ?></div>
     <?php if ($c['branch']): ?><div class="idc-branch"><?= $h($c['branch']) ?></div><?php endif; ?>
   </div>
   <div class="idc-photo">
@@ -121,20 +118,11 @@ function idCardBack(array $c, $rootPath = '../') {
     $h = fn($x) => htmlspecialchars((string)$x, ENT_QUOTES, 'UTF-8');
     ob_start(); ?>
 <div class="idc idc-back">
+  <div class="idc-wm-soul" aria-hidden="true"><img src="<?= $h($rootPath) ?>assets/brand/idcard-soul.png" alt=""></div>
   <div class="idc-slot idc-slot-dark"></div>
   <div class="idc-back-head">
     <div class="idc-logo idc-logo-sm"><?php if ($c['orgLogo']): ?><img src="<?= $h($rootPath . $c['orgLogo']) ?>" alt=""><?php else: ?><span><?= $h(mb_substr($c['org'], 0, 2)) ?></span><?php endif; ?></div>
-    <div><div class="idc-back-org"><?= $h($c['org']) ?></div><div class="idc-back-sub">Employee Identity Card</div></div>
-  </div>
-  <div class="idc-box">
-    <div class="idc-box-t">🚑 Emergency Contact</div>
-    <?php if ($c['emName'] || $c['emMobile']): ?>
-      <div class="idc-box-v"><b><?= $h($c['emName'] ?: '—') ?></b><?= $c['emRel'] ? ' <span>(' . $h($c['emRel']) . ')</span>' : '' ?></div>
-      <div class="idc-box-v idc-mono"><?= $h($c['emMobile'] ?: '—') ?></div>
-    <?php else: ?>
-      <div class="idc-box-v idc-blank">Name: ______________________</div>
-      <div class="idc-box-v idc-blank">Mobile: _____________________</div>
-    <?php endif; ?>
+    <div style="min-width:0;flex:1;"><div class="idc-back-org" data-fit="3" data-fit-min="0.7"><?= $h($c['org']) ?></div><div class="idc-back-sub">Employee Identity Card</div></div>
   </div>
   <div class="idc-meta">
     <div><span>Date of Birth</span><b><?= $h($c['dob']) ?></b></div>
@@ -146,8 +134,10 @@ function idCardBack(array $c, $rootPath = '../') {
     <li>हरवल्यास त्वरित कार्यालयाला कळवा.</li>
     <li>सापडल्यास कृपया खालील पत्त्यावर परत करा.</li>
   </ul>
-  <div class="idc-qr-big"><?= idCardQrSvg($c['verify']) ?><div>SCAN TO VERIFY</div></div>
-  <div class="idc-barcode"><?= idCardBarcodeSvg($c['code']) ?><div class="idc-mono"><?= $h($c['code']) ?></div></div>
+  <div class="idc-codes">
+    <div class="idc-qr-big"><?= idCardQrSvg($c['verify']) ?><div>SCAN TO VERIFY</div></div>
+    <div class="idc-barcode"><?= idCardBarcodeSvg($c['code']) ?><div class="idc-mono"><?= $h($c['code']) ?></div></div>
+  </div>
   <div class="idc-return">
     <b><?= $h($c['campus']) ?></b>
     <?php if ($c['branch']): ?><div><?= $h($c['branch']) ?></div><?php endif; ?>

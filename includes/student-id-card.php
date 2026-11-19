@@ -152,8 +152,8 @@ function studentCardFront(array $c, $rootPath = '../') {
     <div class="idc-slot"></div>
     <div class="idc-logo"><?php if ($c['orgLogo']): ?><img src="<?= $h($rootPath . $c['orgLogo']) ?>" alt=""><?php else: ?><span><?= $h(mb_substr($c['org'], 0, 2)) ?></span><?php endif; ?></div>
     <div class="idc-mantra">॥ आत्मा मालिक ॥</div>
-    <div class="idc-org"><?= $h($c['org']) ?></div>
-    <div class="idc-campus"><?= $h($c['campus']) ?></div>
+    <div class="idc-org" data-fit="2" data-fit-min="0.7"><?= $h($c['org']) ?></div>
+    <div class="idc-campus" data-fit="2" data-fit-min="0.55"><?= $h($c['campus']) ?></div>
     <?php if ($c['branch']): ?><div class="idc-branch"><?= $h($c['branch']) ?></div><?php endif; ?>
   </div>
   <div class="idc-photo">
@@ -206,8 +206,10 @@ function studentCardBack(array $c, $rootPath = '../') {
     <li>हे Card हस्तांतरणीय नाही.</li>
     <li>हरवल्यास त्वरित कार्यालयाला कळवा.</li>
   </ul>
-  <div class="idc-qr-big"><?= idCardQrSvg($c['verify']) ?><div>SCAN TO VERIFY</div></div>
-  <div class="idc-barcode"><?= idCardBarcodeSvg($c['code']) ?><div class="idc-mono"><?= $h($c['code']) ?></div></div>
+  <div class="idc-codes">
+    <div class="idc-qr-big"><?= idCardQrSvg($c['verify']) ?><div>SCAN TO VERIFY</div></div>
+    <div class="idc-barcode"><?= idCardBarcodeSvg($c['code']) ?><div class="idc-mono"><?= $h($c['code']) ?></div></div>
+  </div>
   <div class="idc-return">
     <b><?= $h($c['campus']) ?></b>
     <?php if ($c['branch']): ?><div><?= $h($c['branch']) ?></div><?php endif; ?>
