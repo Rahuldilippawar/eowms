@@ -24,6 +24,16 @@ $years = $years->fetchAll(PDO::FETCH_COLUMN);
 if ($f['year'] === '' && $years && !isset($_GET['year'])) $f['year'] = $years[0];
 $qs = function (array $over = []) use ($f) { $q = array_filter(array_merge(['campus' => $f['campus'] ?: '', 'year' => $f['year'], 'class' => $f['class'], 'div' => $f['div'], 'q' => $f['q'], 'pass' => $f['pass'], 'status' => $f['status'] === 'left' ? 'left' : ''], $over), fn($v) => $v !== '' && $v !== null); return 'students.php' . ($q ? '?' . http_build_query($q) : ''); };
 
+// 🗑️ निवडलेले बस विद्यार्थी हटवा
+$canDelete = busCanDelete();
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete_bus_students' && $canDelete) {
+    $ids = array_map('intval', (array)($_POST['ids'] ?? []));
+    $r = busStudentsDelete($pdo, $orgId, $ids);
+    $_SESSION['flash'] = $r['n'] ? '🗑️ ' . $r['n'] . ' बस विद्यार्थी हटवले' . ($r['pays'] ? ' (' . $r['pays'] . ' पावत्यांसह)' : '') . '. चूक झाली असल्यास Super Admin → Recycle Bin मधून परत आणता येईल.' : '⚠️ कोणी निवडलं नाही.';
+    $back = (string)($_POST['back'] ?? '');
+    header('Location: ' . (preg_match('#^students\.php(\?[^"\'<>]*)?$#', $back) ? $back : 'students.php')); exit;
+}
+
 $lastPass = "(SELECT CONCAT_WS('|', p.valid_till, p.status, p.pass_no, p.id) FROM student_bus_passes p WHERE p.bus_student_id = s.id ORDER BY (p.status = 'active') DESC, p.valid_till DESC, p.id DESC LIMIT 1)";
 $base = " FROM bus_students s LEFT JOIN campuses c ON c.id = s.campus_id WHERE s.organization_id = ? AND s.is_active = " . ($f['status'] === 'left' ? '0' : '1');
 $bp = [$orgId];
@@ -159,9 +169,17 @@ require_once __DIR__ . '/../includes/smart-insights.php';
       <?php if ($canManage && $f['q'] === ''): ?><div class="mt-2 d-flex justify-content-center gap-2 flex-wrap"><a href="import.php" class="btn btn-sm" style="background:var(--rail);color:#fff;border-radius:8px;">📥 Excel / CSV Import</a><a href="student.php" class="btn btn-sm" style="border:1px solid var(--line);border-radius:8px;">＋ विद्यार्थी जोडा</a></div><?php endif; ?>
     </div>
   <?php else: ?>
+  <?php if ($canDelete): ?>
+  <form method="POST" id="bsDelForm" data-no-smart-filter onsubmit="var n=Array.prototype.filter.call(this.elements,function(e){return e.name==='ids[]'&&e.checked;}).length; if(!n){alert('आधी विद्यार्थी निवडा.');return false;} return confirm(n + ' बस विद्यार्थी कायमचे हटवायचे?\n\nत्यांचे पास व ₹ पावत्या सुद्धा हटतील.\n(Super Admin → Recycle Bin मधून परत आणता येईल)');">
+    <input type="hidden" name="action" value="delete_bus_students"><input type="hidden" name="back" value="<?= h(basename($qs(['pg' => $page > 1 ? $page : null]))) ?>">
+  </form>
+  <div class="bs-delbar" id="bsDelBar"><label style="font-size:12.5px;display:inline-flex;align-items:center;gap:6px;"><input type="checkbox" id="bsAll"> सगळे निवडा</label>
+    <span id="bsSel" style="font-size:12.5px;color:var(--text-dim);">0 निवडले</span>
+    <button type="submit" form="bsDelForm" class="btn btn-sm ms-auto" style="background:#DC2626;color:#fff;border-radius:8px;" id="bsDelBtn" disabled>🗑️ निवडलेले हटवा</button></div>
+  <?php endif; ?>
   <div class="table-responsive">
     <table class="table table-sm bs-t mb-0">
-      <thead><tr><th></th><th>विद्यार्थी</th><th>मार्ग (जाणे ⇄ येणे)</th><th>₹ शुल्क</th><th>पास</th><th class="cp">College</th><th></th></tr></thead>
+      <thead><tr><?php if ($canDelete): ?><th style="width:28px;"></th><?php endif; ?><th></th><th>विद्यार्थी</th><th>मार्ग (जाणे ⇄ येणे)</th><th>₹ शुल्क</th><th>पास</th><th class="cp">College</th><th></th></tr></thead>
       <tbody>
       <?php foreach ($rows as $r): $lp = $r['lastp'] ? explode('|', $r['lastp']) : null;
         $ph = !empty($r['photo_path']) && eowmsPhotoExists($r['photo_path']) ? $r['photo_path'] : '';
@@ -171,6 +189,7 @@ require_once __DIR__ . '/../includes/smart-insights.php';
         elseif ($lp[0] <= date('Y-m-d', strtotime('+7 days'))) { $stc = 'soon'; $stl = 'संपतो ' . date('d/m', strtotime($lp[0])); }
         else { $stc = 'ok'; $stl = 'valid ' . date('d/m/Y', strtotime($lp[0])); } ?>
         <tr>
+          <?php if ($canDelete): ?><td><input type="checkbox" name="ids[]" value="<?= (int)$r['id'] ?>" form="bsDelForm" class="bs-ck" aria-label="निवडा"></td><?php endif; ?>
           <td><?php if ($ph): ?><img src="../<?= h($ph) ?>" class="bs-av" alt="" loading="lazy"><?php else: ?><span class="bs-av"><?= h(mb_strtoupper(mb_substr($r['name'], 0, 1))) ?></span><?php endif; ?></td>
           <td class="nm"><a href="student.php?id=<?= (int)$r['id'] ?>" style="color:inherit;text-decoration:none;"><b><?= h($r['name']) ?></b></a>
             <div style="font-size:11.5px;color:var(--text-dim);"><?= h(trim($r['class_name'] . ($r['division'] ? ' · ' . $r['division'] : '') . ($r['course'] ? ' · ' . $r['course'] : ''))) ?><?= $r['admission_no'] ? ' · Reg. ' . h($r['admission_no']) : '' ?></div></td>
@@ -192,4 +211,17 @@ require_once __DIR__ . '/../includes/smart-insights.php';
   <?php endif; ?>
 </div>
 
+<?php if ($canDelete): ?>
+<style>.bs-delbar{display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid var(--line);background:var(--canvas);border-radius:12px 12px 0 0;}</style>
+<script>
+(function () {
+  var all = document.getElementById('bsAll'), btn = document.getElementById('bsDelBtn'), lbl = document.getElementById('bsSel');
+  if (!all) return;
+  var cks = function () { return Array.prototype.slice.call(document.querySelectorAll('.bs-ck')); };
+  var upd = function () { var n = cks().filter(function (c) { return c.checked; }).length; lbl.textContent = n + ' निवडले'; btn.disabled = !n; all.checked = n && n === cks().length; };
+  all.addEventListener('change', function () { cks().forEach(function (c) { c.checked = all.checked; }); upd(); });
+  cks().forEach(function (c) { c.addEventListener('change', upd); });
+})();
+</script>
+<?php endif; ?>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

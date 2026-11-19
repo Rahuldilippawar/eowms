@@ -327,3 +327,54 @@ function busInr($n) {
     return ($neg ? '-' : '') . '₹' . $last3;
 }
 
+/* ================= 🗑️ बस विद्यार्थी हटवणे ================= */
+
+/** हटवण्याचा अधिकार — बस पास व्यवस्थापक, आणि "नोंदी Lock" असेल तर फक्त Super Admin */
+function busCanDelete() {
+    return canBusPass() && !(function_exists('recordLockActive') && recordLockActive());
+}
+
+/**
+ * बस विद्यार्थी कायमचे हटवा — त्यांचे पास व ₹ पावत्या सुद्धा. आधी Recycle Bin मध्ये प्रत (Super Admin परत आणू शकतो).
+ * परत: ['n' => हटवलेले, 'names' => [...], 'pays' => पावत्या]
+ */
+function busStudentsDelete(PDO $pdo, $orgId, array $ids) {
+    $ids = array_values(array_unique(array_filter(array_map('intval', $ids))));
+    $out = ['n' => 0, 'names' => [], 'pays' => 0];
+    if (!$ids) return $out;
+    $in = implode(',', $ids);
+    $st = $pdo->prepare("SELECT id, name FROM bus_students WHERE organization_id = ? AND id IN ($in)");
+    $st->execute([$orgId]);
+    $rows = $st->fetchAll(PDO::FETCH_KEY_PAIR);
+    if (!$rows) return $out;
+    $ids = array_keys($rows); $in = implode(',', array_map('intval', $ids));
+    $fee = busFeeReady($pdo);
+    $cap = function_exists('recycleCapture');
+    $pdo->beginTransaction();
+    try {
+        foreach ($ids as $bid) {
+            if ($cap) {
+                recycleCapture($pdo, 'bus_students', $bid, '🚌 ' . $rows[$bid], $orgId);
+                $q = $pdo->prepare("SELECT id, pass_no FROM student_bus_passes WHERE organization_id = ? AND bus_student_id = ?");
+                $q->execute([$orgId, $bid]);
+                foreach ($q->fetchAll() as $pp) recycleCapture($pdo, 'student_bus_passes', $pp['id'], '🎫 ' . $pp['pass_no'] . ' — ' . $rows[$bid], $orgId);
+                if ($fee) {
+                    $q = $pdo->prepare("SELECT id, receipt_no FROM bus_fee_payments WHERE organization_id = ? AND bus_student_id = ?");
+                    $q->execute([$orgId, $bid]);
+                    foreach ($q->fetchAll() as $rr) recycleCapture($pdo, 'bus_fee_payments', $rr['id'], '🧾 ' . $rr['receipt_no'] . ' — ' . $rows[$bid], $orgId);
+                }
+            }
+        }
+        if ($fee) {
+            $c = $pdo->prepare("DELETE FROM bus_fee_payments WHERE organization_id = ? AND bus_student_id IN ($in)");
+            $c->execute([$orgId]); $out['pays'] = $c->rowCount();
+        }
+        $pdo->prepare("DELETE FROM student_bus_passes WHERE organization_id = ? AND bus_student_id IN ($in)")->execute([$orgId]);
+        $pdo->prepare("DELETE FROM bus_students WHERE organization_id = ? AND id IN ($in)")->execute([$orgId]);
+        $pdo->commit();
+    } catch (Throwable $e) { $pdo->rollBack(); throw $e; }
+    $out['n'] = count($ids); $out['names'] = array_values($rows);
+    if (function_exists('logActivity')) logActivity('बस विद्यार्थी हटवले', 'bus_student', count($ids) === 1 ? $ids[0] : null, implode(', ', array_slice($out['names'], 0, 20)) . (count($ids) > 20 ? ' …' : ''));
+    return $out;
+}
+

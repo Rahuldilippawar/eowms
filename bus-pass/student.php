@@ -27,6 +27,11 @@ if ($id) {
 $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canManage) {
     $action = $_POST['action'] ?? 'save';
+    if ($action === 'delete_bus_student' && $stu && $id && busCanDelete()) {
+        $r = busStudentsDelete($pdo, $orgId, [$id]);
+        $_SESSION['flash'] = '🗑️ ' . $stu['name'] . ' — बस विद्यार्थी यादीतून हटवला' . ($r['pays'] ? ' (' . $r['pays'] . ' पावत्यांसह)' : '') . '. चूक झाली असल्यास Super Admin → Recycle Bin मधून परत आणता येईल.';
+        header('Location: students.php'); exit;
+    }
     if ($action === 'set_status' && $stu && $id) {
         $active = !empty($_POST['active']) ? 1 : 0;
         $pdo->prepare("UPDATE bus_students SET is_active = ?, updated_at = NOW() WHERE id = ? AND organization_id = ?")->execute([$active, $id, $orgId]);
@@ -239,6 +244,16 @@ require_once __DIR__ . '/../includes/header.php';
       <button type="submit" class="btn btn-sm" style="background:var(--rail);color:#fff;border-radius:8px;">↺ पुन्हा सक्रिय करा</button>
     <?php endif; ?>
   </form>
+  <?php if (busCanDelete()):
+    $delPays = 0; if (busFeeReady($pdo)) { $dq = $pdo->prepare("SELECT COUNT(*) FROM bus_fee_payments WHERE organization_id = ? AND bus_student_id = ?"); $dq->execute([$orgId, $id]); $delPays = (int)$dq->fetchColumn(); } ?>
+  <form method="POST" class="d-flex align-items-center gap-2 flex-wrap" style="padding:0 20px 14px;border-top:1px dashed var(--line);padding-top:12px;"
+    onsubmit="return confirm('<?= h(addslashes($v('name'))) ?> — बस विद्यार्थी यादीतून कायमचा हटवायचा?<?= $delPays ? '\\n\\n⚠️ याच्या ' . $delPays . ' ₹ पावत्या सुद्धा हटतील (शुल्क अहवालातून जातील).' : '' ?>\n\n(Super Admin → Recycle Bin मधून परत आणता येईल)');">
+    <input type="hidden" name="action" value="delete_bus_student"><input type="hidden" name="id" value="<?= (int)$id ?>">
+    <span style="font-size:13px;">🗑️ चुकीची / दुहेरी नोंद?</span>
+    <button type="submit" class="btn btn-sm" style="background:#DC2626;color:#fff;border-radius:8px;">कायमचं हटवा</button>
+    <span style="font-size:12px;color:var(--text-dim);">बस सोडली असेल तर वरचं "बस सोडली" वापरा — नोंद व पावत्या राहतात.</span>
+  </form>
+  <?php endif; ?>
 </div>
 <?php endif; ?>
 <?php endif; ?>
