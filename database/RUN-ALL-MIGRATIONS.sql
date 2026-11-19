@@ -4961,3 +4961,24 @@ CREATE TABLE IF NOT EXISTS bus_fee_payments (
   INDEX idx_bf_student (bus_student_id, paid_on),
   INDEX idx_bf_day (organization_id, paid_on)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
+-- FROM: migration-gate-logs.sql
+-- ============================================================
+-- 🚪 Gate — कर्मचारी ये-जा (Digital ID / Card QR Scan) व "Gate" परवानगी
+CREATE TABLE IF NOT EXISTS gate_logs (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  organization_id INT NOT NULL,
+  user_id INT NULL,
+  direction VARCHAR(3) NULL,
+  result VARCHAR(12) NOT NULL,
+  method VARCHAR(6) NOT NULL,
+  gate VARCHAR(60) NULL,
+  raw VARCHAR(120) NULL,
+  scanned_by INT NULL,
+  created_at DATETIME NOT NULL,
+  INDEX idx_gl_day (organization_id, created_at),
+  INDEX idx_gl_user (user_id, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+INSERT IGNORE INTO permissions (permission_key, label, label_local, sort_order) VALUES
+  ('gate_scan', 'Gate — scan staff ID cards / Digital ID, entry-exit log', 'Gate — कर्मचारी ID Scan, ये-जा नोंद व अहवाल', 51);

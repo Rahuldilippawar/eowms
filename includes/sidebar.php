@@ -320,6 +320,9 @@ function navGroupHead($id, $key, $activeGroup, $icon, $label, $badge = 0) {
     <a href="<?= $rp ?>residency/my-residency.php" class="tree-node <?= $currentDir === 'residency' && $currentPage === 'my-residency.php' ? 'active' : '' ?>">
       <i class="fa-solid fa-house-user fa-fw"></i><span>माझं निवासस्थान</span>
     </a>
+    <a href="<?= $rp ?>staff/my-id.php" class="tree-node <?= $currentDir === 'staff' && $currentPage === 'my-id.php' ? 'active' : '' ?>">
+      <i class="fa-solid fa-id-badge fa-fw"></i><span>माझं Digital ID</span>
+    </a>
     <?php navSectionEnd('माझं काम', 'fa-solid fa-user'); ?>
 
     <!-- ==================== 📊 अहवाल व विश्लेषण ==================== -->
@@ -443,6 +446,18 @@ function navGroupHead($id, $key, $activeGroup, $icon, $label, $badge = 0) {
       <?php endif; ?>
     </div>
     <?php navSectionEnd('मनुष्यबळ (HR)', 'fa-solid fa-people-group'); ?>
+
+    <!-- ==================== 🚪 Gate — कर्मचारी ये-जा (QR Scan) ==================== -->
+    <?php if (hasRole('super_admin') || isManagementOrAbove() || hasPermission('gate_scan')): ?>
+    <?php navSectionStart(); ?>
+      <a href="<?= $rp ?>gate/index.php" class="tree-node <?= $currentDir === 'gate' && $currentPage === 'index.php' ? 'active' : '' ?>">
+        <i class="fa-solid fa-qrcode fa-fw"></i><span>Gate Scanner</span>
+      </a>
+      <a href="<?= $rp ?>gate/log.php" class="tree-node <?= $currentDir === 'gate' && $currentPage === 'log.php' ? 'active' : '' ?>">
+        <i class="fa-solid fa-door-open fa-fw"></i><span>ये-जा अहवाल</span>
+      </a>
+    <?php navSectionEnd('Gate सुरक्षा', 'fa-solid fa-shield-halved'); ?>
+    <?php endif; ?>
 
     <!-- ==================== 🚌 विद्यार्थी वाहतूक — बस पास (स्वतंत्र विभाग) ==================== -->
     <?php navSectionStart(); ?>

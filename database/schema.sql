@@ -286,7 +286,8 @@ INSERT INTO permissions (permission_key, label, label_local, sort_order) VALUES
 ('manage_salary', 'Salary — view and edit salary structure, salary import and report', 'पगार — पगार रचना पाहणे/बदलणे, Salary Import व अहवाल', 47),
 ('manage_students', 'Students — add, edit, import and view the student register', 'विद्यार्थी — यादी पाहणे, जोडणे, बदलणे, Import', 48),
 ('student_id_cards', 'Student ID cards — view students, add photos, card design and print', 'विद्यार्थी व ID Cards — यादी पाहणे, फोटो, Card Design, Print', 49),
-('manage_bus_passes', 'Bus passes — issue, renew, cancel and print student bus passes', 'बस पास — देणे, नूतनीकरण, रद्द, Print', 50);
+('manage_bus_passes', 'Bus passes — issue, renew, cancel and print student bus passes', 'बस पास — देणे, नूतनीकरण, रद्द, Print', 50),
+('gate_scan', 'Gate — scan staff ID cards / Digital ID, entry-exit log', 'Gate — कर्मचारी ID Scan, ये-जा नोंद व अहवाल', 51);
 
 INSERT INTO role_permissions (role_key, permission_key)
 SELECT role_key, 'manage_it' FROM role_definitions WHERE category = 'management';
@@ -3522,4 +3523,20 @@ CREATE TABLE bio_forward_queue (
   created_at DATETIME NOT NULL,
   INDEX idx_next (next_try_at),
   FOREIGN KEY (device_id) REFERENCES bio_devices(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 🚪 Gate — कर्मचारी ये-जा
+CREATE TABLE gate_logs (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  organization_id INT NOT NULL,
+  user_id INT NULL,
+  direction VARCHAR(3) NULL,
+  result VARCHAR(12) NOT NULL,
+  method VARCHAR(6) NOT NULL,
+  gate VARCHAR(60) NULL,
+  raw VARCHAR(120) NULL,
+  scanned_by INT NULL,
+  created_at DATETIME NOT NULL,
+  INDEX idx_gl_day (organization_id, created_at),
+  INDEX idx_gl_user (user_id, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
