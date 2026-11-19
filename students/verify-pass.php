@@ -39,6 +39,16 @@ if ($genuine && !$p['stu_active'] && in_array($state, ['active', 'expiring', 'up
 $ok = in_array($state, ['active', 'expiring'], true);
 $cls = $genuine ? trim(($p['class_name'] ?? '') . ($p['division'] ? ' - ' . $p['division'] : '') . ($p['course'] ? ' · ' . $p['course'] : '')) : '';
 $title = ['limited' => 'खूप प्रयत्न झाले', 'invalid' => 'अवैध बस पास', 'active' => 'बस पास चालू ✓', 'expiring' => 'बस पास चालू ✓ (लवकरच संपतो)', 'upcoming' => 'पास अजून सुरू झाला नाही', 'expired' => 'बस पास संपला', 'cancelled' => 'बस पास रद्द'][$state];
+// ₹ बस शुल्क — एकूण / जमा / बाकी (Conductor ला लगेच कळावं)
+$fee = null;
+if ($genuine) {
+    if (array_key_exists('total_fee', $p)) $fee = ['t' => $p['total_fee'], 'p' => $p['paid_fee'] ?? 0];
+    elseif (!empty($p['bus_student_id'])) {
+        try { $fs = $pdo->prepare("SELECT total_fee t, paid_fee p FROM bus_students WHERE id = ? AND organization_id = ?"); $fs->execute([(int)$p['bus_student_id'], (int)$p['organization_id']]); $fee = $fs->fetch() ?: null; } catch (PDOException $e) { $fee = null; }
+    }
+    if ($fee && $fee['t'] === null) $fee = null;
+    if ($fee) { $fee['t'] = (float)$fee['t']; $fee['p'] = (float)$fee['p']; $fee['b'] = max(0, $fee['t'] - $fee['p']); }
+}
 $tone = $ok ? 'valid' : ($state === 'upcoming' || $state === 'expiring' ? 'warnx' : 'invalid');
 ?>
 <!DOCTYPE html>
@@ -61,6 +71,13 @@ $tone = $ok ? 'valid' : ($state === 'upcoming' || $state === 'expiring' ? 'warnx
   .body{padding:14px 22px 22px;} .name{font-size:19px;font-weight:800;color:#0B3C78;}
   .rows{margin-top:16px;text-align:left;border-top:1px dashed #E1E6EE;}
   .rows div{display:flex;justify-content:space-between;gap:10px;padding:9px 2px;border-bottom:1px dashed #E1E6EE;font-size:13px;} .rows span{color:#6B7186;} .rows b{text-align:right;}
+  .fee{margin-top:14px;border-radius:14px;padding:12px 14px;text-align:left;border:1px solid;}
+  .fee.paid{background:#ECFDF5;border-color:#A7F3D0;} .fee.due{background:#FEF2F2;border-color:#FECACA;}
+  .fee-h{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;font-weight:700;color:#374151;}
+  .fee-h em{font-style:normal;font-size:11.5px;font-weight:800;padding:2px 9px;border-radius:99px;} .paid .fee-h em{background:#16A34A;color:#fff;} .due .fee-h em{background:#DC2626;color:#fff;}
+  .fee-big{font-size:26px;font-weight:800;margin-top:4px;} .paid .fee-big{color:#15803D;} .due .fee-big{color:#B91C1C;}
+  .fee-bar{height:7px;border-radius:99px;background:#FECACA;overflow:hidden;margin-top:8px;} .fee-bar i{display:block;height:100%;background:#16A34A;}
+  .fee-r{display:flex;justify-content:space-between;font-size:12px;color:#4B5563;margin-top:6px;}
   .note{font-size:12px;color:#6B7186;margin-top:14px;line-height:1.6;} .foot{font-size:11px;color:#9A97A6;padding:0 22px 18px;}
 </style>
 </head>
@@ -83,6 +100,14 @@ $tone = $ok ? 'valid' : ($state === 'upcoming' || $state === 'expiring' ? 'warnx
         <?php if ($p['division'] || $p['course']): ?><div><span>Division</span><b><?= h($p['division'] ?: $p['course']) ?></b></div><?php endif; ?>
         <div><span>Reg No</span><b><?= h($p['admission_no']) ?></b></div>
       </div>
+      <?php if ($fee): $fpaid = $fee['b'] <= 0.001; $fpct = $fee['t'] > 0 ? min(100, round($fee['p'] * 100 / $fee['t'])) : 100; ?>
+      <div class="fee <?= $fpaid ? 'paid' : 'due' ?>">
+        <div class="fee-h"><span>₹ बस शुल्क</span><em><?= $fpaid ? '✓ पूर्ण भरलं' : ($fee['p'] > 0 ? 'अर्धवट भरलं' : 'काहीच भरलं नाही') ?></em></div>
+        <div class="fee-big"><?= $fpaid ? '₹0 बाकी' : h(busInr($fee['b'])) . ' बाकी' ?></div>
+        <div class="fee-bar"><i style="width:<?= $fpct ?>%;"></i></div>
+        <div class="fee-r"><span>एकूण <b><?= h(busInr($fee['t'])) ?></b></span><span>जमा <b><?= h(busInr($fee['p'])) ?></b></span></div>
+      </div>
+      <?php endif; ?>
       <div class="note">फोटो पासवरच्या फोटोशी जुळतो का ते पाहा. ही माहिती थेट संस्थेच्या प्रणालीतून आत्ता घेतली आहे.</div>
     </div>
   <?php endif; ?>
