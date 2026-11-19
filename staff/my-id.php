@@ -105,10 +105,16 @@ $initials = mb_strtoupper(mb_substr(trim($c['name']), 0, 1) . (preg_match('/\s(\
   </div>
   <div class="photo"><?php if ($c['photo'] && eowmsPhotoExists($c['photo'])): ?><img src="../<?= h($c['photo']) ?>" alt=""><?php else: ?><span><?= h($initials) ?></span><?php endif; ?></div>
   <div class="name"><?= h($c['name']) ?></div>
-  <?php if ($c['designation'] !== '—'): ?><div class="desig"><?= h($c['designation']) ?></div><?php endif; ?>
+  <?php if ($c['mgmt']): ?><div class="desig" style="background:linear-gradient(90deg,#7A4E00,#C9930A 45%,#F5C94A);text-transform:uppercase;letter-spacing:.06em;"><?= h($c['position']) ?></div><div style="text-align:center;margin-top:6px;font-size:11px;font-weight:800;letter-spacing:.14em;color:#7B3F9E;">✦ MANAGEMENT BODY · व्यवस्थापन मंडळ ✦</div>
+  <?php elseif ($c['designation'] !== '—'): ?><div class="desig"><?= h($c['designation']) ?></div><?php endif; ?>
   <div class="grid">
+    <?php if ($c['mgmt']): ?>
+    <div><span>पद</span><b><?= h($c['position']) ?></b></div>
+    <div><span>Office</span><b><?= h($c['campus']) ?></b></div>
+    <?php else: ?>
     <div><span>Emp. ID</span><b class="mono"><?= h($c['code']) ?></b></div>
     <div><span>विभाग</span><b><?= h($c['dept']) ?></b></div>
+    <?php endif; ?>
   </div>
   <div class="ok<?= $c['active'] ? '' : ' off' ?>"><?= $c['active'] ? '✓ Active कर्मचारी' : '⛔ Inactive' ?></div>
   <div class="qrwrap">
