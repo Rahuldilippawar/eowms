@@ -13,7 +13,7 @@ $emp = null;
 $limited = publicFormRateLimited('verify_id', 60, 600);
 $live = is_string($_GET['live'] ?? null) ? trim($_GET['live']) : '';
 $liveState = ''; // '' | ok | expired | bad — 📱 Digital ID चा Live QR
-$empSql = "SELECT u.name, u.designation, u.is_active, u.photo_path, u.organization_id, u.employee_code, u.id,
+$empSql = "SELECT u.name, u.designation, u.role, u.is_active, u.photo_path, u.organization_id, u.employee_code, u.id,
                COALESCE(NULLIF(d.name_local, ''), d.name) AS dept_name, c.name AS campus_name, o.name AS org_name, o.logo_path
         FROM users u JOIN organizations o ON o.id = u.organization_id
         LEFT JOIN departments d ON d.id = u.department_id LEFT JOIN campuses c ON c.id = u.campus_id";
@@ -104,8 +104,13 @@ $checkedAt = date('d M Y, h:i A');
       <?php if ($emp['designation']): ?><div class="desig"><?= h($emp['designation']) ?></div><?php endif; ?>
       <?php if ($genuine): ?>
         <div class="rows">
+          <?php if (idCardIsMgmtBody($emp)): ?>
+          <div><span>पद</span><b><?= h($emp['designation'] ?: ucwords(str_replace('_', ' ', $emp['role']))) ?></b></div>
+          <div><span>सदस्यत्व</span><b style="color:#8A5A00;">✦ व्यवस्थापन मंडळ</b></div>
+          <?php else: ?>
           <div><span>Employee ID</span><b><?= h($emp['employee_code']) ?></b></div>
           <div><span>विभाग</span><b><?= h($emp['dept_name'] ?: '—') ?></b></div>
+          <?php endif; ?>
           <div><span>Campus</span><b><?= h($emp['campus_name'] ?: '—') ?></b></div>
           <div><span>स्थिती</span><b style="color:<?= $emp['is_active'] ? '#15803D' : '#BE123C' ?>;"><?= $emp['is_active'] ? 'Active — सध्या कार्यरत' : 'Inactive — सध्या कार्यरत नाही' ?></b></div>
         </div>

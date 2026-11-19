@@ -55,9 +55,18 @@ function idCardBarcodeSvg($text) {
 }
 
 /** Card साठी लागणारी माहिती एकत्र — $emp = users + dept_name, campus_name, campus_address, campus_city */
+/** व्यवस्थापन मंडळ (Trust चे पदाधिकारी) — त्यांचं Card वेगळं: पद व संपर्क; Joining / Emp ID / विभाग / जन्मतारीख / Issue दिनांक नाही */
+function idCardIsMgmtBody(array $emp) {
+    return in_array($emp['role'] ?? '', ['president', 'vice_president', 'executive_president', 'secretary', 'joint_secretary', 'treasurer', 'trustee', 'director'], true);
+}
+
 function idCardData(array $emp, array $org) {
     $code = $emp['employee_code'] ?: ('ID-' . $emp['id']);
+    $mgmt = idCardIsMgmtBody($emp);
     return [
+        'mgmt' => $mgmt,
+        'email' => $emp['email'] ?? '',
+        'position' => ($emp['designation'] ?? '') !== '' ? $emp['designation'] : ucwords(str_replace('_', ' ', (string)($emp['role'] ?? ''))),
         'id' => (int)$emp['id'],
         'code' => $code,
         'name' => $emp['name'],
@@ -84,7 +93,7 @@ function idCardFront(array $c, $rootPath = '../') {
     $h = fn($x) => htmlspecialchars((string)$x, ENT_QUOTES, 'UTF-8');
     $initials = mb_strtoupper(mb_substr(trim($c['name']), 0, 1) . (preg_match('/\s(\S)/u', trim($c['name']), $m) ? $m[1] : ''));
     ob_start(); ?>
-<div class="idc idc-front<?= $c['active'] ? '' : ' idc-inactive' ?>">
+<div class="idc idc-front<?= $c['mgmt'] ? ' idc-mgmt' : '' ?><?= $c['active'] ? '' : ' idc-inactive' ?>">
   <div class="idc-head">
     <div class="idc-slot"></div>
     <div class="idc-logo"><?php if ($c['orgLogo']): ?><img src="<?= $h($rootPath . $c['orgLogo']) ?>" alt=""><?php else: ?><span><?= $h(mb_substr($c['org'], 0, 2)) ?></span><?php endif; ?></div>
@@ -93,10 +102,20 @@ function idCardFront(array $c, $rootPath = '../') {
     <div class="idc-campus" data-fit="2" data-fit-min="0.55"><?= $h($c['campus']) ?></div>
     <?php if ($c['branch']): ?><div class="idc-branch"><?= $h($c['branch']) ?></div><?php endif; ?>
   </div>
-  <div class="idc-photo">
+  <div class="idc-photo"<?= $c['mgmt'] ? ' style="box-shadow:0 0 0 .025in #C9930A,0 0 0 .04in #F5D27A,0 6px 14px -6px rgba(60,20,90,.5);"' : '' ?>>
     <?php if ($c['photo']): ?><img src="<?= $h($rootPath . $c['photo']) ?>" alt=""><?php else: ?><span><?= $h($initials) ?></span><?php endif; ?>
   </div>
   <div class="idc-name"><?= $h($c['name']) ?></div>
+  <?php if ($c['mgmt']): ?>
+  <div class="idc-desig" style="background:linear-gradient(90deg,#7A4E00,#C9930A 45%,#F5C94A);font-size:6.6pt;letter-spacing:.06em;text-transform:uppercase;padding:.018in .14in;"><?= $h($c['position']) ?></div>
+  <div class="idc-mgmt-tag" style="text-align:center;margin-top:.035in;font-size:4.6pt;font-weight:800;letter-spacing:.14em;color:#7B3F9E;">✦ MANAGEMENT BODY · व्यवस्थापन मंडळ ✦</div>
+  <div class="idc-info">
+    <div class="idc-rows">
+      <div style="border-left-color:#C9930A;"><span>Office</span><b data-fit="1"><?= $h($c['campus']) ?></b></div>
+      <div style="border-left-color:#C9930A;"><span>Mobile</span><b><?= $h($c['mobile']) ?></b></div>
+      <?php if ($c['email'] !== ''): ?><div style="border-left-color:#C9930A;"><span>Email</span><b data-fit="1" style="font-size:5.4pt;text-overflow:clip;"><?= $h($c['email']) ?></b></div><?php endif; ?>
+    </div>
+  <?php else: ?>
   <div class="idc-desig"><?= $h($c['designation']) ?></div>
   <div class="idc-info">
     <div class="idc-rows">
@@ -105,6 +124,7 @@ function idCardFront(array $c, $rootPath = '../') {
       <div><span>Joining</span><b><?= $h($c['joining']) ?></b></div>
       <div><span>Mobile</span><b><?= $h($c['mobile']) ?></b></div>
     </div>
+  <?php endif; ?>
     <div class="idc-qr" title="Scan to verify"><?= idCardQrSvg($c['verify']) ?><div>SCAN · VERIFY</div></div>
   </div>
   <div class="idc-sign"><div class="idc-sign-line"></div>Authorized Signatory</div>
@@ -122,12 +142,20 @@ function idCardBack(array $c, $rootPath = '../') {
   <div class="idc-slot idc-slot-dark"></div>
   <div class="idc-back-head" style="position:relative;z-index:1;">
     <div class="idc-logo idc-logo-sm"><?php if ($c['orgLogo']): ?><img src="<?= $h($rootPath . $c['orgLogo']) ?>" alt=""><?php else: ?><span><?= $h(mb_substr($c['org'], 0, 2)) ?></span><?php endif; ?></div>
-    <div style="min-width:0;flex:1;"><div class="idc-back-org" data-fit="3" data-fit-min="0.7"><?= $h($c['org']) ?></div><div class="idc-back-sub">Employee Identity Card</div></div>
+    <div style="min-width:0;flex:1;"><div class="idc-back-org" data-fit="3" data-fit-min="0.7"><?= $h($c['org']) ?></div><div class="idc-back-sub"><?= $c['mgmt'] ? 'Management Body Identity Card' : 'Employee Identity Card' ?></div></div>
   </div>
+  <?php if ($c['mgmt']): ?>
+  <div style="position:relative;z-index:1;margin-top:.06in;text-align:center;border:.012in solid #E9C46A;background:rgba(255,248,225,.82);border-radius:.06in;padding:.04in .06in;">
+    <div style="font-size:4.4pt;font-weight:800;letter-spacing:.12em;color:#8A5A00;">✦ व्यवस्थापन मंडळ सदस्य ✦</div>
+    <div style="font-size:7pt;font-weight:800;color:#3B1D5C;margin-top:.01in;"><?= $h($c['name']) ?></div>
+    <div style="font-size:5.4pt;font-weight:700;color:#7B3F9E;"><?= $h($c['position']) ?></div>
+  </div>
+  <?php else: ?>
   <div class="idc-meta" style="position:relative;z-index:1;">
     <div><span>Date of Birth</span><b><?= $h($c['dob']) ?></b></div>
     <div><span>Issued On</span><b><?= $h($c['issued']) ?></b></div>
   </div>
+  <?php endif; ?>
   <ul class="idc-rules" style="position:relative;z-index:1;">
     <li>हे ओळखपत्र नेहमी दर्शनी भागात परिधान करा.</li>
     <li>हे Card हस्तांतरणीय नाही — फक्त धारकासाठी.</li>
@@ -136,7 +164,7 @@ function idCardBack(array $c, $rootPath = '../') {
   </ul>
   <div class="idc-codes" style="position:relative;z-index:1;margin-top:auto;display:flex;align-items:flex-end;justify-content:space-between;gap:.08in;padding-top:.05in;">
     <div class="idc-qr-big" style="position:static;flex-shrink:0;"><?= idCardQrSvg($c['verify']) ?><div>SCAN TO VERIFY</div></div>
-    <div class="idc-barcode" style="position:static;flex:0 0 .92in;width:auto;margin-bottom:.06in;"><?= idCardBarcodeSvg($c['code']) ?><div class="idc-mono"><?= $h($c['code']) ?></div></div>
+    <div class="idc-barcode" style="position:static;flex:0 0 .92in;width:auto;margin-bottom:.06in;"><?= idCardBarcodeSvg($c['code']) ?><?php if (!$c['mgmt']): ?><div class="idc-mono"><?= $h($c['code']) ?></div><?php endif; ?></div>
   </div>
   <div class="idc-return" style="position:relative;z-index:1;left:auto;right:auto;bottom:auto;margin-top:.05in;">
     <b><?= $h($c['campus']) ?></b>
