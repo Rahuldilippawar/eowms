@@ -255,11 +255,9 @@ function busPassCard(array $p, array $set, $rootPath = '../') {
     <?php $isAy = !empty($p['ay']); ?>
     <div class="bpc-tag"><div class="bpc-bus"><?php if (!empty($set['bus_photo'])): ?><img src="<?= $h($rootPath . $set['bus_photo']) ?>" alt=""><?php else: ?><?= busPassBusSvg() ?><?php endif; ?></div><div class="bpc-tag-t">BUS PASS</div><b><?= $isAy ? 'AY ' . $h($p['ay']) : $h($p['pass_no']) ?></b></div>
   </div>
-  <div class="bpc-band" aria-hidden="true"><span><?= str_repeat('STUDENT TRANSPORT PASS ✦ NON-TRANSFERABLE ✦ ' . $h(mb_strtoupper($set['title'])) . ' ✦ ', 3) ?></span></div>
   <div class="bpc-body">
     <div class="bpc-left">
       <div class="bpc-photo"><?php if ($photo): ?><img src="<?= $h($rootPath . $photo) ?>" alt=""><?php else: ?><span><?= $h($initials) ?></span><?php endif; ?></div>
-      <div class="bpc-seal" aria-hidden="true"><?php if ($set['logo']): ?><img src="<?= $h($rootPath . $set['logo']) ?>" alt=""><?php else: ?><i><?= $h(mb_substr($set['title'], 0, 2)) ?></i><?php endif; ?></div>
     </div>
     <div class="bpc-main">
       <div class="bpc-name" data-fit="1"><?= $h($p['name']) ?></div>
