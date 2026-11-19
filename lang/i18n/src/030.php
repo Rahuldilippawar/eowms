@@ -2952,4 +2952,5 @@ return [
     "हजेरीत धरले जात नाहीत" => ["हाज़िरी में नहीं गिने जाते", "don't count towards attendance"],
     "हजेरी पाहा" => ["हाज़िरी देखें", "View attendance"],
     "पहिला आत Scan म्हणजे हजेरी (उशीर Shift नुसार), शेवटचा बाहेर Scan म्हणजे जाण्याची वेळ; Biometric Machine च्या Punches सोबत एकत्र हिशोब." => ["पहला अंदर Scan यानी हाज़िरी (देरी Shift के अनुसार), अंतिम बाहर Scan यानी जाने का समय; Biometric Machine के Punches के साथ एक साथ हिसाब।", "First In scan means attendance (late per shift), last Out scan means leaving time; combined with biometric machine punches."],
+    "अहवाल (PDF)" => ["रिपोर्ट (PDF)", "report (PDF)"],
 ];
