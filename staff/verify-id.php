@@ -1,7 +1,7 @@
 <?php
 // 🪪 ID Card Verification — QR Scan केल्यावर उघडणारं सार्वजनिक पान (Login लागत नाही)
 require_once __DIR__ . '/../includes/auth.php';
-require_once __DIR__ . '/../includes/id-card.php';
+require_once __DIR__ . '/../includes/gate.php';
 
 $code = is_string($_GET['code'] ?? null) ? trim($_GET['code']) : '';
 $verifyOrgId = (int)($_GET['org'] ?? 0);
@@ -11,21 +11,38 @@ $emp = null;
 // सुरक्षा: फक्त कर्मचारी-कोडनेच शोध (id=1,2,3… ने यादी काढता येऊ नये), जास्त प्रयत्नांवर मर्यादा,
 // आणि फोटो/विभाग फक्त खऱ्या (Signature जुळलेल्या) QR वरच — कोड अंदाजाने टाकून माहिती मिळू नये.
 $limited = publicFormRateLimited('verify_id', 60, 600);
-if ($code !== '' && !$limited) {
+$live = is_string($_GET['live'] ?? null) ? trim($_GET['live']) : '';
+$liveState = ''; // '' | ok | expired | bad — 📱 Digital ID चा Live QR
+$empSql = "SELECT u.name, u.designation, u.is_active, u.photo_path, u.organization_id, u.employee_code, u.id,
+               COALESCE(NULLIF(d.name_local, ''), d.name) AS dept_name, c.name AS campus_name, o.name AS org_name, o.logo_path
+        FROM users u JOIN organizations o ON o.id = u.organization_id
+        LEFT JOIN departments d ON d.id = u.department_id LEFT JOIN campuses c ON c.id = u.campus_id";
+if ($live !== '' && !$limited) {
     publicFormRecordSubmission('verify_id');
-    $sql = "SELECT u.name, u.designation, u.is_active, u.photo_path, u.organization_id, u.employee_code,
-                   COALESCE(NULLIF(d.name_local, ''), d.name) AS dept_name, c.name AS campus_name, o.name AS org_name, o.logo_path
-            FROM users u JOIN organizations o ON o.id = u.organization_id
-            LEFT JOIN departments d ON d.id = u.department_id LEFT JOIN campuses c ON c.id = u.campus_id
-            WHERE u.employee_code = ?";
+    $lc = gateLiveCheck($live);
+    if (is_array($lc)) {
+        $stmt = $pdo->prepare($empSql . " WHERE u.id = ? AND u.organization_id = ? LIMIT 1");
+        $stmt->execute([$lc['user'], $lc['org']]);
+        $emp = $stmt->fetch() ?: null;
+        $liveState = $emp ? 'ok' : 'bad';
+    } else {
+        $liveState = $lc === 'expired' ? 'expired' : 'bad';
+    }
+} elseif ($code !== '' && !$limited) {
+    publicFormRecordSubmission('verify_id');
+    // Employee code नसलेल्यांच्या Card वर "ID-123"
+    $sql = $empSql . " WHERE (u.employee_code = ?" . (preg_match('/^ID-(\d+)$/i', $code, $idm) ? " OR (u.id = ? AND (u.employee_code IS NULL OR u.employee_code = ''))" : '') . ")";
     $params = [$code];
+    if (!empty($idm)) $params[] = (int)$idm[1];
     if ($verifyOrgId) { $sql .= " AND u.organization_id = ?"; $params[] = $verifyOrgId; }
     $stmt = $pdo->prepare($sql . " LIMIT 1");
     $stmt->execute($params);
     $emp = $stmt->fetch();
+    if ($emp && ($emp['employee_code'] ?? '') === '') $emp['employee_code'] = 'ID-' . $emp['id'];
 }
-$genuine = $emp && $sig !== '' && hash_equals(idCardSig($emp['organization_id'], $emp['employee_code']), $sig);
-$state = !$emp ? 'notfound' : (!$genuine ? 'unsigned' : ($emp['is_active'] ? 'valid' : 'inactive'));
+if ($emp && ($emp['employee_code'] ?? '') === '') $emp['employee_code'] = 'ID-' . $emp['id'];
+$genuine = $liveState === 'ok' || ($emp && $sig !== '' && hash_equals(idCardSig($emp['organization_id'], $emp['employee_code']), $sig));
+$state = in_array($liveState, ['expired', 'bad'], true) ? 'notfound' : (!$emp ? 'notfound' : (!$genuine ? 'unsigned' : ($emp['is_active'] ? 'valid' : 'inactive')));
 $checkedAt = date('d M Y, h:i A');
 ?>
 <!DOCTYPE html>
@@ -68,12 +85,17 @@ $checkedAt = date('d M Y, h:i A');
     <div class="top unsigned"><div class="seal">⏳</div><div class="status">खूप प्रयत्न झाले</div><div class="status-sub">काही मिनिटांनी पुन्हा Scan करा.</div></div>
     <div class="body" style="padding-top:60px;"></div>
   <?php elseif ($state === 'notfound'): ?>
+    <?php if ($liveState === 'expired'): ?>
+    <div class="top unsigned"><div class="seal">⏱</div><div class="status">Digital ID चा QR जुना आहे</div><div class="status-sub">हा QR काही सेकंदांसाठीच चालतो</div></div>
+    <div class="body" style="padding-top:28px;"><div class="note">हा Screenshot / जुना फोटो असू शकतो. कर्मचाऱ्याला मोबाईलवर <b>चालू</b> Digital ID उघडून पुन्हा Scan करू द्या.</div></div>
+    <?php else: ?>
     <div class="top notfound"><div class="seal">✕</div><div class="status">अवैध ID Card</div><div class="status-sub">हे Card आमच्या नोंदीत सापडलं नाही</div></div>
     <div class="body" style="padding-top:28px;"><div class="note">हे Card बनावट असू शकतं किंवा कर्मचारी-कोड बदललेला आहे. कृपया कार्यालयाशी संपर्क साधा.</div></div>
+    <?php endif; ?>
   <?php else: ?>
     <div class="top <?= $state ?>">
       <div class="seal"><?= ['valid' => '✓', 'inactive' => '!', 'unsigned' => '?'][$state] ?></div>
-      <div class="status"><?= ['valid' => 'खरं ID Card ✓', 'inactive' => 'कर्मचारी सध्या निष्क्रिय', 'unsigned' => 'Card ची खात्री होत नाही'][$state] ?></div>
+      <div class="status"><?= $liveState === 'ok' && $state === 'valid' ? '📱 Live Digital ID ✓' : (['valid' => 'खरं ID Card ✓', 'inactive' => 'कर्मचारी सध्या निष्क्रिय', 'unsigned' => 'Card ची खात्री होत नाही'][$state]) ?></div>
       <div class="status-sub"><?= h($emp['org_name']) ?></div>
     </div>
     <div class="photo"><?php if ($genuine && !empty($emp['photo_path'])): ?><img src="../<?= h($emp['photo_path']) ?>" alt=""><?php else: ?><?= h(mb_substr($emp['name'], 0, 1)) ?><?php endif; ?></div>
