@@ -125,14 +125,20 @@ function busPassSig($orgId, $id, $validTill) {
     return substr(hash_hmac('sha256', 'buspass|' . (int)$orgId . '|' . (int)$id . '|' . (string)$validTill, appSecret()), 0, 12);
 }
 
-/** शैक्षणिक वर्ष "2026-27" → ['2026-06-01', '2027-05-31'] (चुकीचं / रिकामं असेल तर चालू वर्ष) */
+/** शैक्षणिक वर्ष "2026-27" → ['2026-07-01', '2027-06-30'] — July ते June (चुकीचं / रिकामं असेल तर चालू वर्ष) */
 function busAcademicRange($ay) {
     if (!preg_match('/^(\d{4})\s*[-\/]\s*\d{2,4}$/', trim((string)$ay), $m)) { $ay = studentCurrentAcademicYear(); preg_match('/^(\d{4})/', $ay, $m); }
     $y = (int)$m[1];
-    return [$y . '-06-01', ($y + 1) . '-05-31', $y . '-' . substr((string)($y + 1), -2)];
+    return [$y . '-07-01', ($y + 1) . '-06-30', $y . '-' . substr((string)($y + 1), -2)];
 }
 
 /** पास दिलेला नसलेल्या बस विद्यार्थ्याचा QR — शैक्षणिक वर्षासाठी (Signature: विद्यार्थी + वर्ष) */
+/** "2026-27" → "JULY - 2026 TO JUNE - 2027" */
+function busAyLabel($ay) {
+    [$f, $t] = busAcademicRange($ay);
+    return 'JULY - ' . substr($f, 0, 4) . ' TO JUNE - ' . substr($t, 0, 4);
+}
+
 function busStudentSig($orgId, $bsId, $ay) {
     return substr(hash_hmac('sha256', 'busstu|' . (int)$orgId . '|' . (int)$bsId . '|' . (string)$ay, appSecret()), 0, 12);
 }
@@ -170,10 +176,10 @@ function busPassNextNo(PDO $pdo, $orgId) {
     return $prefix . str_pad((string)($last + 1), 5, '0', STR_PAD_LEFT);
 }
 
-/** शैक्षणिक वर्षाची मूळ वैधता: आज → 31 मे (जूनपासून नवीन वर्ष) */
+/** शैक्षणिक वर्षाची मूळ वैधता: आज → 30 जून (July पासून नवीन वर्ष) */
 function busPassDefaultDates() {
-    $y = (int)date('Y'); if ((int)date('n') >= 6) $y++;
-    return [date('Y-m-d'), $y . '-05-31'];
+    $y = (int)date('Y'); if ((int)date('n') >= 7) $y++;
+    return [date('Y-m-d'), $y . '-06-30'];
 }
 
 /** नवीन पास (नूतनीकरणही) — त्या विद्यार्थ्याचे आधीचे चालू पास, तारखा एकमेकांवर येत असतील तर, रद्द */
@@ -199,18 +205,6 @@ function busPassSelectSql() {
     return "SELECT p.*, s.name, s.class_name, s.division, s.course, s.admission_no, s.roll_no, s.photo_path,
             s.campus_id, s.is_active stu_active, s.parent_mobile, s.mobile, s.academic_year, c.name campus_name
         FROM student_bus_passes p JOIN bus_students s ON s.id = p.bus_student_id LEFT JOIN campuses c ON c.id = s.campus_id";
-}
-
-/** महिन्यांची पट्टी — शैक्षणिक वर्ष (जून → मे); पास ज्या महिन्यांत valid ते रंगीत. Conductor ला एका नजरेत कळतं. */
-function busPassMonths($from, $till) {
-    $f = strtotime($from); $t = strtotime($till);
-    $y = (int)date('Y', $f); if ((int)date('n', $f) < 6) $y--;
-    $cells = [];
-    for ($i = 0; $i < 12; $i++) {
-        $ms = mktime(0, 0, 0, 6 + $i, 1, $y); $me = mktime(0, 0, 0, 7 + $i, 0, $y);
-        $cells[] = ['m' => date('M', $ms), 'on' => $me >= $f && $ms <= $t, 'now' => date('Y-m') === date('Y-m', $ms)];
-    }
-    return $cells;
 }
 
 /** 🚌 पिवळी School Bus — बाजूने (स्वतःचं चित्र, Print मध्ये स्पष्ट) */
@@ -275,14 +269,13 @@ function busPassCard(array $p, array $set, $rootPath = '../') {
       <div class="bpc-route">
         <div class="bpc-pl"><span>SOURCE</span><b data-fit="3" data-fit-min="0.48"><?= $h($p['from_place']) ?></b></div>
         <div class="bpc-ar" title="जाणे-येणे">
-          <div class="bpc-road"><svg class="bpc-arr" viewBox="0 0 60 12" aria-hidden="true"><path d="M8 6H52M46 1.5 52.5 6 46 10.5M14 1.5 7.5 6 14 10.5"/></svg><?= busPassBusSvg('bpc-mini') ?></div>
+          <svg viewBox="0 0 60 30" aria-hidden="true"><path d="M4 9.5H52M45 3l8 6.5-8 6.5" /><path d="M56 20.5H8M15 14l-8 6.5 8 6.5" /></svg>
           <em>UP · DOWN</em>
         </div>
         <div class="bpc-pl bpc-to"><span>DESTINATION</span><b data-fit="3" data-fit-min="0.48"><?= $h($p['to_place']) ?></b></div>
       </div>
-      <div class="bpc-months"><?php foreach (busPassMonths($p['valid_from'], $p['valid_till']) as $c): ?><i class="<?= $c['on'] ? 'on' : '' ?><?= $c['now'] ? ' now' : '' ?>"><?= $h($c['m']) ?></i><?php endforeach; ?></div>
       <?php if ($isAy): ?>
-      <div class="bpc-valid"><span>VALID · ACADEMIC YEAR</span><b class="till"><?= $h($p['ay']) ?></b></div>
+      <div class="bpc-valid bpc-valid-ay"><span>VALID · ACADEMIC YEAR</span><b class="till" data-fit="1"><?= $h(busAyLabel($p['ay'])) ?></b></div>
       <?php else: ?>
       <div class="bpc-valid"><span>VALID</span><b><?= $h($d($p['valid_from'])) ?></b><span>→</span><b class="till"><?= $h($d($p['valid_till'])) ?></b></div>
       <?php endif; ?>

@@ -78,7 +78,7 @@ $tone = $ok ? 'valid' : ($state === 'upcoming' || $state === 'expiring' ? 'warnx
         <div><span>पास क्र.</span><b><?= h($p['pass_no']) ?></b></div>
         <div><span>मार्ग (जाणे-येणे)</span><b><?= h($p['from_place']) ?> ⇄ <?= h($p['to_place']) ?></b></div>
         <?php if ($p['route_name']): ?><div><span>मार्ग / बस</span><b><?= h($p['route_name']) ?></b></div><?php endif; ?>
-        <div><span>Valid</span><b style="color:<?= $ok ? '#15803D' : '#BE123C' ?>;"><?= !empty($p['ay']) ? 'शैक्षणिक वर्ष ' . h($p['ay']) : h(date('d/m/Y', strtotime($p['valid_from']))) . ' → ' . h(date('d/m/Y', strtotime($p['valid_till']))) ?></b></div>
+        <div><span>Valid</span><b style="color:<?= $ok ? '#15803D' : '#BE123C' ?>;"><?= !empty($p['ay']) ? 'शैक्षणिक वर्ष ' . h($p['ay']) . ' · ' . h(busAyLabel($p['ay'])) : h(date('d/m/Y', strtotime($p['valid_from']))) . ' → ' . h(date('d/m/Y', strtotime($p['valid_till']))) ?></b></div>
         <?php if ($p['class_name']): ?><div><span>Class</span><b><?= h($p['class_name']) ?></b></div><?php endif; ?>
         <?php if ($p['division'] || $p['course']): ?><div><span>Division</span><b><?= h($p['division'] ?: $p['course']) ?></b></div><?php endif; ?>
         <div><span>Reg No</span><b><?= h($p['admission_no']) ?></b></div>
