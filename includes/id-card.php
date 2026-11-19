@@ -83,15 +83,31 @@ function idCardData(array $emp, array $org) {
 function idCardFront(array $c, $rootPath = '../') {
     $h = fn($x) => htmlspecialchars((string)$x, ENT_QUOTES, 'UTF-8');
     $initials = mb_strtoupper(mb_substr(trim($c['name']), 0, 1) . (preg_match('/\s(\S)/u', trim($c['name']), $m) ? $m[1] : ''));
-    ob_start(); ?>
+    static $headCss = false;
+    ob_start();
+    if (!$headCss) { $headCss = true; ?>
+<style>
+  .idc-head.idc-head2{padding:.165in .09in 0 !important;text-align:left;}
+  .idc-head2 .idc-mantra{text-align:center;margin:0 0 .03in;font-size:5pt;letter-spacing:.08em;}
+  .idc-head2 .idc-hrow{display:flex;align-items:center;gap:.07in;position:relative;z-index:1;}
+  .idc-head2 .idc-logo{position:static !important;flex-shrink:0;width:.42in;height:.42in;box-shadow:0 0 0 .02in #F0932B,0 .02in .05in rgba(0,0,0,.3);}
+  .idc-head2 .idc-htext{flex:1;min-width:0;}
+  .idc-head2 .idc-org{padding:0 !important;margin:0;font-size:4.7pt;line-height:1.22;opacity:.92;text-transform:uppercase;letter-spacing:.02em;max-height:2.5em;overflow:hidden;overflow-wrap:normal;}
+  .idc-head2 .idc-campus{padding:.018in 0 0 !important;margin:.018in 0 0;border-top:.008in solid rgba(255,214,150,.55);font-size:7.6pt;line-height:1.08;text-align:left;max-height:3.3em;overflow:hidden;overflow-wrap:normal;word-break:normal;display:block;-webkit-line-clamp:unset;}
+  .idc-head2 .idc-branch{font-size:4.6pt;color:#FFD9A8;margin-top:.01in;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;}
+</style>
+<?php } ?>
 <div class="idc idc-front<?= $c['active'] ? '' : ' idc-inactive' ?>">
-  <div class="idc-head">
+  <div class="idc-head idc-head2">
     <div class="idc-slot"></div>
-    <div class="idc-logo"><?php if ($c['orgLogo']): ?><img src="<?= $h($rootPath . $c['orgLogo']) ?>" alt=""><?php else: ?><span><?= $h(mb_substr($c['org'], 0, 2)) ?></span><?php endif; ?></div>
     <div class="idc-mantra">॥ आत्मा मालिक ॥</div>
-    <div class="idc-org" data-fit="2" data-fit-min="0.7"><?= $h($c['org']) ?></div>
-    <div class="idc-campus" data-fit="2" data-fit-min="0.55"><?= $h($c['campus']) ?></div>
-    <?php if ($c['branch']): ?><div class="idc-branch"><?= $h($c['branch']) ?></div><?php endif; ?>
+    <div class="idc-hrow">
+      <div class="idc-logo"><?php if ($c['orgLogo']): ?><img src="<?= $h($rootPath . $c['orgLogo']) ?>" alt=""><?php else: ?><span><?= $h(mb_substr($c['org'], 0, 2)) ?></span><?php endif; ?></div>
+      <div class="idc-htext">
+        <div class="idc-org" data-fit="2" data-fit-min="0.7"><?= $h($c['org']) ?></div>
+        <div class="idc-campus" data-fit="3" data-fit-min="0.6"><?= $h($c['campus']) ?></div>
+      </div>
+    </div>
   </div>
   <div class="idc-photo">
     <?php if ($c['photo']): ?><img src="<?= $h($rootPath . $c['photo']) ?>" alt=""><?php else: ?><span><?= $h($initials) ?></span><?php endif; ?>
