@@ -45,8 +45,8 @@ $ready = gateReady($pdo);
   .start{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:20px;background:#0E1530;}
   .start button{border:0;background:linear-gradient(90deg,#6D28D9,#2563EB);color:#fff;font:700 16px inherit;font-family:inherit;padding:14px 26px;border-radius:14px;cursor:pointer;}
   .start p{font-size:12.5px;color:#9AA3C7;line-height:1.6;}
-  .res{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:18px;color:#fff;animation:pop .25s ease-out;}
-  @keyframes pop{from{transform:scale(.94);opacity:0;}to{transform:none;opacity:1;}}
+  .res{position:absolute;inset:0;z-index:5;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:18px;color:#fff;animation:pop .25s ease-out;}
+  @keyframes pop{from{transform:scale(.94);}to{transform:none;}}
   .res.show{display:flex;} .res.in{background:linear-gradient(160deg,#047857,#16A34A);} .res.out{background:linear-gradient(160deg,#C2410C,#F97316);}
   .res.warn{background:linear-gradient(160deg,#92400E,#D97706);} .res.bad{background:linear-gradient(160deg,#7F1D1D,#DC2626);}
   .res .ph{width:110px;height:126px;border-radius:16px;border:4px solid rgba(255,255,255,.9);overflow:hidden;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:42px;font-weight:800;}
@@ -54,6 +54,7 @@ $ready = gateReady($pdo);
   .res .dir{font-size:30px;font-weight:800;letter-spacing:.04em;margin-top:10px;line-height:1.1;}
   .res .nm{font-size:19px;font-weight:800;margin-top:6px;} .res .sub{font-size:13px;opacity:.9;margin-top:2px;} .res .tm{font-size:12.5px;opacity:.85;margin-top:6px;}
   .res .icon{font-size:56px;}
+  .res .att{margin-top:8px;background:rgba(0,0,0,.22);border-radius:99px;padding:5px 14px;font-size:13.5px;font-weight:700;}
   .manual{display:flex;gap:6px;margin-top:10px;}
   .manual input{flex:1;background:#141B33;border:1px solid #232B4D;color:#E7EAF6;border-radius:12px;padding:10px 12px;font:inherit;font-size:14px;}
   .manual button{border:0;background:#2563EB;color:#fff;border-radius:12px;padding:0 16px;font:700 14px inherit;font-family:inherit;cursor:pointer;}
@@ -117,7 +118,7 @@ $ready = gateReady($pdo);
     var ph = u ? '<div class="ph">' + (u.photo ? '<img src="' + esc(u.photo) + '" alt="">' : esc((u.name || '?').charAt(0))) + '</div>' : '<div class="icon">' + (tone === 'warn' ? '⏱' : '⛔') + '</div>';
     res.className = 'res show ' + tone;
     res.innerHTML = ph + '<div class="dir">' + esc(head) + '</div>' + (u ? '<div class="nm">' + esc(u.name) + '</div><div class="sub">' + esc([u.designation, u.dept].filter(Boolean).join(' · ')) + '</div><div class="sub">' + esc(u.code) + '</div>' : '<div class="sub">' + esc(d.label) + '</div>') +
-      '<div class="tm">' + esc(d.time) + ' · ' + esc(d.methodLabel) + '</div>';
+      (d.att ? '<div class="att">' + esc(d.att) + '</div>' : '') + '<div class="tm">' + esc(d.time) + ' · ' + esc(d.methodLabel) + '</div>';
     beep(d.result === 'ok'); stats(d.stats);
     var list = document.getElementById('recent'); if (list.querySelector('.empty')) list.innerHTML = '';
     var tag = d.result === 'ok' ? '<span class="tag ' + d.direction + '">' + (d.direction === 'in' ? 'आत' : 'बाहेर') + '</span>' : '<span class="tag ' + tone + '">' + esc(d.result === 'duplicate' ? 'आधीच' : 'अवैध') + '</span>';

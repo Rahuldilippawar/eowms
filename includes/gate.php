@@ -131,7 +131,8 @@ function gateProcess(PDO $pdo, $orgId, $text, $mode, $gate, $byUserId) {
         $result = 'ok';
     }
     $id = gateLog($pdo, $orgId, $user['id'] ?? null, $direction, $result, $method, $gate, $result === 'ok' ? '' : $raw, $byUserId);
-    return ['result' => $result, 'direction' => $direction, 'method' => $method, 'user' => $user, 'log_id' => $id, 'at' => date('Y-m-d H:i:s')];
+    $att = $result === 'ok' ? gateAttendanceUpdate($pdo, $orgId, (int)$user['id']) : null;
+    return ['result' => $result, 'direction' => $direction, 'method' => $method, 'user' => $user, 'log_id' => $id, 'at' => date('Y-m-d H:i:s'), 'att' => $att];
 }
 
 function gateResultLabels() {
@@ -140,3 +141,24 @@ function gateResultLabels() {
 }
 
 function gateMethodLabels() { return ['live' => '📱 Live ID', 'card' => '🪪 Card', 'code' => '⌨️ हाताने']; }
+
+/** 🕘 Gate Scan → हजेरी: Biometric सारखाच हिशोब (Shift, उशीर, लवकर गेले, काम, Overtime). परत: हिशोब / null */
+function gateAttendanceUpdate(PDO $pdo, $orgId, $userId) {
+    require_once __DIR__ . '/bio-helpers.php';
+    if (!bioReady($pdo) || !bioGateAttendance($pdo, $orgId)) return null;
+    try {
+        $date = bioWorkDate(bioShift($pdo, $userId), time());
+        $r = bioProcessUserDate($pdo, $orgId, $userId, $date);
+        return $r ? $r + ['date' => $date] : null;
+    } catch (PDOException $e) { return null; }
+}
+
+/** हजेरीचा छोटा मजकूर — Scanner / Digital ID वर */
+function gateAttendanceText($att, $direction) {
+    if (!$att) return '';
+    $hm = fn($m) => (int)$m >= 60 ? intdiv((int)$m, 60) . ' ता ' . ((int)$m % 60) . ' मि' : (int)$m . ' मि';
+    if ($direction === 'out' && !$att['missed']) {
+        return '🕘 हजेरी: काम ' . $hm($att['worked']) . ($att['early'] > 0 ? ' · लवकर ' . $hm($att['early']) : '') . ($att['ot'] > 0 ? ' · OT ' . $hm($att['ot']) : '');
+    }
+    return '🕘 हजेरी नोंद: ' . date('h:i A', $att['first']) . ($att['late'] > 0 ? ' · ⏰ उशीर ' . $hm($att['late']) : ' · ✓ वेळेत');
+}
