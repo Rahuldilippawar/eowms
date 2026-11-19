@@ -250,6 +250,17 @@ function bioWorkDate(array $shift, $ts) {
     return $d;
 }
 
+/** Gate QR Scan हजेरीत धरायचे का — gate_logs Table असेल व संस्थेने बंद केलं नसेल (org_settings: gate_attendance = 0) */
+function bioGateAttendance(PDO $pdo, $orgId) {
+    static $table = null, $cache = [];
+    if ($table === null) { try { $pdo->query("SELECT 1 FROM gate_logs LIMIT 0"); $table = true; } catch (PDOException $e) { $table = false; } }
+    if (!$table) { return false; }
+    if (!array_key_exists((int)$orgId, $cache)) {
+        $cache[(int)$orgId] = !function_exists('orgSetting') || (string)orgSetting($pdo, (int)$orgId, 'gate_attendance', '1') !== '0';
+    }
+    return $cache[(int)$orgId];
+}
+
 /**
  * एका कर्मचाऱ्याचा एका दिवसाचा हिशोब — सगळे Punches (सगळ्या Machines चे) घेऊन staff_attendance मध्ये.
  * हाताने (manual / Regularization) दुरुस्त केलेली स्थिती बदलत नाही — फक्त वेळा व मिनिटं.
@@ -261,9 +272,16 @@ function bioProcessUserDate(PDO $pdo, $orgId, $userId, $date) {
     $eTs = strtotime("$date {$sh['end']}") + ($night ? 86400 : 0);
     if ($night) { $from = date('Y-m-d H:i:s', $sTs - 4 * 3600); $to = date('Y-m-d H:i:s', $eTs + 4 * 3600); }
     else { $from = "$date 00:00:00"; $to = date('Y-m-d', strtotime("+1 day", strtotime($date))) . ' 00:00:00'; }
-    $st = $pdo->prepare("SELECT p.punch_time, p.punch_state FROM bio_punches p JOIN bio_devices d ON d.id = p.device_id AND d.status = 'active' AND d.organization_id = ?
-        WHERE p.user_id = ? AND p.punch_time >= ? AND p.punch_time < ? ORDER BY p.punch_time");
-    $st->execute([(int)$orgId, (int)$userId, $from, $to]);
+    $sql = "SELECT p.punch_time, p.punch_state FROM bio_punches p JOIN bio_devices d ON d.id = p.device_id AND d.status = 'active' AND d.organization_id = ?
+        WHERE p.user_id = ? AND p.punch_time >= ? AND p.punch_time < ?";
+    $prm = [(int)$orgId, (int)$userId, $from, $to];
+    // 🚪 Gate वरचे QR Scan (Digital ID / Card) — Machine च्या Punch सारखेच (आत = 0, बाहेर = 1)
+    if (bioGateAttendance($pdo, $orgId)) {
+        $sql .= " UNION ALL SELECT g.created_at, IF(g.direction = 'out', 1, 0) FROM gate_logs g WHERE g.organization_id = ? AND g.user_id = ? AND g.result = 'ok' AND g.created_at >= ? AND g.created_at < ?";
+        array_push($prm, (int)$orgId, (int)$userId, $from, $to);
+    }
+    $st = $pdo->prepare("SELECT * FROM ($sql) x ORDER BY punch_time");
+    $st->execute($prm);
     $punches = [];
     foreach ($st->fetchAll() as $r) {
         $ts = strtotime($r['punch_time']);

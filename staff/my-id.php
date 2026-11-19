@@ -28,6 +28,12 @@ if (gateReady($pdo)) {
     $st->execute([$orgId, $emp['id']]);
     $todayLogs = $st->fetchAll();
 }
+$myAtt = null;
+try {
+    $st = $pdo->prepare("SELECT status, first_punch_time, last_punch_time, late_minutes, worked_minutes FROM staff_attendance WHERE user_id = ? AND attendance_date = CURDATE()");
+    $st->execute([$emp['id']]);
+    $myAtt = $st->fetch() ?: null;
+} catch (PDOException $e) { $myAtt = null; }
 $initials = mb_strtoupper(mb_substr(trim($c['name']), 0, 1) . (preg_match('/\s(\S)/u', trim($c['name']), $m) ? $m[1] : ''));
 ?>
 <!DOCTYPE html>
@@ -113,9 +119,14 @@ $initials = mb_strtoupper(mb_substr(trim($c['name']), 0, 1) . (preg_match('/\s(\
   <div class="clock" id="clock"><?= date('h:i:s A') ?></div>
   <div class="band"><i></i><i></i><i></i></div>
 </div>
-<?php if ($todayLogs): ?>
-<div class="logs"><h3>🚪 आजची ये-जा</h3>
-  <?php foreach ($todayLogs as $l): ?><div><span class="<?= $l['direction'] === 'in' ? 'in' : 'out' ?>"><?= $l['direction'] === 'in' ? '⬇ आत' : '⬆ बाहेर' ?></span><span><?= h($l['gate'] ?: 'Gate') ?></span><b><?= date('h:i A', strtotime($l['created_at'])) ?></b></div><?php endforeach; ?>
+<?php if ($myAtt || $todayLogs): ?>
+<div class="logs"><?php if ($myAtt): $st0 = ['present' => '✓ हजर', 'half_day' => '◐ अर्धा दिवस', 'absent' => '✕ गैरहजर', 'holiday' => 'सुट्टी', 'on_leave' => 'रजा'][$myAtt['status']] ?? $myAtt['status']; ?>
+  <h3>🕘 आजची हजेरी: <span class="in"><?= h($st0) ?></span></h3>
+  <div><span>आलो</span><b><?= $myAtt['first_punch_time'] ? date('h:i A', strtotime($myAtt['first_punch_time'])) : '—' ?><?= (int)$myAtt['late_minutes'] > 0 ? ' <span class="out">· उशीर ' . ((int)$myAtt['late_minutes'] >= 60 ? intdiv((int)$myAtt['late_minutes'], 60) . ' ता ' . ((int)$myAtt['late_minutes'] % 60) . ' मि' : (int)$myAtt['late_minutes'] . ' मि') . '</span>' : '' ?></b></div>
+  <?php if ($myAtt['last_punch_time']): ?><div><span>गेलो</span><b><?= date('h:i A', strtotime($myAtt['last_punch_time'])) ?> · काम <?= intdiv((int)$myAtt['worked_minutes'], 60) ?> ता <?= (int)$myAtt['worked_minutes'] % 60 ?> मि</b></div><?php endif; ?>
+  <?php endif; ?>
+  <?php if ($todayLogs): ?><h3 style="margin-top:<?= $myAtt ? '10px' : '0' ?>;">🚪 आजची ये-जा</h3>
+  <?php foreach ($todayLogs as $l): ?><div><span class="<?= $l['direction'] === 'in' ? 'in' : 'out' ?>"><?= $l['direction'] === 'in' ? '⬇ आत' : '⬆ बाहेर' ?></span><span><?= h($l['gate'] ?: 'Gate') ?></span><b><?= date('h:i A', strtotime($l['created_at'])) ?></b></div><?php endforeach; ?><?php endif; ?>
 </div>
 <?php endif; ?>
 <p class="hint">हा QR दर <?= GATE_LIVE_STEP ?> सेकंदाला बदलतो — Screenshot किंवा Forward केलेला फोटो Gate वर चालत नाही. Home Screen वर ठेवण्यासाठी Browser मेनू → "Add to Home screen".</p>

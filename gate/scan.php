@@ -41,6 +41,7 @@ $out([
     'method' => $r['method'],
     'methodLabel' => gateMethodLabels()[$r['method']] ?? '',
     'time' => date('h:i:s A', strtotime($r['at'])),
+    'att' => gateAttendanceText($r['att'] ?? null, $r['direction']),
     'user' => $u ? [
         'name' => $u['name'],
         'code' => ($u['employee_code'] ?? '') !== '' ? $u['employee_code'] : 'ID-' . $u['id'],

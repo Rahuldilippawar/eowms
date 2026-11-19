@@ -8,6 +8,16 @@ require_once __DIR__ . '/../includes/smart-insights.php';
 if (!canGate()) { http_response_code(403); die('<div style="font-family:sans-serif;padding:40px;">Gate अहवाल पाहण्याची परवानगी नाही.</div>'); }
 $orgId = activeOrgId();
 $ready = gateReady($pdo);
+// 🕘 Gate Scan हजेरीत — चालू / बंद (Super Admin / Management)
+$canSet = hasRole('super_admin') || isManagementOrAbove();
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'gate_att' && $canSet && function_exists('orgSettingSet')) {
+    $on = !empty($_POST['on']) ? '1' : '0';
+    orgSettingSet($pdo, $orgId, 'gate_attendance', $on);
+    logActivity($on === '1' ? 'Gate Scan हजेरीत धरणे सुरू' : 'Gate Scan हजेरीत धरणे बंद', 'organization', $orgId, '');
+    $_SESSION['flash'] = $on === '1' ? '✓ आता Gate Scan हजेरीत धरले जातील.' : '✓ Gate Scan आता फक्त ये-जा नोंदीसाठी — हजेरीत धरले जाणार नाहीत.';
+    header('Location: log.php'); exit;
+}
+$gateAtt = (string)(function_exists('orgSetting') ? orgSetting($pdo, $orgId, 'gate_attendance', '1') : '1') !== '0';
 $day = (is_string($_GET['d'] ?? null) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $_GET['d'])) ? $_GET['d'] : date('Y-m-d');
 $isToday = $day === date('Y-m-d');
 $gf = ['dir' => in_array($_GET['dir'] ?? '', ['in', 'out', 'bad'], true) ? $_GET['dir'] : '', 'q' => trim((string)($_GET['q'] ?? '')), 'dept' => (int)($_GET['dept'] ?? 0)];
@@ -62,6 +72,8 @@ $hmax = max(1, ...array_map(fn($x) => $x['in'] + $x['out'], array_values($hours)
 $av = function ($r) { $p = $r['photo_path'] ?? ''; return ($p && eowmsPhotoExists($p)) ? '<img src="../' . h($p) . '" alt="">' : h(mb_substr((string)($r['name'] ?? '?'), 0, 1)); };
 ?>
 <style>
+  .gt-att{display:flex;align-items:center;gap:12px;flex-wrap:wrap;border:1px solid var(--line);border-radius:14px;padding:10px 14px;margin-bottom:12px;background:var(--surface);}
+  .gt-att.on{border-color:#A7F3D0;background:color-mix(in srgb,#16A34A 6%,var(--surface));}
   .gt-act{display:flex;gap:6px;flex-wrap:wrap;}
   .gt-act a{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:10px;font-size:12.5px;font-weight:600;padding:8px 12px;text-decoration:none;}
   .gt-act a.pri{background:linear-gradient(90deg,#6D28D9,#2563EB);color:#fff;border:0;}
@@ -89,6 +101,14 @@ $av = function ($r) { $p = $r['photo_path'] ?? ''; return ($p && eowmsPhotoExist
     <a href="<?= h($gqs(['export' => 'csv'])) ?>">📊 Excel</a>
     <a href="../staff/my-id.php">📱 माझं Digital ID</a>
   </div>
+</div>
+<div class="gt-att <?= $gateAtt ? 'on' : '' ?>">
+  <span style="font-size:22px;">🕘</span>
+  <div style="flex:1;min-width:200px;"><b><?= $gateAtt ? 'Gate Scan हजेरीत धरले जातात' : 'Gate Scan हजेरीत धरले जात नाहीत' ?></b>
+    <div style="font-size:12.5px;color:var(--text-dim);"><?= $gateAtt ? 'पहिला आत Scan म्हणजे हजेरी (उशीर Shift नुसार), शेवटचा बाहेर Scan म्हणजे जाण्याची वेळ; Biometric Machine च्या Punches सोबत एकत्र हिशोब.' : 'फक्त ये-जा नोंद — हजेरी फक्त Biometric Machine वरून.' ?></div></div>
+  <?php if ($canSet): ?><form method="POST" class="m-0"><input type="hidden" name="action" value="gate_att"><?php if (!$gateAtt): ?><input type="hidden" name="on" value="1"><?php endif; ?>
+    <button type="submit" class="btn btn-sm" style="border-radius:9px;font-weight:700;<?= $gateAtt ? 'border:1px solid var(--line);' : 'background:#16A34A;color:#fff;' ?>"><?= $gateAtt ? 'बंद करा' : 'सुरू करा' ?></button></form><?php endif; ?>
+  <a href="../staff/attendance.php" class="btn btn-sm" style="border:1px solid var(--line);border-radius:9px;">हजेरी पाहा →</a>
 </div>
 <?php if (!$ready): ?><div class="alert alert-warning" style="border-radius:10px;font-size:13px;">⚠️ Gate साठी Database Update बाकी आहे — Super Admin ने Database Update चालवावं.</div><?php endif; ?>
 
