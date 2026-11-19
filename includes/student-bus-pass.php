@@ -267,27 +267,24 @@ function busPassCard(array $p, array $set, $rootPath = '../') {
         <?php if (($p['admission_no'] ?? '') !== ''): ?><div><span>REG NO</span><b data-fit="1"><?= $h($p['admission_no']) ?></b></div><?php endif; ?>
       </div>
       <div class="bpc-route">
-        <div class="bpc-pl"><span>SOURCE</span><b data-fit="3" data-fit-min="0.48"><?= $h($p['from_place']) ?></b></div>
-        <div class="bpc-ar" title="जाणे-येणे">
-          <svg viewBox="0 0 60 30" aria-hidden="true"><path d="M4 9.5H52M45 3l8 6.5-8 6.5" /><path d="M56 20.5H8M15 14l-8 6.5 8 6.5" /></svg>
-          <em>UP · DOWN</em>
-        </div>
-        <div class="bpc-pl bpc-to"><span>DESTINATION</span><b data-fit="3" data-fit-min="0.48"><?= $h($p['to_place']) ?></b></div>
+        <div class="bpc-pl"><span><i class="dot"></i>FROM</span><b data-fit="3" data-fit-min="0.48"><?= $h($p['from_place']) ?></b></div>
+        <div class="bpc-ar" title="जाणे-येणे"><i class="ln"></i><em class="sw"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h14M14 4l4 4-4 4M20 16H6M10 12l-4 4 4 4"/></svg></em><i class="ln"></i><small>UP · DOWN</small></div>
+        <div class="bpc-pl bpc-to"><span>TO<i class="pin"></i></span><b data-fit="3" data-fit-min="0.48"><?= $h($p['to_place']) ?></b></div>
       </div>
       <?php if ($isAy): ?>
-      <div class="bpc-valid bpc-valid-ay"><span>VALID · ACADEMIC YEAR</span><b class="till" data-fit="1"><?= $h(busAyLabel($p['ay'])) ?></b></div>
+      <div class="bpc-valid bpc-valid-ay"><span class="lb">VALID</span><div><em>ACADEMIC YEAR</em><b class="till" data-fit="1"><?= $h(busAyLabel($p['ay'])) ?></b></div></div>
       <?php else: ?>
-      <div class="bpc-valid"><span>VALID</span><b><?= $h($d($p['valid_from'])) ?></b><span>→</span><b class="till"><?= $h($d($p['valid_till'])) ?></b></div>
+      <div class="bpc-valid"><span class="lb">VALID</span><div><em>FROM</em><b><?= $h($d($p['valid_from'])) ?></b></div><div><em>TILL</em><b class="till"><?= $h($d($p['valid_till'])) ?></b></div></div>
       <?php endif; ?>
     </div>
     <div class="bpc-side">
       <div class="bpc-qr"><?= idCardQrSvg(busPassVerifyUrl($p['organization_id'], $p['id'], $p['valid_till'], (int)($p['bus_student_id'] ?? 0), (string)($p['ay'] ?? ''))) ?><div>SCAN TO VERIFY</div></div>
-      <div class="bpc-sign"><?php if ($set['sign']): ?><img src="<?= $h($rootPath . $set['sign']) ?>" alt=""><?php endif; ?><div><?= $h($set['sign_label']) ?></div></div>
+      <div class="bpc-sign"><div class="im"><?php if ($set['sign']): ?><img src="<?= $h($rootPath . $set['sign']) ?>" alt=""><?php endif; ?></div><div class="lbl"><?= $h($set['sign_label']) ?></div></div>
     </div>
   </div>
   <div class="bpc-foot">
     <span data-fit="1"><?= busPassBusSvg('bpc-fbus') ?><?= ($p['route_name'] ?? '') !== '' ? $h($p['route_name']) : $h($p['from_place']) . ' ⇄ ' . $h($p['to_place']) ?></span>
-    <?php if ($phone !== ''): ?><span class="ph">☎ Parent <?= $h($phone) ?></span><?php endif; ?>
+    <span class="ph"><?= $phone !== '' ? '☎ PARENT ' . $h($phone) : 'NON-TRANSFERABLE' ?></span>
   </div>
   <?php if (in_array($state, ['expired', 'cancelled'], true)): ?><div class="bpc-stamp"><?= $state === 'expired' ? 'EXPIRED' : 'CANCELLED' ?></div><?php endif; ?>
 </div>
