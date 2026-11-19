@@ -37,7 +37,7 @@ $side = in_array($_GET['side'] ?? '', ['front', 'back'], true) ? $_GET['side'] :
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ID Card — <?= h($emp['name']) ?></title>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&family=Noto+Sans+Devanagari:wght@400;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../assets/css/id-card.css?v=4">
+<link rel="stylesheet" href="../assets/css/id-card.css?v=5">
 </head>
 <body class="idc-page">
 <div class="idc-toolbar">
@@ -76,9 +76,11 @@ $side = in_array($_GET['side'] ?? '', ['front', 'back'], true) ? $_GET['side'] :
         if (opt === 'size') sheet.classList.toggle('idc-lg', v === 'lg');
         else sheet.className = sheet.className.replace(/show-\w+/, 'show-' + v);
         var u = new URL(location.href); u.searchParams.set(opt, v); history.replaceState(null, '', u);
+        if (window.idCardFit) window.idCardFit();
       });
     });
   })();
 </script>
+<script src="../assets/js/id-card-fit.js?v=4"></script>
 </body>
 </html>

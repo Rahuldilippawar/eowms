@@ -92,8 +92,8 @@ function idCardFront(array $c, $rootPath = '../') {
     <div class="idc-slot"></div>
     <div class="idc-logo"><?php if ($c['orgLogo']): ?><img src="<?= $h($rootPath . $c['orgLogo']) ?>" alt=""><?php else: ?><span><?= $h(mb_substr($c['org'], 0, 2)) ?></span><?php endif; ?></div>
     <div class="idc-mantra">॥ आत्मा मालिक ॥</div>
-    <div class="idc-org"><?= $h($c['org']) ?></div>
-    <div class="idc-campus"><?= $h($c['campus']) ?></div>
+    <div class="idc-org" data-fit="2" data-fit-min="0.7"><?= $h($c['org']) ?></div>
+    <div class="idc-campus" data-fit="2" data-fit-min="0.55"><?= $h($c['campus']) ?></div>
     <?php if ($c['branch']): ?><div class="idc-branch"><?= $h($c['branch']) ?></div><?php endif; ?>
   </div>
   <div class="idc-photo">
