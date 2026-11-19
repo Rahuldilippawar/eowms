@@ -28,7 +28,6 @@ $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $all = $stmt->fetchAll();
 $noPhoto = array_values(array_filter($all, fn($e) => empty($e['photo_path'])));
-$noEmergency = count(array_filter($all, fn($e) => empty($e['emergency_contact_mobile'])));
 $employees = $onlyPhoto ? array_values(array_filter($all, fn($e) => !empty($e['photo_path']))) : $all;
 
 if (!empty($_GET['generate'])) {
@@ -102,7 +101,6 @@ require_once __DIR__ . '/../includes/smart-insights.php';
 <?= smartTiles([
     ['label' => 'Cards तयार होतील', 'value' => count($employees), 'sub' => $deptId || $codes ? 'निवडलेल्या अटींनुसार' : 'सर्व Active कर्मचारी', 'tone' => 'ok'],
     ['label' => 'फोटो नाही', 'value' => count($noPhoto), 'sub' => count($noPhoto) ? 'Card वर फक्त आद्याक्षरं दिसतील' : 'सगळ्यांचे फोटो आहेत', 'tone' => count($noPhoto) ? 'warn' : 'ok'],
-    ['label' => 'Emergency Contact नाही', 'value' => $noEmergency, 'sub' => 'Back वर हाताने लिहायची जागा', 'tone' => $noEmergency ? 'warn' : 'ok'],
 ]) ?>
 
 <div class="row g-3">
