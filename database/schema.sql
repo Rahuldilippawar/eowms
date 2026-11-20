@@ -3695,6 +3695,29 @@ CREATE TABLE purchase_comparison_rates (
   PRIMARY KEY (item_id, vendor_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- 🧩 मागणीतील वस्तूनिहाय खरेदी स्थिती
+CREATE TABLE purchase_request_items (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  request_id INT NOT NULL,
+  organization_id INT NOT NULL,
+  sort_order INT NOT NULL DEFAULT 0,
+  name VARCHAR(300) NOT NULL,
+  name_key VARCHAR(300) NOT NULL,
+  qty DECIMAL(14,3) NULL,
+  unit VARCHAR(40) NULL,
+  qty_done DECIMAL(14,3) NOT NULL DEFAULT 0,
+  status VARCHAR(10) NOT NULL DEFAULT 'pending',
+  done_on DATE NULL,
+  supplier VARCHAR(150) NULL,
+  bill_no VARCHAR(80) NULL,
+  amount DECIMAL(14,2) NULL,
+  note VARCHAR(255) NULL,
+  done_by INT NULL,
+  updated_at DATETIME NULL,
+  INDEX idx_pri_req (request_id, sort_order),
+  INDEX idx_pri_org (organization_id, status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE purchase_requests (
   id INT AUTO_INCREMENT PRIMARY KEY,
   organization_id INT NOT NULL,

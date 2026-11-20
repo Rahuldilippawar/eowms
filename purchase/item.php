@@ -63,9 +63,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canEdit) {
                 logActivity('खरेदी मागणी नोंद', 'purchase_request', $id, $in['title']);
                 $_SESSION['flash'] = '✓ नवीन खरेदी मागणी नोंदली — "खरेदी बाकी" यादीत.';
             }
+            purchaseItemsSync($pdo, $orgId, $id, $in['items']);   // 🧩 वस्तूनिहाय खरेदी स्थिती
             header('Location: item.php?id=' . $id); exit;
         }
         $row = array_merge($row ?: [], $in);
+    }
+    // 🧩 निवडलेल्या वस्तू खरेदी झाल्या (नग अंशतः सुद्धा)
+    if ($row && $act === 'mark_items' && $row['status'] === 'pending') {
+        $got = [];
+        foreach ((array)($_POST['pick'] ?? []) as $iid) {
+            $iid = (int)$iid; $q = trim((string)($_POST['got'][$iid] ?? ''));
+            $got[$iid] = $q === '' ? null : (float)str_replace(',', '', $q);
+        }
+        $amt = trim((string)($_POST['amount'] ?? '')); $amt = $amt === '' ? null : round((float)str_replace([',', '₹', ' '], '', $amt), 2);
+        $sup = $tx('supplier', 150);
+        $res = $got ? purchaseItemsMark($pdo, $orgId, $row, $got, $dt('done_on') ?: date('Y-m-d'), $sup, $tx('bill_no', 80), $amt, $tx('note', 255), (int)$user['id']) : ['n' => 0];
+        if ($sup !== '' && is_file(__DIR__ . '/../includes/purchase-compare.php')) { require_once __DIR__ . '/../includes/purchase-compare.php'; purchaseSuppliersSync($pdo, $orgId, [$sup], (int)$user['id']); }
+        if (!$res['n']) $_SESSION['flash'] = '⚠️ खरेदी झालेल्या वस्तू निवडा.';
+        else { logActivity('खरेदी — वस्तू खरेदी झाल्या', 'purchase_request', $id, $res['n'] . ' वस्तू'); $_SESSION['flash'] = $res['all_done'] ? '✅ सगळ्या वस्तू खरेदी झाल्या — मागणी "खरेदी पूर्ण" यादीत गेली.' : '✓ ' . ($res['n'] - $res['half']) . ' वस्तू खरेदी झाल्या' . ($res['half'] ? ', ' . $res['half'] . ' अंशतः' : '') . ' — ' . $res['left'] . ' वस्तू अजून बाकी.'; }
+        header('Location: item.php?id=' . $id); exit;
+    }
+    if ($row && $act === 'undo_line' && purchaseItemsReady($pdo)) {
+        $iid = (int)($_POST['item_id'] ?? 0);
+        $st = $pdo->prepare("SELECT name FROM purchase_request_items WHERE id = ? AND request_id = ? AND organization_id = ?"); $st->execute([$iid, $id, $orgId]);
+        if ($nm = $st->fetchColumn()) {
+            $pdo->prepare("UPDATE purchase_request_items SET status = 'pending', qty_done = 0, done_on = NULL, supplier = NULL, bill_no = NULL, amount = NULL, note = NULL, updated_at = NOW() WHERE id = ?")->execute([$iid]);
+            purchaseLog($pdo, $orgId, $id, 'item_undo', $nm, $user['id']);
+            if ($row['status'] === 'done') {   // एखादी वस्तू पुन्हा बाकी → मागणी पुन्हा "खरेदी बाकी"
+                $pdo->prepare("UPDATE purchase_requests SET status = 'pending', updated_by = ?, updated_at = NOW() WHERE id = ?")->execute([$user['id'], $id]);
+                purchaseLog($pdo, $orgId, $id, 'reopened', $nm . ' — पुन्हा बाकी', $user['id']);
+            }
+            $_SESSION['flash'] = '↺ "' . $nm . '" पुन्हा बाकी.';
+        }
+        header('Location: item.php?id=' . $id); exit;
     }
     if ($row && $act === 'cancel_item') {
         $pdo->prepare("UPDATE purchase_requests SET status = 'cancelled', updated_by = ?, updated_at = NOW() WHERE id = ? AND organization_id = ?")->execute([$user['id'], $id, $orgId]);
@@ -107,6 +137,11 @@ $age = $row && !empty($row['id']) ? purchaseAgeDays($row) : null;
   .pi-steps div.on{border-color:#16A34A;color:#166534;} .pi-steps div.cur{border-color:#D97706;color:#92400E;}
   .pi-steps b{display:block;font-size:12.5px;}
   .pi-ev{display:flex;gap:10px;padding:8px 0;border-bottom:1px dashed var(--line);font-size:13px;} .pi-ev small{color:var(--text-dim);}
+    .pi-bar{position:relative;height:16px;border-radius:9px;background:var(--canvas);overflow:hidden;margin-bottom:8px;} .pi-bar i{display:block;height:100%;background:linear-gradient(90deg,#16A34A,#22C55E);} .pi-bar span{position:absolute;inset:0;text-align:center;font-size:11px;font-weight:800;line-height:16px;}
+  table.pi-it{width:100%;border-collapse:collapse;font-size:13px;} table.pi-it th{font-size:11.5px;color:var(--text-dim);font-weight:700;text-align:left;padding:5px;border-bottom:1px solid var(--line);} table.pi-it td{padding:6px 5px;border-bottom:1px dashed var(--line);vertical-align:middle;}
+  table.pi-it tr.ok td:not(:first-child){color:var(--text-dim);} table.pi-it tr.ok td:nth-child(2){text-decoration:line-through;text-decoration-color:#16A34A;}
+  .pi-c{font-size:11.5px;font-weight:700;border-radius:99px;padding:2px 8px;background:#FEF3C7;color:#92400E;white-space:nowrap;} .pi-c.ok{background:#DCFCE7;color:#166534;} .pi-c.half{background:#FFEDD5;color:#9A3412;}
+  table.pi-it small{color:var(--text-dim);font-size:11px;} .pi-undo{border:0;background:none;color:var(--text-dim);cursor:pointer;font-size:13px;}
   .pi-sec{font-size:12px;font-weight:800;letter-spacing:.06em;color:#B45309;text-transform:uppercase;margin:6px 0 2px;}
 </style>
 
@@ -178,6 +213,53 @@ $age = $row && !empty($row['id']) ? purchaseAgeDays($row) : null;
       </div>
       <?php endif; ?>
     </div>
+    <?php // 🧩 साहित्य — वस्तूनिहाय खरेदी स्थिती
+    $IR = $row && !empty($row['id']) ? [$row] : [];
+    if ($IR) purchaseItemsAttach($pdo, $orgId, $IR);
+    $ITS = $IR[0]['_items'] ?? [];
+    if ($ITS): $tot = $IR[0]['_it_total']; $dn = $IR[0]['_it_done']; $pct = $tot ? round($dn * 100 / $tot) : 0; $canMark = $canEdit && $row['status'] === 'pending'; ?>
+    <div class="panel mt-3" style="padding:14px 16px;">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+        <div style="font-weight:800;">📦 साहित्य — खरेदी स्थिती</div>
+        <div style="font-size:13px;"><b style="color:#15803D;"><?= $dn ?></b> खरेदी झाले · <b style="color:#B45309;"><?= $tot - $dn ?></b> बाकी · एकूण <?= $tot ?></div>
+      </div>
+      <div class="pi-bar"><i style="width:<?= $pct ?>%;"></i><span><?= $pct ?>%</span></div>
+      <form method="POST" id="piItems" data-no-smart-filter>
+        <input type="hidden" name="action" value="mark_items"><input type="hidden" name="id" value="<?= (int)$id ?>">
+        <table class="pi-it">
+          <thead><tr><?php if ($canMark): ?><th style="width:30px;"><input type="checkbox" id="piAll" title="सगळ्या बाकी वस्तू निवडा"></th><?php endif; ?><th>वस्तू</th><th style="width:110px;">नग</th><th>स्थिती</th><?php if ($canMark): ?><th style="width:110px;">आता मिळाले</th><?php endif; ?></tr></thead>
+          <tbody>
+          <?php foreach ($ITS as $it): $isDone = $it['status'] === 'done'; $half = !$isDone && (float)$it['qty_done'] > 0; $rem = $it['qty'] !== null ? max(0, (float)$it['qty'] - (float)$it['qty_done']) : null; ?>
+            <tr class="<?= $isDone ? 'ok' : ($half ? 'half' : '') ?>">
+              <?php if ($canMark): ?><td><?php if (!$isDone): ?><input type="checkbox" name="pick[]" value="<?= (int)$it['id'] ?>" class="piPick"><?php endif; ?></td><?php endif; ?>
+              <td><?= h($it['name']) ?></td>
+              <td><?= h(purchaseItemQtyLabel($it)) ?: '—' ?></td>
+              <td><?php if ($isDone): ?><span class="pi-c ok">✅ खरेदी झाले</span> <small><?= h(purchaseDate($it['done_on'])) ?><?= $it['supplier'] ? ' · ' . h($it['supplier']) : '' ?><?= $it['bill_no'] ? ' · बिल ' . h($it['bill_no']) : '' ?></small>
+                  <?php if ($canEdit): ?><button type="submit" form="piUndo<?= (int)$it['id'] ?>" class="pi-undo" title="चुकून नोंदलं — पुन्हा बाकी करा">↺</button><?php endif; ?>
+                <?php elseif ($half): ?><span class="pi-c half">🧩 अंशतः — <?= h(rtrim(rtrim(number_format((float)$rem, 3, '.', ''), '0'), '.')) ?> <?= h((string)$it['unit']) ?> बाकी</span> <small><?= $it['supplier'] ? h($it['supplier']) : '' ?></small>
+                <?php else: ?><span class="pi-c">⏳ बाकी</span><?php endif; ?></td>
+              <?php if ($canMark): ?><td><?php if (!$isDone): ?><input type="number" name="got[<?= (int)$it['id'] ?>]" class="form-control-custom pi-got" min="0" step="any" value="<?= $rem !== null ? h(rtrim(rtrim(number_format($rem, 3, '.', ''), '0'), '.')) : '' ?>" placeholder="<?= $rem === null ? 'पूर्ण' : '' ?>" style="padding:4px 6px;"><?php endif; ?></td><?php endif; ?>
+            </tr>
+          <?php endforeach; ?>
+          </tbody>
+        </table>
+        <?php if ($canMark && $dn < $tot): ?>
+        <div class="row g-2 mt-1" style="font-size:13px;">
+          <div class="col-md-3 col-6"><label class="form-label-custom">खरेदी दिनांक</label><input type="date" name="done_on" class="form-control-custom" value="<?= date('Y-m-d') ?>" max="<?= date('Y-m-d') ?>"></div>
+          <div class="col-md-4 col-6"><label class="form-label-custom">पुरवठादार</label><input type="text" name="supplier" class="form-control-custom" maxlength="150" list="piSup" autocomplete="off"></div>
+          <div class="col-md-2 col-6"><label class="form-label-custom">बिल क्र.</label><input type="text" name="bill_no" class="form-control-custom" maxlength="80"></div>
+          <div class="col-md-3 col-6"><label class="form-label-custom">बिल रक्कम ₹</label><input type="number" name="amount" class="form-control-custom" min="0" step="0.01" inputmode="decimal"></div>
+          <div class="col-12"><input type="text" name="note" class="form-control-custom" maxlength="255" placeholder="शेरा (ऐच्छिक)"></div>
+        </div>
+        <button type="submit" class="btn btn-sm mt-2" id="piGo" style="background:#16A34A;color:#fff;border-radius:9px;font-weight:700;" disabled>✓ निवडलेल्या वस्तू खरेदी झाल्या</button>
+        <span style="font-size:12px;color:var(--text-dim);margin-left:6px;">"आता मिळाले" कमी लिहिलं तर ती वस्तू 🧩 अंशतः राहते; सगळ्या झाल्या की मागणी आपोआप "खरेदी पूर्ण".</span>
+        <?php endif; ?>
+      </form>
+      <?php if ($canEdit): foreach ($ITS as $it): if ($it['status'] === 'done' || (float)$it['qty_done'] > 0): ?>
+        <form method="POST" id="piUndo<?= (int)$it['id'] ?>" onsubmit="return confirm('&quot;<?= h(addslashes($it['name'])) ?>&quot; पुन्हा बाकी करायची?');" style="display:none;"><input type="hidden" name="action" value="undo_line"><input type="hidden" name="id" value="<?= (int)$id ?>"><input type="hidden" name="item_id" value="<?= (int)$it['id'] ?>"></form>
+      <?php endif; endforeach; endif; ?>
+    </div>
+    <?php endif; ?>
   </div>
   <div class="col-lg-4">
     <?php if ($canEdit && $row && !empty($row['id'])): ?>
@@ -237,5 +319,15 @@ $age = $row && !empty($row['id']) ? purchaseAgeDays($row) : null;
   </div>
 </div>
 
+<script>
+window.addEventListener('load', function () {
+  var f = document.getElementById('piItems'); if (!f) return;
+  var go = document.getElementById('piGo'), all = document.getElementById('piAll');
+  var upd = function () { var n = f.querySelectorAll('.piPick:checked').length; if (go) { go.disabled = !n; go.textContent = n ? '✓ निवडलेल्या ' + n + ' वस्तू खरेदी झाल्या' : '✓ निवडलेल्या वस्तू खरेदी झाल्या'; } };
+  f.addEventListener('change', function (e) { if (e.target.classList.contains('piPick')) upd(); });
+  f.querySelectorAll('.pi-got').forEach(function (g) { g.addEventListener('input', function () { var c = g.closest('tr').querySelector('.piPick'); if (c && !c.checked) { c.checked = true; upd(); } }); });
+  if (all) all.addEventListener('change', function () { f.querySelectorAll('.piPick').forEach(function (c) { c.checked = all.checked; }); upd(); });
+});
+</script>
 <?php if (purchaseReady($pdo)) { require_once __DIR__ . '/../includes/purchase-compare.php'; ?><datalist id="piSup"><?php foreach (purchaseSupplierNames($pdo, $orgId) as $sn): ?><option value="<?= h($sn) ?>"><?php endforeach; ?></datalist><?php } ?>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>
