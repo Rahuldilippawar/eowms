@@ -483,6 +483,15 @@ function navGroupHead($id, $key, $activeGroup, $icon, $label, $badge = 0) {
     <?php endif; ?>
     <?php navSectionEnd('खरेदी विभाग', 'fa-solid fa-cart-shopping'); ?>
 
+    <!-- ==================== 🧾 मासिक बिल ताळमेळ — भांडार · खरेदी · लेखा ==================== -->
+    <?php navSectionStart(); ?>
+    <?php if (hasRole('super_admin') || hasPermission('bill_recon_store') || hasPermission('manage_purchase') || hasPermission('bill_recon_accounts') || isManagementOrAbove()): ?>
+      <a href="<?= $rp ?>bill-recon/index.php" class="tree-node <?= $currentDir === 'bill-recon' ? 'active' : '' ?>">
+        <i class="fa-solid fa-scale-balanced fa-fw"></i><span>मासिक बिल ताळमेळ</span>
+      </a>
+    <?php endif; ?>
+    <?php navSectionEnd('बिल ताळमेळ', 'fa-solid fa-scale-balanced'); ?>
+
     <!-- ==================== 🏢 संस्था कामकाज — सुविधा, उपक्रम, मालमत्ता, तांत्रिक, आर्थिक ==================== -->
     <?php navSectionStart(); ?>
     <?php // पूर्वीचे "विभाग Budget" + "Material Purchase व Payment" — आता एकच; दोन्हीपैकी कुठलीही परवानगी पुरेशी ?>
