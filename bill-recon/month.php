@@ -25,14 +25,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $mName = billReconMonthName($p);
 
     if (in_array($act, ['save_count', 'approve_dept', 'withdraw_approval'], true)) {
-        if (!billReconCan($dept)) { http_response_code(403); die('या विभागाची परवानगी नाही.'); }
+        if (!isset($depts[$dept])) { http_response_code(400); die('चुकीचा विभाग.'); }
+        // संख्या — विभागाची परवानगी; मान्यता / मान्यता काढणे — फक्त जबाबदार अधिकारी
+        if ($act === 'save_count' && !billReconCan($dept)) { http_response_code(403); die('या विभागाची परवानगी नाही.'); }
+        if ($act !== 'save_count' && !billReconCanApprove($pdo, $orgId, $dept)) { http_response_code(403); die('या विभागाची मान्यता फक्त जबाबदार अधिकारी देऊ शकतात.'); }
+        $uName = billReconPersonLabel($user) ?: $uName;
         $dn = $depts[$dept][0];
         if ($act === 'save_count') {
             $raw = trim((string)($_POST['count'] ?? ''));
             $c = $raw === '' ? null : max(0, min(100000, (int)$raw));
             $note = mb_substr(trim((string)($_POST['note'] ?? '')), 0, 255);
             $changed = (string)$row[$dept . '_count'] !== (string)$c;
-            $approve = !empty($_POST['approve_now']) && $c !== null;
+            $approve = !empty($_POST['approve_now']) && $c !== null && billReconCanApprove($pdo, $orgId, $dept);
             if ($changed && $row[$dept . '_at']) {
                 // संख्या बदलली — आधीची मान्यता रद्द (नवीन संख्येवर पुन्हा मान्यता हवी)
                 $pdo->prepare("UPDATE bill_recon_months SET {$dept}_by = NULL, {$dept}_name = NULL, {$dept}_at = NULL WHERE id = ?")->execute([$mid]);
@@ -165,7 +169,7 @@ require_once __DIR__ . '/../includes/header.php';
 </div>
 
 <div class="bm-cards">
-<?php foreach ($depts as $k => $d): $c = $r[$k . '_count']; $can = billReconCan($k); ?>
+<?php foreach ($depts as $k => $d): $c = $r[$k . '_count']; $can = billReconCan($k); $canAp = billReconCanApprove($pdo, $orgId, $k); $resp = billReconResponsible($pdo, $orgId, $k); ?>
   <div class="bm-card">
     <div class="top" style="border-top-color:<?= $colors[$k] ?>;">
       <div class="nm"><?= $d[1] ?> <?= h($d[0]) ?></div>
@@ -178,20 +182,20 @@ require_once __DIR__ . '/../includes/header.php';
       <input type="hidden" name="action" value="save_count"><input type="hidden" name="dept" value="<?= $k ?>">
       <div class="d-flex gap-2"><input type="number" name="count" class="form-control-custom" min="0" max="100000" value="<?= $c === null ? '' : (int)$c ?>" placeholder="बिलांची संख्या" inputmode="numeric" style="max-width:130px;">
         <input type="text" name="note" class="form-control-custom" maxlength="255" value="<?= h($r[$k . '_note']) ?>" placeholder="टीप (ऐच्छिक)"></div>
-      <?php if (!$r[$k . '_at']): ?><label style="font-size:12px;margin-top:6px;display:flex;gap:6px;align-items:flex-start;"><input type="checkbox" name="approve_now" value="1" style="margin-top:3px;"> <span>✍️ संख्या खात्री करून बरोबर आहे — <b>डिजिटल मान्यता</b> द्या</span></label><?php endif; ?>
+      <?php if (!$r[$k . '_at'] && $canAp): ?><label style="font-size:12px;margin-top:6px;display:flex;gap:6px;align-items:flex-start;"><input type="checkbox" name="approve_now" value="1" style="margin-top:3px;"> <span>✍️ संख्या खात्री करून बरोबर आहे — <b>डिजिटल मान्यता</b> द्या</span></label><?php endif; ?>
       <button type="submit" class="btn btn-sm mt-2" style="background:<?= $colors[$k] ?>;color:#fff;border-radius:9px;font-weight:700;">✓ जतन</button>
     </form>
     <?php endif; ?>
     <?php if ($r[$k . '_at']): $paper = !$r[$k . '_by']; ?>
       <div class="bm-sign">
-        <b>✍️ <?= $paper ? 'कागदी सही' : 'डिजिटल मान्यता' ?></b><br>
+        <b>✅ Approved by: <?= h($r[$k . '_name'] ?: '—') ?></b><br>
         वरील आकडेवारी <b><?= h($r[$k . '_name'] ?: '—') ?></b> यांनी खात्री करून दिली असून बरोबर आहे.
         <div class="code"><?= h(date('d.m.Y h:i A', strtotime($r[$k . '_at']))) ?><?= $paper ? '' : ' · पडताळणी कोड ' . h(billReconSignCode($r, $k)) ?></div>
-        <?php if ($can): ?><form method="POST" class="m-0 p-0 mt-1" onsubmit="return confirm('<?= h($d[4]) ?> मान्यता काढायची?');" data-no-smart-filter><input type="hidden" name="action" value="withdraw_approval"><input type="hidden" name="dept" value="<?= $k ?>"><button type="submit" style="border:0;background:none;padding:0;font-size:11.5px;color:var(--text-dim);">↺ मान्यता काढा</button></form><?php endif; ?>
+        <?php if ($canAp): ?><form method="POST" class="m-0 p-0 mt-1" onsubmit="return confirm('<?= h($d[4]) ?> मान्यता काढायची?');" data-no-smart-filter><input type="hidden" name="action" value="withdraw_approval"><input type="hidden" name="dept" value="<?= $k ?>"><button type="submit" style="border:0;background:none;padding:0;font-size:11.5px;color:var(--text-dim);">↺ मान्यता काढा</button></form><?php endif; ?>
       </div>
     <?php elseif ($c !== null): ?>
-      <div class="bm-sign pend">⏳ <?= h($d[4]) ?> डिजिटल मान्यता बाकी
-        <?php if ($can): ?><form method="POST" class="m-0 p-0 mt-1" onsubmit="return confirm('<?= (int)$c ?> बिलं — खात्री करून डिजिटल मान्यता द्यायची?');" data-no-smart-filter><input type="hidden" name="action" value="approve_dept"><input type="hidden" name="dept" value="<?= $k ?>"><button type="submit" class="btn btn-sm" style="background:#16A34A;color:#fff;border-radius:8px;font-weight:700;">✍️ मान्यता द्या</button></form><?php endif; ?>
+      <div class="bm-sign pend">⏳ <?= h($d[4]) ?> मान्यता बाकी<div style="font-size:11.5px;color:var(--text-dim);"><?= $resp ? '👤 जबाबदार: ' . h(billReconPersonLabel($resp)) : 'जबाबदार अधिकारी नेमलेले नाहीत — विभागाचे परवानगीधारक कर्मचारी मान्यता देतील' ?></div>
+        <?php if ($canAp): ?><form method="POST" class="m-0 p-0 mt-1" onsubmit="return confirm('<?= (int)$c ?> बिलं — खात्री करून डिजिटल मान्यता द्यायची?');" data-no-smart-filter><input type="hidden" name="action" value="approve_dept"><input type="hidden" name="dept" value="<?= $k ?>"><button type="submit" class="btn btn-sm" style="background:#16A34A;color:#fff;border-radius:8px;font-weight:700;">✍️ मान्यता द्या</button></form><?php endif; ?>
       </div>
     <?php endif; ?>
   </div>

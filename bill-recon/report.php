@@ -152,7 +152,7 @@ $maxC = max(1, ...array_map(fn($r) => max((int)$r['store_count'], (int)$r['purch
     <?php foreach ($depts as $k => $d): $sg = $signs[$k]; ?>
       <div>
         <?php if ($sg['names']): ?>
-          <div class="stamp">✍️ <?= $sg['digital'] ? 'डिजिटल मान्यता' : 'मान्यता (कागदी सही)' ?><small><?= $h($N(date('d.m.Y', strtotime($sg['last'])))) ?></small></div>
+          <div class="stamp">✅ Approved by<small style="font-size:12px;font-weight:800;color:#166534;"><?= $h(implode(', ', array_keys($sg['names']))) ?></small><small><?= $h($N(date('d.m.Y', strtotime($sg['last'])))) ?></small></div>
           <div>वरील आकडेवारी <?php $nm = array_keys($sg['names']); echo $h(implode(', ', $nm)); ?> यांनी खात्री करून दिली असून बरोबर आहे.</div>
         <?php endif; ?>
         <?php if ($sg['pending']): ?><div class="stamp p" style="margin-top:6px;">⏳ मान्यता बाकी<small><?= $h(implode(', ', array_map(fn($p) => billReconMonthName($p, false), $sg['pending']))) ?></small></div><?php endif; ?>
