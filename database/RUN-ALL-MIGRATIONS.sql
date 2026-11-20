@@ -5116,3 +5116,13 @@ ALTER TABLE bill_recon_months ADD COLUMN kitchen_at DATETIME NULL AFTER kitchen_
 UPDATE bill_recon_months SET kitchen_count = GREATEST(purchase_count - store_count, 0) WHERE kitchen_count IS NULL AND store_count IS NOT NULL AND purchase_count IS NOT NULL;
 INSERT IGNORE INTO permissions (permission_key, label, label_local, sort_order) VALUES
   ('bill_recon_kitchen', 'Kitchen (Bhojanalay) — monthly bill count & digital approval (bill reconciliation)', 'भोजनालय विभाग — मासिक बिल संख्या व डिजिटल मान्यता (बिल ताळमेळ)', 53);
+
+-- ============================================================
+-- FROM: migration-bill-recon-cmk-fix.sql
+-- ============================================================
+-- 🧾 बिल ताळमेळ — कागदी तक्त्यावरून आयात दुरुस्ती: CMK ट्रेडर्सचं फक्त 1 बिल (64 नव्हे), खरेदी विभागाकडे जमा
+UPDATE bill_recon_issues SET bill_count = 1, held_at = 'purchase', status = 'open', resolved_note = NULL, resolved_at = NULL, resolved_by = NULL,
+  reason = 'किचन साहित्य खरेदीचे बिल तीन कोटेशन अभावी जमा नाही — खरेदी विभागाकडे जमा आहे'
+  WHERE party = 'CMK ट्रेडर्स' AND bill_count = 64;
+UPDATE bill_recon_issues SET held_at = 'accounts', status = 'resolved', resolved_note = 'कागदी तक्त्यावर खोडले — मिटले', reason = 'मूळ बिले प्राप्त न झाल्याने जमा करणे बाकी'
+  WHERE party = 'श्री गणेश मेडिकल स्टोअर्स' AND bill_count = 2 AND status = 'open' AND resolved_by IS NULL AND reason = 'मूळ बिले प्राप्त न झाल्याने लेखा विभागात जमा करणे बाकी';

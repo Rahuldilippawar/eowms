@@ -80,6 +80,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             billReconNotifyOthers($pdo, $orgId, '', '⚠️ बिल ताळमेळ फरक — ' . $mName, ($party ? $party . ': ' : '') . $bc . ' बिलं — ' . $reason, $link, $user['id']);
             $flash = '✓ फरकाचं कारण नोंदलं.';
         }
+    } elseif ($act === 'save_issue' && billReconCanAny()) {
+        // कारण दुरुस्त करणे (पुरवठादार, बिलांची संख्या, कुठे, कारण)
+        $iid = (int)($_POST['issue_id'] ?? 0);
+        $st = $pdo->prepare("SELECT * FROM bill_recon_issues WHERE id = ? AND month_id = ? AND organization_id = ?"); $st->execute([$iid, $mid, $orgId]); $iss = $st->fetch();
+        $reason = mb_substr(trim((string)($_POST['reason'] ?? '')), 0, 500);
+        if ($iss && mb_strlen($reason) >= 3) {
+            $party = mb_substr(trim((string)($_POST['party'] ?? '')), 0, 150);
+            $bc = max(1, min(100000, (int)($_POST['bill_count'] ?? 1)));
+            $held = isset($depts[$_POST['held_at'] ?? '']) ? $_POST['held_at'] : $iss['held_at'];
+            $pdo->prepare("UPDATE bill_recon_issues SET party = ?, bill_count = ?, held_at = ?, reason = ? WHERE id = ?")->execute([$party ?: null, $bc, $held, $reason, $iid]);
+            billReconLog($pdo, $orgId, $mid, 'issue', '✎ ' . ($party ? $party . ' — ' : '') . $iss['bill_count'] . ' → ' . $bc . ' बिलं — ' . $reason, $user['id']);
+            $flash = '✓ कारण दुरुस्त केलं.';
+        } else { $flash = '⚠️ फरकाचं कारण लिहा.'; }
     } elseif (in_array($act, ['resolve_issue', 'reopen_issue'], true) && billReconCanAny()) {
         $iid = (int)($_POST['issue_id'] ?? 0);
         $st = $pdo->prepare("SELECT * FROM bill_recon_issues WHERE id = ? AND month_id = ? AND organization_id = ?"); $st->execute([$iid, $mid, $orgId]); $iss = $st->fetch();
@@ -222,6 +235,14 @@ require_once __DIR__ . '/../includes/header.php';
           <div class="rs"><b><?= $n + 1 ?>) <?= h($i['party'] ?: 'बिलं') ?></b> — <?= (int)$i['bill_count'] ?> बिलं · <?= h($i['reason']) ?></div>
           <div style="font-size:12px;margin-top:3px;"><?= $i['status'] === 'open' ? '📍 ' . h($depts[$i['held_at']][3] ?? '') . ' जमा / अडकली' : '✅ मिटले ' . ($i['resolved_at'] ? date('d.m.Y', strtotime($i['resolved_at'])) : '') . ($i['resolved_note'] ? ' — ' . h($i['resolved_note']) : '') ?></div>
           <?php if (billReconCanAny()): ?>
+            <details class="mt-1"><summary style="font-size:12px;color:var(--text-dim);cursor:pointer;">✎ दुरुस्त करा</summary>
+              <form method="POST" class="row g-2 mt-1" data-no-smart-filter><input type="hidden" name="action" value="save_issue"><input type="hidden" name="issue_id" value="<?= (int)$i['id'] ?>">
+                <div class="col-md-5"><input type="text" name="party" class="form-control-custom" maxlength="150" value="<?= h($i['party']) ?>" placeholder="पुरवठादार / बिल"></div>
+                <div class="col-md-2 col-4"><input type="number" name="bill_count" class="form-control-custom" min="1" value="<?= (int)$i['bill_count'] ?>" title="बिलं"></div>
+                <div class="col-md-5 col-8"><select name="held_at" class="form-select-custom"><?php foreach ($depts as $dk => $dd): ?><option value="<?= $dk ?>" <?= $dk === $i['held_at'] ? 'selected' : '' ?>>📍 <?= h($dd[3]) ?></option><?php endforeach; ?></select></div>
+                <div class="col-12 d-flex gap-2"><input type="text" name="reason" class="form-control-custom" maxlength="500" required value="<?= h($i['reason']) ?>"><button type="submit" class="btn btn-sm" style="background:#0891B2;color:#fff;border-radius:8px;white-space:nowrap;font-weight:700;">✓ जतन</button></div>
+              </form>
+            </details>
             <?php if ($i['status'] === 'open'): ?>
               <form method="POST" class="d-flex gap-2 mt-2" data-no-smart-filter><input type="hidden" name="action" value="resolve_issue"><input type="hidden" name="issue_id" value="<?= (int)$i['id'] ?>">
                 <input type="text" name="note" class="form-control-custom" maxlength="255" placeholder="कसा मिटला (उदा. कोटेशन मिळाले, बिल लेखा विभागाला दिले)"><button type="submit" class="btn btn-sm" style="background:#16A34A;color:#fff;border-radius:8px;white-space:nowrap;font-weight:700;">✓ मिटले</button></form>
