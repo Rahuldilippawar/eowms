@@ -32,6 +32,12 @@ if ($ready && $canEdit && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $bill = mb_substr(trim((string)($_POST['bill_no'] ?? '')), 0, 80); $sup = mb_substr(trim((string)($_POST['supplier'] ?? '')), 0, 150); $note = mb_substr(trim((string)($_POST['done_note'] ?? '')), 0, 255);
         $pdo->prepare("UPDATE purchase_requests SET status = 'done', done_on = ?, actual_amount = ?, bill_no = ?, supplier = ?, done_note = ?, done_by = ?, updated_by = ?, updated_at = NOW() WHERE id = ? AND organization_id = ?")
             ->execute([$on, $amt, $bill ?: null, $sup ?: null, $note ?: null, $user['id'], $user['id'], $id, $orgId]);
+        // सगळ्या (बाकी) वस्तू खरेदी झाल्या
+        if (purchaseItemsReady($pdo)) {
+            purchaseItemsEnsure($pdo, $orgId, [$row]);
+            $pdo->prepare("UPDATE purchase_request_items SET status = 'done', qty_done = COALESCE(qty, qty_done), done_on = ?, supplier = COALESCE(supplier, ?), bill_no = COALESCE(bill_no, ?), done_by = ?, updated_at = NOW() WHERE request_id = ? AND status = 'pending'")
+                ->execute([$on, $sup ?: null, $bill ?: null, $user['id'], $id]);
+        }
         // आवक क्र. दिलेला नसेल तर आपोआप
         if (trim((string)$row['inward_no']) === '') {
             $ind = $row['inward_date'] ?: $on; $ino = purchaseNextInward($pdo, $orgId, $ind, $id);
@@ -46,6 +52,11 @@ if ($ready && $canEdit && $_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     if ($act === 'reopen_item') {
         $pdo->prepare("UPDATE purchase_requests SET status = 'pending', updated_by = ?, updated_at = NOW() WHERE id = ? AND organization_id = ?")->execute([$user['id'], $id, $orgId]);
+        // सगळ्या वस्तू "खरेदी झाले" होत्या → पुन्हा बाकी (एखादीच बाकी करायची असेल तर मागणीच्या पानावर ↺)
+        if (purchaseItemsReady($pdo)) {
+            $c = $pdo->prepare("SELECT SUM(status = 'pending') FROM purchase_request_items WHERE request_id = ?"); $c->execute([$id]);
+            if ((int)$c->fetchColumn() === 0) $pdo->prepare("UPDATE purchase_request_items SET status = 'pending', qty_done = 0, done_on = NULL, updated_at = NOW() WHERE request_id = ?")->execute([$id]);
+        }
         purchaseLog($pdo, $orgId, $id, 'reopened', mb_substr(trim((string)($_POST['note'] ?? '')), 0, 255) ?: null, $user['id']);
         logActivity('खरेदी पुन्हा बाकी', 'purchase_request', $id, $row['title']);
         $_SESSION['flash'] = '↺ "' . mb_strimwidth($row['title'], 0, 60, '…') . '" पुन्हा खरेदी बाकी यादीत.';
@@ -56,7 +67,7 @@ if ($ready && $canEdit && $_SERVER['REQUEST_METHOD'] === 'POST') {
 // ---------- Filters ----------
 $tab = in_array($_GET['tab'] ?? '', ['done', 'cancelled', 'all'], true) ? $_GET['tab'] : 'pending';
 $f = ['fy' => preg_match('/^\d{4}-\d{2}$/', (string)($_GET['fy'] ?? '')) ? $_GET['fy'] : '', 'dept' => trim((string)($_GET['dept'] ?? '')),
-    'stage' => in_array($_GET['stage'] ?? '', ['approve', 'order', 'process', 'old'], true) ? $_GET['stage'] : '', 'q' => trim((string)($_GET['q'] ?? ''))];
+    'stage' => in_array($_GET['stage'] ?? '', ['approve', 'order', 'process', 'partial', 'old'], true) ? $_GET['stage'] : '', 'q' => trim((string)($_GET['q'] ?? ''))];
 $qs = function (array $over = []) use ($tab, $f) { $q = array_filter(array_merge(['tab' => $tab !== 'pending' ? $tab : '', 'fy' => $f['fy'], 'dept' => $f['dept'], 'stage' => $f['stage'], 'q' => $f['q']], $over), fn($v) => $v !== '' && $v !== null); return 'index.php' . ($q ? '?' . http_build_query($q) : ''); };
 
 $rows = []; $K = []; $byDept = []; $fys = []; $counts = ['pending' => 0, 'done' => 0, 'cancelled' => 0]; $total = 0; $page = 1; $pages = 1; $hasAny = false;
@@ -76,6 +87,14 @@ if ($ready) {
         SUM((approval_no IS NOT NULL OR approval_date IS NOT NULL) AND inward_no IS NULL AND inward_date IS NULL) s_ord,
         SUM(inward_no IS NOT NULL OR inward_date IS NOT NULL) s_pro, SUM($age > 90) old90, MAX($age) maxage $base AND r.status = 'pending'");
     $st->execute($bp); $K = $st->fetch();
+    // 🧩 अंशतः खरेदी — काही वस्तू खरेदी झाल्या, काही बाकी
+    $partialSql = "EXISTS (SELECT 1 FROM purchase_request_items pi WHERE pi.request_id = r.id AND pi.status = 'done') AND EXISTS (SELECT 1 FROM purchase_request_items pi2 WHERE pi2.request_id = r.id AND pi2.status = 'pending')";
+    $K['partial'] = 0; $K['it_done'] = 0; $K['it_left'] = 0;
+    if (purchaseItemsReady($pdo)) {
+        $st = $pdo->prepare("SELECT COUNT(*) $base AND r.status = 'pending' AND $partialSql"); $st->execute($bp); $K['partial'] = (int)$st->fetchColumn();
+        $st = $pdo->prepare("SELECT SUM(pi.status = 'done'), SUM(pi.status = 'pending') FROM purchase_request_items pi JOIN purchase_requests r ON r.id = pi.request_id WHERE r.organization_id = ? AND r.status = 'pending'" . ($f['fy'] !== '' ? " AND r.fy = ?" : '') . ($f['dept'] !== '' ? " AND r.department = ?" : ''));
+        $st->execute(array_values(array_filter([$orgId, $f['fy'] ?: null, $f['dept'] ?: null], fn($x) => $x !== null))); [$K['it_done'], $K['it_left']] = array_map('intval', $st->fetch(PDO::FETCH_NUM));
+    }
     $st = $pdo->prepare("SELECT COUNT(*) n, SUM(COALESCE(actual_amount, est_amount, 0)) amt, AVG(DATEDIFF(done_on, COALESCE(demand_date, approval_date, inward_date, DATE(created_at)))) avgdays $base AND r.status = 'done'");
     $st->execute($bp); $D = $st->fetch();
     $st = $pdo->prepare("SELECT department, COUNT(*) n, SUM(COALESCE(est_amount,0)) amt $base AND r.status = 'pending' GROUP BY department ORDER BY amt DESC, n DESC");
@@ -87,11 +106,13 @@ if ($ready) {
     elseif ($tab === 'pending' && $f['stage'] === 'order') $where .= " AND (r.approval_no IS NOT NULL OR r.approval_date IS NOT NULL) AND r.inward_no IS NULL AND r.inward_date IS NULL";
     elseif ($tab === 'pending' && $f['stage'] === 'process') $where .= " AND (r.inward_no IS NOT NULL OR r.inward_date IS NOT NULL)";
     elseif ($tab === 'pending' && $f['stage'] === 'old') $where .= " AND $age > 90";
+    elseif ($tab === 'pending' && $f['stage'] === 'partial' && purchaseItemsReady($pdo)) $where .= " AND $partialSql";
     $st = $pdo->prepare("SELECT COUNT(*) $where"); $st->execute($wp); $total = (int)$st->fetchColumn();
     $per = 30; $pages = max(1, (int)ceil($total / $per)); $page = min($pages, max(1, (int)($_GET['pg'] ?? 1)));
     $order = $tab === 'done' ? "r.done_on DESC, r.id DESC" : "r.fy, r.sr_no, r.id";
     $st = $pdo->prepare("SELECT r.*, u.name done_by_name FROM purchase_requests r LEFT JOIN users u ON u.id = r.done_by" . substr($where, strlen(" FROM purchase_requests r")) . " ORDER BY $order LIMIT $per OFFSET " . (($page - 1) * $per));
     $st->execute($wp); $rows = $st->fetchAll();
+    purchaseItemsAttach($pdo, $orgId, $rows);   // वस्तूनिहाय खरेदी स्थिती
 
     // 📊 Excel
     if (($_GET['export'] ?? '') === 'csv') {
@@ -135,6 +156,9 @@ $ageCls = fn($d) => $d === null ? '' : ($d > 90 ? 'a-red' : ($d > 45 ? 'a-amb' :
   .a-red{background:#FEE2E2;color:#991B1B;} .a-amb{background:#FEF3C7;color:#92400E;} .a-grn{background:#ECFDF5;color:#166534;}
   .pu-dept{font-size:11.5px;font-weight:700;color:#B45309;}
   .pu-items{margin:6px 0 0;padding-left:16px;font-size:12.5px;color:var(--text);} .pu-items li{margin:1px 0;}
+  .pu-items li.ok{color:var(--text-dim);text-decoration:line-through;text-decoration-color:#16A34A;} .pu-items li.half{color:#92400E;} .pu-items small{color:var(--text-dim);}
+  .pu-prog{display:flex;align-items:center;gap:8px;font-size:12px;margin-top:6px;} .pu-bar{width:120px;height:7px;border-radius:9px;background:var(--canvas);overflow:hidden;} .pu-bar i{display:block;height:100%;background:linear-gradient(90deg,#16A34A,#22C55E);}
+  .st-partial{background:#FFEDD5;color:#9A3412;}
   .pu-more{font-size:12px;color:var(--rail);cursor:pointer;border:0;background:none;padding:0;}
   .pu-note{margin-top:6px;font-size:12px;border-left:3px solid #F59E0B;padding:3px 8px;background:color-mix(in srgb,#F59E0B 8%,transparent);border-radius:0 6px 6px 0;}
   .pu-note.done{border-color:#16A34A;background:color-mix(in srgb,#16A34A 8%,transparent);}
@@ -190,6 +214,7 @@ $ageCls = fn($d) => $d === null ? '' : ($d > 90 ? 'a-red' : ($d > 45 ? 'a-amb' :
     ['label' => '⏳ मंजुरी बाकी', 'value' => (int)$K['s_app'], 'sub' => 'मंजुरी क्र. / दिनांक नाही', 'tone' => (int)$K['s_app'] ? 'bad' : 'ok', 'href' => $qs(['tab' => '', 'stage' => 'approve'])],
     ['label' => '📝 आवक / आदेश बाकी', 'value' => (int)$K['s_ord'], 'sub' => 'मंजुरी झाली', 'tone' => (int)$K['s_ord'] ? 'warn' : 'ok', 'href' => $qs(['tab' => '', 'stage' => 'order'])],
     ['label' => '🛒 खरेदी प्रक्रियेत', 'value' => (int)$K['s_pro'], 'sub' => 'आवक क्र. दिला', 'href' => $qs(['tab' => '', 'stage' => 'process'])],
+    ['label' => '🧩 अंशतः खरेदी', 'value' => (int)$K['partial'], 'sub' => (int)$K['it_done'] . ' वस्तू खरेदी झाल्या · ' . (int)$K['it_left'] . ' बाकी', 'tone' => (int)$K['partial'] ? 'warn' : '', 'href' => $qs(['tab' => '', 'stage' => 'partial'])],
     ['label' => '⏰ 90+ दिवस जुने', 'value' => (int)$K['old90'], 'sub' => $K['maxage'] !== null ? 'सर्वात जुनं ' . (int)$K['maxage'] . ' दिवस' : '—', 'tone' => (int)$K['old90'] ? 'bad' : 'ok', 'href' => $qs(['tab' => '', 'stage' => 'old'])],
 ]) ?>
 <?php if ((int)$D['n']): ?><div style="font-size:12.5px;color:var(--text-dim);margin:-6px 0 10px;">✅ खरेदी पूर्ण: <b style="color:var(--text);"><?= (int)$D['n'] ?></b> · <?= h(purchaseInr($D['amt'])) ?> · सरासरी <?= (int)round($D['avgdays']) ?> दिवसांत पूर्ण</div><?php endif; ?>
@@ -219,7 +244,12 @@ $ageCls = fn($d) => $d === null ? '' : ($d > 90 ? 'a-red' : ($d > 45 ? 'a-amb' :
         <span style="font-size:11px;color:var(--text-dim);">आ.व. <?= h(purchaseFyLabel($r['fy'])) ?></span>
       </div>
       <a href="item.php?id=<?= (int)$r['id'] ?>" class="pu-tt" style="color:inherit;text-decoration:none;"><?= h($r['title']) ?></a>
-      <?php if ($its): ?>
+      <?php if (!empty($r['_items'])): $tot = $r['_it_total']; $dn = $r['_it_done']; $pct = $tot ? round($dn * 100 / $tot) : 0; ?>
+        <div class="pu-prog"><div class="pu-bar"><i style="width:<?= $pct ?>%;"></i></div><b><?= $dn ?>/<?= $tot ?></b> खरेदी झाले<?= $tot - $dn ? ' · <span style="color:#B45309;font-weight:700;">' . ($tot - $dn) . ' बाकी</span>' : '' ?></div>
+        <ul class="pu-items"><?php $sortedIt = $r['_items']; usort($sortedIt, fn($x, $y) => [$x['status'] === 'done', $x['sort_order']] <=> [$y['status'] === 'done', $y['sort_order']]); foreach ($sortedIt as $ix => $it): ?><li class="<?= $it['status'] === 'done' ? 'ok' : ((float)$it['qty_done'] > 0 ? 'half' : '') ?><?= $ix >= 4 ? ' pu-more-it' : '' ?>"<?= $ix >= 4 ? ' style="display:none;"' : '' ?>><?= $it['status'] === 'done' ? '✅ ' : ((float)$it['qty_done'] > 0 ? '🧩 ' : '') ?><?= h($it['name']) ?><?= ($ql = purchaseItemQtyLabel($it)) !== '' ? ' <small>— ' . h($ql) . '</small>' : '' ?></li><?php endforeach; ?>
+          <?php if (count($r['_items']) > 4): ?><li style="list-style:none;margin-left:-16px;"><button type="button" class="pu-more" onclick="var l=this.closest('ul').querySelectorAll('.pu-more-it'),o=l[0].style.display==='none';l.forEach(function(x){x.style.display=o?'':'none';});this.textContent=o?'− कमी दाखवा':'＋ आणखी <?= count($r['_items']) - 4 ?>';">＋ आणखी <?= count($r['_items']) - 4 ?></button></li><?php endif; ?>
+        </ul>
+      <?php elseif ($its): ?>
         <ul class="pu-items"><?php foreach (array_slice($its, 0, 3) as $it): ?><li><?= h($it) ?></li><?php endforeach; ?>
           <?php if (count($its) > 3): ?><span class="pu-hid" style="display:none;"><?php foreach (array_slice($its, 3) as $it): ?><li><?= h($it) ?></li><?php endforeach; ?></span>
           <li style="list-style:none;margin-left:-16px;"><button type="button" class="pu-more" onclick="var s=this.closest('ul').querySelector('.pu-hid');s.style.display=s.style.display==='none'?'contents':'none';this.textContent=s.style.display==='none'?'＋ आणखी <?= count($its) - 3 ?> साहित्य':'− कमी दाखवा';">＋ आणखी <?= count($its) - 3 ?> साहित्य</button></li><?php endif; ?>

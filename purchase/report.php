@@ -33,6 +33,7 @@ if ($type !== 'all') { $w .= " AND r.status = ?"; $p[] = $type; } else { $w .= "
 if ($fy !== '') { $w .= " AND r.fy = ?"; $p[] = $fy; }
 if ($dept !== '') { $w .= " AND r.department = ?"; $p[] = $dept; }
 $st = $pdo->prepare("SELECT r.* $w ORDER BY r.fy, r.sr_no, r.id"); $st->execute($p); $rows = $st->fetchAll();
+purchaseItemsAttach($pdo, $orgId, $rows);   // 🧩 वस्तूनिहाय खरेदी स्थिती
 $byFy = [];
 foreach ($rows as $r) $byFy[$r['fy']][] = $r;
 
@@ -131,7 +132,9 @@ $ref = fn($no, $d) => trim(($no ?: '') . ($d ? ($no ? '/' : '') . date('d.m.Y', 
           <td class="c"><?= $h($N(purchaseDate($r['demand_date']))) ?></td>
           <td class="c"><?= $h($N($ref($r['approval_no'], $r['approval_date']))) ?></td>
           <td class="c"><?= $h($N($ref($r['inward_no'], $r['inward_date']))) ?></td>
-          <td class="t"><b><?= $h($r['title']) ?></b><?php if ($its): ?><ul><?php foreach ($its as $it): ?><li><?= $h($it) ?></li><?php endforeach; ?></ul><?php endif; ?><?php if ($type === 'all' && $r['status'] === 'done'): ?><div style="color:#166534;font-weight:700;">✅ खरेदी पूर्ण <?= $h($N(purchaseDate($r['done_on']))) ?></div><?php endif; ?></td>
+          <td class="t"><b><?= $h($r['title']) ?></b><?php if (!empty($r['_items'])): ?><ul><?php foreach ($r['_items'] as $it): ?><li<?= $it['status'] === 'done' ? ' style="text-decoration:line-through;color:#555;"' : '' ?>><?= $it['status'] === 'done' ? '✓ ' : '' ?><?= $h($it['name']) ?><?= ($ql = purchaseItemQtyLabel($it)) !== '' ? ' - ' . $h($N($ql)) : '' ?><?= $it['status'] !== 'done' && (float)$it['qty_done'] > 0 ? ' (अंशतः)' : '' ?></li><?php endforeach; ?></ul>
+            <?php if ($r['status'] === 'pending' && $r['_it_done'] > 0): ?><div style="font-size:10.3px;font-weight:700;color:#9A3412;">🧩 <?= $h($N($r['_it_done'])) ?>/<?= $h($N($r['_it_total'])) ?> खरेदी झाले · <?= $h($N($r['_it_total'] - $r['_it_done'])) ?> बाकी</div><?php endif; ?>
+          <?php elseif ($its): ?><ul><?php foreach ($its as $it): ?><li><?= $h($it) ?></li><?php endforeach; ?></ul><?php endif; ?><?php if ($type === 'all' && $r['status'] === 'done'): ?><div style="color:#166534;font-weight:700;">✅ खरेदी पूर्ण <?= $h($N(purchaseDate($r['done_on']))) ?></div><?php endif; ?></td>
           <td class="r"><?= $h($amt($r['est_amount'])) ?></td>
           <?php if ($type === 'done'): ?>
             <td class="r"><?= $h($amt($r['actual_amount'])) ?></td>

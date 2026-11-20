@@ -44,6 +44,8 @@ function purchaseInr($n) {
 function purchaseStage(array $r) {
     if (($r['status'] ?? '') === 'done') return ['done', '✅ खरेदी पूर्ण'];
     if (($r['status'] ?? '') === 'cancelled') return ['cancel', '✕ रद्द'];
+    // काही वस्तू खरेदी झाल्या, काही बाकी (purchaseItemsAttach() ने _it_total / _it_done भरलेले असतील तर)
+    if (!empty($r['_it_total']) && !empty($r['_it_done']) && $r['_it_done'] < $r['_it_total']) return ['partial', '🧩 अंशतः खरेदी'];
     if (!empty($r['inward_no']) || !empty($r['inward_date'])) return ['process', '🛒 खरेदी प्रक्रियेत'];
     if (!empty($r['approval_no']) || !empty($r['approval_date'])) return ['order', '📝 आवक / आदेश बाकी'];
     return ['approve', '⏳ मंजुरी बाकी'];
@@ -64,7 +66,7 @@ function purchaseLog(PDO $pdo, $orgId, $reqId, $event, $note = null, $userId = n
 }
 
 function purchaseEventLabels() {
-    return ['created' => '🆕 नोंद केली', 'edited' => '✎ बदल केला', 'done' => '✅ खरेदी पूर्ण', 'reopened' => '↺ पुन्हा बाकी', 'cancelled' => '✕ रद्द', 'imported' => '📥 PDF मधून आयात'];
+    return ['created' => '🆕 नोंद केली', 'edited' => '✎ बदल केला', 'done' => '✅ खरेदी पूर्ण', 'reopened' => '↺ पुन्हा बाकी', 'cancelled' => '✕ रद्द', 'imported' => '📥 PDF मधून आयात', 'items' => '🧩 वस्तू खरेदी झाल्या', 'item_undo' => '↺ वस्तू पुन्हा बाकी'];
 }
 
 /** पुढचा अ.क्र. (त्या आर्थिक वर्षात) */
@@ -136,4 +138,118 @@ function purchaseSeedImport(PDO $pdo, $orgId, $userId) {
         $pdo->commit();
     } catch (Throwable $e) { $pdo->rollBack(); throw $e; }
     return $n;
+}
+
+
+/* ======================= 🧩 मागणीतील वस्तूनिहाय खरेदी ======================= */
+
+function purchaseItemsReady(PDO $pdo) {
+    static $ok = null;
+    if ($ok !== null) return $ok;
+    try { $pdo->query("SELECT 1 FROM purchase_request_items LIMIT 0"); return $ok = true; } catch (PDOException $e) { return $ok = false; }
+}
+
+/** "आरसे - 30 नग" → ['आरसे', 30, 'नग']; नग नसेल तर qty null */
+function purchaseParseItemLine($line) {
+    $line = trim(preg_replace('/\s+/u', ' ', (string)$line));
+    if (preg_match('/^(.*?)\s*[-–—:=]\s*([\d.]+)\s*(\S.*)?$/u', $line, $m) && $m[1] !== '' && is_numeric($m[2])) {
+        $u = trim($m[3] ?? '');
+        if (mb_strlen($u) > 15) { $w = preg_split('/\s+/u', $u, 2); return [trim($m[1] . ' — ' . ($w[1] ?? '')), (float)$m[2], mb_substr($w[0], 0, 40)]; }   // "2 Nos (3 Year Warranty)" → Unit "Nos", बाकी नावात
+        return [trim($m[1]), (float)$m[2], $u];
+    }
+    if (preg_match('/^(.*\S)\s+([\d.]+)\s*(नग|nos|no|pcs|pc|kg|किलो|ltr|लिटर|liter|mtr|meter|मीटर|box|pkt|set|pair|bundle|jodi|जोडी|rim|बॉक्स)\.?$/iu', $line, $m) && is_numeric($m[2])) return [trim($m[1]), (float)$m[2], $m[3]];
+    return [$line, null, ''];
+}
+function purchaseItemKey($name) { return mb_substr(preg_replace('/[^\p{L}\p{N}]+/u', '', mb_strtolower((string)$name)), 0, 300); }
+
+/** साहित्य यादी (मजकूर) → वस्तूंच्या ओळी. आधीची खरेदी स्थिती जपते; काढलेल्या (बाकी) वस्तू हटवते. */
+function purchaseItemsSync(PDO $pdo, $orgId, $reqId, $itemsText) {
+    if (!purchaseItemsReady($pdo)) return;
+    $lines = array_values(array_filter(array_map('trim', preg_split('/\r?\n/', (string)$itemsText)), 'strlen'));
+    $st = $pdo->prepare("SELECT * FROM purchase_request_items WHERE request_id = ? AND organization_id = ?"); $st->execute([(int)$reqId, (int)$orgId]);
+    $have = []; foreach ($st->fetchAll() as $r) $have[$r['name_key']][] = $r;
+    $keep = [];
+    $ins = $pdo->prepare("INSERT INTO purchase_request_items (request_id, organization_id, sort_order, name, name_key, qty, unit, updated_at) VALUES (?,?,?,?,?,?,?,NOW())");
+    $upd = $pdo->prepare("UPDATE purchase_request_items SET sort_order = ?, name = ?, qty = ?, unit = ?, status = CASE WHEN status = 'done' AND ? IS NOT NULL AND qty_done < ? THEN 'pending' WHEN status = 'pending' AND ? IS NOT NULL AND qty_done >= ? AND qty_done > 0 THEN 'done' ELSE status END WHERE id = ?");
+    foreach ($lines as $i => $ln) {
+        [$nm, $q, $u] = purchaseParseItemLine($ln);
+        $k = purchaseItemKey($nm);
+        if ($k === '') continue;
+        if (!empty($have[$k])) { $r = array_shift($have[$k]); $upd->execute([$i, mb_substr($nm, 0, 300), $q, $u !== '' ? mb_substr($u, 0, 40) : null, $q, $q, $q, $q, $r['id']]); $keep[] = (int)$r['id']; }
+        else { $ins->execute([(int)$reqId, (int)$orgId, $i, mb_substr($nm, 0, 300), $k, $q, $u !== '' ? mb_substr($u, 0, 40) : null]); $keep[] = (int)$pdo->lastInsertId(); }
+    }
+    // यादीतून काढलेल्या — फक्त बाकी (खरेदी न झालेल्या) हटवतो; खरेदी झालेल्या नोंदी इतिहासासाठी ठेवतो
+    $del = $pdo->prepare("DELETE FROM purchase_request_items WHERE request_id = ? AND organization_id = ? AND status = 'pending' AND qty_done = 0" . ($keep ? " AND id NOT IN (" . implode(',', $keep) . ")" : ''));
+    $del->execute([(int)$reqId, (int)$orgId]);
+}
+
+/** ज्या मागण्यांच्या वस्तू अजून ओळींत नाहीत त्या तयार करतो (जुन्या नोंदी) */
+function purchaseItemsEnsure(PDO $pdo, $orgId, array $rows) {
+    if (!purchaseItemsReady($pdo) || !$rows) return;
+    $ids = array_map(fn($r) => (int)$r['id'], array_filter($rows, fn($r) => trim((string)$r['items']) !== ''));
+    if (!$ids) return;
+    $st = $pdo->query("SELECT DISTINCT request_id FROM purchase_request_items WHERE request_id IN (" . implode(',', $ids) . ")");
+    $has = array_flip(array_map('intval', $st->fetchAll(PDO::FETCH_COLUMN)));
+    foreach ($rows as $r) if (!isset($has[(int)$r['id']]) && trim((string)$r['items']) !== '') {
+        try { purchaseItemsSync($pdo, $orgId, $r['id'], $r['items']); } catch (PDOException $e) { continue; }
+        // आधीच "खरेदी पूर्ण" असलेल्या मागणीच्या सगळ्या वस्तू खरेदी झाल्या
+        if (($r['status'] ?? '') === 'done') $pdo->prepare("UPDATE purchase_request_items SET status = 'done', qty_done = COALESCE(qty, 0), done_on = ?, supplier = ? WHERE request_id = ? AND status = 'pending'")->execute([$r['done_on'], $r['supplier'], (int)$r['id']]);
+    }
+}
+
+/** वस्तूंच्या ओळी व आकडे जोडतो: $r['_items'], _it_total, _it_done */
+function purchaseItemsAttach(PDO $pdo, $orgId, array &$rows) {
+    if (!purchaseItemsReady($pdo) || !$rows) return;
+    purchaseItemsEnsure($pdo, $orgId, $rows);
+    $ids = array_map(fn($r) => (int)$r['id'], $rows);
+    $map = [];
+    foreach ($pdo->query("SELECT * FROM purchase_request_items WHERE request_id IN (" . implode(',', $ids) . ") ORDER BY request_id, sort_order, id")->fetchAll() as $it) $map[(int)$it['request_id']][] = $it;
+    foreach ($rows as &$r) {
+        $its = $map[(int)$r['id']] ?? [];
+        $r['_items'] = $its;
+        $r['_it_total'] = count(array_filter($its, fn($x) => $x['status'] !== 'cancelled'));
+        $r['_it_done'] = count(array_filter($its, fn($x) => $x['status'] === 'done'));
+    }
+    unset($r);
+}
+
+/** "12/30 नग" */
+function purchaseItemQtyLabel(array $it) {
+    $f = fn($x) => rtrim(rtrim(number_format((float)$x, 3, '.', ''), '0'), '.');
+    if ($it['qty'] === null) return $it['status'] === 'done' ? '' : '';
+    return ((float)$it['qty_done'] > 0 && (float)$it['qty_done'] < (float)$it['qty'] ? $f($it['qty_done']) . '/' : '') . $f($it['qty']) . ($it['unit'] ? ' ' . $it['unit'] : '');
+}
+
+/**
+ * निवडलेल्या वस्तू खरेदी झाल्या — $got = [itemId => आता मिळालेले नग (null = पूर्ण)]
+ * सगळ्या वस्तू झाल्या की मागणी आपोआप "खरेदी पूर्ण". परत: ['n' => किती, 'all_done' => bool, 'left' => बाकी]
+ */
+function purchaseItemsMark(PDO $pdo, $orgId, array $req, array $got, $doneOn, $supplier, $bill, $amount, $note, $userId) {
+    $names = []; $n = 0; $half = 0;
+    $st = $pdo->prepare("SELECT * FROM purchase_request_items WHERE id = ? AND request_id = ? AND organization_id = ?");
+    $up = $pdo->prepare("UPDATE purchase_request_items SET qty_done = ?, status = ?, done_on = ?, supplier = COALESCE(?, supplier), bill_no = COALESCE(?, bill_no), amount = CASE WHEN ? IS NULL THEN amount ELSE COALESCE(amount, 0) + ? END, note = COALESCE(?, note), done_by = ?, updated_at = NOW() WHERE id = ?");
+    foreach ($got as $iid => $q) {
+        $st->execute([(int)$iid, (int)$req['id'], (int)$orgId]); $it = $st->fetch();
+        if (!$it || $it['status'] !== 'pending') continue;
+        $qty = $it['qty'] === null ? null : (float)$it['qty'];
+        $done = (float)$it['qty_done'] + ($q === null ? ($qty === null ? 0 : $qty - (float)$it['qty_done']) : max(0, (float)$q));
+        if ($qty !== null) $done = min($done, $qty);
+        $full = $qty === null || $done >= $qty - 1e-9;
+        $up->execute([$done, $full ? 'done' : 'pending', $doneOn, $supplier ?: null, $bill ?: null, $amount, $amount, $note ?: null, $userId, $it['id']]);
+        $names[] = $it['name'] . ($qty !== null ? ' (' . rtrim(rtrim(number_format($done, 3, '.', ''), '0'), '.') . '/' . rtrim(rtrim(number_format($qty, 3, '.', ''), '0'), '.') . ')' : '') . ($full ? '' : ' — अंशतः');
+        $n++; if (!$full) $half++;
+        $amount = null;   // रक्कम एकदाच (पहिल्या वस्तूवर) — एकूण बिलाची
+    }
+    if (!$n) return ['n' => 0, 'all_done' => false, 'left' => null];
+    purchaseLog($pdo, $orgId, $req['id'], 'items', implode(', ', $names) . ($supplier ? ' · ' . $supplier : '') . ($bill ? ' · बिल ' . $bill : ''), $userId);
+    $c = $pdo->prepare("SELECT COUNT(*) FROM purchase_request_items WHERE request_id = ? AND status = 'pending'"); $c->execute([(int)$req['id']]);
+    $left = (int)$c->fetchColumn();
+    if ($left === 0 && $req['status'] === 'pending') {
+        $sum = $pdo->prepare("SELECT SUM(amount), GROUP_CONCAT(DISTINCT supplier SEPARATOR ', '), GROUP_CONCAT(DISTINCT bill_no SEPARATOR ', ') FROM purchase_request_items WHERE request_id = ?"); $sum->execute([(int)$req['id']]);
+        [$amt, $sups, $bills] = $sum->fetch(PDO::FETCH_NUM);
+        $pdo->prepare("UPDATE purchase_requests SET status = 'done', done_on = ?, actual_amount = COALESCE(actual_amount, ?), supplier = COALESCE(supplier, ?), bill_no = COALESCE(bill_no, ?), done_note = COALESCE(done_note, ?), done_by = ?, updated_by = ?, updated_at = NOW() WHERE id = ?")
+            ->execute([$doneOn, $amt, $sups ? mb_substr($sups, 0, 150) : null, $bills ? mb_substr($bills, 0, 80) : null, 'सगळ्या वस्तू खरेदी झाल्या', $userId, $userId, (int)$req['id']]);
+        purchaseLog($pdo, $orgId, $req['id'], 'done', 'सगळ्या वस्तू खरेदी झाल्या — आपोआप "खरेदी पूर्ण"', $userId);
+    }
+    return ['n' => $n, 'half' => $half, 'all_done' => $left === 0, 'left' => $left];
 }
