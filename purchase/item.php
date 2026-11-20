@@ -35,6 +35,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canEdit) {
         ];
         if ($in['department'] === '') $error = 'विभाग भरा.';
         elseif (mb_strlen($in['title']) < 3) $error = 'तपशील (काय खरेदी करायचं) भरा.';
+        // खरेदी आवक क्र. आपोआप — आवक दिनांक भरला / "आपोआप" निवडलं आणि क्र. रिकामा
+        if (!$error && $in['inward_no'] === '' && ($in['inward_date'] || !empty($_POST['auto_inward']))) {
+            if (!$in['inward_date']) $in['inward_date'] = date('Y-m-d');
+            $in['inward_no'] = purchaseNextInward($pdo, $orgId, $in['inward_date'], $row ? $id : 0);
+        }
         if (!$error) {
             $vals = [$in['fy'], $in['sr_no'], $in['department'], $in['demand_no'] ?: null, $in['demand_date'], $in['approval_no'] ?: null, $in['approval_date'], $in['inward_no'] ?: null, $in['inward_date'],
                 $in['title'], $in['items'] ?: null, $in['est_amount'], $in['pending_reason'] ?: null, $in['remarks'] ?: null];
@@ -151,7 +156,7 @@ $age = $row && !empty($row['id']) ? purchaseAgeDays($row) : null;
         <div class="row g-2">
           <div class="col-md-3 col-6"><label class="form-label-custom">मंजुरी क्र.</label><input type="text" name="approval_no" class="form-control-custom" value="<?= h($v('approval_no')) ?>" maxlength="60"></div>
           <div class="col-md-3 col-6"><label class="form-label-custom">मंजुरी दिनांक</label><input type="date" name="approval_date" class="form-control-custom" value="<?= h($v('approval_date')) ?>"></div>
-          <div class="col-md-3 col-6"><label class="form-label-custom">खरेदी आवक क्र.</label><input type="text" name="inward_no" class="form-control-custom" value="<?= h($v('inward_no')) ?>" maxlength="60"></div>
+          <div class="col-md-3 col-6"><label class="form-label-custom">खरेदी आवक क्र.</label><input type="text" name="inward_no" id="puInwNo" class="form-control-custom" value="<?= h($v('inward_no')) ?>" maxlength="60" placeholder="आपोआप"><?php if ((string)$v('inward_no') === ''): ?><label class="d-flex align-items-center gap-1 mt-1" style="font-size:12px;white-space:nowrap;color:var(--text-dim);cursor:pointer;"><input type="checkbox" name="auto_inward" value="1" id="puInwAuto" onchange="var d=document.querySelector('[name=inward_date]');if(this.checked&&!d.value)d.value='<?= date('Y-m-d') ?>';document.getElementById('puInwNo').placeholder=this.checked?'<?= h(purchaseNextInward($pdo, $orgId, null, $row ? $id : 0)) ?> (आपोआप)':'आपोआप';"><span>⚡ आपोआप द्या (<b><?= h(purchaseNextInward($pdo, $orgId, null, $row ? $id : 0)) ?></b>)</span></label><?php endif; ?></div>
           <div class="col-md-3 col-6"><label class="form-label-custom">आवक दिनांक</label><input type="date" name="inward_date" class="form-control-custom" value="<?= h($v('inward_date')) ?>"></div>
           <div class="col-md-6"><label class="form-label-custom">खरेदी प्रलंबित राहण्याचे कारण</label><input type="text" name="pending_reason" class="form-control-custom" value="<?= h($v('pending_reason')) ?>" maxlength="255" list="puReasons"></div>
           <div class="col-md-6"><label class="form-label-custom">शेरा</label><input type="text" name="remarks" class="form-control-custom" value="<?= h($v('remarks')) ?>" maxlength="500" list="puRemarks"></div>
