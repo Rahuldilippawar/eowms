@@ -105,9 +105,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     header('Location: ' . $self); exit;
 }
 
-$r = $row ?: ['id' => 0, 'period' => $p, 'store_count' => null, 'purchase_count' => null, 'accounts_count' => null, 'store_at' => null, 'purchase_at' => null, 'accounts_at' => null,
-    'store_note' => null, 'purchase_note' => null, 'accounts_note' => null, 'store_name' => null, 'purchase_name' => null, 'accounts_name' => null, 'store_by' => null, 'purchase_by' => null, 'accounts_by' => null,
-    'head_remark' => null, 'head_name' => null, 'head_at' => null];
+$r = $row ?: billReconEmpty($p);
 [$sk, $sl, $tone] = billReconStatus($r);
 $issues = $events = [];
 if ($row) {
@@ -117,7 +115,7 @@ if ($row) {
 $hints = billReconHints($pdo, $orgId, $p);
 $openBills = array_sum(array_map(fn($i) => $i['status'] === 'open' ? (int)$i['bill_count'] : 0, $issues));
 $prev = date('Y-m', strtotime($p . '-01 -1 month')); $next = date('Y-m', strtotime($p . '-01 +1 month'));
-$colors = ['store' => '#0891B2', 'purchase' => '#D97706', 'accounts' => '#7C3AED'];
+$colors = billReconColors();
 $evL = billReconEventLabels();
 
 $pageTitle = 'बिल ताळमेळ — ' . billReconMonthName($p);
@@ -130,7 +128,7 @@ require_once __DIR__ . '/../includes/header.php';
   .bm-ban{border-radius:16px;padding:14px 16px;margin:8px 0 14px;display:flex;gap:14px;align-items:center;flex-wrap:wrap;}
   .bm-ban.ok{background:linear-gradient(90deg,#DCFCE7,#F0FDF4);color:#14532D;} .bm-ban.warn{background:linear-gradient(90deg,#FEF3C7,#FFFBEB);color:#78350F;} .bm-ban.bad{background:linear-gradient(90deg,#FEE2E2,#FEF2F2);color:#7F1D1D;}
   .bm-ban b{font-size:17px;} .bm-ban .dd{font-size:12.5px;}
-  .bm-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;}
+  .bm-cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;}
   .bm-card{border:1px solid var(--line);border-radius:16px;background:var(--surface);overflow:hidden;display:flex;flex-direction:column;}
   .bm-card .top{padding:12px 14px;border-top:4px solid;}
   .bm-card .nm{font-weight:800;font-size:14px;} .bm-card .big{font-size:34px;font-weight:800;line-height:1.1;margin-top:4px;} .bm-card .big small{font-size:12px;color:var(--text-dim);font-weight:600;}
@@ -144,7 +142,8 @@ require_once __DIR__ . '/../includes/header.php';
   .bm-iss{border:1px solid var(--line);border-left:4px solid #DC2626;border-radius:12px;padding:10px 12px;margin-bottom:8px;background:var(--surface);}
   .bm-iss.res{border-left-color:#16A34A;} .bm-iss.res .rs{text-decoration:line-through;color:var(--text-dim);}
   .bm-ev{font-size:12.5px;border-left:2px solid var(--line);padding:2px 0 8px 12px;position:relative;} .bm-ev:before{content:'';position:absolute;left:-5px;top:6px;width:8px;height:8px;border-radius:50%;background:#0891B2;}
-  @media (max-width:860px){ .bm-cards{grid-template-columns:1fr;} }
+  @media (max-width:1250px){ .bm-cards{grid-template-columns:repeat(2,minmax(0,1fr));} }
+  @media (max-width:700px){ .bm-cards{grid-template-columns:1fr;} }
 </style>
 
 <div class="page-eyebrow">🧾 मासिक बिल जमा / ताळमेळ</div>
@@ -162,9 +161,9 @@ require_once __DIR__ . '/../includes/header.php';
   <b><?= h($sl) ?></b>
   <div class="dd">
     <?php if ($sk === 'diff'): ?>फरक <b style="font-size:14px;"><?= billReconDiff($r) ?></b> बिलं<?= $openBills ? ' · कारणं नोंदलेली: ' . $openBills . ' बिलं' : ' · <b>फरकाचं कारण अजून नोंदलेलं नाही</b>' ?>
-    <?php elseif ($sk === 'entry'): ?>तिन्ही विभागांनी या महिन्याची बिल संख्या भरायची आहे.
+    <?php elseif ($sk === 'entry'): ?>भांडार, भोजनालय, खरेदी व लेखा विभागांनी या महिन्याची बिल संख्या भरायची आहे.
     <?php elseif ($sk === 'match_wait'): ?>संख्या जुळल्या — बाकी विभागांची डिजिटल मान्यता हवी.
-    <?php else: ?>तिन्ही विभागांची संख्या जुळली व डिजिटल मान्यता झाली.<?php endif; ?>
+    <?php else: ?>सर्व विभागांची संख्या जुळली (भांडार + भोजनालय = खरेदी = लेखा) व मान्यता झाली.<?php endif; ?>
   </div>
 </div>
 
@@ -193,6 +192,8 @@ require_once __DIR__ . '/../includes/header.php';
         <div class="code"><?= h(date('d.m.Y h:i A', strtotime($r[$k . '_at']))) ?><?= $paper ? '' : ' · पडताळणी कोड ' . h(billReconSignCode($r, $k)) ?></div>
         <?php if ($canAp): ?><form method="POST" class="m-0 p-0 mt-1" onsubmit="return confirm('<?= h($d[4]) ?> मान्यता काढायची?');" data-no-smart-filter><input type="hidden" name="action" value="withdraw_approval"><input type="hidden" name="dept" value="<?= $k ?>"><button type="submit" style="border:0;background:none;padding:0;font-size:11.5px;color:var(--text-dim);">↺ मान्यता काढा</button></form><?php endif; ?>
       </div>
+    <?php elseif ($k === 'kitchen' && $c !== null && (int)$c === 0): ?>
+      <div class="bm-sign" style="border-style:dotted;">✓ या महिन्यात भोजनालयाची बिलं नाहीत — मान्यता आवश्यक नाही</div>
     <?php elseif ($c !== null): ?>
       <div class="bm-sign pend">⏳ <?= h($d[4]) ?> मान्यता बाकी<div style="font-size:11.5px;color:var(--text-dim);"><?= $resp ? '👤 जबाबदार: ' . h(billReconPersonLabel($resp)) : 'जबाबदार अधिकारी नेमलेले नाहीत — विभागाचे परवानगीधारक कर्मचारी मान्यता देतील' ?></div>
         <?php if ($canAp): ?><form method="POST" class="m-0 p-0 mt-1" onsubmit="return confirm('<?= (int)$c ?> बिलं — खात्री करून डिजिटल मान्यता द्यायची?');" data-no-smart-filter><input type="hidden" name="action" value="approve_dept"><input type="hidden" name="dept" value="<?= $k ?>"><button type="submit" class="btn btn-sm" style="background:#16A34A;color:#fff;border-radius:8px;font-weight:700;">✍️ मान्यता द्या</button></form><?php endif; ?>
@@ -202,10 +203,10 @@ require_once __DIR__ . '/../includes/header.php';
 <?php endforeach; ?>
 </div>
 
-<?php if ($r['store_count'] !== null || $r['purchase_count'] !== null || $r['accounts_count'] !== null):
-  $cmp = [['खरेदी − भांडार', 'purchase', 'store'], ['लेखा − खरेदी', 'accounts', 'purchase'], ['लेखा − भांडार', 'accounts', 'store']]; ?>
+<?php if ($r['store_count'] !== null || $r['kitchen_count'] !== null || $r['purchase_count'] !== null || $r['accounts_count'] !== null): $recv = billReconReceived($r); ?>
 <div class="bm-cmp">
-  <?php foreach ($cmp as [$l, $a, $b]): if ($r[$a . '_count'] === null || $r[$b . '_count'] === null) continue; $dv = (int)$r[$a . '_count'] - (int)$r[$b . '_count']; ?>
+  <span>📦 भांडार <b><?= (int)$r['store_count'] ?></b> + 🍲 भोजनालय <b><?= (int)$r['kitchen_count'] ?></b> = <b>प्राप्त <?= $recv ?></b></span>
+  <?php foreach ([['खरेदी − प्राप्त', $r['purchase_count'] === null ? null : (int)$r['purchase_count'] - $recv], ['लेखा − खरेदी', $r['accounts_count'] === null || $r['purchase_count'] === null ? null : (int)$r['accounts_count'] - (int)$r['purchase_count']]] as [$l, $dv]): if ($dv === null) continue; ?>
     <span><?= h($l) ?> = <b class="<?= $dv ? 'neg' : 'zero' ?>"><?= $dv > 0 ? '+' : '' ?><?= $dv ?></b></span>
   <?php endforeach; ?>
 </div>

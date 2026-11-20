@@ -50,15 +50,16 @@ $issByMonth = [];
 foreach ($openIss as $i) $issByMonth[$i['period']][] = $i;
 
 // सारांश
-$tot = ['store' => 0, 'purchase' => 0, 'accounts' => 0]; $cnt = ['match' => 0, 'match_wait' => 0, 'diff' => 0, 'entry' => 0]; $myPending = [];
+$tot = array_fill_keys(array_keys($depts), 0); $cnt = ['match' => 0, 'match_wait' => 0, 'diff' => 0, 'entry' => 0]; $myPending = [];
 foreach ($statPeriods as $p) {
-    $r = $rows[$p] ?? ['id' => 0, 'period' => $p, 'store_count' => null, 'purchase_count' => null, 'accounts_count' => null, 'store_at' => null, 'purchase_at' => null, 'accounts_at' => null];
+    $r = $rows[$p] ?? billReconEmpty($p);
     foreach ($tot as $k => $_) $tot[$k] += (int)$r[$k . '_count'];
     $cnt[billReconStatus($r)[0]]++;
-    foreach ($depts as $k => $_) if (billReconCan($k) && !$r[$k . '_at'] && $p < date('Y-m')) $myPending[$p] = true;
+    foreach ($depts as $k => $_) if (billReconCanApprove($pdo, $orgId, $k) && !$r[$k . '_at'] && !($k === 'kitchen' && (int)$r['kitchen_count'] === 0 && $r['kitchen_count'] !== null) && $p < date('Y-m')) $myPending[$p] = true;
 }
 $seedPending = $ready && billReconCanAny() && (!function_exists('orgSetting') || orgSetting($pdo, $orgId, 'bill_recon_seed_done', '') === '');
-$maxC = max(1, ...array_map(fn($p) => max((int)($rows[$p]['store_count'] ?? 0), (int)($rows[$p]['purchase_count'] ?? 0), (int)($rows[$p]['accounts_count'] ?? 0)), $periods ?: ['x']));
+$maxC = max(1, ...array_map(fn($p) => max(array_map(fn($k) => (int)($rows[$p][$k . '_count'] ?? 0), array_keys($depts))), $periods ?: ['x']));
+$colors = billReconColors();
 
 $pageTitle = 'बिल ताळमेळ';
 $rootPath = '../';
@@ -70,7 +71,7 @@ require_once __DIR__ . '/../includes/header.php';
   .br-act .pri{background:linear-gradient(90deg,#0E7490,#0891B2);color:#fff;border:0;}
   .br-seed{display:flex;gap:12px;align-items:center;flex-wrap:wrap;border:1px dashed #0891B2;background:color-mix(in srgb,#0891B2 7%,var(--surface));border-radius:14px;padding:12px 14px;margin-bottom:12px;}
   .br-grid{display:grid;gap:8px;}
-  .br-row{display:grid;grid-template-columns:150px repeat(3,minmax(0,1fr)) 150px 92px;gap:10px;align-items:center;border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:10px 14px;text-decoration:none;color:inherit;}
+  .br-row{display:grid;grid-template-columns:140px repeat(4,minmax(0,1fr)) 150px 80px;gap:10px;align-items:center;border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:10px 14px;text-decoration:none;color:inherit;}
   .br-row:hover{border-color:#0891B2;}
   .br-row.hd{background:transparent;border:0;padding:0 14px;font-size:11.5px;font-weight:700;color:var(--text-dim);}
   .br-m b{font-size:14.5px;display:block;} .br-m small{font-size:11px;color:var(--text-dim);}
@@ -84,8 +85,8 @@ require_once __DIR__ . '/../includes/header.php';
   .br-iss{border:1px solid var(--line);border-left:4px solid #DC2626;border-radius:12px;background:var(--surface);padding:9px 12px;margin-bottom:8px;font-size:13px;}
   .br-iss.res{border-left-color:#16A34A;opacity:.75;} .br-iss.res .rs{text-decoration:line-through;}
   @media (max-width:860px){
-    .br-row{grid-template-columns:1fr 1fr 1fr;row-gap:8px;} .br-row.hd{display:none;}
-    .br-m{grid-column:1 / span 2;} .br-stc{grid-column:3;grid-row:1;text-align:right;} .br-open{grid-column:1 / -1;text-align:left;}
+    .br-row{grid-template-columns:1fr 1fr;row-gap:8px;} .br-row.hd{display:none;}
+    .br-m{grid-column:1;} .br-stc{grid-column:2;grid-row:1;text-align:right;} .br-open{grid-column:1 / -1;text-align:left;}
   }
 </style>
 
@@ -115,20 +116,20 @@ require_once __DIR__ . '/../includes/header.php';
     ['label' => '✅ 100% ताळमेळ', 'value' => $cnt['match'] . ' / ' . $months . ' महिने', 'sub' => $months ? round($cnt['match'] * 100 / $months) . '% महिने पूर्ण' : '', 'tone' => $cnt['match'] === $months && $months ? 'ok' : ''],
     ['label' => '⚠️ फरक असलेले महिने', 'value' => $cnt['diff'], 'sub' => count($openIss) . ' कारणं उघडी · ' . array_sum(array_column($openIss, 'bill_count')) . ' बिलं', 'tone' => $cnt['diff'] ? 'bad' : 'ok'],
     ['label' => '✍️ मान्यता / नोंद बाकी', 'value' => $cnt['match_wait'] + $cnt['entry'], 'sub' => $myPending ? 'तुमची: ' . implode(', ', array_map(fn($p) => billReconMonthName($p, false), array_keys($myPending))) : 'तुमचं काही बाकी नाही', 'tone' => $myPending ? 'warn' : ''],
-    ['label' => '📦 भांडार बिलं', 'value' => number_format($tot['store']), 'sub' => 'आ.व. ' . billReconFyLabel($fy)],
+    ['label' => '📦 भांडार + 🍲 भोजनालय', 'value' => number_format($tot['store'] + $tot['kitchen']), 'sub' => number_format($tot['store']) . ' + ' . number_format($tot['kitchen']) . ' · आ.व. ' . billReconFyLabel($fy)],
     ['label' => '🛒 खरेदी / 📒 लेखा', 'value' => number_format($tot['purchase']) . ' / ' . number_format($tot['accounts']), 'sub' => ($tot['purchase'] - $tot['accounts']) ? 'फरक ' . abs($tot['purchase'] - $tot['accounts']) : 'खरेदी = लेखा'],
   ]);
 ?>
 <div class="br-grid mb-3">
   <div class="br-row hd"><div>महिना</div><?php foreach ($depts as $d): ?><div><?= $d[1] ?> <?= h($d[0]) ?></div><?php endforeach; ?><div>स्थिती</div><div></div></div>
   <?php foreach (array_reverse($periods) as $p):
-    $r = $rows[$p] ?? ['id' => 0, 'period' => $p, 'store_count' => null, 'purchase_count' => null, 'accounts_count' => null, 'store_at' => null, 'purchase_at' => null, 'accounts_at' => null, 'head_at' => null];
+    $r = $rows[$p] ?? billReconEmpty($p);
     [$sk, $sl, $tone] = billReconStatus($r); $df = billReconDiff($r); $ni = count($issByMonth[$p] ?? []); ?>
   <a class="br-row" href="month.php?p=<?= h($p) ?>">
     <div class="br-m"><b><?= h(billReconMonthName($p)) ?></b><small><?= $r['head_at'] ? '🏛️ कार्याध्यक्ष शेरा दिला' : ($ni ? '⚠️ ' . $ni . ' कारणं उघडी' : '') ?></small></div>
     <?php foreach ($depts as $k => $d): $c = $r[$k . '_count']; ?>
-      <div class="br-n"><small class="d-md-none"><?= $d[1] ?> <?= h($d[0]) ?></small><?= $c === null ? '<span style="color:var(--text-dim);">—</span>' : h(number_format((int)$c)) ?> <?= $c === null ? '' : ($r[$k . '_at'] ? '<span class="ok" title="डिजिटल मान्यता">✍️</span>' : '<span class="no" title="मान्यता बाकी">○</span>') ?>
-        <div class="br-bar"><i style="width:<?= $c === null ? 0 : round((int)$c * 100 / $maxC) ?>%;background:<?= ['store' => '#0891B2', 'purchase' => '#D97706', 'accounts' => '#7C3AED'][$k] ?>;"></i></div></div>
+      <div class="br-n"><small class="d-md-none"><?= $d[1] ?> <?= h($d[0]) ?></small><?= $c === null ? '<span style="color:var(--text-dim);">—</span>' : h(number_format((int)$c)) ?> <?= $c === null ? '' : ($r[$k . '_at'] ? '<span class="ok" title="डिजिटल मान्यता">✍️</span>' : ($k === 'kitchen' && (int)$c === 0 ? '' : '<span class="no" title="मान्यता बाकी">○</span>')) ?>
+        <div class="br-bar"><i style="width:<?= $c === null ? 0 : round((int)$c * 100 / $maxC) ?>%;background:<?= $colors[$k] ?>;"></i></div></div>
     <?php endforeach; ?>
     <div class="br-stc"><span class="br-st t-<?= $tone ?>"><?= h($sl) ?></span><?php if ($df): ?><div class="br-diff">फरक <?= h($df) ?> बिलं</div><?php endif; ?></div>
     <div class="br-open"><?= $r['id'] ? 'उघडा →' : (billReconCanAny() ? '＋ नोंद' : '') ?></div>

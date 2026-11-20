@@ -33,7 +33,7 @@ function moduleAccessPermissions() {
 /** त्या विभागाचे कर्मचारी (Department code) — त्यांचं रोजचं काम, म्हणून Permission नसली तरी Module दिसतो */
 function moduleAccessDeptCodes() {
     return ['music' => ['MUS'], 'vehicles' => ['TRP'], 'store' => ['STR'], 'cctv' => ['CCTV'], 'it' => ['IT'],
-        'purchase' => ['PUR'], 'bill-recon' => ['STR', 'PUR', 'ACC']];   // बिल ताळमेळ — भांडार, खरेदी, लेखा विभागाचे कर्मचारी
+        'purchase' => ['PUR'], 'bill-recon' => ['STR', 'PUR', 'ACC', 'KIT', 'MESS', 'BHJ', 'BHO', 'CNT']];   // बिल ताळमेळ — भांडार, खरेदी, लेखा विभागाचे कर्मचारी
 }
 
 function moduleUserDeptCode() {
