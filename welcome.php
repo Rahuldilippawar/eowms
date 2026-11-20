@@ -418,36 +418,32 @@ $todayLabel = $marathiDays[(int)date('w')] . ', ' . (int)date('j') . ' ' . $mara
     .med-aura,.med-figure,.med-mandala,.med-chakras circle,.med-crown,.med-lotus,.med-sparks circle,.med-breath .in,.hero::before,.hero::after,.quote-om,.mark,.hero h1,.hero p,.quote-card,.action-row,.cel,.sacred-ring,.yantra,.hero-eyebrow,.today-strip,.content-eyebrow,.content-title,.content-glyph{animation:none;opacity:1;}
   }
 
-  /* 🟠 केशरी रंगसंगती — वरचा भाग साधा केशरी (#FF9933), खालचा भाग पांढरा; काळी पार्श्वभूमी नाही */
+  /* ☀️ पांढरी (White) रंगसंगती — काळी पार्श्वभूमी नको; केशरी रंग फक्त बटणं व ठळक भागांसाठी */
   body{background:#FFFFFF;color:#1F2937;}
-  .hero{background:#FF9933;color:#fff;}
+  .hero{background:#FFFFFF;color:#3B2414;}
   .hero::before,.hero::after{display:none;}
-  .sacred-ring{border-color:rgba(255,255,255,.22);} .sacred-ring::before{border-color:rgba(255,255,255,.16);} .sacred-ring::after{border-color:rgba(255,255,255,.28);}
-  .yantra .petal::before{background:linear-gradient(to bottom, rgba(255,255,255,.35), transparent);}
-  .yantra-core{border-color:rgba(255,255,255,.25);} .yantra-core::before{border-color:rgba(255,255,255,.18);}
-  #medAura stop{stop-color:#FFF7ED;}
-  .med-mandala{stroke:#FFF7ED;}
-  .med-breath{color:#fff;}
-  .today-strip{color:#FFF7ED;border-color:rgba(255,255,255,.45);background:rgba(255,255,255,.15);}
-  .today-strip .dot{background:#fff;box-shadow:0 0 8px #fff;}
-  .today-strip .ts-i:not(:empty) ~ .ts-i:not(:empty)::before{color:rgba(255,255,255,.7);}
-  .hero-eyebrow{color:#fff;}
-  .hero-eyebrow::before{background:linear-gradient(90deg,transparent,#fff);} .hero-eyebrow::after{background:linear-gradient(90deg,#fff,transparent);}
-  .hero h1{background:none;color:#fff;-webkit-text-fill-color:#fff;text-shadow:0 2px 10px rgba(124,45,18,.25);}
-  .hero p{color:#FFF7ED;}
-  .btn-login{background:#FFFFFF;color:#C2410C;box-shadow:0 8px 22px rgba(124,45,18,.22);}
-  .btn-login:hover{box-shadow:0 12px 28px rgba(124,45,18,.3);}
-  .btn-request{background:rgba(255,255,255,.14);color:#fff;border:1.5px solid rgba(255,255,255,.75);}
-  .btn-request:hover{background:rgba(255,255,255,.26);}
-  .quote-card{background:#FFFFFF;border-color:rgba(255,255,255,.6);box-shadow:0 10px 34px rgba(124,45,18,.18);}
-  .quote-card::before,.quote-card::after{border-color:rgba(194,65,12,.35);}
+  .sacred-ring{border-color:rgba(180,83,9,.12);} .sacred-ring::before{border-color:rgba(180,83,9,.09);} .sacred-ring::after{border-color:rgba(180,83,9,.16);}
+  .yantra .petal::before{background:linear-gradient(to bottom, rgba(180,83,9,.22), transparent);}
+  .yantra-core{border-color:rgba(180,83,9,.16);} .yantra-core::before{border-color:rgba(180,83,9,.10);}
+  .today-strip{color:#6B4F36;border-color:rgba(180,83,9,.22);background:rgba(255,255,255,.75);box-shadow:0 2px 10px rgba(180,83,9,.06);}
+  .today-strip .ts-i:not(:empty) ~ .ts-i:not(:empty)::before{color:#C9A27E;}
+  .hero-eyebrow{color:#B45309;}
+  .hero h1{background:none;color:#431407;-webkit-text-fill-color:#431407;}
+  .hero p{color:#6B4F36;}
+  .med-breath{color:#C2410C;}
+  .med-crown{filter:drop-shadow(0 0 6px #C084FC);}
+  .quote-card{background:#FFFFFF;border-color:rgba(180,83,9,.2);box-shadow:0 10px 34px rgba(180,83,9,.10);}
+  .quote-card::before,.quote-card::after{border-color:rgba(180,83,9,.35);}
   .quote-om{color:#C2410C;text-shadow:none;}
   .quote-text{color:#3B2414;} .quote-author{color:#8A6A4A;}
   .quote-divider span{background:linear-gradient(90deg,transparent,rgba(180,83,9,.4),transparent);}
-  .cel{background:#FFFFFF;border-color:rgba(255,255,255,.6);box-shadow:0 10px 34px rgba(124,45,18,.16);}
+  .btn-request{background:#FFFFFF;color:#7C2D12;border:1.5px solid rgba(180,83,9,.28);box-shadow:0 4px 14px rgba(180,83,9,.08);}
+  .btn-request:hover{background:#FFF4E8;}
+  .cel{background:#FFFFFF;border-color:rgba(180,83,9,.18);box-shadow:0 10px 34px rgba(180,83,9,.06);}
   .cel-head h2{color:#7C2D12;} .cel-head h2 .sep{color:#C9A27E;} .cel-head p{color:#6B4F36;}
   .cel-eyebrow{color:#B45309;}
   .cel-card{background:#FFFFFF;border-color:rgba(180,83,9,.16);box-shadow:0 12px 30px rgba(180,83,9,.10);}
+  .cel-card:hover{box-shadow:0 18px 40px rgba(180,83,9,.16);}
   .cel-ring::after{background:#FFFFFF;}
   .cel-name{color:#1F2937;} .cel-sub{color:#6B7280;} .cel-dept{color:#92400E;background:#FEF3C7;border-color:#FCD34D;}
   .cel-msg{color:#3B2414;} .cel-count{color:#92400E;background:#FEF3C7;}
@@ -455,15 +451,14 @@ $todayLabel = $marathiDays[(int)date('w')] . ', ' . (int)date('j') . ' ' . $mara
   .cel-done{color:#15803D;}
   .cel-quick button{border-color:rgba(180,83,9,.25);background:#FFF7ED;color:#7C2D12;} .cel-quick button:hover{background:#FFEDD5;}
   .cel-own input{background:#FFFFFF;border-color:rgba(180,83,9,.25);color:#1F2937;} .cel-own input::placeholder{color:#9CA3AF;}
-  .cel-swipe{color:#FFF7ED;} .ts-cel{color:#fff;text-decoration:underline;}
+  .cel-swipe{color:#8A6A4A;} .ts-cel{color:#B45309;}
   .content-title{color:#3B2414;}
   .info-card{box-shadow:0 4px 20px rgba(180,83,9,.08);border:1px solid rgba(180,83,9,.10);}
   footer{color:#8A6A4A;}
-  .content{margin-top:34px;}
 </style>
 </head>
 <body>
-<div style="display:flex;justify-content:flex-end;padding:14px 16px 0;position:relative;z-index:50;background:#FF9933;"><?= i18nSwitcher('style="border:1px solid rgba(180,83,9,.3);border-radius:9px;padding:8px 12px;font-size:12.5px;color:#7C2D12;background:#fff;cursor:pointer;"') ?></div>
+<div style="display:flex;justify-content:flex-end;padding:14px 16px 0;position:relative;z-index:50;"><?= i18nSwitcher('style="border:1px solid rgba(180,83,9,.3);border-radius:9px;padding:8px 12px;font-size:12.5px;color:#7C2D12;background:#fff;cursor:pointer;"') ?></div>
 <?= i18nClientScript() ?>
 
 <div class="hero">
@@ -713,7 +708,7 @@ $todayLabel = $marathiDays[(int)date('w')] . ', ' . (int)date('j') . ' ' . $mara
 </footer>
 <style>
   .wl-clock{font-family:'JetBrains Mono',monospace;}
-  .wl-me{display:flex;flex-wrap:wrap;gap:8px 14px;justify-content:center;align-items:center;margin:16px auto 0;max-width:640px;font-size:13px;color:#FFF7ED;}
+  .wl-me{display:flex;flex-wrap:wrap;gap:8px 14px;justify-content:center;align-items:center;margin:16px auto 0;max-width:640px;font-size:13px;color:#6B4F36;}
   .wl-me a{background:#fff;border:1px solid rgba(180,83,9,.22);border-radius:20px;padding:6px 14px;color:#7C2D12;text-decoration:none;}
   .wl-me a:hover{background:#FFF4E8;}
   .wl-me em{color:#BE185D;font-style:normal;}
@@ -722,7 +717,7 @@ $todayLabel = $marathiDays[(int)date('w')] . ', ' . (int)date('j') . ' ' . $mara
   .wl-track input{flex:1;border:0;outline:none;font-size:14px;padding:10px 4px;background:transparent;color:#10162B;min-width:0;font-family:inherit;}
   .wl-track button{border:0;background:#D9530F;color:#fff;font-weight:700;border-radius:10px;padding:10px 18px;font-size:13.5px;cursor:pointer;white-space:nowrap;font-family:inherit;}
   .wl-track button:hover{filter:brightness(1.08);}
-  .wl-install{display:block;margin:14px auto 0;border:1px dashed rgba(255,255,255,.7);background:transparent;color:#fff;border-radius:10px;padding:8px 16px;font-size:13px;cursor:pointer;font-family:inherit;}
+  .wl-install{display:block;margin:14px auto 0;border:1px dashed rgba(180,83,9,.4);background:transparent;color:#7C2D12;border-radius:10px;padding:8px 16px;font-size:13px;cursor:pointer;font-family:inherit;}
   .wl-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;max-width:1000px;margin:-38px auto 46px;padding:0 20px;position:relative;z-index:3;}
   .wl-stats>div{background:#fff;border-radius:14px;padding:18px 16px;text-align:center;box-shadow:0 12px 30px rgba(16,22,43,.12);border:1px solid #E4E6EC;}
   .wl-stats b{display:block;font-family:'Space Grotesk',sans-serif;font-size:28px;color:#D9530F;}
