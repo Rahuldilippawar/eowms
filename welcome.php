@@ -417,10 +417,48 @@ $todayLabel = $marathiDays[(int)date('w')] . ', ' . (int)date('j') . ' ' . $mara
   @media (prefers-reduced-motion: reduce){
     .med-aura,.med-figure,.med-mandala,.med-chakras circle,.med-crown,.med-lotus,.med-sparks circle,.med-breath .in,.hero::before,.hero::after,.quote-om,.mark,.hero h1,.hero p,.quote-card,.action-row,.cel,.sacred-ring,.yantra,.hero-eyebrow,.today-strip,.content-eyebrow,.content-title,.content-glyph{animation:none;opacity:1;}
   }
+
+  /* ☀️ उजळ (Light) रंगसंगती — काळी पार्श्वभूमी नको: केशरी-क्रीम, आश्रमाच्या रंगांशी जुळणारी */
+  body{background:#FFF9F2;color:#1F2937;}
+  .hero{background:radial-gradient(ellipse 120% 85% at 50% -10%, #FFE3C7 0%, #FFF1E2 45%, #FFF9F2 100%);color:#3B2414;}
+  .hero::before{opacity:.16;} .hero::after{opacity:.14;}
+  .sacred-ring{border-color:rgba(180,83,9,.12);} .sacred-ring::before{border-color:rgba(180,83,9,.09);} .sacred-ring::after{border-color:rgba(180,83,9,.16);}
+  .yantra .petal::before{background:linear-gradient(to bottom, rgba(180,83,9,.22), transparent);}
+  .yantra-core{border-color:rgba(180,83,9,.16);} .yantra-core::before{border-color:rgba(180,83,9,.10);}
+  .today-strip{color:#6B4F36;border-color:rgba(180,83,9,.22);background:rgba(255,255,255,.75);box-shadow:0 2px 10px rgba(180,83,9,.06);}
+  .today-strip .ts-i:not(:empty) ~ .ts-i:not(:empty)::before{color:#C9A27E;}
+  .hero-eyebrow{color:#B45309;}
+  .hero h1{background:none;color:#431407;-webkit-text-fill-color:#431407;}
+  .hero p{color:#6B4F36;}
+  .med-breath{color:#C2410C;}
+  .med-crown{filter:drop-shadow(0 0 6px #C084FC);}
+  .quote-card{background:linear-gradient(160deg,rgba(217,83,15,.08),#FFFFFF);border-color:rgba(180,83,9,.2);box-shadow:0 10px 34px rgba(180,83,9,.10);}
+  .quote-card::before,.quote-card::after{border-color:rgba(180,83,9,.35);}
+  .quote-om{color:#C2410C;text-shadow:none;}
+  .quote-text{color:#3B2414;} .quote-author{color:#8A6A4A;}
+  .quote-divider span{background:linear-gradient(90deg,transparent,rgba(180,83,9,.4),transparent);}
+  .btn-request{background:#FFFFFF;color:#7C2D12;border:1.5px solid rgba(180,83,9,.28);box-shadow:0 4px 14px rgba(180,83,9,.08);}
+  .btn-request:hover{background:#FFF4E8;}
+  .cel{background:radial-gradient(120% 90% at 50% 0%,rgba(251,146,60,.20),rgba(253,230,138,.14) 45%,rgba(255,255,255,.6) 80%);border-color:rgba(180,83,9,.18);}
+  .cel-head h2{color:#7C2D12;} .cel-head h2 .sep{color:#C9A27E;} .cel-head p{color:#6B4F36;}
+  .cel-eyebrow{color:#B45309;}
+  .cel-card{background:#FFFFFF;border-color:rgba(180,83,9,.16);box-shadow:0 12px 30px rgba(180,83,9,.10);}
+  .cel-card:hover{box-shadow:0 18px 40px rgba(180,83,9,.16);}
+  .cel-ring::after{background:#FFFFFF;}
+  .cel-name{color:#1F2937;} .cel-sub{color:#6B7280;} .cel-dept{color:#92400E;background:#FEF3C7;border-color:#FCD34D;}
+  .cel-msg{color:#3B2414;} .cel-count{color:#92400E;background:#FEF3C7;}
+  .cel-wish{color:#3B2414;background:#FFF7ED;} .cel-wish b{color:#C2410C;}
+  .cel-done{color:#15803D;}
+  .cel-quick button{border-color:rgba(180,83,9,.25);background:#FFF7ED;color:#7C2D12;} .cel-quick button:hover{background:#FFEDD5;}
+  .cel-own input{background:#FFFFFF;border-color:rgba(180,83,9,.25);color:#1F2937;} .cel-own input::placeholder{color:#9CA3AF;}
+  .cel-swipe{color:#8A6A4A;} .ts-cel{color:#B45309;}
+  .content-title{color:#3B2414;}
+  .info-card{box-shadow:0 4px 20px rgba(180,83,9,.08);border:1px solid rgba(180,83,9,.10);}
+  footer{color:#8A6A4A;}
 </style>
 </head>
 <body>
-<div style="display:flex;justify-content:flex-end;padding:14px 16px 0;position:relative;z-index:50;"><?= i18nSwitcher('style="border:1px solid rgba(255,255,255,.3);border-radius:9px;padding:8px 12px;font-size:12.5px;color:#fff;background:rgba(255,255,255,.1);cursor:pointer;"') ?></div>
+<div style="display:flex;justify-content:flex-end;padding:14px 16px 0;position:relative;z-index:50;"><?= i18nSwitcher('style="border:1px solid rgba(180,83,9,.3);border-radius:9px;padding:8px 12px;font-size:12.5px;color:#7C2D12;background:#fff;cursor:pointer;"') ?></div>
 <?= i18nClientScript() ?>
 
 <div class="hero">
@@ -666,20 +704,20 @@ $todayLabel = $marathiDays[(int)date('w')] . ', ' . (int)date('j') . ' ' . $mara
   <div style="margin-bottom:4px;"><?= h(t('s68')) ?></div>
   <div>© <?= date('Y') ?> <?= htmlspecialchars($org['name'] ?? 'VJMAT') ?><?= h(t('s69')) ?></div>
   <div style="margin-top:3px;">Developed by Rahul Pawar</div>
-  <div style="margin-top:8px;"><a href="about.php" style="color:#8A90AC;font-size:11.5px;text-decoration:none;">🕉️ आमच्याबद्दल (About)</a></div>
+  <div style="margin-top:8px;"><a href="about.php" style="color:#8A6A4A;font-size:11.5px;text-decoration:none;">🕉️ आमच्याबद्दल (About)</a></div>
 </footer>
 <style>
   .wl-clock{font-family:'JetBrains Mono',monospace;}
-  .wl-me{display:flex;flex-wrap:wrap;gap:8px 14px;justify-content:center;align-items:center;margin:16px auto 0;max-width:640px;font-size:13px;color:#DCE1F0;}
-  .wl-me a{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);border-radius:20px;padding:6px 14px;color:#fff;text-decoration:none;}
-  .wl-me a:hover{background:rgba(255,255,255,.18);}
-  .wl-me em{color:#F3A6B0;font-style:normal;}
-  .wl-track{display:flex;align-items:center;gap:8px;max-width:560px;margin:20px auto 0;background:rgba(255,255,255,.96);border-radius:14px;padding:6px 6px 6px 16px;box-shadow:0 10px 30px rgba(0,0,0,.25);}
+  .wl-me{display:flex;flex-wrap:wrap;gap:8px 14px;justify-content:center;align-items:center;margin:16px auto 0;max-width:640px;font-size:13px;color:#6B4F36;}
+  .wl-me a{background:#fff;border:1px solid rgba(180,83,9,.22);border-radius:20px;padding:6px 14px;color:#7C2D12;text-decoration:none;}
+  .wl-me a:hover{background:#FFF4E8;}
+  .wl-me em{color:#BE185D;font-style:normal;}
+  .wl-track{display:flex;align-items:center;gap:8px;max-width:560px;margin:20px auto 0;background:rgba(255,255,255,.96);border-radius:14px;padding:6px 6px 6px 16px;box-shadow:0 10px 30px rgba(180,83,9,.12);border:1px solid rgba(180,83,9,.16);}
   .wl-track i{color:#6B7080;}
   .wl-track input{flex:1;border:0;outline:none;font-size:14px;padding:10px 4px;background:transparent;color:#10162B;min-width:0;font-family:inherit;}
   .wl-track button{border:0;background:#D9530F;color:#fff;font-weight:700;border-radius:10px;padding:10px 18px;font-size:13.5px;cursor:pointer;white-space:nowrap;font-family:inherit;}
   .wl-track button:hover{filter:brightness(1.08);}
-  .wl-install{display:block;margin:14px auto 0;border:1px dashed rgba(255,255,255,.4);background:transparent;color:#fff;border-radius:10px;padding:8px 16px;font-size:13px;cursor:pointer;font-family:inherit;}
+  .wl-install{display:block;margin:14px auto 0;border:1px dashed rgba(180,83,9,.4);background:transparent;color:#7C2D12;border-radius:10px;padding:8px 16px;font-size:13px;cursor:pointer;font-family:inherit;}
   .wl-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;max-width:1000px;margin:-38px auto 46px;padding:0 20px;position:relative;z-index:3;}
   .wl-stats>div{background:#fff;border-radius:14px;padding:18px 16px;text-align:center;box-shadow:0 12px 30px rgba(16,22,43,.12);border:1px solid #E4E6EC;}
   .wl-stats b{display:block;font-family:'Space Grotesk',sans-serif;font-size:28px;color:#D9530F;}
