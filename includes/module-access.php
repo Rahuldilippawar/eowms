@@ -26,6 +26,7 @@ function moduleAccessPermissions() {
         'deadstock'    => ['manage_dead_stock_master'],
         'dept-finance' => ['manage_budget', 'manage_dept_finance'],
         'purchase'     => ['manage_purchase'],
+        'purchase-compare' => ['purchase_compare', 'purchase_compare_approve', 'purchase_compare_view', 'manage_purchase'],
         'bill-recon'   => ['bill_recon_store', 'manage_purchase', 'bill_recon_accounts', 'bill_recon_view'],
     ];
 }
@@ -33,7 +34,7 @@ function moduleAccessPermissions() {
 /** त्या विभागाचे कर्मचारी (Department code) — त्यांचं रोजचं काम, म्हणून Permission नसली तरी Module दिसतो */
 function moduleAccessDeptCodes() {
     return ['music' => ['MUS'], 'vehicles' => ['TRP'], 'store' => ['STR'], 'cctv' => ['CCTV'], 'it' => ['IT'],
-        'purchase' => ['PUR'], 'bill-recon' => ['STR', 'PUR', 'ACC', 'KIT', 'MESS', 'BHJ', 'BHO', 'CNT']];   // बिल ताळमेळ — भांडार, खरेदी, लेखा विभागाचे कर्मचारी
+        'purchase' => ['PUR'], 'purchase-compare' => ['PUR'], 'bill-recon' => ['STR', 'PUR', 'ACC', 'KIT', 'MESS', 'BHJ', 'BHO', 'CNT']];   // बिल ताळमेळ — भांडार, खरेदी, लेखा विभागाचे कर्मचारी
 }
 
 function moduleUserDeptCode() {

@@ -481,6 +481,11 @@ function navGroupHead($id, $key, $activeGroup, $icon, $label, $badge = 0) {
         <i class="fa-solid fa-print fa-fw"></i><span>खरेदी अहवाल</span>
       </a>
     <?php endif; ?>
+    <?php require_once __DIR__ . '/purchase-compare.php'; if (purchaseCmpCanView()): ?>
+      <a href="<?= $rp ?>purchase/compare/index.php" class="tree-node <?= $currentDir === 'compare' ? 'active' : '' ?>">
+        <i class="fa-solid fa-scale-unbalanced fa-fw"></i><span>तुलनात्मक तक्ते</span>
+      </a>
+    <?php endif; ?>
     <?php navSectionEnd('खरेदी विभाग', 'fa-solid fa-cart-shopping'); ?>
 
     <!-- ==================== 🧾 मासिक बिल ताळमेळ — भांडार · खरेदी · लेखा ==================== -->
