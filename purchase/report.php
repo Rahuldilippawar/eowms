@@ -81,7 +81,7 @@ $ref = fn($no, $d) => trim(($no ?: '') . ($d ? ($no ? '/' : '') . date('d.m.Y', 
   td.t ul{margin:2px 0 0;padding-left:14px;font-size:10.3px;} td.t li{margin:0;}
   tr.sub td{font-weight:800;background:#FBF8F2;} tr.grand td{font-weight:800;font-size:12.5px;background:#F1EADC;}
   tr{break-inside:avoid;page-break-inside:avoid;} thead{display:table-header-group;}
-  .fyblk{margin-bottom:14px;}
+  .fyrow td{font-weight:800;font-size:12px;text-align:center;background:#EFE7D6;}
   .sum{margin-top:10px;} .sum h3{font-size:14px;margin:12px 0 6px;border-bottom:2px solid #B45309;padding-bottom:3px;color:#7C2D12;}
   .kp{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;} .kp div{border:1px solid #D6CFC2;border-radius:8px;padding:6px 8px;} .kp span{display:block;font-size:10px;color:#555;font-weight:600;} .kp b{font-size:16px;}
   .two{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
@@ -113,15 +113,16 @@ $ref = fn($no, $d) => trim(($no ?: '') . ($d ? ($no ? '/' : '') . date('d.m.Y', 
 <?php if (!$rows): ?>
   <p style="font-size:14px;text-align:center;padding:40px;">या अटींनुसार एकही नोंद नाही.</p>
 <?php endif; ?>
-<?php $grand = 0; $fi = 0; foreach ($byFy as $fyk => $list): $sub = 0; $fi++; ?>
-  <div class="fyblk<?= $fi > 1 ? ' pgb' : '' ?>">
-    <div class="hd"><?php foreach (array_filter(explode("\n", $head)) as $line): ?><div><?= $h($line) ?></div><?php endforeach; ?><div class="ti">आर्थिक वर्ष-<?= $h($N(purchaseFyLabel($fyk))) ?> <?= $h($typeT) ?><?= $dept !== '' ? ' — ' . $h($dept) : '' ?></div></div>
+<?php if ($rows): $grand = 0; $fi = 0; ?>
+    <div class="hd"><?php foreach (array_filter(explode("\n", $head)) as $line): ?><div><?= $h($line) ?></div><?php endforeach; ?><div class="ti"><?= $fy !== '' ? 'आर्थिक वर्ष-' . $h($N(purchaseFyLabel($fy))) . ' ' : (count($byFy) > 1 ? 'आर्थिक वर्ष-' . $h($N(purchaseFyLabel(array_key_first($byFy)))) . ' ते ' . $h($N(purchaseFyLabel(array_key_last($byFy)))) . ' ' : (count($byFy) === 1 ? 'आर्थिक वर्ष-' . $h($N(purchaseFyLabel(array_key_first($byFy)))) . ' ' : '')) ?><?= $h($typeT) ?><?= $dept !== '' ? ' — ' . $h($dept) : '' ?></div></div>
     <div class="dt"><span></span><b>दिनांक : <?= $h($N(date('d.m.Y'))) ?></b></div>
     <table>
       <colgroup><col style="width:3.3%"><col style="width:9%"><col style="width:6.5%"><col style="width:7.5%"><col style="width:9%"><col style="width:9%"><col style="width:<?= $type === 'done' ? '26%' : '30%' ?>"><col style="width:7.5%"><?php if ($type === 'done'): ?><col style="width:7.5%"><col style="width:14.7%"><?php else: ?><col style="width:8.5%"><col style="width:9.7%"><?php endif; ?></colgroup>
       <thead><tr><th>अ. क्र.</th><th>विभाग</th><th>मागणी क्रमांक</th><th>मागणी दिनांक</th><th>मंजुरी क्र. / दिनांक</th><th>खरेदी आवक क्र व दिनांक</th><th>तपशील</th><th>अंदाजित रक्कम</th>
         <?php if ($type === 'done'): ?><th>प्रत्यक्ष रक्कम</th><th>खरेदी दिनांक / पुरवठादार / बिल</th><?php else: ?><th>खरेदी प्रलंबित राहण्याचे कारण</th><th>शेरा</th><?php endif; ?></tr></thead>
       <tbody>
+<?php foreach ($byFy as $fyk => $list): $sub = 0; $fi++; ?>
+        <?php if (count($byFy) > 1): ?><tr class="fyrow"><td colspan="10">आर्थिक वर्ष <?= $h($N(purchaseFyLabel($fyk))) ?></td></tr><?php endif; ?>
       <?php foreach ($list as $r): $its = array_values(array_filter(array_map('trim', explode("\n", (string)$r['items'])))); $sub += (float)($type === 'done' && $r['actual_amount'] !== null ? $r['actual_amount'] : $r['est_amount']); ?>
         <tr>
           <td class="c"><?= $h($N((int)$r['sr_no'] ?: '')) ?></td>
@@ -143,10 +144,10 @@ $ref = fn($no, $d) => trim(($no ?: '') . ($d ? ($no ? '/' : '') . date('d.m.Y', 
       <?php endforeach; $grand += $sub; ?>
         <tr class="sub"><td colspan="7" style="text-align:right;">आर्थिक वर्ष <?= $h($N(purchaseFyLabel($fyk))) ?> — एकूण (<?= $h($N(count($list))) ?> नोंदी)</td><td class="r" colspan="<?= $type === 'done' ? 2 : 1 ?>"><?= $h($amt($sub)) ?></td><td colspan="<?= $type === 'done' ? 1 : 2 ?>"></td></tr>
         <?php if ($fi === count($byFy) && count($byFy) > 1): ?><tr class="grand"><td colspan="7" style="text-align:center;">एकूण</td><td class="r" colspan="<?= $type === 'done' ? 2 : 1 ?>"><?= $h($amt($grand)) ?></td><td colspan="<?= $type === 'done' ? 1 : 2 ?>"></td></tr><?php endif; ?>
+<?php endforeach; ?>
       </tbody>
     </table>
-  </div>
-<?php endforeach; ?>
+<?php endif; ?>
 
 <?php if ($rows && $withSum): ?>
   <div class="sum pgb">
