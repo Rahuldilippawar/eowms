@@ -32,6 +32,31 @@ function billReconCanHead() { return hasRole('super_admin') || isManagementOrAbo
 function billReconCanAny() { return billReconCan('store') || billReconCan('purchase') || billReconCan('accounts'); }
 function billReconCanView() { return billReconCanAny() || billReconCanHead(); }
 
+/** विभागाचा जबाबदार अधिकारी (फक्त तोच मान्यता देऊ शकतो) — संस्था सेटिंग "bill_recon_resp_<dept>" */
+function billReconResponsible(PDO $pdo, $orgId, $dept) {
+    static $c = [];
+    if (array_key_exists($dept, $c)) return $c[$dept];
+    $id = function_exists('orgSetting') ? (int)orgSetting($pdo, $orgId, 'bill_recon_resp_' . $dept, 0) : 0;
+    if (!$id) return $c[$dept] = null;
+    $st = $pdo->prepare("SELECT id, name, designation FROM users WHERE id = ? AND organization_id = ? AND is_active = 1");
+    $st->execute([$id, (int)$orgId]);
+    return $c[$dept] = ($st->fetch() ?: null);
+}
+/** "नाव, पद" — Approved by मध्ये दाखवायला */
+function billReconPersonLabel($u) { return $u ? trim($u['name'] . (!empty($u['designation']) ? ', ' . $u['designation'] : '')) : ''; }
+/**
+ * मान्यता कोण देऊ शकतो: जबाबदार अधिकारी नेमला असेल तर फक्त तोच;
+ * नेमला नसेल तर त्या विभागाची परवानगी असलेला कर्मचारी (Super Admin दुसऱ्याच्या वतीने मान्यता देत नाही).
+ */
+function billReconCanApprove(PDO $pdo, $orgId, $dept) {
+    $u = currentUser(); if (!$u) return false;
+    $resp = billReconResponsible($pdo, $orgId, $dept);
+    if ($resp) return (int)$resp['id'] === (int)$u['id'];
+    return $u['role'] !== 'super_admin' && billReconCan($dept);
+}
+/** जबाबदार अधिकारी नेमणे — Super Admin / व्यवस्थापन */
+function billReconCanSetResponsible() { return hasRole('super_admin') || isManagementOrAbove(); }
+
 /** "2026-10" → आर्थिक वर्ष "2026-27" (एप्रिल–मार्च) */
 function billReconFy($period) {
     [$y, $m] = array_map('intval', explode('-', $period));

@@ -16,6 +16,19 @@ if ($ready && billReconCanAny() && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_P
     header('Location: index.php?fy=2026-27'); exit;
 }
 
+// 👤 जबाबदार अधिकारी नेमणे (फक्त तेच मान्यता देऊ शकतात)
+if ($ready && billReconCanSetResponsible() && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_responsible' && function_exists('orgSettingSet')) {
+    $names = [];
+    foreach (billReconDepts() as $k => $d) {
+        $uid = (int)($_POST['resp_' . $k] ?? 0);
+        if ($uid) { $st = $pdo->prepare("SELECT name FROM users WHERE id = ? AND organization_id = ? AND is_active = 1"); $st->execute([$uid, $orgId]); $nm = $st->fetchColumn(); if (!$nm) $uid = 0; else $names[] = $d[0] . ': ' . $nm; }
+        orgSettingSet($pdo, $orgId, 'bill_recon_resp_' . $k, $uid ? (string)$uid : '');
+    }
+    logActivity('बिल ताळमेळ — जबाबदार अधिकारी', 'organization', $orgId, implode('; ', $names));
+    $_SESSION['flash'] = '✓ जबाबदार अधिकारी जतन झाले.';
+    header('Location: index.php' . (isset($_GET['fy']) ? '?fy=' . urlencode((string)$_GET['fy']) : '')); exit;
+}
+
 $curFy = billReconFy(date('Y-m'));
 $fy = preg_match('/^\d{4}-\d{2}$/', (string)($_GET['fy'] ?? '')) ? $_GET['fy'] : $curFy;
 $fys = [$curFy];
@@ -122,6 +135,28 @@ require_once __DIR__ . '/../includes/header.php';
   </a>
   <?php endforeach; ?>
 </div>
+
+<?php if (billReconCanSetResponsible() || array_filter(array_map(fn($k) => billReconResponsible($pdo, $orgId, $k), array_keys($depts)))): ?>
+<div class="panel mb-3" style="padding:12px 14px;">
+  <div style="font-weight:800;margin-bottom:4px;">👤 जबाबदार अधिकारी — मान्यता देणारे</div>
+  <div style="font-size:12px;color:var(--text-dim);margin-bottom:8px;">प्रत्येक विभागाची मासिक बिल संख्या फक्त त्या विभागाचा जबाबदार अधिकारीच "Approved" करू शकतो.</div>
+  <?php if (billReconCanSetResponsible()): ?>
+  <form method="POST" class="row g-2 align-items-end" data-no-smart-filter><input type="hidden" name="action" value="save_responsible">
+    <?php foreach ($depts as $k => $d): $cur = billReconResponsible($pdo, $orgId, $k); $opts = billReconUsers($pdo, $orgId, $d[2]);
+      if ($cur && !in_array((int)$cur['id'], $opts, true)) $opts[] = (int)$cur['id'];
+      $ul = [];
+      if ($opts) { $in = implode(',', array_map('intval', $opts)); $ul = $pdo->query("SELECT id, name, designation FROM users WHERE id IN ($in) AND is_active = 1 ORDER BY name")->fetchAll(); } ?>
+      <div class="col-md-3 col-12"><label class="form-label-custom"><?= $d[1] ?> <?= h($d[0]) ?></label>
+        <select name="resp_<?= $k ?>" class="form-select-custom"><option value="">— निवडा —</option><?php foreach ($ul as $u): ?><option value="<?= (int)$u['id'] ?>" <?= $cur && (int)$cur['id'] === (int)$u['id'] ? 'selected' : '' ?>><?= h(billReconPersonLabel($u)) ?></option><?php endforeach; ?></select>
+        <?php if (!$ul): ?><div style="font-size:11px;color:#B45309;margin-top:2px;">आधी "<?= h($d[0]) ?>" ची परवानगी कर्मचाऱ्याला द्या</div><?php endif; ?></div>
+    <?php endforeach; ?>
+    <div class="col-md-3 col-12"><button type="submit" class="btn btn-sm w-100" style="background:#0891B2;color:#fff;border-radius:9px;font-weight:700;padding:9px;">✓ जतन</button></div>
+  </form>
+  <?php else: ?>
+    <div class="d-flex gap-3 flex-wrap" style="font-size:13px;"><?php foreach ($depts as $k => $d): $cur = billReconResponsible($pdo, $orgId, $k); ?><span><?= $d[1] ?> <?= h($d[0]) ?>: <b><?= $cur ? h(billReconPersonLabel($cur)) : '—' ?></b></span><?php endforeach; ?></div>
+  <?php endif; ?>
+</div>
+<?php endif; ?>
 
 <?php if ($issues): ?>
   <h6 style="font-weight:800;margin:16px 0 8px;">⚠️ फरकाची कारणं (कारणे मिमांसा)</h6>

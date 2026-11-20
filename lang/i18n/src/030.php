@@ -3178,4 +3178,13 @@ return [
     "कारण नोंदलेलं नाही" => ["कारण दर्ज नहीं", "no reason recorded"],
     "फरक आहे पण" => ["अंतर है पर", "has a difference but"],
     "सर्वात जास्त अडकलेली बिलं" => ["सबसे अधिक अटके बिल", "Most bills held"],
+    "जबाबदार अधिकारी जतन झाले." => ["जिम्मेदार अधिकारी सहेजे गए।", "Responsible officers saved."],
+    "जबाबदार अधिकारी — मान्यता देणारे" => ["जिम्मेदार अधिकारी — मान्यता देने वाले", "Responsible officers — approvers"],
+    "प्रत्येक विभागाची मासिक बिल संख्या फक्त त्या विभागाचा जबाबदार अधिकारीच" => ["हर विभाग की मासिक बिल संख्या केवल उस विभाग का जिम्मेदार अधिकारी ही", "Each department's monthly bill count can only be"],
+    "करू शकतो." => ["कर सकता है।", "by that department's responsible officer."],
+    "ची परवानगी कर्मचाऱ्याला द्या" => ["की अनुमति कर्मचारी को दें", "permission to an employee first"],
+    "चुकीचा विभाग." => ["गलत विभाग।", "Invalid department."],
+    "या विभागाची मान्यता फक्त जबाबदार अधिकारी देऊ शकतात." => ["इस विभाग की मान्यता केवल जिम्मेदार अधिकारी दे सकते हैं।", "Only the responsible officer can approve for this department."],
+    "जबाबदार अधिकारी नेमलेले नाहीत — विभागाचे परवानगीधारक कर्मचारी मान्यता देतील" => ["जिम्मेदार अधिकारी नियुक्त नहीं — विभाग के अनुमति प्राप्त कर्मचारी मान्यता देंगे", "No responsible officer set — permitted staff of the department will approve"],
+    "वरील तक्त्यातील सर्व माहिती जबाबदार अधिकारी यांनी अधिकृतरीत्या तपासून व खात्री करून दिलेली आहे. तरी माननीय कार्याध्यक्ष साहेब यांच्या माहितीस्तव सविनय सादर..." => ["उपरोक्त तालिका की सारी जानकारी जिम्मेदार अधिकारियों ने आधिकारिक रूप से जाँच कर पुष्टि की है। माननीय कार्याध्यक्ष महोदय की जानकारी हेतु सविनय प्रस्तुत...", "All information in the above table has been officially checked and confirmed by the responsible officers. Respectfully submitted for the Hon. Chairman's information..."],
 ];
