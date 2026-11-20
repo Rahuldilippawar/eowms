@@ -287,7 +287,8 @@ INSERT INTO permissions (permission_key, label, label_local, sort_order) VALUES
 ('manage_students', 'Students — add, edit, import and view the student register', 'विद्यार्थी — यादी पाहणे, जोडणे, बदलणे, Import', 48),
 ('student_id_cards', 'Student ID cards — view students, add photos, card design and print', 'विद्यार्थी व ID Cards — यादी पाहणे, फोटो, Card Design, Print', 49),
 ('manage_bus_passes', 'Bus passes — issue, renew, cancel and print student bus passes', 'बस पास — देणे, नूतनीकरण, रद्द, Print', 50),
-('gate_scan', 'Gate — scan staff ID cards / Digital ID, entry-exit log', 'Gate — कर्मचारी ID Scan, ये-जा नोंद व अहवाल', 51);
+('gate_scan', 'Gate — scan staff ID cards / Digital ID, entry-exit log', 'Gate — कर्मचारी ID Scan, ये-जा नोंद व अहवाल', 51),
+('manage_purchase', 'Purchase department — pending purchases: add, edit, mark purchased, reports', 'खरेदी विभाग — खरेदी बाकी नोंद, बदल, खरेदी पूर्ण, अहवाल', 52);
 
 INSERT INTO role_permissions (role_key, permission_key)
 SELECT role_key, 'manage_it' FROM role_definitions WHERE category = 'management';
@@ -3539,4 +3540,47 @@ CREATE TABLE gate_logs (
   created_at DATETIME NOT NULL,
   INDEX idx_gl_day (organization_id, created_at),
   INDEX idx_gl_user (user_id, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 🛒 खरेदी विभाग — खरेदी बाकी
+CREATE TABLE purchase_requests (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  organization_id INT NOT NULL,
+  fy VARCHAR(9) NOT NULL,
+  sr_no INT NULL,
+  department VARCHAR(150) NOT NULL,
+  demand_no VARCHAR(60) NULL,
+  demand_date DATE NULL,
+  approval_no VARCHAR(60) NULL,
+  approval_date DATE NULL,
+  inward_no VARCHAR(60) NULL,
+  inward_date DATE NULL,
+  title VARCHAR(500) NOT NULL,
+  items TEXT NULL,
+  est_amount DECIMAL(12,2) NULL,
+  pending_reason VARCHAR(255) NULL,
+  remarks VARCHAR(500) NULL,
+  status VARCHAR(10) NOT NULL DEFAULT 'pending',
+  done_on DATE NULL,
+  actual_amount DECIMAL(12,2) NULL,
+  bill_no VARCHAR(80) NULL,
+  supplier VARCHAR(150) NULL,
+  done_note VARCHAR(255) NULL,
+  done_by INT NULL,
+  created_by INT NULL,
+  updated_by INT NULL,
+  created_at DATETIME NOT NULL,
+  updated_at DATETIME NULL,
+  INDEX idx_pr_org (organization_id, status, fy),
+  INDEX idx_pr_dept (organization_id, department)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE purchase_request_events (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  request_id INT NOT NULL,
+  organization_id INT NOT NULL,
+  event VARCHAR(20) NOT NULL,
+  note VARCHAR(500) NULL,
+  user_id INT NULL,
+  created_at DATETIME NOT NULL,
+  INDEX idx_pre_req (request_id, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
