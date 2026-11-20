@@ -243,6 +243,41 @@ function dailyReportData(PDO $pdo, $orgId, $date) {
         foreach (ecampusAlerts($pdo, $o, $ecPeriod) as $a) { $alerts[] = $a; }
     }
 
+    // 14) 🧾 मासिक बिल ताळमेळ — भांडार + भोजनालय = खरेदी = लेखा (चालू व मागचे 2 महिने) + आजच्या नोंदी
+    if (is_file(__DIR__ . '/bill-recon.php')) {
+        require_once __DIR__ . '/bill-recon.php';
+        if (billReconReady($pdo)) {
+            $brPeriods = [date('Y-m', strtotime(substr($d, 0, 7) . '-01 -2 months')), date('Y-m', strtotime(substr($d, 0, 7) . '-01 -1 month')), substr($d, 0, 7)];
+            $brRows = [];
+            foreach ($q("SELECT * FROM bill_recon_months WHERE organization_id = ? AND period IN (?,?,?)", array_merge([$o], $brPeriods)) as $r) $brRows[$r['period']] = $r;
+            $brToday = $q("SELECT e.event, e.note, m.period, u.name uname FROM bill_recon_events e JOIN bill_recon_months m ON m.id = e.month_id LEFT JOIN users u ON u.id = e.user_id
+                WHERE e.organization_id = ? AND DATE(e.created_at) = ? ORDER BY e.id", [$o, $d]);
+            $brIss = $q("SELECT i.party, i.bill_count, i.held_at, i.reason, m.period FROM bill_recon_issues i JOIN bill_recon_months m ON m.id = i.month_id
+                WHERE i.organization_id = ? AND i.status = 'open' ORDER BY m.period DESC, i.id LIMIT 6", [$o]);
+            if ($brRows || $brToday) {
+                $brMonths = [];
+                foreach ($brPeriods as $bp) {
+                    if (!isset($brRows[$bp]) && $bp !== substr($d, 0, 7)) continue;
+                    $r = $brRows[$bp] ?? billReconEmpty($bp);
+                    [$sk, $sl] = billReconStatus($r);
+                    $pend = [];
+                    foreach (billReconDepts() as $dk => $dv) {
+                        if ($r[$dk . '_count'] === null) $pend[] = $dv[0] . ' (संख्या)';
+                        elseif (!$r[$dk . '_at'] && !($dk === 'kitchen' && (int)$r['kitchen_count'] === 0)) $pend[] = $dv[0] . ' (मान्यता)';
+                    }
+                    $brMonths[] = ['period' => $bp, 'r' => $r, 'status' => $sk, 'label' => $sl, 'diff' => billReconDiff($r), 'pending' => $pend];
+                    // मागचा महिना 5 तारखेनंतरही पूर्ण नाही → सूचना
+                    if ($bp < substr($d, 0, 7) && $sk !== 'match' && (int)date('j', strtotime($d)) >= 5) {
+                        $alerts[] = [$sk === 'diff' ? 'bad' : 'warn', 'बिल ताळमेळ — ' . billReconMonthName($bp) . ': ' . ($sk === 'diff' ? 'फरक ' . billReconDiff($r) . ' बिलं' : ($pend ? 'बाकी: ' . implode(', ', $pend) : trim(preg_replace('/^\S+\s/u', '', $sl))))];
+                    } elseif ($bp === $brPeriods[1] && $sk === 'match') {
+                        $good[] = 'बिल ताळमेळ — ' . billReconMonthName($bp) . ': 100% ताळमेळ पूर्ण';
+                    }
+                }
+                $S['billRecon'] = ['months' => $brMonths, 'today' => $brToday, 'issues' => $brIss];
+            }
+        }
+    }
+
     // दिवसाचा गुण (0–100) — कामाची पूर्णता, हजेरी, मुदतबाह्य, SLA, SOS
     $score = 100;
     if (!empty($S['work']) && $w['total'] > 0) { $score -= (int)round((100 - $w['done'] * 100 / $w['total']) * 0.25); }
@@ -441,6 +476,31 @@ function dailyReportPdfHtml(array $D) {
         $html .= $S['ecampus']['html'];
     }
 
+    // --- 🧾 मासिक बिल ताळमेळ ---
+    if (!empty($S['billRecon'])) {
+        $x = $S['billRecon'];
+        $html .= $sec(++$n, 'मासिक बिल ताळमेळ', 'भांडार + भोजनालय = खरेदी = लेखा');
+        $stCol = ['match' => '#137A4B', 'match_wait' => '#B45309', 'diff' => '#B42318', 'entry' => '#B45309'];
+        $html .= '<table class="g"><thead><tr><th style="width:17%;">महिना</th><th class="num-r" style="width:11%;">भांडार</th><th class="num-r" style="width:11%;">भोजनालय</th><th class="num-r" style="width:11%;">खरेदी</th><th class="num-r" style="width:11%;">लेखा</th><th style="width:39%;">स्थिती</th></tr></thead><tbody>';
+        foreach ($x['months'] as $m) {
+            $r = $m['r']; $c = fn($k) => $r[$k . '_count'] === null ? '—' : ($r[$k . '_at'] ? '<b style="color:#137A4B;">' . (int)$r[$k . '_count'] . '</b>' : (int)$r[$k . '_count']);
+            $html .= '<tr><td><b>' . $h(billReconMonthName($m['period'])) . '</b></td><td class="num-r">' . $c('store') . '</td><td class="num-r">' . $c('kitchen') . '</td><td class="num-r">' . $c('purchase') . '</td><td class="num-r">' . $c('accounts') . '</td>'
+                . '<td style="color:' . $stCol[$m['status']] . ';font-weight:bold;">' . $h(trim(preg_replace('/^\S+\s/u', '', $m['label']))) . ($m['diff'] ? ' — फरक ' . $m['diff'] . ' बिलं' : '')
+                . ($m['pending'] && $m['status'] !== 'match' ? '<div class="muted" style="font-weight:normal;">बाकी: ' . $h(implode(', ', $m['pending'])) . '</div>' : '') . '</td></tr>';
+        }
+        $html .= '</tbody></table><div class="muted" style="margin-top:2px;"><b style="color:#137A4B;">हिरवा आकडा</b> = जबाबदार अधिकाऱ्याची मान्यता (Approved)</div>';
+        if ($x['issues']) {
+            $html .= '<div style="margin-top:6px;font-weight:bold;font-size:9.2pt;">⚠ फरकाची उघडी कारणं</div>';
+            foreach ($x['issues'] as $i) $html .= '<div style="font-size:8.8pt;margin:1px 0;">• ' . $h(billReconMonthName($i['period'], false)) . ': ' . $h(($i['party'] ? $i['party'] . ' — ' : '') . (int)$i['bill_count'] . ' बिलं — ' . $i['reason']) . ' <span class="muted">(' . $h(billReconDepts()[$i['held_at']][3] ?? '') . ')</span></div>';
+        }
+        if ($x['today']) {
+            $evL = billReconEventLabels();
+            $html .= '<div style="margin-top:6px;font-weight:bold;font-size:9.2pt;">आजच्या नोंदी</div>';
+            foreach (array_slice($x['today'], 0, 8) as $e) $html .= '<div style="font-size:8.8pt;margin:1px 0;">• ' . $h(billReconMonthName($e['period'], false)) . ' — ' . $h(trim(preg_replace('/^\S+\s/u', '', $evL[$e['event']] ?? $e['event']))) . ($e['note'] ? ': ' . $h(mb_strimwidth($e['note'], 0, 110, '…')) : '') . ($e['uname'] ? ' <span class="muted">— ' . $h($e['uname']) . '</span>' : '') . '</div>';
+            if (count($x['today']) > 8) $html .= '<div class="muted">+' . (count($x['today']) - 8) . ' अजून</div>';
+        }
+    }
+
     // --- नूतनीकरण --- (काहीच मुदतीत नसेल तरी "✓ सगळं वेळेत" — विसरलं की ठीक आहे, ते स्पष्ट)
     $RI = $S['renewInfo'] ?? null;
     $renLink = (defined('SITE_BASE_URL') ? SITE_BASE_URL : '') . '/renewals/index.php';
@@ -522,6 +582,7 @@ function dailyReportEmailHtml(array $D) {
         . $cell((int)($S['tasks']['t']['overdue'] ?? 0), 'मुदतबाह्य Tasks', ($S['tasks']['t']['overdue'] ?? 0) ? '#B42318' : '#137A4B')
         . "</tr></table>"
         . (!empty($S['ecampus']) ? "<div style='margin-top:12px;font-size:13px;background:#F7F5F2;border-radius:8px;padding:8px 12px;'>🎓 <b>E-Campus:</b> " . (int)$S['ecampus']['overall'] . "% पूर्ण — " . (int)$S['ecampus']['done'] . '/' . (int)$S['ecampus']['work'] .  " कामं पूर्ण — सविस्तर E-Campus अहवाल सोबतच्या दुसऱ्या PDF मध्ये</div>" : '')
+        . (!empty($S['billRecon']) ? (function ($B) use ($h) { $l = []; foreach ($B['months'] as $m) $l[] = billReconMonthName($m['period'], false) . ': ' . trim(preg_replace('/^\S+\s/u', '', $m['label'])) . ($m['diff'] ? ' (फरक ' . $m['diff'] . ')' : ''); return "<div style='margin-top:8px;font-size:13px;background:#F7F5F2;border-radius:8px;padding:8px 12px;'>🧾 <b>बिल ताळमेळ:</b> " . $h(implode(' · ', $l)) . "</div>"; })($S['billRecon']) : '')
         . ($alerts ? "<div style='font-weight:bold;font-size:14px;margin:14px 0 4px;color:#191C3A;'>आजचे ठळक मुद्दे</div><ul style='padding-left:18px;margin:0;font-size:13px;line-height:1.6;'>$alerts</ul>" : '')
         . ($url ? "<a href='{$url}reports/daily.php' style='display:inline-block;margin-top:16px;background:#D9530F;color:#fff;text-decoration:none;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:bold;'>E-Admin मध्ये पाहा</a>" : '')
         . "<p style='font-size:11.5px;color:#8A90AC;margin-top:18px;'>!! आत्मा मालिक !! — हा अहवाल रोज संध्याकाळी आपोआप पाठवला जातो.</p>

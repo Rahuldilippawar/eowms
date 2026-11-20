@@ -418,10 +418,10 @@ $todayLabel = $marathiDays[(int)date('w')] . ', ' . (int)date('j') . ' ' . $mara
     .med-aura,.med-figure,.med-mandala,.med-chakras circle,.med-crown,.med-lotus,.med-sparks circle,.med-breath .in,.hero::before,.hero::after,.quote-om,.mark,.hero h1,.hero p,.quote-card,.action-row,.cel,.sacred-ring,.yantra,.hero-eyebrow,.today-strip,.content-eyebrow,.content-title,.content-glyph{animation:none;opacity:1;}
   }
 
-  /* ☀️ उजळ (Light) रंगसंगती — काळी पार्श्वभूमी नको: केशरी-क्रीम, आश्रमाच्या रंगांशी जुळणारी */
-  body{background:#FFF9F2;color:#1F2937;}
-  .hero{background:radial-gradient(ellipse 120% 85% at 50% -10%, #FFE3C7 0%, #FFF1E2 45%, #FFF9F2 100%);color:#3B2414;}
-  .hero::before{opacity:.16;} .hero::after{opacity:.14;}
+  /* ☀️ पांढरी (White) रंगसंगती — काळी पार्श्वभूमी नको; केशरी रंग फक्त बटणं व ठळक भागांसाठी */
+  body{background:#FFFFFF;color:#1F2937;}
+  .hero{background:#FFFFFF;color:#3B2414;}
+  .hero::before,.hero::after{display:none;}
   .sacred-ring{border-color:rgba(180,83,9,.12);} .sacred-ring::before{border-color:rgba(180,83,9,.09);} .sacred-ring::after{border-color:rgba(180,83,9,.16);}
   .yantra .petal::before{background:linear-gradient(to bottom, rgba(180,83,9,.22), transparent);}
   .yantra-core{border-color:rgba(180,83,9,.16);} .yantra-core::before{border-color:rgba(180,83,9,.10);}
@@ -432,14 +432,14 @@ $todayLabel = $marathiDays[(int)date('w')] . ', ' . (int)date('j') . ' ' . $mara
   .hero p{color:#6B4F36;}
   .med-breath{color:#C2410C;}
   .med-crown{filter:drop-shadow(0 0 6px #C084FC);}
-  .quote-card{background:linear-gradient(160deg,rgba(217,83,15,.08),#FFFFFF);border-color:rgba(180,83,9,.2);box-shadow:0 10px 34px rgba(180,83,9,.10);}
+  .quote-card{background:#FFFFFF;border-color:rgba(180,83,9,.2);box-shadow:0 10px 34px rgba(180,83,9,.10);}
   .quote-card::before,.quote-card::after{border-color:rgba(180,83,9,.35);}
   .quote-om{color:#C2410C;text-shadow:none;}
   .quote-text{color:#3B2414;} .quote-author{color:#8A6A4A;}
   .quote-divider span{background:linear-gradient(90deg,transparent,rgba(180,83,9,.4),transparent);}
   .btn-request{background:#FFFFFF;color:#7C2D12;border:1.5px solid rgba(180,83,9,.28);box-shadow:0 4px 14px rgba(180,83,9,.08);}
   .btn-request:hover{background:#FFF4E8;}
-  .cel{background:radial-gradient(120% 90% at 50% 0%,rgba(251,146,60,.20),rgba(253,230,138,.14) 45%,rgba(255,255,255,.6) 80%);border-color:rgba(180,83,9,.18);}
+  .cel{background:#FFFFFF;border-color:rgba(180,83,9,.18);box-shadow:0 10px 34px rgba(180,83,9,.06);}
   .cel-head h2{color:#7C2D12;} .cel-head h2 .sep{color:#C9A27E;} .cel-head p{color:#6B4F36;}
   .cel-eyebrow{color:#B45309;}
   .cel-card{background:#FFFFFF;border-color:rgba(180,83,9,.16);box-shadow:0 12px 30px rgba(180,83,9,.10);}

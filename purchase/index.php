@@ -39,6 +39,7 @@ if ($ready && $canEdit && $_SERVER['REQUEST_METHOD'] === 'POST') {
             purchaseLog($pdo, $orgId, $id, 'edited', 'आवक क्र. आपोआप: ' . $ino, $user['id']);
         }
         purchaseLog($pdo, $orgId, $id, 'done', trim(date('d.m.Y', strtotime($on)) . ($amt !== null ? ' · ' . purchaseInr($amt) : '') . ($sup ? ' · ' . $sup : '') . ($bill ? ' · बिल ' . $bill : '') . ($note ? ' · ' . $note : '')), $user['id']);
+        if ($sup !== '') { require_once __DIR__ . '/../includes/purchase-compare.php'; purchaseSuppliersSync($pdo, $orgId, [$sup], (int)$user['id']); }
         logActivity('खरेदी पूर्ण', 'purchase_request', $id, $row['title']);
         $_SESSION['flash'] = '✅ "' . mb_strimwidth($row['title'], 0, 60, '…') . '" — खरेदी पूर्ण. आता "खरेदी पूर्ण" यादीत.';
         header('Location: ' . $back); exit;
@@ -267,7 +268,12 @@ $ageCls = fn($d) => $d === null ? '' : ($d > 90 ? 'a-red' : ($d > 45 ? 'a-amb' :
 </div></div></div>
 <?php
 $sups = [];
-if ($ready) { $st = $pdo->prepare("SELECT DISTINCT supplier FROM purchase_requests WHERE organization_id = ? AND supplier IS NOT NULL AND supplier <> '' ORDER BY supplier LIMIT 200"); $st->execute([$orgId]); $sups = $st->fetchAll(PDO::FETCH_COLUMN); }
+if ($ready) {
+    $st = $pdo->prepare("SELECT DISTINCT supplier FROM purchase_requests WHERE organization_id = ? AND supplier IS NOT NULL AND supplier <> '' ORDER BY supplier LIMIT 200"); $st->execute([$orgId]); $sups = $st->fetchAll(PDO::FETCH_COLUMN);
+    // 🏪 पुरवठादार यादीतील नावं — टाईप करताच सुचवणी
+    require_once __DIR__ . '/../includes/purchase-compare.php';
+    $sups = array_values(array_unique(array_merge(purchaseSupplierNames($pdo, $orgId), $sups)));
+}
 ?>
 <datalist id="puSup"><?php foreach ($sups as $s): ?><option value="<?= h($s) ?>"><?php endforeach; ?></datalist>
 <script>

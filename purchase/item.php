@@ -190,7 +190,7 @@ $age = $row && !empty($row['id']) ? purchaseAgeDays($row) : null;
             <div class="col-6"><label class="form-label-custom">दिनांक</label><input type="date" name="done_on" class="form-control-custom" value="<?= date('Y-m-d') ?>" max="<?= date('Y-m-d') ?>"></div>
             <div class="col-6"><label class="form-label-custom">प्रत्यक्ष ₹</label><input type="number" name="actual_amount" class="form-control-custom" value="<?= $row['est_amount'] !== null ? (float)$row['est_amount'] : '' ?>" min="0" step="0.01"></div>
             <div class="col-6"><label class="form-label-custom">बिल क्र.</label><input type="text" name="bill_no" class="form-control-custom" maxlength="80"></div>
-            <div class="col-6"><label class="form-label-custom">पुरवठादार</label><input type="text" name="supplier" class="form-control-custom" maxlength="150"></div>
+            <div class="col-6"><label class="form-label-custom">पुरवठादार</label><input type="text" name="supplier" class="form-control-custom" maxlength="150" list="piSup" autocomplete="off"></div>
             <div class="col-12"><input type="text" name="done_note" class="form-control-custom" maxlength="255" placeholder="शेरा"></div>
           </div>
           <button type="submit" class="btn btn-sm mt-2 w-100" style="background:#16A34A;color:#fff;border-radius:9px;font-weight:700;">✓ खरेदी पूर्ण करा</button>
@@ -214,6 +214,18 @@ $age = $row && !empty($row['id']) ? purchaseAgeDays($row) : null;
       <?php endif; ?>
     </div>
     <?php endif; ?>
+    <?php // 📊 या मागणीचे तुलनात्मक तक्ते
+    if ($row && !empty($row['id'])) { require_once __DIR__ . '/../includes/purchase-compare.php'; }
+    if ($row && !empty($row['id']) && purchaseCmpReady($pdo) && purchaseCmpCanView()):
+      $cst = $pdo->prepare("SELECT id, cmp_no, fy, title, status FROM purchase_comparisons WHERE organization_id = ? AND request_id = ? ORDER BY id DESC"); $cst->execute([$orgId, (int)$row['id']]); $cmps = $cst->fetchAll(); ?>
+    <div class="panel mb-3" style="padding:12px 16px;">
+      <div style="font-weight:800;margin-bottom:6px;">📊 तुलनात्मक तक्ता</div>
+      <?php foreach ($cmps as $cm): $cs = purchaseCmpStatuses()[$cm['status']] ?? ['', '#000', '#fff']; ?>
+        <a href="compare/view.php?id=<?= (int)$cm['id'] ?>" style="display:block;font-size:13px;margin-bottom:4px;text-decoration:none;">#<?= (int)$cm['cmp_no'] ?>/<?= h(purchaseFyLabel($cm['fy'])) ?> — <?= h(mb_strimwidth($cm['title'], 0, 50, '…')) ?> <span style="font-size:11px;font-weight:700;color:<?= $cs[1] ?>;background:<?= $cs[2] ?>;border-radius:99px;padding:1px 7px;"><?= h($cs[0]) ?></span></a>
+      <?php endforeach; ?>
+      <?php if (purchaseCmpCanEdit()): ?><a href="compare/chart.php?request=<?= (int)$row['id'] ?>" class="btn btn-sm mt-1" style="background:#2563EB;color:#fff;border-radius:8px;font-weight:700;">＋ दरपत्रकांचा तुलनात्मक तक्ता बनवा</a><?php elseif (!$cmps): ?><div style="font-size:12.5px;color:var(--text-dim);">अजून तक्ता नाही.</div><?php endif; ?>
+    </div>
+    <?php endif; ?>
     <?php if ($events): $el = purchaseEventLabels(); ?>
     <div class="panel" style="padding:12px 16px;">
       <div style="font-weight:800;margin-bottom:4px;">🕘 इतिहास</div>
@@ -225,4 +237,5 @@ $age = $row && !empty($row['id']) ? purchaseAgeDays($row) : null;
   </div>
 </div>
 
+<?php if (purchaseReady($pdo)) { require_once __DIR__ . '/../includes/purchase-compare.php'; ?><datalist id="piSup"><?php foreach (purchaseSupplierNames($pdo, $orgId) as $sn): ?><option value="<?= h($sn) ?>"><?php endforeach; ?></datalist><?php } ?>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

@@ -5126,3 +5126,94 @@ UPDATE bill_recon_issues SET bill_count = 1, held_at = 'purchase', status = 'ope
   WHERE party = 'CMK ट्रेडर्स' AND bill_count = 64;
 UPDATE bill_recon_issues SET held_at = 'accounts', status = 'resolved', resolved_note = 'कागदी तक्त्यावर खोडले — मिटले', reason = 'मूळ बिले प्राप्त न झाल्याने जमा करणे बाकी'
   WHERE party = 'श्री गणेश मेडिकल स्टोअर्स' AND bill_count = 2 AND status = 'open' AND resolved_by IS NULL AND reason = 'मूळ बिले प्राप्त न झाल्याने लेखा विभागात जमा करणे बाकी';
+
+-- ============================================================
+-- FROM: migration-purchase-comparison.sql
+-- ============================================================
+-- 📊 खरेदी विभाग — तुलनात्मक तक्ता (Comparison Chart): पुरवठादारांचे दर, GST/वाहतूक/सूट, L1, निवड व मान्यता
+CREATE TABLE IF NOT EXISTS purchase_comparisons (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  organization_id INT NOT NULL,
+  fy VARCHAR(9) NOT NULL,
+  cmp_no INT NOT NULL DEFAULT 0,
+  title VARCHAR(255) NOT NULL,
+  cmp_date DATE NOT NULL,
+  department VARCHAR(150) NULL,
+  request_id INT NULL,
+  status VARCHAR(10) NOT NULL DEFAULT 'draft',
+  notes TEXT NULL,
+  signatories TEXT NULL,
+  selected_vendor INT NULL,
+  approved_by INT NULL,
+  approved_name VARCHAR(150) NULL,
+  approved_at DATETIME NULL,
+  approval_note VARCHAR(500) NULL,
+  source VARCHAR(150) NULL,
+  created_by INT NULL,
+  created_at DATETIME NOT NULL,
+  updated_by INT NULL,
+  updated_at DATETIME NULL,
+  INDEX idx_pc_org (organization_id, fy, status),
+  INDEX idx_pc_req (request_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE IF NOT EXISTS purchase_comparison_vendors (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  comparison_id INT NOT NULL,
+  sort_order INT NOT NULL DEFAULT 0,
+  name VARCHAR(200) NOT NULL,
+  gst_pct DECIMAL(5,2) NULL,
+  gst_amount DECIMAL(14,2) NULL,
+  gst_incl TINYINT(1) NOT NULL DEFAULT 0,
+  gst_on_transport TINYINT(1) NOT NULL DEFAULT 0,
+  transport DECIMAL(14,2) NULL,
+  transport_incl TINYINT(1) NOT NULL DEFAULT 0,
+  other_label VARCHAR(100) NULL,
+  other_amount DECIMAL(14,2) NULL,
+  discount DECIMAL(14,2) NULL,
+  remarks VARCHAR(255) NULL,
+  INDEX idx_pcv_cmp (comparison_id, sort_order)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE IF NOT EXISTS purchase_comparison_items (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  comparison_id INT NOT NULL,
+  sort_order INT NOT NULL DEFAULT 0,
+  particular VARCHAR(500) NOT NULL,
+  qty DECIMAL(14,3) NULL,
+  unit VARCHAR(30) NULL,
+  INDEX idx_pci_cmp (comparison_id, sort_order)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE IF NOT EXISTS purchase_comparison_rates (
+  item_id INT NOT NULL,
+  vendor_id INT NOT NULL,
+  rate DECIMAL(16,4) NULL,
+  amount DECIMAL(16,2) NULL,
+  PRIMARY KEY (item_id, vendor_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+INSERT IGNORE INTO permissions (permission_key, label, label_local, sort_order) VALUES
+  ('purchase_compare', 'Comparison chart — create, edit, print, Excel import', 'तुलनात्मक तक्ता — बनवणे, बदल, Print, Excel आयात', 56),
+  ('purchase_compare_approve', 'Comparison chart — approve vendor selection', 'तुलनात्मक तक्ता — पुरवठादार निवड मान्यता (Approve)', 57),
+  ('purchase_compare_view', 'Comparison chart — view & print', 'तुलनात्मक तक्ता — पाहणे व Print', 58);
+
+-- ============================================================
+-- FROM: migration-purchase-suppliers.sql
+-- ============================================================
+-- 🏪 खरेदी विभाग — पुरवठादार यादी (Supplier Master): नाव टाईप करताच आपोआप सुचवणी, संपर्क, GSTIN, प्रकार
+CREATE TABLE IF NOT EXISTS purchase_suppliers (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  organization_id INT NOT NULL,
+  name VARCHAR(200) NOT NULL,
+  name_key VARCHAR(200) NOT NULL,
+  category VARCHAR(100) NULL,
+  contact_person VARCHAR(150) NULL,
+  phone VARCHAR(40) NULL,
+  email VARCHAR(150) NULL,
+  gstin VARCHAR(20) NULL,
+  address VARCHAR(500) NULL,
+  notes VARCHAR(500) NULL,
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  created_by INT NULL,
+  created_at DATETIME NOT NULL,
+  updated_at DATETIME NULL,
+  UNIQUE KEY uq_ps_key (organization_id, name_key),
+  INDEX idx_ps_org (organization_id, is_active, name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
