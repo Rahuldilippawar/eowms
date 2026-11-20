@@ -5095,3 +5095,10 @@ CREATE TABLE IF NOT EXISTS bill_recon_events (
 INSERT IGNORE INTO permissions (permission_key, label, label_local, sort_order) VALUES
   ('bill_recon_store', 'Main store — monthly bill count & digital approval (bill reconciliation)', 'मुख्य भांडार विभाग — मासिक बिल संख्या व डिजिटल मान्यता (बिल ताळमेळ)', 53),
   ('bill_recon_accounts', 'Accounts — monthly bill count & digital approval (bill reconciliation)', 'लेखा विभाग — मासिक बिल संख्या व डिजिटल मान्यता (बिल ताळमेळ)', 54);
+
+-- ============================================================
+-- FROM: migration-bill-recon-view.sql
+-- ============================================================
+-- 🧾 बिल ताळमेळ — फक्त पाहणे / अहवाल Access (पदे व्यवस्थापनातून इतरांना देता येतो)
+INSERT IGNORE INTO permissions (permission_key, label, label_local, sort_order) VALUES
+  ('bill_recon_view', 'Monthly bill reconciliation — view & reports', 'मासिक बिल ताळमेळ — पाहणे व अहवाल', 55);

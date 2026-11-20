@@ -3187,4 +3187,5 @@ return [
     "या विभागाची मान्यता फक्त जबाबदार अधिकारी देऊ शकतात." => ["इस विभाग की मान्यता केवल जिम्मेदार अधिकारी दे सकते हैं।", "Only the responsible officer can approve for this department."],
     "जबाबदार अधिकारी नेमलेले नाहीत — विभागाचे परवानगीधारक कर्मचारी मान्यता देतील" => ["जिम्मेदार अधिकारी नियुक्त नहीं — विभाग के अनुमति प्राप्त कर्मचारी मान्यता देंगे", "No responsible officer set — permitted staff of the department will approve"],
     "वरील तक्त्यातील सर्व माहिती जबाबदार अधिकारी यांनी अधिकृतरीत्या तपासून व खात्री करून दिलेली आहे. तरी माननीय कार्याध्यक्ष साहेब यांच्या माहितीस्तव सविनय सादर..." => ["उपरोक्त तालिका की सारी जानकारी जिम्मेदार अधिकारियों ने आधिकारिक रूप से जाँच कर पुष्टि की है। माननीय कार्याध्यक्ष महोदय की जानकारी हेतु सविनय प्रस्तुत...", "All information in the above table has been officially checked and confirmed by the responsible officers. Respectfully submitted for the Hon. Chairman's information..."],
+    "मासिक बिल ताळमेळ" => ["मासिक बिल मिलान", "Monthly bill reconciliation"],
 ];

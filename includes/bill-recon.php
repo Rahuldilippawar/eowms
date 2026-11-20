@@ -23,14 +23,20 @@ function billReconDepts() {
     ];
 }
 
+/** विभागाचा Department code — त्या विभागाचे कर्मचारी आपोआप (परवानगी नसली तरी) */
+function billReconDeptCodes() { return ['store' => 'STR', 'purchase' => 'PUR', 'accounts' => 'ACC']; }
+
 function billReconCan($dept) {
     $d = billReconDepts();
-    return isset($d[$dept]) && (hasRole('super_admin') || hasPermission($d[$dept][2]));
+    if (!isset($d[$dept])) return false;
+    if (hasRole('super_admin') || hasPermission($d[$dept][2])) return true;
+    return function_exists('moduleUserDeptCode') && moduleUserDeptCode() === billReconDeptCodes()[$dept];
 }
 /** मा. कार्याध्यक्ष / व्यवस्थापन शेरा */
 function billReconCanHead() { return hasRole('super_admin') || isManagementOrAbove(); }
 function billReconCanAny() { return billReconCan('store') || billReconCan('purchase') || billReconCan('accounts'); }
-function billReconCanView() { return billReconCanAny() || billReconCanHead(); }
+/** पाहणे व अहवाल — तिन्ही विभाग, व्यवस्थापन, किंवा पदे व्यवस्थापनातून "बिल ताळमेळ — पाहणे" Access */
+function billReconCanView() { return billReconCanAny() || billReconCanHead() || hasPermission('bill_recon_view'); }
 
 /** विभागाचा जबाबदार अधिकारी (फक्त तोच मान्यता देऊ शकतो) — संस्था सेटिंग "bill_recon_resp_<dept>" */
 function billReconResponsible(PDO $pdo, $orgId, $dept) {
@@ -130,11 +136,14 @@ function billReconMonth(PDO $pdo, $orgId, $period, $userId = null, $create = tru
 /** त्या विभागाच्या परवानगीचे सक्रिय वापरकर्ते (सूचना पाठवण्यासाठी) */
 function billReconUsers(PDO $pdo, $orgId, $perm) {
     try {
+        $code = '';
+        foreach (billReconDepts() as $dk => $dv) if ($dv[2] === $perm) $code = billReconDeptCodes()[$dk];
         $st = $pdo->prepare("SELECT u.id FROM users u WHERE u.organization_id = ? AND u.is_active = 1 AND (
-                EXISTS (SELECT 1 FROM user_permissions up WHERE up.user_id = u.id AND up.permission_key = ? AND up.mode = 'grant' AND (up.expires_on IS NULL OR up.expires_on >= CURDATE()))
+                EXISTS (SELECT 1 FROM departments dd WHERE dd.id = u.department_id AND dd.code = ? AND ? <> '')
+                OR EXISTS (SELECT 1 FROM user_permissions up WHERE up.user_id = u.id AND up.permission_key = ? AND up.mode = 'grant' AND (up.expires_on IS NULL OR up.expires_on >= CURDATE()))
                 OR (EXISTS (SELECT 1 FROM role_permissions rp WHERE rp.role_key = u.role AND rp.permission_key = ?)
                     AND NOT EXISTS (SELECT 1 FROM user_permissions ud WHERE ud.user_id = u.id AND ud.permission_key = ? AND ud.mode = 'deny')))");
-        $st->execute([(int)$orgId, $perm, $perm, $perm]);
+        $st->execute([(int)$orgId, $code, $code, $perm, $perm, $perm]);
         return array_map('intval', $st->fetchAll(PDO::FETCH_COLUMN));
     } catch (PDOException $e) { return []; }
 }

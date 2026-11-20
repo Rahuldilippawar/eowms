@@ -23,7 +23,8 @@ function accessGatedModules() {
     $reg = getModuleRegistry();
     $names = ['store' => '📦 भांडार (Store)', 'meditation' => 'ध्यान व सत्संग', 'music' => 'संगीत विभाग', 'events' => 'कार्यक्रम', 'guests' => 'पाहुणे',
         'room-booking' => 'Room/Hall Booking', 'allocations' => 'Issue / Return Register', 'gaushala' => 'गौशाळा', 'vehicles' => 'वाहन विभाग',
-        'cctv' => 'CCTV', 'it' => 'IT विभाग', 'deadstock' => 'Dead Stock', 'dept-finance' => 'विभाग Finance'];
+        'cctv' => 'CCTV', 'it' => 'IT विभाग', 'deadstock' => 'Dead Stock', 'dept-finance' => 'विभाग Finance',
+        'purchase' => '🛒 खरेदी विभाग', 'bill-recon' => '🧾 मासिक बिल ताळमेळ'];
     $lbl = fn($k, $f) => $reg[$k]['label'] ?? ($names[$k] ?? $f);
     $deptCodes = moduleAccessDeptCodes();
     $out = [];

@@ -470,7 +470,7 @@ function navGroupHead($id, $key, $activeGroup, $icon, $label, $badge = 0) {
 
     <!-- ==================== 🛒 खरेदी विभाग — खरेदी बाकी / पूर्ण / अहवाल ==================== -->
     <?php navSectionStart(); ?>
-    <?php if (hasRole('super_admin') || hasPermission('manage_purchase') || isManagementOrAbove()): ?>
+    <?php if (moduleAllowed('purchase') || isManagementOrAbove()): ?>
       <a href="<?= $rp ?>purchase/index.php" class="tree-node <?= $currentDir === 'purchase' && $currentPage === 'index.php' && ($_GET['tab'] ?? '') !== 'done' ? 'active' : '' ?>">
         <i class="fa-solid fa-cart-shopping fa-fw"></i><span>खरेदी बाकी</span>
       </a>
@@ -485,7 +485,7 @@ function navGroupHead($id, $key, $activeGroup, $icon, $label, $badge = 0) {
 
     <!-- ==================== 🧾 मासिक बिल ताळमेळ — भांडार · खरेदी · लेखा ==================== -->
     <?php navSectionStart(); ?>
-    <?php if (hasRole('super_admin') || hasPermission('bill_recon_store') || hasPermission('manage_purchase') || hasPermission('bill_recon_accounts') || isManagementOrAbove()): ?>
+    <?php if (moduleAllowed('bill-recon') || isManagementOrAbove()): ?>
       <a href="<?= $rp ?>bill-recon/index.php" class="tree-node <?= $currentDir === 'bill-recon' ? 'active' : '' ?>">
         <i class="fa-solid fa-scale-balanced fa-fw"></i><span>मासिक बिल ताळमेळ</span>
       </a>

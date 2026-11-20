@@ -14,7 +14,7 @@ function purchaseReady(PDO $pdo) {
 }
 
 /** नोंद / बदल / खरेदी पूर्ण / अहवाल — Super Admin किंवा "खरेदी विभाग" परवानगी */
-function canPurchase() { return hasRole('super_admin') || hasPermission('manage_purchase'); }
+function canPurchase() { return hasRole('super_admin') || hasPermission('manage_purchase') || (function_exists('moduleUserDeptCode') && moduleUserDeptCode() === 'PUR'); }
 /** पाहणे व अहवाल — वरचे + Management */
 function canViewPurchase() { return canPurchase() || isManagementOrAbove(); }
 

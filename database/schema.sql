@@ -290,7 +290,8 @@ INSERT INTO permissions (permission_key, label, label_local, sort_order) VALUES
 ('gate_scan', 'Gate — scan staff ID cards / Digital ID, entry-exit log', 'Gate — कर्मचारी ID Scan, ये-जा नोंद व अहवाल', 51),
 ('manage_purchase', 'Purchase department — pending purchases: add, edit, mark purchased, reports', 'खरेदी विभाग — खरेदी बाकी नोंद, बदल, खरेदी पूर्ण, अहवाल', 52),
 ('bill_recon_store', 'Main store — monthly bill count & digital approval (bill reconciliation)', 'मुख्य भांडार विभाग — मासिक बिल संख्या व डिजिटल मान्यता (बिल ताळमेळ)', 53),
-('bill_recon_accounts', 'Accounts — monthly bill count & digital approval (bill reconciliation)', 'लेखा विभाग — मासिक बिल संख्या व डिजिटल मान्यता (बिल ताळमेळ)', 54);
+('bill_recon_accounts', 'Accounts — monthly bill count & digital approval (bill reconciliation)', 'लेखा विभाग — मासिक बिल संख्या व डिजिटल मान्यता (बिल ताळमेळ)', 54),
+('bill_recon_view', 'Monthly bill reconciliation — view & reports', 'मासिक बिल ताळमेळ — पाहणे व अहवाल', 55);
 
 INSERT INTO role_permissions (role_key, permission_key)
 SELECT role_key, 'manage_it' FROM role_definitions WHERE category = 'management';
