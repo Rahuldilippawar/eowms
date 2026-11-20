@@ -3614,6 +3614,27 @@ CREATE TABLE bill_recon_events (
   INDEX idx_bre_month (month_id, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- 🏪 पुरवठादार यादी
+CREATE TABLE purchase_suppliers (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  organization_id INT NOT NULL,
+  name VARCHAR(200) NOT NULL,
+  name_key VARCHAR(200) NOT NULL,
+  category VARCHAR(100) NULL,
+  contact_person VARCHAR(150) NULL,
+  phone VARCHAR(40) NULL,
+  email VARCHAR(150) NULL,
+  gstin VARCHAR(20) NULL,
+  address VARCHAR(500) NULL,
+  notes VARCHAR(500) NULL,
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  created_by INT NULL,
+  created_at DATETIME NOT NULL,
+  updated_at DATETIME NULL,
+  UNIQUE KEY uq_ps_key (organization_id, name_key),
+  INDEX idx_ps_org (organization_id, is_active, name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- 📊 तुलनात्मक तक्ता
 CREATE TABLE purchase_comparisons (
   id INT AUTO_INCREMENT PRIMARY KEY,

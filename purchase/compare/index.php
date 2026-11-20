@@ -9,6 +9,13 @@ $orgId = activeOrgId();
 $ready = purchaseCmpReady($pdo);
 $canEdit = purchaseCmpCanEdit();
 $S = purchaseCmpStatuses();
+if ($ready && $canEdit && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'import_seed') {
+    $n = purchaseCmpSeedImport($pdo, $orgId, (int)currentUser()['id']);
+    if ($n) logActivity('तुलनात्मक तक्ते — Excel मधील तक्ते आयात', 'organization', $orgId, $n . ' तक्ते');
+    $_SESSION['flash'] = $n ? '✓ Excel मधील ' . $n . ' तुलनात्मक तक्ते आयात झाले — सगळे पुरवठादार यादीत जोडले.' : '⚠️ तक्ते आधीच आयात केलेले आहेत.';
+    header('Location: index.php'); exit;
+}
+$seedPending = $ready && $canEdit && (!function_exists('orgSetting') || orgSetting($pdo, $orgId, 'purchase_cmp_seed_done', '') === '');
 
 $f = ['fy' => preg_match('/^\d{4}-\d{2}$/', (string)($_GET['fy'] ?? '')) ? $_GET['fy'] : '', 'st' => isset($S[$_GET['st'] ?? '']) ? $_GET['st'] : '',
     'dept' => trim((string)($_GET['dept'] ?? '')), 'q' => trim((string)($_GET['q'] ?? ''))];
@@ -73,11 +80,20 @@ require_once __DIR__ . '/../../includes/header.php';
   <div class="page-title mb-0">📊 तुलनात्मक तक्ते (Comparison Chart)</div>
   <div class="pc-act">
     <?php if ($canEdit && $ready): ?><a class="pri" href="chart.php">＋ नवीन तक्ता</a><a href="import.php">📥 Excel आयात</a><?php endif; ?>
+    <?php if ($ready): ?><a href="suppliers.php">🏪 पुरवठादार</a><?php endif; ?>
     <a href="../index.php">🛒 खरेदी बाकी</a>
   </div>
 </div>
 <?php if (!$ready): ?><div class="alert alert-warning" style="border-radius:10px;font-size:13px;">⚠️ तुलनात्मक तक्त्यांसाठी Database Update बाकी आहे — Super Admin ने System Update → Database Update चालवावं.</div><?php endif; ?>
 
+<?php if ($seedPending):
+  require_once __DIR__ . '/../../includes/purchase-compare-seed.php'; $SD = purchaseCmpSeedData(); ?>
+<form method="POST" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;border:1px dashed #2563EB;background:color-mix(in srgb,#2563EB 6%,var(--surface));border-radius:14px;padding:12px 14px;margin:8px 0 12px;" onsubmit="return confirm('जुन्या Comparison Excel मधील <?= count($SD['charts']) ?> तक्ते आयात करायचे?');">
+  <input type="hidden" name="action" value="import_seed"><span style="font-size:26px;">📥</span>
+  <div style="flex:1;min-width:220px;"><b>Comparison Chart Excel — <?= count($SD['charts']) ?> तक्ते</b><div style="font-size:12.5px;color:var(--text-dim);">शहापूर शाखेचे जुने सगळे तुलनात्मक तक्ते (दर, GST, वाहतूक, सूट, टीप, सह्या) एका क्लिकमध्ये — सगळ्या पुरवठादारांची नावं यादीत जतन होतील.</div></div>
+  <button type="submit" class="btn btn-sm" style="background:#2563EB;color:#fff;border-radius:9px;font-weight:700;">आयात करा</button>
+</form>
+<?php endif; ?>
 <?php if ($ready):
   smartTiles([
     ['label' => '📊 तक्ते', 'value' => $kp['n'], 'sub' => $kp['appr'] . ' मंजूर · ' . $kp['wait'] . ' मान्यतेसाठी'],

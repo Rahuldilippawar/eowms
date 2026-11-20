@@ -145,6 +145,10 @@ function purchaseCmpSave(PDO $pdo, $orgId, $userId, array $d, $id = 0) {
                     $d['signatories'] ?: null, $d['status'] ?? 'draft', $d['source'] ?? null, $userId]);
             $id = (int)$pdo->lastInsertId();
         }
+        // पुरवठादार यादीत नाव जोडतो / आधीचं (प्रमाण) नाव वापरतो
+        $canon = purchaseSuppliersSync($pdo, $orgId, array_column($d['vendors'], 'name'), $userId);
+        foreach ($d['vendors'] as &$vv) { $kk = purchaseSupplierKey($vv['name']); if (isset($canon[$kk])) $vv['name'] = $canon[$kk]; }
+        unset($vv);
         $vIns = $pdo->prepare("INSERT INTO purchase_comparison_vendors (comparison_id, sort_order, name, gst_pct, gst_amount, gst_incl, gst_on_transport, transport, transport_incl, other_label, other_amount, discount, remarks)
             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)");
         $vIds = [];
@@ -338,4 +342,112 @@ function purchaseCmpComputeDraft(array $d) {
         foreach ($it['rates'] as $vi => $r) { $c['rates'][$j][$vi] = $r; if (($it['amounts'][$vi] ?? null) !== null) $c['amounts'][$j][$vi] = $it['amounts'][$vi]; }
     }
     return purchaseCmpCompute($c);
+}
+
+/* ======================= 🏪 पुरवठादार यादी (Supplier Master) ======================= */
+
+function purchaseSuppliersReady(PDO $pdo) {
+    static $ok = null;
+    if ($ok !== null) return $ok;
+    try { $pdo->query("SELECT 1 FROM purchase_suppliers LIMIT 0"); return $ok = true; } catch (PDOException $e) { return $ok = false; }
+}
+
+/** नावाची ओळख — "SHREE KRUPA TRADERS" = "Shree Krupa Traders " = "Shree Krupa Traders." */
+function purchaseSupplierKey($name) {
+    $k = mb_strtolower(trim((string)$name));
+    $k = str_replace('&', ' and ', $k);
+    $k = preg_replace('/\b(m\/s|messrs)\b\.?/u', '', $k);
+    return mb_substr(preg_replace('/[^\p{L}\p{N}]+/u', '', $k), 0, 200);
+}
+
+/** यादीत नसलेली नावं जोडतो; परत: [key => यादीतलं (प्रमाण) नाव] */
+function purchaseSuppliersSync(PDO $pdo, $orgId, array $names, $userId = null) {
+    if (!purchaseSuppliersReady($pdo)) return [];
+    $map = [];
+    $ins = $pdo->prepare("INSERT IGNORE INTO purchase_suppliers (organization_id, name, name_key, created_by, created_at) VALUES (?,?,?,?,NOW())");
+    $get = $pdo->prepare("SELECT name FROM purchase_suppliers WHERE organization_id = ? AND name_key = ?");
+    foreach ($names as $n) {
+        $n = trim(preg_replace('/\s+/u', ' ', (string)$n));
+        $k = purchaseSupplierKey($n);
+        if ($k === '' || isset($map[$k])) continue;
+        $ins->execute([(int)$orgId, mb_substr($n, 0, 200), $k, $userId]);
+        $get->execute([(int)$orgId, $k]);
+        $map[$k] = (string)($get->fetchColumn() ?: $n);
+    }
+    return $map;
+}
+
+/** आपोआप सुचवणीसाठी नावं — पुरवठादार यादी (सक्रिय) */
+function purchaseSupplierNames(PDO $pdo, $orgId) {
+    $out = [];
+    if (purchaseSuppliersReady($pdo)) {
+        $st = $pdo->prepare("SELECT name FROM purchase_suppliers WHERE organization_id = ? AND is_active = 1 ORDER BY name"); $st->execute([(int)$orgId]);
+        foreach ($st->fetchAll(PDO::FETCH_COLUMN) as $n) $out[purchaseSupplierKey($n)] = $n;
+    }
+    try {
+        $st = $pdo->prepare("SELECT DISTINCT v.name FROM purchase_comparison_vendors v JOIN purchase_comparisons c ON c.id = v.comparison_id WHERE c.organization_id = ?"); $st->execute([(int)$orgId]);
+        foreach ($st->fetchAll(PDO::FETCH_COLUMN) as $n) { $k = purchaseSupplierKey($n); if (!isset($out[$k])) $out[$k] = $n; }
+    } catch (PDOException $e) {}
+    natcasesort($out);
+    return array_values($out);
+}
+
+/** वस्तूंची नावं व Unit — आधीच्या तक्त्यांतून (आपोआप सुचवणी; नाव निवडल्यावर Unit आपोआप) */
+function purchaseCmpItemSuggest(PDO $pdo, $orgId) {
+    try {
+        $st = $pdo->prepare("SELECT i.particular, i.unit FROM purchase_comparison_items i JOIN purchase_comparisons c ON c.id = i.comparison_id WHERE c.organization_id = ? ORDER BY i.id DESC LIMIT 2000");
+        $st->execute([(int)$orgId]);
+        $items = []; $units = [];
+        foreach ($st->fetchAll() as $r) {
+            $p = trim($r['particular']); $u = trim((string)$r['unit']);
+            if ($p !== '' && !isset($items[$p])) $items[$p] = $u;
+            if ($u !== '' && mb_strlen($u) <= 12) $units[mb_strtolower($u)] = $u;
+        }
+        return ['items' => $items, 'units' => array_values($units)];
+    } catch (PDOException $e) { return ['items' => [], 'units' => []]; }
+}
+
+/** पुरवठादाराची आकडेवारी — किती तक्त्यांत, किती वेळा L1, किती वेळा निवड, शेवटचा तक्ता */
+function purchaseSupplierStats(PDO $pdo, $orgId) {
+    $S = [];
+    try {
+        $st = $pdo->prepare("SELECT id FROM purchase_comparisons WHERE organization_id = ? AND status <> 'cancelled'"); $st->execute([(int)$orgId]);
+        foreach ($st->fetchAll(PDO::FETCH_COLUMN) as $cid) {
+            $c = purchaseCmpLoad($pdo, $orgId, $cid); $C = purchaseCmpCompute($c);
+            foreach ($c['vendors'] as $i => $v) {
+                $k = purchaseSupplierKey($v['name']);
+                $S[$k] = $S[$k] ?? ['charts' => 0, 'l1' => 0, 'won' => 0, 'won_amt' => 0, 'last' => null, 'last_id' => null];
+                $S[$k]['charts']++;
+                if ($C['l1'] === $v['id']) $S[$k]['l1']++;
+                if ($c['status'] === 'approved' && (int)$c['selected_vendor'] === $i) { $S[$k]['won']++; $S[$k]['won_amt'] += $C['vendors'][$v['id']]['total']; }
+                if ($S[$k]['last'] === null || $c['cmp_date'] > $S[$k]['last']) { $S[$k]['last'] = $c['cmp_date']; $S[$k]['last_id'] = (int)$c['id']; }
+            }
+        }
+    } catch (PDOException $e) {}
+    return $S;
+}
+
+/** शहापूर शाखेच्या जुन्या Excel मधील तक्ते — एकदाच आयात (परत: आयात झालेले) */
+function purchaseCmpSeedImport(PDO $pdo, $orgId, $userId) {
+    require_once __DIR__ . '/purchase-compare-seed.php';
+    if (function_exists('orgSetting') && orgSetting($pdo, $orgId, 'purchase_cmp_seed_done', '') !== '') return 0;
+    $D = purchaseCmpSeedData();
+    $st = $pdo->prepare("SELECT CONCAT(title, '|', cmp_date) FROM purchase_comparisons WHERE organization_id = ?"); $st->execute([(int)$orgId]);
+    $have = array_flip($st->fetchAll(PDO::FETCH_COLUMN));
+    $n = 0;
+    $pdo->beginTransaction();
+    try {
+        foreach ($D['charts'] as $d) {
+            if (isset($have[$d['title'] . '|' . $d['cmp_date']])) continue;
+            $d['status'] = 'final'; $d['request_id'] = null; $d['source'] = mb_substr('Excel: Comparission_Excel › ' . $d['sheet'], 0, 150);
+            purchaseCmpSave($pdo, $orgId, $userId, $d);
+            $n++;
+        }
+        if (function_exists('orgSettingSet')) {
+            orgSettingSet($pdo, $orgId, 'purchase_cmp_seed_done', date('Y-m-d H:i:s'));
+            if (!empty($D['head']) && (string)orgSetting($pdo, $orgId, 'purchase_report_head', '') === '') orgSettingSet($pdo, $orgId, 'purchase_report_head', $D['head']);
+        }
+        $pdo->commit();
+    } catch (Throwable $e) { $pdo->rollBack(); throw $e; }
+    return $n;
 }

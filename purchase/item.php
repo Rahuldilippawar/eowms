@@ -190,7 +190,7 @@ $age = $row && !empty($row['id']) ? purchaseAgeDays($row) : null;
             <div class="col-6"><label class="form-label-custom">दिनांक</label><input type="date" name="done_on" class="form-control-custom" value="<?= date('Y-m-d') ?>" max="<?= date('Y-m-d') ?>"></div>
             <div class="col-6"><label class="form-label-custom">प्रत्यक्ष ₹</label><input type="number" name="actual_amount" class="form-control-custom" value="<?= $row['est_amount'] !== null ? (float)$row['est_amount'] : '' ?>" min="0" step="0.01"></div>
             <div class="col-6"><label class="form-label-custom">बिल क्र.</label><input type="text" name="bill_no" class="form-control-custom" maxlength="80"></div>
-            <div class="col-6"><label class="form-label-custom">पुरवठादार</label><input type="text" name="supplier" class="form-control-custom" maxlength="150"></div>
+            <div class="col-6"><label class="form-label-custom">पुरवठादार</label><input type="text" name="supplier" class="form-control-custom" maxlength="150" list="piSup" autocomplete="off"></div>
             <div class="col-12"><input type="text" name="done_note" class="form-control-custom" maxlength="255" placeholder="शेरा"></div>
           </div>
           <button type="submit" class="btn btn-sm mt-2 w-100" style="background:#16A34A;color:#fff;border-radius:9px;font-weight:700;">✓ खरेदी पूर्ण करा</button>
@@ -237,4 +237,5 @@ $age = $row && !empty($row['id']) ? purchaseAgeDays($row) : null;
   </div>
 </div>
 
+<?php if (purchaseReady($pdo)) { require_once __DIR__ . '/../includes/purchase-compare.php'; ?><datalist id="piSup"><?php foreach (purchaseSupplierNames($pdo, $orgId) as $sn): ?><option value="<?= h($sn) ?>"><?php endforeach; ?></datalist><?php } ?>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

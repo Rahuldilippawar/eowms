@@ -94,7 +94,8 @@ if ($c) {
 if (!empty($P) && $error) { $state = ['vendors' => $P['vendors'] ?? $state['vendors'], 'items' => $P['items'] ?? $state['items']]; $F = array_merge($F, array_intersect_key($_POST, $F)); }
 $reqs = [];
 if (purchaseReady($pdo)) { $st = $pdo->prepare("SELECT id, sr_no, fy, title FROM purchase_requests WHERE organization_id = ? AND (status = 'pending' OR id = ?) ORDER BY fy DESC, sr_no DESC LIMIT 300"); $st->execute([$orgId, (int)$F['request_id']]); $reqs = $st->fetchAll(); }
-$st = $pdo->prepare("SELECT DISTINCT name FROM purchase_comparison_vendors v JOIN purchase_comparisons c ON c.id = v.comparison_id WHERE c.organization_id = ? ORDER BY name LIMIT 400"); $st->execute([$orgId]); $vNames = $st->fetchAll(PDO::FETCH_COLUMN);
+$vNames = purchaseSupplierNames($pdo, $orgId);
+$IS = purchaseCmpItemSuggest($pdo, $orgId);
 $depts = function_exists('purchaseDepartments') ? purchaseDepartments($pdo, $orgId) : [];
 
 $pageTitle = $c ? 'तुलनात्मक तक्ता — बदल' : 'नवीन तुलनात्मक तक्ता';
@@ -165,9 +166,12 @@ require_once __DIR__ . '/../../includes/header.php';
 </form>
 <datalist id="cgDepts"><?php foreach ($depts as $d): ?><option value="<?= h($d) ?>"><?php endforeach; ?></datalist>
 <datalist id="cgVendors"><?php foreach ($vNames as $n): ?><option value="<?= h($n) ?>"><?php endforeach; ?></datalist>
+<datalist id="cgItems"><?php foreach (array_slice(array_keys($IS['items']), 0, 1500) as $n): ?><option value="<?= h($n) ?>"><?php endforeach; ?></datalist>
+<datalist id="cgUnits"><?php foreach (array_unique(array_merge(['Nos', 'Kg', 'Ltr', 'Mtr', 'Box', 'Pkt', 'Set', 'Pair', 'Sqft', 'Bundle'], $IS['units'])) as $n): ?><option value="<?= h($n) ?>"><?php endforeach; ?></datalist>
 <script>
 window.addEventListener('load', function () {
   var S = <?= json_encode($state, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP) ?>;
+  var IU = <?= json_encode($IS['items'] ?: new stdClass(), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP) ?>;   // आधीच्या वस्तू → Unit
   var T = document.getElementById('cg'), SUM = document.getElementById('cgSum');
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]; }); };
   var n = function (v) { v = String(v == null ? '' : v).replace(/[,₹\s]/g, ''); return v === '' || isNaN(v) ? null : parseFloat(v); };
@@ -180,7 +184,7 @@ window.addEventListener('load', function () {
     V.forEach(function () { h += '<th style="font-weight:600;">दर (Rate)</th><th style="font-weight:600;">रक्कम</th>'; });
     h += '<th></th></tr></thead><tbody>';
     S.items.forEach(function (it, ii) {
-      h += '<tr><td class="sr">' + (ii + 1) + '</td><td><input data-i="' + ii + '" data-f="particular" value="' + esc(it.particular) + '" placeholder="वस्तूचं नाव"></td><td><input data-i="' + ii + '" data-f="qty" value="' + esc(it.qty) + '" inputmode="decimal" style="text-align:right;"></td><td><input data-i="' + ii + '" data-f="unit" value="' + esc(it.unit) + '"></td>';
+      h += '<tr><td class="sr">' + (ii + 1) + '</td><td><input data-i="' + ii + '" data-f="particular" value="' + esc(it.particular) + '" placeholder="वस्तूचं नाव — टाईप करा" list="cgItems"></td><td><input data-i="' + ii + '" data-f="qty" value="' + esc(it.qty) + '" inputmode="decimal" style="text-align:right;"></td><td><input data-i="' + ii + '" data-f="unit" value="' + esc(it.unit) + '" list="cgUnits"></td>';
       V.forEach(function (v, vi) { h += '<td><input data-i="' + ii + '" data-r="' + vi + '" value="' + esc(it.rates[vi]) + '" inputmode="decimal" style="text-align:right;" placeholder="—"></td><td class="amt" id="a' + ii + '_' + vi + '"></td>'; });
       h += '<td><button type="button" class="x" data-deli="' + ii + '" title="ओळ काढा">✕</button></td></tr>';
     });
@@ -230,7 +234,11 @@ window.addEventListener('load', function () {
   T.addEventListener('input', function (e) {
     var el = e.target, d = el.dataset;
     if (d.r !== undefined) { S.items[+d.i].rates[+d.r] = el.value; if (S.items[+d.i].amounts) S.items[+d.i].amounts[+d.r] = ''; }
-    else if (d.i !== undefined) { S.items[+d.i][d.f] = el.value; if (d.f === 'qty' && S.items[+d.i].amounts) S.items[+d.i].amounts = S.items[+d.i].amounts.map(function () { return ''; }); }
+    else if (d.i !== undefined) {
+      S.items[+d.i][d.f] = el.value; if (d.f === 'qty' && S.items[+d.i].amounts) S.items[+d.i].amounts = S.items[+d.i].amounts.map(function () { return ''; });
+      // आधीची वस्तू निवडली → Unit आपोआप
+      if (d.f === 'particular' && IU[el.value] && (!S.items[+d.i].unit || S.items[+d.i].unit === 'Nos')) { S.items[+d.i].unit = IU[el.value]; var u = T.querySelector('input[data-i="' + d.i + '"][data-f="unit"]'); if (u) u.value = IU[el.value]; }
+    }
     else if (d.v !== undefined) { S.vendors[+d.v][d.f] = el.type === 'checkbox' ? (el.checked ? 1 : 0) : el.value; }
     calc();
   });

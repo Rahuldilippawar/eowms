@@ -5193,3 +5193,27 @@ INSERT IGNORE INTO permissions (permission_key, label, label_local, sort_order) 
   ('purchase_compare', 'Comparison chart — create, edit, print, Excel import', 'तुलनात्मक तक्ता — बनवणे, बदल, Print, Excel आयात', 56),
   ('purchase_compare_approve', 'Comparison chart — approve vendor selection', 'तुलनात्मक तक्ता — पुरवठादार निवड मान्यता (Approve)', 57),
   ('purchase_compare_view', 'Comparison chart — view & print', 'तुलनात्मक तक्ता — पाहणे व Print', 58);
+
+-- ============================================================
+-- FROM: migration-purchase-suppliers.sql
+-- ============================================================
+-- 🏪 खरेदी विभाग — पुरवठादार यादी (Supplier Master): नाव टाईप करताच आपोआप सुचवणी, संपर्क, GSTIN, प्रकार
+CREATE TABLE IF NOT EXISTS purchase_suppliers (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  organization_id INT NOT NULL,
+  name VARCHAR(200) NOT NULL,
+  name_key VARCHAR(200) NOT NULL,
+  category VARCHAR(100) NULL,
+  contact_person VARCHAR(150) NULL,
+  phone VARCHAR(40) NULL,
+  email VARCHAR(150) NULL,
+  gstin VARCHAR(20) NULL,
+  address VARCHAR(500) NULL,
+  notes VARCHAR(500) NULL,
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  created_by INT NULL,
+  created_at DATETIME NOT NULL,
+  updated_at DATETIME NULL,
+  UNIQUE KEY uq_ps_key (organization_id, name_key),
+  INDEX idx_ps_org (organization_id, is_active, name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
