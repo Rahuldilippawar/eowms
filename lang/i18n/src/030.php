@@ -3199,4 +3199,6 @@ return [
     "भोजनालय विभागाची" => ["भोजनालय विभाग की", "Kitchen department's"],
     "भांडार + भोजनालय" => ["भंडार + भोजनालय", "Store + kitchen"],
     "मूळ बिले प्राप्त न झाल्याने लेखा विभागात जमा करणे बाकी" => ["मूल बिल प्राप्त न होने से लेखा विभाग में जमा करना बाकी", "Not yet submitted to accounts as original bills not received"],
+    "कारण दुरुस्त केलं." => ["कारण सुधारा गया।", "Reason corrected."],
+    "किचन साहित्य खरेदीचे बिल तीन कोटेशन अभावी जमा नाही — खरेदी विभागाकडे जमा आहे" => ["रसोई सामग्री खरीद का बिल तीन कोटेशन के अभाव में जमा नहीं — खरीद विभाग के पास जमा है", "Kitchen items bill not submitted for lack of three quotations — held with purchase"],
 ];

@@ -248,9 +248,9 @@ function billReconSeedImport(PDO $pdo, $orgId, $userId) {
             billReconLog($pdo, $orgId, $m['id'], 'imported', 'मासिक बिल जमा / ताळमेळ तक्ता (एप्रिल ते ऑक्टोबर 2026)', $userId);
             if ($p === '2026-10') {
                 $ins = $pdo->prepare("INSERT INTO bill_recon_issues (month_id, organization_id, party, bill_count, held_at, reason, status, resolved_note, resolved_at, created_by, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,NOW())");
-                // CMK ची 64 बिलं = भोजनालय विभागाची (225 + 64 = 289) → स्पष्ट; उरलेला फरक 2 = गणेश मेडिकल (लेखा विभागात जमा नाही)
-                $ins->execute([$m['id'], $orgId, 'CMK ट्रेडर्स', 64, 'kitchen', 'किचन साहित्य खरेदीचे बिल तीन कोटेशन अभावी जमा नाही', 'resolved', 'भोजनालय विभागाची बिलं — भांडार 225 + भोजनालय 64 = खरेदी 289', $at, $userId]);
-                $ins->execute([$m['id'], $orgId, 'श्री गणेश मेडिकल स्टोअर्स', 2, 'purchase', 'मूळ बिले प्राप्त न झाल्याने लेखा विभागात जमा करणे बाकी', 'open', null, null, $userId]);
+                // कागदी तक्त्याप्रमाणे: 1) CMK ट्रेडर्सचं 1 बिल खरेदी विभागाकडे; 2) गणेश मेडिकल — खोडलेलं (मिटलं)
+                $ins->execute([$m['id'], $orgId, 'CMK ट्रेडर्स', 1, 'purchase', 'किचन साहित्य खरेदीचे बिल तीन कोटेशन अभावी जमा नाही — खरेदी विभागाकडे जमा आहे', 'open', null, null, $userId]);
+                $ins->execute([$m['id'], $orgId, 'श्री गणेश मेडिकल स्टोअर्स', 2, 'accounts', 'मूळ बिले प्राप्त न झाल्याने जमा करणे बाकी', 'resolved', 'कागदी तक्त्यावर खोडले — मिटले', $at, $userId]);
             }
             $n++;
         }
