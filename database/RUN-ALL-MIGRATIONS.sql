@@ -5102,3 +5102,17 @@ INSERT IGNORE INTO permissions (permission_key, label, label_local, sort_order) 
 -- 🧾 बिल ताळमेळ — फक्त पाहणे / अहवाल Access (पदे व्यवस्थापनातून इतरांना देता येतो)
 INSERT IGNORE INTO permissions (permission_key, label, label_local, sort_order) VALUES
   ('bill_recon_view', 'Monthly bill reconciliation — view & reports', 'मासिक बिल ताळमेळ — पाहणे व अहवाल', 55);
+
+-- ============================================================
+-- FROM: migration-bill-recon-kitchen.sql
+-- ============================================================
+-- 🍲 बिल ताळमेळ — भोजनालय विभाग (भांडार + भोजनालय = खरेदी = लेखा)
+ALTER TABLE bill_recon_months ADD COLUMN kitchen_count INT NULL AFTER store_at;
+ALTER TABLE bill_recon_months ADD COLUMN kitchen_note VARCHAR(255) NULL AFTER kitchen_count;
+ALTER TABLE bill_recon_months ADD COLUMN kitchen_by INT NULL AFTER kitchen_note;
+ALTER TABLE bill_recon_months ADD COLUMN kitchen_name VARCHAR(150) NULL AFTER kitchen_by;
+ALTER TABLE bill_recon_months ADD COLUMN kitchen_at DATETIME NULL AFTER kitchen_name;
+-- आधीच्या महिन्यांत: खरेदी − भांडार = भोजनालयाची बिलं (उदा. ऑक्टोबर 2026: 289 − 225 = 64)
+UPDATE bill_recon_months SET kitchen_count = GREATEST(purchase_count - store_count, 0) WHERE kitchen_count IS NULL AND store_count IS NOT NULL AND purchase_count IS NOT NULL;
+INSERT IGNORE INTO permissions (permission_key, label, label_local, sort_order) VALUES
+  ('bill_recon_kitchen', 'Kitchen (Bhojanalay) — monthly bill count & digital approval (bill reconciliation)', 'भोजनालय विभाग — मासिक बिल संख्या व डिजिटल मान्यता (बिल ताळमेळ)', 53);

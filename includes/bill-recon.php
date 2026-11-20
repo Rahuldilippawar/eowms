@@ -14,27 +14,54 @@ function billReconReady(PDO $pdo) {
     try { $pdo->query("SELECT 1 FROM bill_recon_months LIMIT 0"); return $ok = true; } catch (PDOException $e) { return $ok = false; }
 }
 
-/** तीन विभाग — key => [नाव, Icon, परवानगी, "…कडे", "…ची"] */
+/**
+ * चार विभाग — key => [नाव, Icon, परवानगी, "…कडे", "…ची"]
+ * बिलं येतात भांडार व भोजनालय विभागात → त्यांची बेरीज = खरेदी विभाग = लेखा विभाग (उदा. 225 + 64 = 289)
+ */
 function billReconDepts() {
     return [
         'store'    => ['भांडार विभाग', '📦', 'bill_recon_store', 'भांडार विभागाकडे', 'भांडार विभागाची'],
+        'kitchen'  => ['भोजनालय विभाग', '🍲', 'bill_recon_kitchen', 'भोजनालय विभागाकडे', 'भोजनालय विभागाची'],
         'purchase' => ['खरेदी विभाग', '🛒', 'manage_purchase', 'खरेदी विभागाकडे', 'खरेदी विभागाची'],
         'accounts' => ['लेखा विभाग', '📒', 'bill_recon_accounts', 'लेखा विभागाकडे', 'लेखा विभागाची'],
     ];
 }
 
-/** विभागाचा Department code — त्या विभागाचे कर्मचारी आपोआप (परवानगी नसली तरी) */
-function billReconDeptCodes() { return ['store' => 'STR', 'purchase' => 'PUR', 'accounts' => 'ACC']; }
+/** विभाग ओळखणे — Department code, आणि भोजनालयासाठी नावातील शब्द (कोड वेगवेगळे असू शकतात) */
+function billReconDeptMatch() {
+    return [
+        'store'    => [['STR'], []],
+        'kitchen'  => [['KIT', 'MESS', 'BHJ', 'BHO', 'CNT'], ['भोजनालय', 'भोजन', 'Kitchen', 'Mess', 'Canteen']],
+        'purchase' => [['PUR'], []],
+        'accounts' => [['ACC'], []],
+    ];
+}
+
+/** सध्याचा वापरकर्ता कोणत्या विभागाचा (store/kitchen/purchase/accounts) — नसेल तर '' */
+function billReconUserDept() {
+    global $pdo;
+    static $k = null;
+    if ($k !== null) return $k;
+    $k = ''; $u = currentUser();
+    if (!$u || empty($u['department_id']) || !($pdo instanceof PDO)) return $k;
+    try { $st = $pdo->prepare("SELECT code, name, name_local FROM departments WHERE id = ?"); $st->execute([(int)$u['department_id']]); $d = $st->fetch(); } catch (PDOException $e) { $d = null; }
+    if (!$d) return $k;
+    foreach (billReconDeptMatch() as $key => [$codes, $words]) {
+        if (in_array(strtoupper((string)$d['code']), $codes, true)) return $k = $key;
+        foreach ($words as $w) if (mb_stripos((string)$d['name'], $w) !== false || mb_stripos((string)$d['name_local'], $w) !== false) return $k = $key;
+    }
+    return $k;
+}
 
 function billReconCan($dept) {
     $d = billReconDepts();
     if (!isset($d[$dept])) return false;
     if (hasRole('super_admin') || hasPermission($d[$dept][2])) return true;
-    return function_exists('moduleUserDeptCode') && moduleUserDeptCode() === billReconDeptCodes()[$dept];
+    return billReconUserDept() === $dept;
 }
 /** मा. कार्याध्यक्ष / व्यवस्थापन शेरा */
 function billReconCanHead() { return hasRole('super_admin') || isManagementOrAbove(); }
-function billReconCanAny() { return billReconCan('store') || billReconCan('purchase') || billReconCan('accounts'); }
+function billReconCanAny() { foreach (billReconDepts() as $k => $_) if (billReconCan($k)) return true; return false; }
 /** पाहणे व अहवाल — तिन्ही विभाग, व्यवस्थापन, किंवा पदे व्यवस्थापनातून "बिल ताळमेळ — पाहणे" Access */
 function billReconCanView() { return billReconCanAny() || billReconCanHead() || hasPermission('bill_recon_view'); }
 
@@ -91,16 +118,31 @@ function billReconMr($s) { return strtr((string)$s, ['0' => '०', '1' => '१',
  * entry: संख्या भरणे बाकी · match: जुळली + तिन्ही मान्यता · match_wait: जुळली, मान्यता बाकी · diff: फरक आहे
  */
 function billReconStatus(array $r) {
-    if ($r['store_count'] === null || $r['purchase_count'] === null || $r['accounts_count'] === null) return ['entry', '⏳ नोंद बाकी', 'warn'];
-    $eq = (int)$r['store_count'] === (int)$r['purchase_count'] && (int)$r['purchase_count'] === (int)$r['accounts_count'];
-    $appr = $r['store_at'] && $r['purchase_at'] && $r['accounts_at'];
+    if ($r['store_count'] === null || ($r['kitchen_count'] ?? null) === null || $r['purchase_count'] === null || $r['accounts_count'] === null) return ['entry', '⏳ नोंद बाकी', 'warn'];
+    $recv = billReconReceived($r);
+    $eq = $recv === (int)$r['purchase_count'] && (int)$r['purchase_count'] === (int)$r['accounts_count'];
+    // भोजनालयाची बिलं 0 असतील तर त्यांची मान्यता लागत नाही
+    $appr = $r['store_at'] && $r['purchase_at'] && $r['accounts_at'] && ((int)$r['kitchen_count'] === 0 || !empty($r['kitchen_at']));
     if ($eq) return $appr ? ['match', '✅ 100% ताळमेळ पूर्ण', 'ok'] : ['match_wait', '✍️ जुळले — मान्यता बाकी', 'warn'];
     return ['diff', '⚠️ ताळमेळ बाकी', 'bad'];
 }
 
+/** विभागाचे रंग */
+function billReconColors() { return ['store' => '#0891B2', 'kitchen' => '#16A34A', 'purchase' => '#D97706', 'accounts' => '#7C3AED']; }
+
+/** नोंद नसलेल्या महिन्यासाठी रिकामी ओळ */
+function billReconEmpty($period) {
+    $r = ['id' => 0, 'period' => $period, 'head_remark' => null, 'head_name' => null, 'head_at' => null];
+    foreach (array_keys(billReconDepts()) as $k) foreach (['count', 'note', 'by', 'name', 'at'] as $f) $r[$k . '_' . $f] = null;
+    return $r;
+}
+
+/** भांडार + भोजनालय = प्राप्त बिलं (खरेदी विभागाशी जुळायला हवी) */
+function billReconReceived(array $r) { return (int)$r['store_count'] + (int)($r['kitchen_count'] ?? 0); }
+
 /** सगळ्यात जास्त संख्येच्या तुलनेत फरक (उदा. 289 − 225 = 64) */
 function billReconDiff(array $r) {
-    $c = array_filter([$r['store_count'], $r['purchase_count'], $r['accounts_count']], fn($x) => $x !== null);
+    $c = array_filter([$r['store_count'] === null && ($r['kitchen_count'] ?? null) === null ? null : billReconReceived($r), $r['purchase_count'], $r['accounts_count']], fn($x) => $x !== null);
     return count($c) > 1 ? max($c) - min($c) : 0;
 }
 
@@ -136,14 +178,19 @@ function billReconMonth(PDO $pdo, $orgId, $period, $userId = null, $create = tru
 /** त्या विभागाच्या परवानगीचे सक्रिय वापरकर्ते (सूचना पाठवण्यासाठी) */
 function billReconUsers(PDO $pdo, $orgId, $perm) {
     try {
-        $code = '';
-        foreach (billReconDepts() as $dk => $dv) if ($dv[2] === $perm) $code = billReconDeptCodes()[$dk];
+        // त्या विभागाचे कर्मचारी (Department code / नाव) + परवानगी असलेले
+        $codes = ['__none__']; $words = [];
+        foreach (billReconDepts() as $dk => $dv) if ($dv[2] === $perm) [$codes, $words] = billReconDeptMatch()[$dk] + [1 => []];
+        $codes = $codes ?: ['__none__'];
+        $dq = 'dd.code IN (' . implode(',', array_fill(0, count($codes), '?')) . ')';
+        foreach ($words as $_) $dq .= ' OR dd.name LIKE ? OR dd.name_local LIKE ?';
+        $dp = $codes; foreach ($words as $w) { $dp[] = '%' . $w . '%'; $dp[] = '%' . $w . '%'; }
         $st = $pdo->prepare("SELECT u.id FROM users u WHERE u.organization_id = ? AND u.is_active = 1 AND (
-                EXISTS (SELECT 1 FROM departments dd WHERE dd.id = u.department_id AND dd.code = ? AND ? <> '')
+                EXISTS (SELECT 1 FROM departments dd WHERE dd.id = u.department_id AND ($dq))
                 OR EXISTS (SELECT 1 FROM user_permissions up WHERE up.user_id = u.id AND up.permission_key = ? AND up.mode = 'grant' AND (up.expires_on IS NULL OR up.expires_on >= CURDATE()))
                 OR (EXISTS (SELECT 1 FROM role_permissions rp WHERE rp.role_key = u.role AND rp.permission_key = ?)
                     AND NOT EXISTS (SELECT 1 FROM user_permissions ud WHERE ud.user_id = u.id AND ud.permission_key = ? AND ud.mode = 'deny')))");
-        $st->execute([(int)$orgId, $code, $code, $perm, $perm, $perm]);
+        $st->execute(array_merge([(int)$orgId], $dp, [$perm, $perm, $perm]));
         return array_map('intval', $st->fetchAll(PDO::FETCH_COLUMN));
     } catch (PDOException $e) { return []; }
 }
@@ -185,23 +232,25 @@ function billReconHead(PDO $pdo, $orgId, $orgName) {
  */
 function billReconSeedImport(PDO $pdo, $orgId, $userId) {
     if (function_exists('orgSetting') && orgSetting($pdo, $orgId, 'bill_recon_seed_done', '') !== '') return 0;
-    $rows = [['2026-04', 204, 204, 204], ['2026-05', 160, 160, 160], ['2026-06', 166, 166, 166], ['2026-07', 169, 169, 169],
-             ['2026-08', 300, 300, 300], ['2026-09', 254, 254, 254], ['2026-10', 225, 289, 287]];
+    // [महिना, भांडार, भोजनालय, खरेदी, लेखा] — ऑक्टोबर: भांडार 225 + भोजनालय 64 = खरेदी 289
+    $rows = [['2026-04', 204, 0, 204, 204], ['2026-05', 160, 0, 160, 160], ['2026-06', 166, 0, 166, 166], ['2026-07', 169, 0, 169, 169],
+             ['2026-08', 300, 0, 300, 300], ['2026-09', 254, 0, 254, 254], ['2026-10', 225, 64, 289, 287]];
     $paper = ['store' => 'श्री राजेंद्र भोयर', 'purchase' => 'श्री युनिस बात्रा', 'accounts' => 'श्री शुभम पवार'];
     $n = 0;
     $pdo->beginTransaction();
     try {
-        foreach ($rows as [$p, $s, $pu, $a]) {
+        foreach ($rows as [$p, $s, $ki, $pu, $a]) {
             $m = billReconMonth($pdo, $orgId, $p, $userId);
             if ($m['store_count'] !== null || $m['purchase_count'] !== null || $m['accounts_count'] !== null) continue;
             $at = '2026-11-03 10:00:00';
-            $pdo->prepare("UPDATE bill_recon_months SET store_count=?, store_name=?, store_at=?, purchase_count=?, purchase_name=?, purchase_at=?, accounts_count=?, accounts_name=?, accounts_at=?, updated_at=NOW() WHERE id=?")
-                ->execute([$s, $paper['store'], $at, $pu, $paper['purchase'], $at, $a, $paper['accounts'], $at, $m['id']]);
+            $pdo->prepare("UPDATE bill_recon_months SET store_count=?, store_name=?, store_at=?, kitchen_count=?, purchase_count=?, purchase_name=?, purchase_at=?, accounts_count=?, accounts_name=?, accounts_at=?, updated_at=NOW() WHERE id=?")
+                ->execute([$s, $paper['store'], $at, $ki, $pu, $paper['purchase'], $at, $a, $paper['accounts'], $at, $m['id']]);
             billReconLog($pdo, $orgId, $m['id'], 'imported', 'मासिक बिल जमा / ताळमेळ तक्ता (एप्रिल ते ऑक्टोबर 2026)', $userId);
             if ($p === '2026-10') {
                 $ins = $pdo->prepare("INSERT INTO bill_recon_issues (month_id, organization_id, party, bill_count, held_at, reason, status, resolved_note, resolved_at, created_by, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,NOW())");
-                $ins->execute([$m['id'], $orgId, 'CMK ट्रेडर्स', 64, 'purchase', 'किचन साहित्य खरेदीचे बिल तीन कोटेशन अभावी जमा नाही', 'open', null, null, $userId]);
-                $ins->execute([$m['id'], $orgId, 'श्री गणेश मेडिकल स्टोअर्स', 2, 'accounts', 'मूळ बिले प्राप्त न झाल्याने जमा करणे बाकी', 'resolved', 'कागदी तक्त्यावर खोडले — मिटले', $at, $userId]);
+                // CMK ची 64 बिलं = भोजनालय विभागाची (225 + 64 = 289) → स्पष्ट; उरलेला फरक 2 = गणेश मेडिकल (लेखा विभागात जमा नाही)
+                $ins->execute([$m['id'], $orgId, 'CMK ट्रेडर्स', 64, 'kitchen', 'किचन साहित्य खरेदीचे बिल तीन कोटेशन अभावी जमा नाही', 'resolved', 'भोजनालय विभागाची बिलं — भांडार 225 + भोजनालय 64 = खरेदी 289', $at, $userId]);
+                $ins->execute([$m['id'], $orgId, 'श्री गणेश मेडिकल स्टोअर्स', 2, 'purchase', 'मूळ बिले प्राप्त न झाल्याने लेखा विभागात जमा करणे बाकी', 'open', null, null, $userId]);
             }
             $n++;
         }

@@ -27,7 +27,7 @@ $h = fn($x) => htmlspecialchars((string)$x, ENT_QUOTES, 'UTF-8');
 
 $st = $pdo->prepare("SELECT DISTINCT fy FROM bill_recon_months WHERE organization_id = ?"); $st->execute([$orgId]);
 $fys = array_values(array_unique(array_merge([$curFy], $st->fetchAll(PDO::FETCH_COLUMN)))); rsort($fys);
-$st = $pdo->prepare("SELECT * FROM bill_recon_months WHERE organization_id = ? AND period BETWEEN ? AND ? AND (store_count IS NOT NULL OR purchase_count IS NOT NULL OR accounts_count IS NOT NULL) ORDER BY period");
+$st = $pdo->prepare("SELECT * FROM bill_recon_months WHERE organization_id = ? AND period BETWEEN ? AND ? AND (store_count IS NOT NULL OR kitchen_count IS NOT NULL OR purchase_count IS NOT NULL OR accounts_count IS NOT NULL) ORDER BY period");
 $st->execute([$orgId, $from, $to]); $rows = $st->fetchAll();
 $iss = [];
 if ($rows) {
@@ -48,18 +48,19 @@ foreach ($depts as $k => $d) {
     $signs[$k] = ['names' => [], 'pending' => [], 'last' => null, 'digital' => false];
     foreach ($rows as $r) {
         if ($r[$k . '_at']) { $signs[$k]['names'][$r[$k . '_name'] ?: '—'][] = $r['period']; $signs[$k]['last'] = max((string)$signs[$k]['last'], $r[$k . '_at']); if ($r[$k . '_by']) $signs[$k]['digital'] = true; }
-        else $signs[$k]['pending'][] = $r['period'];
+        elseif (!($k === 'kitchen' && $r['kitchen_count'] !== null && (int)$r['kitchen_count'] === 0)) $signs[$k]['pending'][] = $r['period'];
     }
 }
 // सारांश
-$tot = ['store' => 0, 'purchase' => 0, 'accounts' => 0]; $cnt = ['match' => 0, 'match_wait' => 0, 'diff' => 0, 'entry' => 0]; $openI = []; $parties = [];
+$tot = array_fill_keys(array_keys($depts), 0); $cnt = ['match' => 0, 'match_wait' => 0, 'diff' => 0, 'entry' => 0]; $openI = []; $parties = [];
 foreach ($rows as $r) {
     foreach ($tot as $k => $_) $tot[$k] += (int)$r[$k . '_count'];
     $cnt[billReconStatus($r)[0]]++;
     foreach ($iss[$r['id']] ?? [] as $i) if ($i['status'] === 'open') { $openI[] = $i + ['period' => $r['period']]; $pk = $i['party'] ?: 'इतर'; $parties[$pk] = ($parties[$pk] ?? 0) + (int)$i['bill_count']; }
 }
 arsort($parties);
-$maxC = max(1, ...array_map(fn($r) => max((int)$r['store_count'], (int)$r['purchase_count'], (int)$r['accounts_count']), $rows ?: [['store_count' => 1, 'purchase_count' => 1, 'accounts_count' => 1]]));
+$maxC = max(1, ...array_map(fn($r) => max(array_map(fn($k) => (int)$r[$k . '_count'], array_keys($depts))), $rows ?: [billReconEmpty('2000-01')]));
+$colors = billReconColors();
 ?>
 <!DOCTYPE html>
 <html lang="mr">
@@ -84,7 +85,7 @@ $maxC = max(1, ...array_map(fn($r) => max((int)$r['store_count'], (int)$r['purch
   .ok{color:#166534;font-weight:700;} .bad{color:#991B1B;font-weight:700;} .wait{color:#92400E;font-weight:700;}
   .why div{margin:2px 0;} .why .rs{text-decoration:line-through;color:#555;}
   tr.tot td{font-weight:800;background:#F1F5F9;}
-  .signs{display:grid;grid-template-columns:repeat(3,1fr);border:1.5px solid #111;margin-top:16px;}
+  .signs{display:grid;grid-template-columns:repeat(4,1fr);border:1.5px solid #111;margin-top:16px;}
   .signs>div{border-right:1.5px solid #111;padding:8px;text-align:center;font-size:12.5px;line-height:1.45;display:flex;flex-direction:column;}
   .signs>div:last-child{border-right:0;}
   .stamp{border:1.5px solid #16A34A;color:#166534;border-radius:8px;padding:4px 6px;margin-bottom:6px;font-size:11.5px;font-weight:700;}
@@ -127,19 +128,19 @@ $maxC = max(1, ...array_map(fn($r) => max((int)$r['store_count'], (int)$r['purch
 <?php if (!$rows): ?>
   <p style="text-align:center;padding:40px;font-size:14px;">या कालावधीत एकाही महिन्याची नोंद नाही.</p>
 <?php else: ?>
-  <div class="intro">आर्थिक वर्ष <?= $h($N($fy)) ?> मध्ये माहे <?= $h(billReconMonthName($rows[0]['period'], false)) ?> पासून दरमहा मुख्य भांडार विभाग, खरेदी विभाग व लेखा विभाग यांच्यातील खरेदी संदर्भातील बिले हस्तांतरण माहिती अहवाल खालीलप्रमाणे -</div>
+  <div class="intro">आर्थिक वर्ष <?= $h($N($fy)) ?> मध्ये माहे <?= $h(billReconMonthName($rows[0]['period'], false)) ?> पासून दरमहा मुख्य भांडार विभाग, भोजनालय विभाग, खरेदी विभाग व लेखा विभाग यांच्यातील खरेदी संदर्भातील बिले हस्तांतरण माहिती अहवाल खालीलप्रमाणे -</div>
   <table class="m">
-    <thead><tr><th style="width:7%">अ.क्र.</th><th style="width:15%">महिना</th><th>भांडार विभाग प्राप्त बिलांची संख्या</th><th>खरेदी विभाग प्राप्त बिलांची संख्या</th><th>लेखा विभागात नोंद संख्या</th><th style="width:22%">शेरा</th></tr></thead>
+    <thead><tr><th style="width:6%">अ.क्र.</th><th style="width:12%">महिना</th><th>भांडार विभाग प्राप्त बिलांची संख्या</th><th>भोजनालय विभाग प्राप्त बिलांची संख्या</th><th>खरेदी विभाग प्राप्त बिलांची संख्या</th><th>लेखा विभागात नोंद संख्या</th><th style="width:22%">शेरा</th></tr></thead>
     <tbody>
     <?php foreach ($rows as $n => $r): [$sk, $sl] = billReconStatus($r); $mi = $iss[$r['id']] ?? []; ?>
       <tr>
         <td rowspan="<?= $mi ? 2 : 1 ?>"><?= $h($N($n + 1)) ?></td>
         <td rowspan="<?= $mi ? 2 : 1 ?>"><?= $h(billReconMonthName($r['period'], false)) ?></td>
-        <?php foreach ($depts as $k => $_): ?><td><?= $r[$k . '_count'] === null ? '—' : $h($N($r[$k . '_count'])) ?></td><?php endforeach; ?>
+        <?php foreach ($depts as $k => $_): ?><td><?php if ($r[$k . '_count'] === null): ?>—<?php elseif ($k === 'purchase' && (int)$r['kitchen_count'] > 0): ?><?= $h($N((int)$r['store_count'] . '+' . (int)$r['kitchen_count'] . '=' . billReconReceived($r))) ?><?php if ((int)$r['purchase_count'] !== billReconReceived($r)): ?><br><b><?= $h($N($r['purchase_count'])) ?></b><?php endif; ?><?php else: ?><?= $h($N($r[$k . '_count'])) ?><?php endif; ?></td><?php endforeach; ?>
         <td class="<?= $sk === 'match' ? 'ok' : ($sk === 'diff' ? 'bad' : 'wait') ?>"><?= $sk === 'match' ? $h($N('100')) . '% ताळमेळ पूर्ण' : ($sk === 'diff' ? 'फरक ' . $h($N(billReconDiff($r))) . ' बिलं' : $h(trim(preg_replace('/^\S+\s/u', '', $sl)))) ?></td>
       </tr>
       <?php if ($mi): ?>
-      <tr><td colspan="4" class="l why"><b>कारणे मिमांसा -</b>
+      <tr><td colspan="5" class="l why"><b>कारणे मिमांसा -</b>
         <?php foreach ($mi as $j => $i): ?><div class="<?= $i['status'] === 'resolved' ? 'rs' : '' ?>"><?= $h($N($j + 1)) ?>) <?= $i['party'] ? $h($i['party']) . ' यांचे ' : '' ?><?= $h($N($i['bill_count'])) ?> बिल<?= (int)$i['bill_count'] > 1 ? 'े' : '' ?> — <?= $h($i['reason']) ?><?= $i['status'] === 'open' ? ' (' . $h($depts[$i['held_at']][3] ?? '') . ')' : '' ?></div><?php if ($i['status'] === 'resolved'): ?><div style="font-size:11.5px;color:#166534;">&nbsp;&nbsp;✅ मिटले<?= $i['resolved_note'] ? ' — ' . $h($i['resolved_note']) : '' ?></div><?php endif; ?><?php endforeach; ?>
       </td></tr>
       <?php endif; ?>
@@ -173,14 +174,16 @@ $maxC = max(1, ...array_map(fn($r) => max((int)$r['store_count'], (int)$r['purch
     <div class="kp" style="margin-top:10px;">
       <div><span>✅ 100% ताळमेळ</span><b><?= $h($N($cnt['match'])) ?> / <?= $h($N(count($rows))) ?></b></div>
       <div><span>⚠️ फरक असलेले महिने</span><b><?= $h($N($cnt['diff'])) ?></b></div>
-      <div><span>📦 भांडार / 🛒 खरेदी / 📒 लेखा</span><b style="font-size:14px;"><?= $h($N($tot['store'])) ?> / <?= $h($N($tot['purchase'])) ?> / <?= $h($N($tot['accounts'])) ?></b></div>
+      <div><span>📦 भांडार + 🍲 भोजनालय / 🛒 खरेदी / 📒 लेखा</span><b style="font-size:13px;"><?= $h($N($tot['store'])) ?>+<?= $h($N($tot['kitchen'])) ?> / <?= $h($N($tot['purchase'])) ?> / <?= $h($N($tot['accounts'])) ?></b></div>
       <div><span>उघडी कारणं (बिलं)</span><b><?= $h($N(count($openI))) ?> (<?= $h($N(array_sum(array_column($openI, 'bill_count')))) ?>)</b></div>
     </div>
     <?php
       $ins = [];
       $rate = count($rows) ? round($cnt['match'] * 100 / count($rows)) : 0;
       $ins[] = 'एकूण ' . $N(count($rows)) . ' महिन्यांपैकी <b>' . $N($cnt['match']) . '</b> महिन्यांत 100% ताळमेळ (' . $N($rate) . '%).';
-      if ($tot['purchase'] !== $tot['store']) $ins[] = 'खरेदी विभागाकडे भांडारपेक्षा <b>' . $N(abs($tot['purchase'] - $tot['store'])) . '</b> बिलं ' . ($tot['purchase'] > $tot['store'] ? 'जास्त' : 'कमी') . '.';
+      $recvT = $tot['store'] + $tot['kitchen'];
+      $ins[] = 'प्राप्त बिलं: भांडार <b>' . $N($tot['store']) . '</b> + भोजनालय <b>' . $N($tot['kitchen']) . '</b> = <b>' . $N($recvT) . '</b>.';
+      if ($tot['purchase'] !== $recvT) $ins[] = 'खरेदी विभागाकडे प्राप्त बिलांपेक्षा (भांडार + भोजनालय) <b>' . $N(abs($tot['purchase'] - $recvT)) . '</b> बिलं ' . ($tot['purchase'] > $recvT ? 'जास्त' : 'कमी') . '.';
       if ($tot['accounts'] !== $tot['purchase']) $ins[] = 'लेखा विभागात खरेदीपेक्षा <b>' . $N(abs($tot['accounts'] - $tot['purchase'])) . '</b> बिलं ' . ($tot['accounts'] > $tot['purchase'] ? 'जास्त' : 'कमी') . ' नोंद.';
       if ($parties) { $tp = array_key_first($parties); $ins[] = 'सर्वात जास्त अडकलेली बिलं: <b>' . $h($tp) . '</b> — ' . $N($parties[$tp]) . ' बिलं.'; }
       foreach ($rows as $r) if (billReconStatus($r)[0] === 'diff' && !array_filter($iss[$r['id']] ?? [], fn($i) => $i['status'] === 'open')) $ins[] = $h(billReconMonthName($r['period'])) . ': फरक आहे पण <b>कारण नोंदलेलं नाही</b>.';
@@ -188,9 +191,9 @@ $maxC = max(1, ...array_map(fn($r) => max((int)$r['store_count'], (int)$r['purch
     ?>
     <h3>💡 निरीक्षणं</h3><ul class="ins"><?php foreach ($ins as $i): ?><li><?= $i ?></li><?php endforeach; ?></ul>
     <h3>📈 महिनानिहाय बिलं</h3>
-    <div class="ch"><?php foreach ($rows as $r): ?><div class="g"><?php foreach (['store' => '#0891B2', 'purchase' => '#D97706', 'accounts' => '#7C3AED'] as $k => $c): ?><i style="height:<?= round((int)$r[$k . '_count'] * 100 / $maxC) ?>%;background:<?= $c ?>;" title="<?= (int)$r[$k . '_count'] ?>"></i><?php endforeach; ?></div><?php endforeach; ?></div>
+    <div class="ch"><?php foreach ($rows as $r): ?><div class="g"><?php foreach ($colors as $k => $c): ?><i style="height:<?= round((int)$r[$k . '_count'] * 100 / $maxC) ?>%;background:<?= $c ?>;" title="<?= (int)$r[$k . '_count'] ?>"></i><?php endforeach; ?></div><?php endforeach; ?></div>
     <div class="chl"><?php foreach ($rows as $r): ?><span><?= $h(billReconMonthName($r['period'], false)) ?></span><?php endforeach; ?></div>
-    <div class="lg"><i style="background:#0891B2"></i>भांडार <i style="background:#D97706"></i>खरेदी <i style="background:#7C3AED"></i>लेखा</div>
+    <div class="lg"><?php foreach ($depts as $k => $d): ?><i style="background:<?= $colors[$k] ?>"></i><?= $h($d[0]) ?> <?php endforeach; ?></div>
     <?php if ($openI): ?>
       <h3>⚠️ उघडी कारणं (मिटायची बाकी)</h3>
       <table class="mini"><thead><tr><th>महिना</th><th>पुरवठादार / बिल</th><th>बिलं</th><th>कुठे</th><th>कारण</th></tr></thead><tbody>

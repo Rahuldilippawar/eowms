@@ -291,7 +291,8 @@ INSERT INTO permissions (permission_key, label, label_local, sort_order) VALUES
 ('manage_purchase', 'Purchase department — pending purchases: add, edit, mark purchased, reports', 'खरेदी विभाग — खरेदी बाकी नोंद, बदल, खरेदी पूर्ण, अहवाल', 52),
 ('bill_recon_store', 'Main store — monthly bill count & digital approval (bill reconciliation)', 'मुख्य भांडार विभाग — मासिक बिल संख्या व डिजिटल मान्यता (बिल ताळमेळ)', 53),
 ('bill_recon_accounts', 'Accounts — monthly bill count & digital approval (bill reconciliation)', 'लेखा विभाग — मासिक बिल संख्या व डिजिटल मान्यता (बिल ताळमेळ)', 54),
-('bill_recon_view', 'Monthly bill reconciliation — view & reports', 'मासिक बिल ताळमेळ — पाहणे व अहवाल', 55);
+('bill_recon_view', 'Monthly bill reconciliation — view & reports', 'मासिक बिल ताळमेळ — पाहणे व अहवाल', 55),
+('bill_recon_kitchen', 'Kitchen (Bhojanalay) — monthly bill count & digital approval (bill reconciliation)', 'भोजनालय विभाग — मासिक बिल संख्या व डिजिटल मान्यता (बिल ताळमेळ)', 53);
 
 INSERT INTO role_permissions (role_key, permission_key)
 SELECT role_key, 'manage_it' FROM role_definitions WHERE category = 'management';
@@ -3557,6 +3558,11 @@ CREATE TABLE bill_recon_months (
   store_by INT NULL,
   store_name VARCHAR(150) NULL,
   store_at DATETIME NULL,
+  kitchen_count INT NULL,
+  kitchen_note VARCHAR(255) NULL,
+  kitchen_by INT NULL,
+  kitchen_name VARCHAR(150) NULL,
+  kitchen_at DATETIME NULL,
   purchase_count INT NULL,
   purchase_note VARCHAR(255) NULL,
   purchase_by INT NULL,

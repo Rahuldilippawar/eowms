@@ -485,7 +485,7 @@ function navGroupHead($id, $key, $activeGroup, $icon, $label, $badge = 0) {
 
     <!-- ==================== 🧾 मासिक बिल ताळमेळ — भांडार · खरेदी · लेखा ==================== -->
     <?php navSectionStart(); ?>
-    <?php if (moduleAllowed('bill-recon') || isManagementOrAbove()): ?>
+    <?php require_once __DIR__ . '/bill-recon.php'; if (moduleAllowed('bill-recon') || isManagementOrAbove() || billReconCanView()): ?>
       <a href="<?= $rp ?>bill-recon/index.php" class="tree-node <?= $currentDir === 'bill-recon' ? 'active' : '' ?>">
         <i class="fa-solid fa-scale-balanced fa-fw"></i><span>मासिक बिल ताळमेळ</span>
       </a>
