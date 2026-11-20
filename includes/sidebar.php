@@ -468,6 +468,21 @@ function navGroupHead($id, $key, $activeGroup, $icon, $label, $badge = 0) {
     <?php endif; ?>
     <?php navSectionEnd('विद्यार्थी वाहतूक', 'fa-solid fa-bus'); ?>
 
+    <!-- ==================== 🛒 खरेदी विभाग — खरेदी बाकी / पूर्ण / अहवाल ==================== -->
+    <?php navSectionStart(); ?>
+    <?php if (hasRole('super_admin') || hasPermission('manage_purchase') || isManagementOrAbove()): ?>
+      <a href="<?= $rp ?>purchase/index.php" class="tree-node <?= $currentDir === 'purchase' && $currentPage === 'index.php' && ($_GET['tab'] ?? '') !== 'done' ? 'active' : '' ?>">
+        <i class="fa-solid fa-cart-shopping fa-fw"></i><span>खरेदी बाकी</span>
+      </a>
+      <a href="<?= $rp ?>purchase/index.php?tab=done" class="tree-node <?= $currentDir === 'purchase' && ($_GET['tab'] ?? '') === 'done' ? 'active' : '' ?>">
+        <i class="fa-solid fa-circle-check fa-fw"></i><span>खरेदी पूर्ण</span>
+      </a>
+      <a href="<?= $rp ?>purchase/report.php" class="tree-node">
+        <i class="fa-solid fa-print fa-fw"></i><span>खरेदी अहवाल</span>
+      </a>
+    <?php endif; ?>
+    <?php navSectionEnd('खरेदी विभाग', 'fa-solid fa-cart-shopping'); ?>
+
     <!-- ==================== 🏢 संस्था कामकाज — सुविधा, उपक्रम, मालमत्ता, तांत्रिक, आर्थिक ==================== -->
     <?php navSectionStart(); ?>
     <?php // पूर्वीचे "विभाग Budget" + "Material Purchase व Payment" — आता एकच; दोन्हीपैकी कुठलीही परवानगी पुरेशी ?>
