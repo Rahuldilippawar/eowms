@@ -74,6 +74,25 @@ function purchaseNextSr(PDO $pdo, $orgId, $fy) {
     return (int)$st->fetchColumn();
 }
 
+/**
+ * पुढचा खरेदी आवक क्र. (आपोआप) — त्या आर्थिक वर्षात आधी वापरलेल्या पद्धतीनुसार:
+ *  "Nov.009" अशी महिनानिहाय पद्धत वापरली असेल तर → त्या महिन्याचा पुढचा ("Nov.012"; नवीन महिना → "Dec.001"),
+ *  नाहीतर साधा क्रमांक → सर्वात मोठा + 1 (उदा. 204 → 205).
+ */
+function purchaseNextInward(PDO $pdo, $orgId, $date = null, $exceptId = 0) {
+    $date = $date ?: date('Y-m-d');
+    $st = $pdo->prepare("SELECT inward_no FROM purchase_requests WHERE organization_id = ? AND fy = ? AND inward_no IS NOT NULL AND inward_no <> '' AND id <> ?");
+    $st->execute([(int)$orgId, purchaseFy($date), (int)$exceptId]);
+    $nos = $st->fetchAll(PDO::FETCH_COLUMN);
+    $monthStyle = false; $maxM = 0; $maxN = 0; $mon = date('M', strtotime($date));
+    foreach ($nos as $n) {
+        $n = trim($n);
+        if (preg_match('/^([A-Za-z]{3})\.?\s*(\d+)$/', $n, $m)) { $monthStyle = true; if (strcasecmp($m[1], $mon) === 0) $maxM = max($maxM, (int)$m[2]); }
+        elseif (preg_match('/^(\d+)$/', $n, $m)) $maxN = max($maxN, (int)$m[1]);
+    }
+    return $monthStyle ? $mon . '.' . str_pad((string)($maxM + 1), 3, '0', STR_PAD_LEFT) : (string)($maxN + 1);
+}
+
 /** विभागांची नावं — आधी वापरलेली + संस्थेचे विभाग (सुचवण्यासाठी) */
 function purchaseDepartments(PDO $pdo, $orgId) {
     $n = [];

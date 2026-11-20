@@ -32,6 +32,12 @@ if ($ready && $canEdit && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $bill = mb_substr(trim((string)($_POST['bill_no'] ?? '')), 0, 80); $sup = mb_substr(trim((string)($_POST['supplier'] ?? '')), 0, 150); $note = mb_substr(trim((string)($_POST['done_note'] ?? '')), 0, 255);
         $pdo->prepare("UPDATE purchase_requests SET status = 'done', done_on = ?, actual_amount = ?, bill_no = ?, supplier = ?, done_note = ?, done_by = ?, updated_by = ?, updated_at = NOW() WHERE id = ? AND organization_id = ?")
             ->execute([$on, $amt, $bill ?: null, $sup ?: null, $note ?: null, $user['id'], $user['id'], $id, $orgId]);
+        // आवक क्र. दिलेला नसेल तर आपोआप
+        if (trim((string)$row['inward_no']) === '') {
+            $ind = $row['inward_date'] ?: $on; $ino = purchaseNextInward($pdo, $orgId, $ind, $id);
+            $pdo->prepare("UPDATE purchase_requests SET inward_no = ?, inward_date = ? WHERE id = ? AND organization_id = ?")->execute([$ino, $ind, $id, $orgId]);
+            purchaseLog($pdo, $orgId, $id, 'edited', 'आवक क्र. आपोआप: ' . $ino, $user['id']);
+        }
         purchaseLog($pdo, $orgId, $id, 'done', trim(date('d.m.Y', strtotime($on)) . ($amt !== null ? ' · ' . purchaseInr($amt) : '') . ($sup ? ' · ' . $sup : '') . ($bill ? ' · बिल ' . $bill : '') . ($note ? ' · ' . $note : '')), $user['id']);
         logActivity('खरेदी पूर्ण', 'purchase_request', $id, $row['title']);
         $_SESSION['flash'] = '✅ "' . mb_strimwidth($row['title'], 0, 60, '…') . '" — खरेदी पूर्ण. आता "खरेदी पूर्ण" यादीत.';
