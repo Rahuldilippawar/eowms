@@ -288,7 +288,9 @@ INSERT INTO permissions (permission_key, label, label_local, sort_order) VALUES
 ('student_id_cards', 'Student ID cards — view students, add photos, card design and print', 'विद्यार्थी व ID Cards — यादी पाहणे, फोटो, Card Design, Print', 49),
 ('manage_bus_passes', 'Bus passes — issue, renew, cancel and print student bus passes', 'बस पास — देणे, नूतनीकरण, रद्द, Print', 50),
 ('gate_scan', 'Gate — scan staff ID cards / Digital ID, entry-exit log', 'Gate — कर्मचारी ID Scan, ये-जा नोंद व अहवाल', 51),
-('manage_purchase', 'Purchase department — pending purchases: add, edit, mark purchased, reports', 'खरेदी विभाग — खरेदी बाकी नोंद, बदल, खरेदी पूर्ण, अहवाल', 52);
+('manage_purchase', 'Purchase department — pending purchases: add, edit, mark purchased, reports', 'खरेदी विभाग — खरेदी बाकी नोंद, बदल, खरेदी पूर्ण, अहवाल', 52),
+('bill_recon_store', 'Main store — monthly bill count & digital approval (bill reconciliation)', 'मुख्य भांडार विभाग — मासिक बिल संख्या व डिजिटल मान्यता (बिल ताळमेळ)', 53),
+('bill_recon_accounts', 'Accounts — monthly bill count & digital approval (bill reconciliation)', 'लेखा विभाग — मासिक बिल संख्या व डिजिटल मान्यता (बिल ताळमेळ)', 54);
 
 INSERT INTO role_permissions (role_key, permission_key)
 SELECT role_key, 'manage_it' FROM role_definitions WHERE category = 'management';
@@ -3543,6 +3545,65 @@ CREATE TABLE gate_logs (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 🛒 खरेदी विभाग — खरेदी बाकी
+-- 🧾 मासिक बिल ताळमेळ
+CREATE TABLE bill_recon_months (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  organization_id INT NOT NULL,
+  period CHAR(7) NOT NULL,
+  fy VARCHAR(9) NOT NULL,
+  store_count INT NULL,
+  store_note VARCHAR(255) NULL,
+  store_by INT NULL,
+  store_name VARCHAR(150) NULL,
+  store_at DATETIME NULL,
+  purchase_count INT NULL,
+  purchase_note VARCHAR(255) NULL,
+  purchase_by INT NULL,
+  purchase_name VARCHAR(150) NULL,
+  purchase_at DATETIME NULL,
+  accounts_count INT NULL,
+  accounts_note VARCHAR(255) NULL,
+  accounts_by INT NULL,
+  accounts_name VARCHAR(150) NULL,
+  accounts_at DATETIME NULL,
+  head_remark TEXT NULL,
+  head_by INT NULL,
+  head_name VARCHAR(150) NULL,
+  head_at DATETIME NULL,
+  created_by INT NULL,
+  created_at DATETIME NOT NULL,
+  updated_at DATETIME NULL,
+  UNIQUE KEY uq_brm_period (organization_id, period),
+  INDEX idx_brm_fy (organization_id, fy)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE bill_recon_issues (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  month_id INT NOT NULL,
+  organization_id INT NOT NULL,
+  party VARCHAR(150) NULL,
+  bill_count INT NOT NULL DEFAULT 1,
+  held_at VARCHAR(10) NOT NULL DEFAULT 'purchase',
+  reason VARCHAR(500) NOT NULL,
+  status VARCHAR(10) NOT NULL DEFAULT 'open',
+  resolved_note VARCHAR(255) NULL,
+  resolved_by INT NULL,
+  resolved_at DATETIME NULL,
+  created_by INT NULL,
+  created_at DATETIME NOT NULL,
+  INDEX idx_bri_month (month_id),
+  INDEX idx_bri_org (organization_id, status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE bill_recon_events (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  month_id INT NOT NULL,
+  organization_id INT NOT NULL,
+  event VARCHAR(20) NOT NULL,
+  note VARCHAR(500) NULL,
+  user_id INT NULL,
+  created_at DATETIME NOT NULL,
+  INDEX idx_bre_month (month_id, id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE purchase_requests (
   id INT AUTO_INCREMENT PRIMARY KEY,
   organization_id INT NOT NULL,
