@@ -73,27 +73,40 @@ if ($c) {
     $blankV = fn($n) => ['name' => $n, 'gst_pct' => 18, 'gst_amount' => '', 'gst_incl' => 0, 'gst_on_transport' => 0, 'transport' => '', 'transport_incl' => 0, 'other_label' => '', 'other_amount' => '', 'discount' => '', 'remarks' => ''];
     $state = ['vendors' => [$blankV(''), $blankV(''), $blankV('')], 'items' => [['particular' => '', 'qty' => 1, 'unit' => 'Nos', 'rates' => ['', '', ''], 'amounts' => ['', '', '']]]];
     $F = ['title' => '', 'cmp_date' => date('Y-m-d'), 'department' => '', 'request_id' => null, 'notes' => '', 'signatories' => purchaseCmpDefaultSigns(), 'status' => 'draft'];
-    // खरेदी बाकी मागणीवरून सुरुवात
+    // खरेदी बाकी मागणीवरून सुरुवात (?request=ID) — खालच्या $reqMap मधून भरतो
     $rq = (int)($_GET['request'] ?? 0);
-    if ($rq && purchaseReady($pdo)) {
-        $st = $pdo->prepare("SELECT * FROM purchase_requests WHERE id = ? AND organization_id = ?"); $st->execute([$rq, $orgId]);
-        if ($R = $st->fetch()) {
-            $F['title'] = $R['title']; $F['department'] = $R['department']; $F['request_id'] = $R['id'];
-            $lines = array_values(array_filter(array_map('trim', explode("\n", (string)$R['items']))));
-            if ($lines) {
-                $state['items'] = [];
-                foreach ($lines as $ln) {
-                    $q = 1; $u = 'Nos'; $nm = $ln;
-                    if (preg_match('/^(.*?)\s*[-–—:]\s*([\d.]+)\s*(\S*)\s*$/u', $ln, $m)) { $nm = $m[1]; $q = (float)$m[2]; $u = $m[3] !== '' ? $m[3] : 'Nos'; }
-                    $state['items'][] = ['particular' => $nm, 'qty' => $q, 'unit' => $u, 'rates' => ['', '', ''], 'amounts' => ['', '', '']];
-                }
-            }
-        }
-    }
 }
 if (!empty($P) && $error) { $state = ['vendors' => $P['vendors'] ?? $state['vendors'], 'items' => $P['items'] ?? $state['items']]; $F = array_merge($F, array_intersect_key($_POST, $F)); }
-$reqs = [];
-if (purchaseReady($pdo)) { $st = $pdo->prepare("SELECT id, sr_no, fy, title FROM purchase_requests WHERE organization_id = ? AND (status = 'pending' OR id = ?) ORDER BY fy DESC, sr_no DESC LIMIT 300"); $st->execute([$orgId, (int)$F['request_id']]); $reqs = $st->fetchAll(); }
+$reqs = []; $reqMap = [];
+if (purchaseReady($pdo)) {
+    $rq = $rq ?? 0;
+    $st = $pdo->prepare("SELECT id, sr_no, fy, title, department, items, status FROM purchase_requests WHERE organization_id = ? AND (status = 'pending' OR id = ? OR id = ?) ORDER BY fy DESC, sr_no DESC LIMIT 300");
+    $st->execute([$orgId, (int)$F['request_id'], $rq]); $reqs = $st->fetchAll();
+    try { purchaseItemsAttach($pdo, $orgId, $reqs); } catch (Throwable $e) {}
+    $fq = fn($x) => (float)rtrim(rtrim(number_format((float)$x, 3, '.', ''), '0'), '.');
+    foreach ($reqs as $r) {
+        $its = [];
+        if (!empty($r['_items'])) {
+            // बाकी वस्तू — उरलेले नग (एकूण − मिळालेले)
+            foreach ($r['_items'] as $it) {
+                if ($it['status'] !== 'pending') continue;
+                $q = $it['qty'] === null ? 1 : max(0, (float)$it['qty'] - (float)$it['qty_done']);
+                $its[] = ['particular' => $it['name'], 'qty' => $fq($q ?: ($it['qty'] ?? 1)), 'unit' => $it['unit'] ?: 'Nos'];
+            }
+        } else {
+            foreach (array_filter(array_map('trim', explode("\n", (string)$r['items']))) as $ln) {
+                [$nm, $q, $u] = purchaseParseItemLine($ln);
+                if ($nm === '') continue;
+                $its[] = ['particular' => $nm, 'qty' => $q === null ? 1 : $fq($q), 'unit' => $u ?: 'Nos'];
+            }
+        }
+        $reqMap[(int)$r['id']] = ['title' => (string)$r['title'], 'department' => (string)$r['department'], 'items' => $its];
+    }
+    if (!$id && $rq && isset($reqMap[$rq]) && empty($P)) {
+        $R = $reqMap[$rq]; $F['title'] = $R['title']; $F['department'] = $R['department']; $F['request_id'] = $rq;
+        if ($R['items']) $state['items'] = array_map(fn($it) => $it + ['rates' => ['', '', ''], 'amounts' => ['', '', '']], $R['items']);
+    }
+}
 $vNames = purchaseSupplierNames($pdo, $orgId);
 $IS = purchaseCmpItemSuggest($pdo, $orgId);
 $depts = function_exists('purchaseDepartments') ? purchaseDepartments($pdo, $orgId) : [];
@@ -171,6 +184,7 @@ require_once __DIR__ . '/../../includes/header.php';
 <script>
 window.addEventListener('load', function () {
   var S = <?= json_encode($state, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP) ?>;
+  var RQ = <?= json_encode($reqMap ?: new stdClass(), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP) ?>;   // मागणी → विषय, विभाग, बाकी वस्तू
   var IU = <?= json_encode($IS['items'] ?: new stdClass(), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP) ?>;   // आधीच्या वस्तू → Unit
   var T = document.getElementById('cg'), SUM = document.getElementById('cgSum');
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]; }); };
@@ -178,7 +192,7 @@ window.addEventListener('load', function () {
   var fmt = function (v) { if (v == null) return '—'; var neg = v < 0; v = Math.abs(Math.round(v * 100) / 100); var p = v.toFixed(2).split('.'), i = p[0], l = i.slice(-3), r = i.slice(0, -3); if (r) l = r.replace(/\B(?=(\d{2})+(?!\d))/g, ',') + ',' + l; return (neg ? '-' : '') + '₹' + l + (p[1] !== '00' ? '.' + p[1] : ''); };
   var blankV = function () { return {name: '', gst_pct: 18, gst_amount: '', gst_incl: 0, gst_on_transport: 0, transport: '', transport_incl: 0, other_label: '', other_amount: '', discount: '', remarks: ''}; };
   function render() {
-    var V = S.vendors, h = '<thead><tr><th class="sr">#</th><th style="min-width:220px;">वस्तू / तपशील (Particular)</th><th style="width:80px;">नग</th><th style="width:70px;">Unit</th>';
+    var V = S.vendors, h = '<thead><tr><th class="sr">#</th><th style="min-width:220px;">वस्तू / तपशील (Particular)</th><th style="min-width:80px;">नग</th><th style="min-width:86px;">Unit</th>';
     V.forEach(function (v, vi) { h += '<th colspan="2" class="vh" style="min-width:170px;"><div style="display:flex;gap:2px;"><input data-v="' + vi + '" data-f="name" value="' + esc(v.name) + '" placeholder="पुरवठादार ' + (vi + 1) + '" list="cgVendors"><button type="button" class="x" data-delv="' + vi + '" title="काढा">✕</button></div></th>'; });
     h += '<th></th></tr><tr><th></th><th></th><th></th><th></th>';
     V.forEach(function () { h += '<th style="font-weight:600;">दर (Rate)</th><th style="font-weight:600;">रक्कम</th>'; });
@@ -247,6 +261,19 @@ window.addEventListener('load', function () {
     var d = e.target.dataset;
     if (d.deli !== undefined) { if (S.items.length > 1) { S.items.splice(+d.deli, 1); render(); } }
     if (d.delv !== undefined) { if (S.vendors.length > 1 && confirm('हा पुरवठादार व त्याचे सगळे दर काढायचे?')) { S.vendors.splice(+d.delv, 1); S.items.forEach(function (it) { it.rates.splice(+d.delv, 1); if (it.amounts) it.amounts.splice(+d.delv, 1); }); render(); } }
+  });
+  // मागणी निवडताच — विषय, विभाग आणि बाकी वस्तू (नग, Unit सह) तक्त्यात
+  var RS = document.querySelector('select[name="request_id"]');
+  if (RS) RS.addEventListener('change', function () {
+    var R = RQ[RS.value]; if (!R) return;
+    var fT = document.querySelector('input[name="title"]'), fD = document.querySelector('input[name="department"]');
+    if (fT && (!fT.value.trim() || fT.value === fT.dataset.auto)) { fT.value = R.title; fT.dataset.auto = R.title; }
+    if (fD && R.department && (!fD.value.trim() || fD.value === fD.dataset.auto)) { fD.value = R.department; fD.dataset.auto = R.department; }
+    if (!R.items || !R.items.length) return;
+    var used = S.items.some(function (it) { return (it.particular || '').trim() !== '' || it.rates.some(function (x) { return x !== '' && x !== null; }); });
+    if (used && !confirm('तक्त्यातील सध्याच्या वस्तू बदलून या मागणीच्या ' + R.items.length + ' वस्तू भरायच्या?')) return;
+    S.items = R.items.map(function (it) { return {particular: it.particular, qty: it.qty, unit: it.unit || 'Nos', rates: S.vendors.map(function () { return ''; }), amounts: S.vendors.map(function () { return ''; })}; });
+    render();
   });
   document.getElementById('cgAddItem').onclick = function () { S.items.push({particular: '', qty: 1, unit: 'Nos', rates: S.vendors.map(function () { return ''; }), amounts: S.vendors.map(function () { return ''; })}); render(); var ins = T.querySelectorAll('input[data-f="particular"]'); ins[ins.length - 1].focus(); };
   document.getElementById('cgAddVendor').onclick = function () { S.vendors.push(blankV()); S.items.forEach(function (it) { it.rates.push(''); if (it.amounts) it.amounts.push(''); }); render(); };
