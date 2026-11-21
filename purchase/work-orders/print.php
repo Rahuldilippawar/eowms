@@ -49,7 +49,7 @@ $created = trim(($w['created_name'] ?? '') . ($w['created_at'] ? ' · ' . date('
 <title>Work Order <?= $h($woNo) ?> — <?= $h($w['vendor_name']) ?></title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;600;700;800;900&family=Noto+Sans+Devanagari:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
-  :root{--ac:#0F766E;--ac2:#0D9488;--acl:#E6F4F2;--ink:#111827;--mut:#4B5563;--ln:#CBD5E1;}
+  :root{--ac:#111;--ac2:#555;--acl:#F1F1F1;--ink:#111;--mut:#333;--ln:#8A8A8A;}
   *{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
   body{margin:0;background:#E5E7EB;font-family:"Noto Sans","Noto Sans Devanagari",system-ui,sans-serif;color:var(--ink);}
   .bar{position:sticky;top:0;z-index:5;background:#134E4A;color:#fff;display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:8px 12px;font:600 12.5px system-ui,sans-serif;}
@@ -58,11 +58,11 @@ $created = trim(($w['created_name'] ?? '') . ($w['created_at'] ? ' · ' . date('
   .ok{background:#DCFCE7;color:#166534;padding:8px 14px;font:600 13px system-ui,sans-serif;text-align:center;}
   .pg{width:210mm;min-height:297mm;margin:16px auto;background:#fff;padding:9mm 11mm;box-shadow:0 12px 40px -14px rgba(0,0,0,.35);font-size:11.8px;line-height:1.42;position:relative;}
   /* Letterhead */
-  .lh{text-align:center;border-top:5px solid var(--ac);padding:7px 10px 8px;background:linear-gradient(180deg,var(--acl),#fff);border-bottom:2px solid var(--ac);}
-  .lh .l0{font-weight:700;font-size:11px;color:var(--ac);letter-spacing:.6px;} .lh .l1{font-weight:900;font-size:18px;letter-spacing:.6px;color:#0B3B37;margin:1px 0 2px;} .lh .ln{font-size:10.3px;color:var(--mut);line-height:1.45;}
+  .lh{text-align:center;border-top:3px double var(--ac);padding:7px 10px 8px;border-bottom:2px solid var(--ac);}
+  .lh .l0{font-weight:700;font-size:11px;color:var(--ac);letter-spacing:.6px;} .lh .l1{font-weight:900;font-size:18px;letter-spacing:.6px;color:#111;margin:1px 0 2px;} .lh .ln{font-size:10.3px;color:var(--mut);line-height:1.45;}
   /* शीर्षक */
   .ttl{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:9px 0 8px;}
-  .ttl h1{margin:0;font-size:19px;font-weight:900;letter-spacing:3px;color:var(--ac);} .ttl .fy{font-size:11px;font-weight:800;color:#fff;background:var(--ac);border-radius:99px;padding:3px 11px;}
+  .ttl h1{margin:0;font-size:19px;font-weight:900;letter-spacing:3px;color:var(--ac);} .ttl .fy{font-size:11px;font-weight:800;color:var(--ac);border:1.5px solid var(--ac);border-radius:99px;padding:3px 11px;}
   .ttl .st{font-size:10.5px;font-weight:800;border:1.5px solid var(--ac);color:var(--ac);border-radius:6px;padding:2px 8px;text-transform:uppercase;}
   /* To + माहिती */
   .two{display:grid;grid-template-columns:1.25fr 1fr;gap:9px;margin-bottom:8px;}
@@ -70,18 +70,18 @@ $created = trim(($w['created_name'] ?? '') . ($w['created_at'] ? ' · ' . date('
   .bx .vn{font-size:13.5px;font-weight:800;} .bx .ad{color:var(--mut);font-size:11px;} .bx .ct{display:flex;gap:12px;flex-wrap:wrap;font-size:10.8px;margin-top:3px;}
   .meta{border:1px solid var(--ln);border-radius:8px;overflow:hidden;font-size:11.2px;} .meta div{display:grid;grid-template-columns:92px 1fr;border-bottom:1px solid var(--ln);} .meta div:last-child{border-bottom:0;}
   .meta span{background:var(--acl);color:var(--ac);font-weight:800;padding:4px 8px;font-size:10.3px;text-transform:uppercase;letter-spacing:.4px;} .meta b{padding:4px 8px;}
-  .ref{border-left:4px solid var(--ac);background:#F8FAFC;border-radius:0 8px 8px 0;padding:6px 10px;margin-bottom:7px;} .ref b{color:var(--ac);}
+  .ref{border-left:4px solid var(--ac);background:#fff;border-radius:0 8px 8px 0;padding:6px 10px;margin-bottom:7px;} .ref b{color:var(--ac);}
   .ds{margin:0 0 8px;text-align:justify;}
   /* तक्ता */
   table{border-collapse:collapse;width:100%;}
   .it{border:1px solid var(--ln);border-radius:8px;overflow:hidden;border-collapse:separate;border-spacing:0;}
-  .it th{background:var(--ac);color:#fff;font-weight:800;font-size:10.8px;padding:6px;text-align:left;text-transform:uppercase;letter-spacing:.3px;} .it th.r{text-align:right;} .it th.c{text-align:center;}
-  .it td{padding:5px 6px;vertical-align:top;border-bottom:1px solid #E5E7EB;} .it tbody tr:nth-child(even) td{background:#F8FAFC;} .it tbody tr:last-child td{border-bottom:0;}
+  .it th{background:var(--acl);color:var(--ac);border-bottom:1.5px solid var(--ac);font-weight:800;font-size:10.8px;padding:6px;text-align:left;text-transform:uppercase;letter-spacing:.3px;} .it th.r{text-align:right;} .it th.c{text-align:center;}
+  .it td{padding:5px 6px;vertical-align:top;border-bottom:1px solid #C8C8C8;}  .it tbody tr:last-child td{border-bottom:0;}
   .it td.n{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;} .it td.c{text-align:center;} .it td.sr{color:var(--mut);font-weight:700;}
   .tot{display:grid;grid-template-columns:1fr 250px;gap:10px;margin-top:8px;align-items:start;}
   .words{border:1px dashed var(--ac2);background:var(--acl);border-radius:8px;padding:7px 10px;font-size:11.2px;} .words b{color:var(--ac);display:block;font-size:9.5px;text-transform:uppercase;letter-spacing:.8px;}
-  .sum{border:1px solid var(--ln);border-radius:8px;overflow:hidden;font-size:11.5px;} .sum div{display:flex;justify-content:space-between;padding:4px 10px;border-bottom:1px solid #E5E7EB;} .sum b{font-variant-numeric:tabular-nums;}
-  .sum .gt{background:var(--ac);color:#fff;font-weight:900;font-size:13.5px;border-bottom:0;padding:6px 10px;}
+  .sum{border:1px solid var(--ln);border-radius:8px;overflow:hidden;font-size:11.5px;} .sum div{display:flex;justify-content:space-between;padding:4px 10px;border-bottom:1px solid #C8C8C8;} .sum b{font-variant-numeric:tabular-nums;}
+  .sum .gt{background:var(--acl);color:var(--ac);border-top:1.5px solid var(--ac);font-weight:900;font-size:13.5px;border-bottom:0;padding:6px 10px;}
   /* माहिती */
   .info{display:grid;grid-template-columns:1fr 1fr;gap:6px 10px;margin-top:8px;} .info div{border:1px solid var(--ln);border-radius:8px;padding:5px 9px;font-size:11px;} .info div.w{grid-column:1/-1;}
   .info span{display:block;font-size:9.3px;font-weight:800;color:var(--ac);text-transform:uppercase;letter-spacing:.6px;}
@@ -89,19 +89,19 @@ $created = trim(($w['created_name'] ?? '') . ($w['created_at'] ? ' · ' . date('
   /* स्वीकृती व सह्या */
   .acc{display:grid;grid-template-columns:1fr 1.3fr;gap:10px;margin-top:9px;align-items:stretch;}
   .acc .ty{border:1px solid var(--ln);border-radius:8px;padding:8px 10px;font-weight:800;color:var(--ac);display:flex;flex-direction:column;justify-content:space-between;} .acc .ty small{font-weight:600;color:var(--mut);}
-  .acc .ct2{border:1px solid var(--ln);border-radius:8px;overflow:hidden;font-size:11px;} .acc .ct2 div{display:grid;grid-template-columns:118px 1fr;border-bottom:1px solid #E5E7EB;} .acc .ct2 div:last-child{border-bottom:0;}
-  .acc .ct2 span{background:#F8FAFC;padding:4px 8px;color:var(--mut);font-weight:700;} .acc .ct2 b{padding:4px 8px;} .acc .ct2 .seal b{min-height:34px;}
+  .acc .ct2{border:1px solid var(--ln);border-radius:8px;overflow:hidden;font-size:11px;} .acc .ct2 div{display:grid;grid-template-columns:118px 1fr;border-bottom:1px solid #C8C8C8;} .acc .ct2 div:last-child{border-bottom:0;}
+  .acc .ct2 span{background:#fff;padding:4px 8px;color:var(--mut);font-weight:700;} .acc .ct2 b{padding:4px 8px;} .acc .ct2 .seal b{min-height:34px;}
   .sg{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px;} .sg > div{text-align:center;border:1px solid var(--ln);border-radius:8px;padding:6px 6px 7px;}
-  .sg .sp{height:40px;border-bottom:1px dashed #94A3B8;margin:0 10px 5px;} .sg b{display:block;font-size:11.3px;} .sg small{display:block;font-size:9.8px;color:var(--mut);line-height:1.35;}
-  .ft{margin-top:9px;padding-top:6px;border-top:2px solid var(--ac);text-align:center;font-weight:700;font-size:10.5px;color:#0B3B37;}
+  .sg .sp{height:40px;border-bottom:1px dashed #555;margin:0 10px 5px;} .sg b{display:block;font-size:11.3px;} .sg small{display:block;font-size:9.8px;color:var(--mut);line-height:1.35;}
+  .ft{margin-top:9px;padding-top:6px;border-top:2px solid var(--ac);text-align:center;font-weight:700;font-size:10.5px;color:#111;}
   /* अटी */
   .hd2{background:var(--acl);border:1px solid var(--ac2);border-radius:8px;padding:7px 10px;margin:9px 0;display:grid;grid-template-columns:1fr auto;gap:6px 14px;align-items:center;}
   .hd2 h2{margin:0;font-size:14px;font-weight:900;color:var(--ac);letter-spacing:1.5px;text-transform:uppercase;} .hd2 .am{font-size:15px;font-weight:900;color:var(--ac);text-align:right;}
   .hd2 .sb{grid-column:1/-1;font-size:10.8px;color:var(--mut);} .hd2 .sb b{color:var(--ink);}
   .tm{border:1px solid var(--ln);border-radius:8px;overflow:hidden;border-collapse:separate;border-spacing:0;}
-  .tm td{padding:5px 7px;vertical-align:top;text-align:justify;border-bottom:1px solid #E5E7EB;font-size:11px;} .tm tr:last-child td{border-bottom:0;} .tm tr:nth-child(even) td{background:#F8FAFC;}
+  .tm td{padding:5px 7px;vertical-align:top;text-align:justify;border-bottom:1px solid #C8C8C8;font-size:11px;} .tm tr:last-child td{border-bottom:0;} 
   .tm td.no{width:34px;text-align:center;font-weight:800;color:var(--ac);} .tm td.fl{width:58px;text-align:center;vertical-align:middle;}
-  .yn{display:inline-block;font-size:9.8px;font-weight:900;border-radius:99px;padding:2px 9px;} .yn.Y{background:#DCFCE7;color:#166534;} .yn.N{background:#FEE2E2;color:#991B1B;}
+  .yn{display:inline-block;font-size:9.8px;font-weight:900;border-radius:99px;padding:2px 9px;} .yn{border:1px solid var(--ac);} .yn.Y{color:var(--ac);} .yn.N{color:var(--ac);text-decoration:none;}
   .tm .py{margin:4px 0 0;padding:5px 9px;border-left:3px solid var(--ac2);background:#fff;border-radius:0 6px 6px 0;font-size:10.6px;line-height:1.55;}
   .scb{margin-top:8px;text-align:center;font-weight:800;font-size:11px;color:var(--ac);letter-spacing:.4px;}
   .gen{margin-top:10px;padding-top:6px;border-top:1px dashed var(--ln);display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:9.6px;color:var(--mut);}
@@ -131,7 +131,7 @@ $created = trim(($w['created_name'] ?? '') . ($w['created_at'] ? ' · ' . date('
   <div class="ttl"><span class="fy"><?= $h($fyLong) ?></span><h1>WORK ORDER</h1><span class="st"><?= $h(['draft' => 'Draft', 'issued' => 'Issued', 'completed' => 'Completed', 'cancelled' => 'Cancelled'][$w['status']] ?? '') ?></span></div>
   <div class="two">
     <div class="bx"><div class="lb">To,</div><div class="vn"><?= $h($w['vendor_name']) ?></div><?= $w['vendor_address'] ? '<div class="ad">' . $h($w['vendor_address']) . '</div>' : '' ?>
-      <div class="ct"><span>📞 <?= $h($w['vendor_phone'] ?: '—') ?></span><span>✉ <?= $h($w['vendor_email'] ?: '—') ?></span><?= $w['vendor_gstin'] ? '<span>GSTIN: ' . $h($w['vendor_gstin']) . '</span>' : '' ?></div></div>
+      <div class="ct"><span>Ph: <?= $h($w['vendor_phone'] ?: '—') ?></span><span>Email: <?= $h($w['vendor_email'] ?: '—') ?></span><?= $w['vendor_gstin'] ? '<span>GSTIN: ' . $h($w['vendor_gstin']) . '</span>' : '' ?></div></div>
     <div class="meta"><div><span>W.O. No.</span><b><?= $h($woNo) ?></b></div><div><span>Date</span><b><?= $h($date) ?></b></div><?php if ($deptName): ?><div><span>Department</span><b><?= $h($deptName) ?></b></div><?php endif; ?><div><span>Kind Attn.</span><b><?= $h($w['attn'] ?: 'M/s ' . $w['vendor_name']) ?></b></div></div>
   </div>
   <div class="ref"><b>Ref:</b> <?= $h($w['subject']) ?></div>
@@ -185,8 +185,8 @@ $created = trim(($w['created_name'] ?? '') . ($w['created_at'] ? ' · ' . date('
   </div>
   <?= $signRow() ?>
   <div class="ft"><?= $h($SET['footer']) ?></div>
-  <div class="scb">✍ Signed by Contractor as a token of accepted</div>
-  <div class="gen"><span>🖨️ Generated by <b><?= $h($genBy ?: '—') ?></b> · <?= $h($genAt) ?></span><span><?= $created ? 'Created by ' . $h($created) . ' · ' : '' ?>E-Admin · W.O. <?= $h($woNo) ?></span></div>
+  <div class="scb">Signed by Contractor as a token of accepted</div>
+  <div class="gen"><span>Generated by <b><?= $h($genBy ?: '—') ?></b> · <?= $h($genAt) ?></span><span><?= $created ? 'Created by ' . $h($created) . ' · ' : '' ?>E-Admin · W.O. <?= $h($woNo) ?></span></div>
 </div></div>
 </body>
 </html>
