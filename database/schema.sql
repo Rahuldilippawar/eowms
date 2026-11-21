@@ -301,7 +301,8 @@ INSERT INTO permissions (permission_key, label, label_local, sort_order) VALUES
 ('work_order_dept', 'Work order — create & view for own department', 'वर्क ऑर्डर — स्वतःच्या विभागाची बनवणे व पाहणे', 62),
 ('work_order_all', 'Work order — all departments (central, like purchase dept)', 'वर्क ऑर्डर — सर्व विभागांच्या (खरेदी विभागासारखे केंद्रीय)', 63),
 ('bill_sign', 'Bill permission sheets — create, submit for sign, mark permission done, send to accounts', 'बिल परवानगी पत्रक — बनवणे, सहीसाठी जमा, परवानगी Done, लेखा विभागास जमा', 64),
-('bill_sign_view', 'Bill permission sheets — view & print', 'बिल परवानगी पत्रक — पाहणे व Print', 65);
+('bill_sign_view', 'Bill permission sheets — view & print', 'बिल परवानगी पत्रक — पाहणे व Print', 65),
+('bill_sign_approve', 'Bill permission sheets — view & mark permission done (bill-wise decisions)', 'बिल परवानगी पत्रक — पाहणे व परवानगी Done (बिलनिहाय निर्णय)', 65);
 
 INSERT INTO role_permissions (role_key, permission_key)
 SELECT role_key, 'manage_it' FROM role_definitions WHERE category = 'management';
