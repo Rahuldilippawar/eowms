@@ -297,7 +297,9 @@ INSERT INTO permissions (permission_key, label, label_local, sort_order) VALUES
 ('purchase_compare_approve', 'Comparison chart — approve vendor selection', 'तुलनात्मक तक्ता — पुरवठादार निवड मान्यता (Approve)', 57),
 ('purchase_compare_view', 'Comparison chart — view & print', 'तुलनात्मक तक्ता — पाहणे व Print', 58),
 ('office_register', 'Inward / outward — ALL registers: add, edit, import, settings', 'आवक-जावक — सर्व नोंदवह्या: नोंद, बदल, आयात, सेटिंग्ज', 60),
-('office_register_view', 'Inward / outward — ALL registers: view and reports only', 'आवक-जावक — सर्व नोंदवह्या: फक्त पाहणे व अहवाल', 61);
+('office_register_view', 'Inward / outward — ALL registers: view and reports only', 'आवक-जावक — सर्व नोंदवह्या: फक्त पाहणे व अहवाल', 61),
+('work_order_dept', 'Work order — create & view for own department', 'वर्क ऑर्डर — स्वतःच्या विभागाची बनवणे व पाहणे', 62),
+('work_order_all', 'Work order — all departments (central, like purchase dept)', 'वर्क ऑर्डर — सर्व विभागांच्या (खरेदी विभागासारखे केंद्रीय)', 63);
 
 INSERT INTO role_permissions (role_key, permission_key)
 SELECT role_key, 'manage_it' FROM role_definitions WHERE category = 'management';
@@ -3820,6 +3822,68 @@ CREATE TABLE office_register_access (
   created_at DATETIME NOT NULL,
   UNIQUE KEY uq_ora (register_id, user_id),
   INDEX idx_ora_user (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+-- 🧾 वर्क ऑर्डर (केंद्रीय खरेदी विभाग + विभागनिहाय), सलग W.O. क्रमांक
+CREATE TABLE work_orders (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  organization_id INT NOT NULL,
+  fy VARCHAR(9) NOT NULL,
+  wo_num INT NOT NULL,
+  wo_no VARCHAR(20) NOT NULL,
+  wo_date DATE NOT NULL,
+  department_id INT NULL,
+  department_name VARCHAR(150) NULL,
+  vendor_name VARCHAR(200) NOT NULL,
+  vendor_address VARCHAR(500) NULL,
+  vendor_phone VARCHAR(100) NULL,
+  vendor_email VARCHAR(150) NULL,
+  vendor_gstin VARCHAR(30) NULL,
+  attn VARCHAR(200) NULL,
+  subject VARCHAR(500) NOT NULL,
+  labels VARCHAR(300) NULL,
+  subtotal DECIMAL(14,2) NOT NULL DEFAULT 0,
+  gst_pct DECIMAL(5,2) NOT NULL DEFAULT 0,
+  gst_amount DECIMAL(14,2) NOT NULL DEFAULT 0,
+  round_off DECIMAL(10,2) NOT NULL DEFAULT 0,
+  grand_total DECIMAL(14,2) NOT NULL DEFAULT 0,
+  purpose TEXT NULL,
+  taxes_note VARCHAR(300) NULL,
+  execution_note VARCHAR(300) NULL,
+  completion_note VARCHAR(300) NULL,
+  terms_json MEDIUMTEXT NULL,
+  payment_json TEXT NULL,
+  signs_json TEXT NULL,
+  status VARCHAR(10) NOT NULL DEFAULT 'issued',
+  status_note VARCHAR(300) NULL,
+  source VARCHAR(10) NOT NULL DEFAULT 'manual',
+  created_by INT NULL,
+  updated_by INT NULL,
+  created_at DATETIME NOT NULL,
+  updated_at DATETIME NULL,
+  UNIQUE KEY uq_wo_no (organization_id, fy, wo_no),
+  INDEX idx_wo_list (organization_id, fy, wo_num),
+  INDEX idx_wo_dept (organization_id, department_id, wo_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE work_order_items (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  work_order_id INT NOT NULL,
+  sort_order INT NOT NULL DEFAULT 0,
+  particular TEXT NOT NULL,
+  qty VARCHAR(60) NULL,
+  unit VARCHAR(40) NULL,
+  rate DECIMAL(14,2) NULL,
+  amount DECIMAL(14,2) NULL,
+  INDEX idx_woi (work_order_id, sort_order)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE work_order_events (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  work_order_id INT NOT NULL,
+  organization_id INT NOT NULL,
+  event VARCHAR(20) NOT NULL,
+  note VARCHAR(500) NULL,
+  user_id INT NULL,
+  created_at DATETIME NOT NULL,
+  INDEX idx_woe (work_order_id, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 CREATE TABLE office_letter_events (
   id INT AUTO_INCREMENT PRIMARY KEY,

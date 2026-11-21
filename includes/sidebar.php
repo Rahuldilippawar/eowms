@@ -496,6 +496,11 @@ function navGroupHead($id, $key, $activeGroup, $icon, $label, $badge = 0) {
         <i class="fa-solid fa-print fa-fw"></i><span>खरेदी अहवाल</span>
       </a>
     <?php endif; ?>
+    <?php require_once __DIR__ . '/work-order.php'; if (woCanUse()): ?>
+      <a href="<?= $rp ?>purchase/work-orders/index.php" class="tree-node <?= $currentDir === 'work-orders' ? 'active' : '' ?>">
+        <i class="fa-solid fa-file-signature fa-fw"></i><span>वर्क ऑर्डर</span>
+      </a>
+    <?php endif; ?>
     <?php require_once __DIR__ . '/purchase-compare.php'; if (purchaseCmpCanView()): ?>
       <a href="<?= $rp ?>purchase/compare/index.php" class="tree-node <?= $currentDir === 'compare' ? 'active' : '' ?>">
         <i class="fa-solid fa-scale-unbalanced fa-fw"></i><span>तुलनात्मक तक्ते</span>
