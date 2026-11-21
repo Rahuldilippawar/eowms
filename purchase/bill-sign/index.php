@@ -160,7 +160,7 @@ $stForm = function ($s, $op, $label, $cls, $confirm, $back = null) use ($qs) {
   <?php if ($ready): ?><div class="nx"><small>🔢 पुढचा Sheet No.</small><b><?= (int)$nextNo ?></b></div><?php endif; ?>
   <div class="acts">
     <?php if ($ready && $can): ?><a class="pri" href="sheet.php">＋ नवीन पत्रक</a><?php endif; ?>
-    <?php if ($ready): ?><a href="<?= h($qs(['export' => 'csv'])) ?>">📊 Excel</a><?php endif; ?>
+    <?php if ($ready): ?><a href="report.php" target="_blank">📈 मासिक / वार्षिक अहवाल</a><a href="<?= h($qs(['export' => 'csv'])) ?>">📊 Excel</a><?php endif; ?>
     <?php if ($ready && $can): ?><button type="button" data-bs-toggle="modal" data-bs-target="#bsSet">⚙️ सेटिंग्ज</button><?php endif; ?>
   </div>
 </div>
