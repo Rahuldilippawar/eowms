@@ -24,7 +24,7 @@ function accessGatedModules() {
     $names = ['store' => '📦 भांडार (Store)', 'meditation' => 'ध्यान व सत्संग', 'music' => 'संगीत विभाग', 'events' => 'कार्यक्रम', 'guests' => 'पाहुणे',
         'room-booking' => 'Room/Hall Booking', 'allocations' => 'Issue / Return Register', 'gaushala' => 'गौशाळा', 'vehicles' => 'वाहन विभाग',
         'cctv' => 'CCTV', 'it' => 'IT विभाग', 'deadstock' => 'Dead Stock', 'dept-finance' => 'विभाग Finance',
-        'purchase' => '🛒 खरेदी विभाग', 'purchase-compare' => '📊 तुलनात्मक तक्ते', 'bill-recon' => '🧾 मासिक बिल ताळमेळ', 'office-register' => '📨 आवक-जावक नोंदवही', 'work-orders' => '🧾 वर्क ऑर्डर'];
+        'purchase' => '🛒 खरेदी विभाग', 'purchase-compare' => '📊 तुलनात्मक तक्ते', 'bill-recon' => '🧾 मासिक बिल ताळमेळ', 'office-register' => '📨 आवक-जावक नोंदवही', 'work-orders' => '🧾 वर्क ऑर्डर', 'bill-sign' => '✍️ बिल परवानगी पत्रक'];
     $lbl = fn($k, $f) => $reg[$k]['label'] ?? ($names[$k] ?? $f);
     $deptCodes = moduleAccessDeptCodes();
     $out = [];
