@@ -293,3 +293,129 @@ function orSeedImport(PDO $pdo, $orgId, $uid) {
     orgSettingSet($pdo, $orgId, 'office_reg_seed_done', date('Y-m-d H:i:s'));
     return [$n, $skip];
 }
+
+/* ======================================================================
+ * 📝 जावक पत्र — E-Admin मध्येच पत्र बनवा: letterhead, जा.क्र. (पुढचा क्र. आपोआप), प्रति, विषय, संदर्भ,
+ * मजकूर (परिच्छेद / • मुद्दे), सह्या (हव्या तेवढ्या), कार्याध्यक्षांचा शेरा/सही, प्रत माहितीसाठी सादर.
+ * जतन करताच तेच पत्र जावक नोंदवहीत नोंदलं जातं (office_letters.doc_json).
+ * ====================================================================== */
+
+/** पत्राची सेटिंग्ज (संस्थेनुसार) */
+function orLetterSettings(PDO $pdo, $orgId) {
+    $g = fn($k, $d = '') => trim((string)orgSetting($pdo, $orgId, $k, '')) !== '' ? (string)orgSetting($pdo, $orgId, $k, '') : $d;
+    // Excel नोंदवही आयात केलेल्या संस्थेसाठी — त्यांच्या पत्राचं letterhead व जा.क्र. (सेटिंग्ज बदलल्यावर तेच)
+    $sd = [];
+    if ($g('office_reg_seed_done') !== '') { require_once __DIR__ . '/office-register-seed.php'; $sd = orSeedData()['letter'] ?? []; }
+    $signs = [];
+    foreach (array_filter(array_map('trim', explode("\n", $g('office_letter_signs', $sd['signs'] ?? "व्यवस्थापक सामान्य प्रशासन")))) as $ln) { $p = array_map('trim', explode('|', $ln, 2)); $signs[] = count($p) > 1 ? [$p[0], $p[1]] : ['', $p[0]]; }
+    return [
+        'head' => $g('office_letterhead', $sd['head'] ?? orHead($pdo, $orgId)),
+        'prefix' => $g('office_letter_prefix', $sd['prefix'] ?? 'जा.क्र.'),
+        'signs' => $signs,
+        'remark' => $g('office_letter_remark', 'माननीय कार्याध्यक्ष साहेब यांचा शेरा/सही :'),
+        'to' => $g('office_letter_to', ''),
+    ];
+}
+
+/** "जा.क्र./वि.जं.म.आ.ट्रस्ट/व्या. सा.प्र/ २०२६/२५२" — उपसर्ग / वर्ष / क्रमांक */
+function orLetterRef($prefix, $fy, $no) { return rtrim(trim((string)$prefix), '/ ') . '/ ' . substr((string)$fy, 0, 4) . '/' . $no; }
+
+/** विषयावरून शेवटची विनंती-ओळ: "… मंजुरी मिळण्याबाबत." → "तरी, … मंजुरी मिळावी, ही नम्र विनंती." */
+function orAutoClosing($subject) {
+    $s = preg_replace('/^[\s.।]+|[\s.।]+$/u', '', preg_replace('/\s+/u', ' ', (string)$subject));
+    if ($s === '') return 'तरी, उपरोक्त विषयास मंजुरी मिळावी, ही नम्र विनंती.';
+    // क्रियापद — आधीचा शब्द स्त्रीलिंगी (मंजुरी, रक्कम, वाढ …) तर "मिळावी", नाहीतर "मिळावे"
+    $verbs = ['मिळविण्या' => ['मिळावी', 'मिळावे'], 'मिळण्या' => ['मिळावी', 'मिळावे'], 'मिळणे' => ['मिळावी', 'मिळावे'], 'करण्या' => ['करावी', 'करावे'], 'करणे' => ['करावी', 'करावे'],
+        'देण्या' => ['द्यावी', 'द्यावे'], 'देणे' => ['द्यावी', 'द्यावे'], 'होण्या' => ['व्हावी', 'व्हावे'], 'होणे' => ['व्हावी', 'व्हावे'], 'घेण्या' => ['घ्यावी', 'घ्यावे'],
+        'आणण्या' => ['आणावी', 'आणावे'], 'आणणे' => ['आणावी', 'आणावे'], 'पाठविण्या' => ['पाठवावी', 'पाठवावे'], 'पाठवणे' => ['पाठवावी', 'पाठवावे']];
+    $fem = '/(ी|वाढ|रक्कम|व्यवस्था|सुविधा|रजा|मान्यता|सोय|परवानगी|कारवाई|बस|फी|मदत)$/u';
+    if (preg_match('/^(.*?)\s*(' . implode('|', array_keys($verbs)) . ')\s*बाबत$/u', $s, $m) && trim($m[1]) !== '') {
+        $pre = trim($m[1]); $last = preg_replace('/^.*\s/u', '', $pre);
+        return 'तरी, ' . $pre . ' ' . $verbs[$m[2]][preg_match($fem, $last) ? 0 : 1] . ', ही नम्र विनंती.';
+    }
+    if (mb_substr($s, -4) === 'बाबत') return 'तरी, ' . trim(mb_substr($s, 0, -4)) . ' बाबत योग्य ती कार्यवाही व्हावी, ही नम्र विनंती.';
+    return 'तरी, ' . $s . ' — याबाबत योग्य ती कार्यवाही व्हावी, ही नम्र विनंती.';
+}
+
+/** तयार नमुने — [नाव, विषय, मजकूर, शेवट] ({…} = भरायची माहिती) */
+function orLetterTemplates() {
+    $open = "उपरोक्त विषयास अनुसरून सविनय सादर करण्यात येते की, ";
+    return [
+        'general' => ['📄 सर्वसाधारण विनंती', '', $open . "\n\n", ''],
+        'wage' => ['👷 रोजंदारी मंजुरी', '{नाव} यांच्या माहे {महिना} च्या रोजंदारी मंजुरी मिळण्याबाबत.',
+            $open . "आपल्या संकुलामध्ये {नाव} हे {पद} म्हणून रोजंदारी तत्त्वावर कार्यरत आहेत. त्यांनी माहे {महिना} महिन्यात केलेल्या कामाचा तपशील खालीलप्रमाणे असून, त्यानुसार त्यांचे पेमेंट अदा करावयाचे आहे:\n• कामाचा कालावधी: {पासून} ते {पर्यंत}\n• एकूण कार्यदिवस: {दिवस} दिवस\n• रोजंदारी दर: रु. {दर}/- प्रतिदिन\n• एकूण देय रक्कम: रु. {रक्कम}/- (अक्षरी रुपये {अक्षरी} मात्र)", ''],
+        'expense' => ['💰 खर्चास मंजुरी', '{कार्यक्रम / काम} साठी झालेल्या खर्चास मंजुरी मिळणेबाबत.',
+            $open . "{कार्यक्रम / काम} साठी खालीलप्रमाणे खर्च झालेला आहे:\n• खर्चाचा तपशील: {तपशील}\n• एकूण रक्कम: रु. {रक्कम}/-\nसंबंधित बिले सोबत जोडली आहेत.", ''],
+        'purchase' => ['🛒 साहित्य खरेदी मंजुरी', '{विभाग} साठी आवश्यक साहित्य खरेदी करण्यास मंजुरी मिळणेबाबत.',
+            $open . "{विभाग} च्या कामासाठी खालील साहित्याची आवश्यकता आहे:\n• {साहित्य} — {नग} नग\n• अंदाजित खर्च: रु. {रक्कम}/-\nकोटेशन सोबत जोडले आहे.", ''],
+        'salary' => ['📈 वेतनवाढ', '{नाव} यांच्या वेतनात वाढ करण्याबाबत.',
+            $open . "{नाव} हे {पद} म्हणून दिनांक {पासून} पासून कार्यरत असून त्यांचे काम समाधानकारक आहे.\n• सध्याचे वेतन: रु. {सध्याचे}/-\n• प्रस्तावित वेतन: रु. {प्रस्तावित}/-\nत्यांच्या कामाचा आढावा घेऊन वेतनवाढ देण्यात यावी.", ''],
+        'leave' => ['🏖️ सुट्टी / गैरहजेरी', '{नाव} यांच्या रजेबाबत.',
+            $open . "{नाव} ({पद}) हे दिनांक {पासून} ते {पर्यंत} या कालावधीत {कारण} कारणास्तव रजेवर आहेत / होते.", 'तरी, त्यांची रजा मंजूर करण्यात यावी, ही नम्र विनंती.'],
+        'info' => ['📋 माहिती / अहवाल सादर', '{विषय} बाबतची माहिती सादर करणेबाबत.',
+            $open . "{विषय} बाबतची माहिती / अहवाल खालीलप्रमाणे सादर करीत आहोत:\n• {मुद्दा 1}\n• {मुद्दा 2}", 'सदर माहिती आपल्या माहितीसाठी सविनय सादर.'],
+        'action' => ['⚠️ कारवाई / सूचना', '{नाव} यांच्यावर {कारण} बद्दल कारवाई करणेबाबत.',
+            $open . "{नाव} ({पद}) यांनी {तपशील}. यापूर्वीही याबाबत सूचना देण्यात आल्या होत्या.", 'तरी, नियमानुसार योग्य ती कारवाई करण्यात यावी, ही नम्र विनंती.'],
+    ];
+}
+
+/** मजकूर → HTML: रिकाम्या ओळीने परिच्छेद, "•" / "-" / "*" ने सुरू होणाऱ्या ओळी = मुद्दे, **ठळक** */
+function orLetterBodyHtml($body) {
+    $esc = fn($t) => preg_replace('/\*\*(.+?)\*\*/u', '<b>$1</b>', htmlspecialchars($t, ENT_QUOTES, 'UTF-8'));
+    $out = ''; $list = false;
+    foreach (preg_split('/\R/u', trim((string)$body)) as $ln) {
+        $t = trim($ln);
+        if (preg_match('/^[•\-\*●▪]\s*(.+)$/u', $t, $m)) { if (!$list) { $out .= '<ul>'; $list = true; } $out .= '<li>' . $esc($m[1]) . '</li>'; continue; }
+        if ($list) { $out .= '</ul>'; $list = false; }
+        if ($t === '') continue;
+        $out .= '<p>' . $esc($t) . '</p>';
+    }
+    if ($list) $out .= '</ul>';
+    return $out;
+}
+
+/** पत्राचा मजकूर (doc_json) — रिकाम्या जागी सेटिंग्जमधले मूल्य */
+function orLetterDoc(array $row = null, array $set = []) {
+    $d = $row && !empty($row['doc_json']) ? (json_decode((string)$row['doc_json'], true) ?: []) : [];
+    return $d + ['to' => '', 'salutation' => 'महोदय,', 'reference' => '', 'body' => '', 'closing' => '', 'final' => 'आपल्या मंजुरीसाठी सविनय सादर.',
+        'signs' => $set['signs'] ?? [], 'remark' => $set['remark'] ?? '', 'copies' => '', 'template' => '', 'digits' => 'mr', 'prefix' => $set['prefix'] ?? 'जा.क्र.'];
+}
+
+/** पत्राचा CSS (Print + Preview दोन्हीसाठी) */
+function orLetterCss() {
+    return '.ltr{font-family:"Noto Sans Devanagari",system-ui,sans-serif;color:#000;background:#fff;font-size:15px;line-height:1.75;}
+.ltr .lh{text-align:center;line-height:1.55;} .ltr .lh div{font-size:15px;} .ltr .lh div.l0{font-size:13px;font-weight:700;} .ltr .lh div.l1{font-size:17px;font-weight:600;}
+.ltr .rule{border:0;border-top:2px solid #000;margin:6px 0 10px;}
+.ltr .rf{display:flex;justify-content:space-between;gap:12px;font-weight:700;font-size:14.5px;flex-wrap:wrap;}
+.ltr .to{margin-top:22px;font-weight:700;line-height:2;} .ltr .to div{white-space:pre-wrap;}
+.ltr .sb{margin:26px 0 6px;padding-left:12%;font-weight:700;} .ltr .rfn{padding-left:12%;font-size:14px;margin-bottom:6px;}
+.ltr .sal{font-weight:700;margin-top:14px;} .ltr .bd p{margin:0 0 6px;text-indent:2.2em;text-align:justify;} .ltr .bd ul{margin:4px 0 8px 2.4em;padding-left:1em;} .ltr .bd li{margin:5px 0;}
+.ltr .cl{margin-top:6px;text-align:justify;} .ltr .fin{margin-top:10px;}
+.ltr .sg{display:flex;flex-wrap:wrap;justify-content:space-between;gap:24px 12px;margin-top:64px;font-weight:700;} .ltr .sg div{min-width:30%;text-align:center;} .ltr .sg div:first-child{text-align:left;} .ltr .sg div:last-child{text-align:right;} .ltr .sg div:only-child{margin-left:auto;}
+.ltr .sg small{display:block;font-weight:600;}
+.ltr .rm{margin-top:40px;font-weight:700;min-height:70px;}
+.ltr .cp{margin-top:14px;font-size:14px;} .ltr .cp b{display:block;} .ltr .cp ol{margin:2px 0 0 1.2em;padding-left:1em;}';
+}
+
+/** पत्र → HTML. $m = ['reg_no', 'fy', 'date', 'subject'] */
+function orLetterHtml(array $doc, array $m, $head, $mr = true) {
+    $h = fn($x) => htmlspecialchars((string)$x, ENT_QUOTES, 'UTF-8');
+    $N = fn($x) => $mr ? orMr($x) : (string)$x;
+    $o = '<div class="ltr"><div class="lh">';
+    foreach (array_values(array_filter(array_map('trim', explode("\n", (string)$head)), 'strlen')) as $i => $ln) $o .= '<div class="l' . min($i, 2) . '">' . $h($ln) . '</div>';
+    $o .= '</div><hr class="rule">';
+    $o .= '<div class="rf"><span>' . $h($N(orLetterRef($doc['prefix'] ?? 'जा.क्र.', $m['fy'], $m['reg_no']))) . '</span><span>दिनांक : ' . $h($N($m['date'] ? date('d/m/Y', strtotime($m['date'])) : '')) . '</span></div>';
+    if (trim((string)$doc['to']) !== '') $o .= '<div class="to"><div>प्रति,</div><div>' . $h(trim((string)$doc['to'])) . '</div></div>';
+    $o .= '<div class="sb">विषय: ' . $h($m['subject']) . '</div>';
+    if (trim((string)$doc['reference']) !== '') $o .= '<div class="rfn"><b>संदर्भ:</b> ' . $h(trim((string)$doc['reference'])) . '</div>';
+    if (trim((string)$doc['salutation']) !== '') $o .= '<div class="sal">' . $h($doc['salutation']) . '</div>';
+    $o .= '<div class="bd">' . orLetterBodyHtml($doc['body']) . '</div>';
+    if (trim((string)$doc['closing']) !== '') $o .= '<div class="cl">' . $h($doc['closing']) . '</div>';
+    if (trim((string)$doc['final']) !== '') $o .= '<div class="fin">' . $h($doc['final']) . '</div>';
+    $sg = array_values(array_filter((array)$doc['signs'], fn($s) => trim(($s[0] ?? '') . ($s[1] ?? '')) !== ''));
+    if ($sg) { $o .= '<div class="sg">'; foreach ($sg as $s) $o .= '<div>' . (trim($s[0] ?? '') !== '' ? '(' . $h(trim($s[0])) . ')<small>' . $h($s[1] ?? '') . '</small>' : $h($s[1] ?? '')) . '</div>'; $o .= '</div>'; }
+    if (trim((string)$doc['remark']) !== '') $o .= '<div class="rm">' . $h($doc['remark']) . '</div>';
+    $cp = array_values(array_filter(array_map(fn($x) => trim(preg_replace('/^\d+[.)]\s*/u', '', $x)), explode("\n", (string)$doc['copies'])), 'strlen'));
+    if ($cp) { $o .= '<div class="cp"><b>प्रत माहितीसाठी सादर :</b><ol>'; foreach ($cp as $c) $o .= '<li>' . $h($c) . '</li>'; $o .= '</ol></div>'; }
+    return $o . '</div>';
+}
