@@ -5495,3 +5495,10 @@ CREATE TABLE IF NOT EXISTS bill_sign_events (
 INSERT IGNORE INTO permissions (permission_key, label, label_local, sort_order) VALUES
   ('bill_sign', 'Bill permission sheets — create, submit for sign, mark permission done, send to accounts', 'बिल परवानगी पत्रक — बनवणे, सहीसाठी जमा, परवानगी Done, लेखा विभागास जमा', 64),
   ('bill_sign_view', 'Bill permission sheets — view & print', 'बिल परवानगी पत्रक — पाहणे व Print', 65);
+
+-- ============================================================
+-- FROM: migration-bill-sign-approve.sql
+-- ============================================================
+-- ✍️ बिल परवानगी पत्रक फक्त खरेदी विभागाला; इतरांना परवानगीनेच — Done करण्यासाठी वेगळी परवानगी
+INSERT IGNORE INTO permissions (permission_key, label, label_local, sort_order) VALUES
+  ('bill_sign_approve', 'Bill permission sheets — view & mark permission done (bill-wise decisions)', 'बिल परवानगी पत्रक — पाहणे व परवानगी Done (बिलनिहाय निर्णय)', 65);

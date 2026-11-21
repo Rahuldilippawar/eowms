@@ -18,10 +18,10 @@ function bsReady(PDO $pdo) {
 /* ---------- Access ---------- */
 /** बनवणे, सहीसाठी जमा, Done, लेखा विभाग — Super Admin, खरेदी विभाग, "बिल परवानगी पत्रक" परवानगी */
 function bsCan() { return hasRole('super_admin') || canPurchase() || hasPermission('bill_sign'); }
-/** पाहणे व Print — वरचे + Management (कार्यकारी अध्यक्ष इ.) + "पाहणे" परवानगी */
-function bsCanView() { return bsCan() || isManagementOrAbove() || hasPermission('bill_sign_view'); }
-/** परवानगी नोंदवणे (Done / बिलनिहाय निर्णय) — खरेदी विभाग किंवा स्वतः Management */
-function bsCanDecide() { return bsCan() || isManagementOrAbove(); }
+/** फक्त खरेदी विभाग (व Super Admin). इतरांना — Super Admin ने दिलेली परवानगी असेल तरच:
+ *  bill_sign = पूर्ण काम, bill_sign_approve = पाहणे + परवानगी Done / बिलनिहाय निर्णय, bill_sign_view = फक्त पाहणे व Print */
+function bsCanDecide() { return bsCan() || hasPermission('bill_sign_approve'); }
+function bsCanView() { return bsCanDecide() || hasPermission('bill_sign_view'); }
 
 function bsStatuses() {
     return [

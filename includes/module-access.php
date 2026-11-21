@@ -30,7 +30,7 @@ function moduleAccessPermissions() {
         'bill-recon'   => ['bill_recon_store', 'manage_purchase', 'bill_recon_accounts', 'bill_recon_view'],
         'office-register' => ['office_register', 'office_register_view'],
         'work-orders' => ['work_order_all', 'work_order_dept', 'manage_purchase'],
-        'bill-sign' => ['bill_sign', 'bill_sign_view', 'manage_purchase'],
+        'bill-sign' => ['bill_sign', 'bill_sign_approve', 'bill_sign_view', 'manage_purchase'],
     ];
 }
 
