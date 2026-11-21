@@ -172,7 +172,7 @@ $stForm = function ($s, $op, $label, $cls, $confirm, $back = null) use ($qs) {
 <?php if ($seedPending): ?>
 <form method="POST" class="bs-seed" onsubmit="return confirm('Excel मधील बिल परवानगी पत्रके (Sheet No. 9 ते 83, आ.व. 2026-27) आयात करायची?');">
   <input type="hidden" name="action" value="import_seed"><span style="font-size:26px;">📥</span>
-  <div style="flex:1;min-width:220px;"><b>Bill Inward To EP So. Sign 2026-27 — 40 पत्रके, 635 ओळी</b><div style="font-size:12.5px;color:var(--text-dim);">Excel मधील प्रत्येक दिवसाचे पत्रक: टिप्पणी क्र., पार्टी, तपशील, बिल क्र., रक्कम, आवक दिनांक. लेखा विभागाला दिलेली पत्रके "🏦 जमा", नोव्हेंबरमधील "📤 सहीसाठी जमा" (Done करायची बाकी).</div></div>
+  <div style="flex:1;min-width:220px;"><b>Bill Inward To Executive President Sir Sign 2026-27 — 40 पत्रके, 635 ओळी</b><div style="font-size:12.5px;color:var(--text-dim);">Excel मधील प्रत्येक दिवसाचे पत्रक: टिप्पणी क्र., पार्टी, तपशील, बिल क्र., रक्कम, आवक दिनांक. लेखा विभागाला दिलेली पत्रके "🏦 जमा", नोव्हेंबरमधील "📤 सहीसाठी जमा" (Done करायची बाकी).</div></div>
   <button type="submit" class="btn btn-sm" style="background:#4338CA;color:#fff;border-radius:9px;font-weight:700;">आयात करा</button>
 </form>
 <?php endif; ?>

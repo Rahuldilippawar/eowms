@@ -1,6 +1,6 @@
 <?php
 /**
- * ✍️ बिल परवानगी पत्रक (Bill Inward for EP Sir Signing).
+ * ✍️ बिल परवानगी पत्रक (Bill Inward for Executive President Sir Signing).
  *  - खरेदी विभाग एकत्रित बिलांची फाईल बनवतो — फाईलवर लावायचे पत्रक (Sheet No., दिनांक, बिलांचा तक्ता, एकूण, सह्या)
  *  - पत्रक सहीसाठी जमा → मा. कार्यकारी अध्यक्षांची परवानगी झाली की "✅ Done" (पूर्ण पत्रक किंवा बिलनिहाय: परवानगी / थांबवले / नाकारले)
  *  - परवानगी झालेली बिलं → लेखा विभागास जमा (Acc. Dept. पत्रक), थांबलेली / नाकारलेली बिलं पुढच्या पत्रकात
@@ -44,7 +44,7 @@ function bsSettings(PDO $pdo, $orgId) {
     return [
         'letterhead' => $lh !== '' ? $lh : "!! Atma Malik !!\nVishwatmak Jangali Maharaj Ashram Trust,\nMohili-Aghai, Tal. Shahapur, Dist.Thane",
         'title' => (string)orgSetting($pdo, $orgId, 'bs_title', '') ?: 'Purchase Dept Inword Files',
-        'subtitle' => (string)orgSetting($pdo, $orgId, 'bs_subtitle', '') ?: 'Inward Files For EP Sir Signing Purpose',
+        'subtitle' => (string)orgSetting($pdo, $orgId, 'bs_subtitle', '') ?: 'Inward Files For Executive President Sir Signing Purpose',
         'submit_to' => (string)orgSetting($pdo, $orgId, 'bs_submit_to', '') ?: "Hon'ble Executive President",
         'signs' => $j('bs_signs', ['Prepared By', 'Asst. Accountant', 'Purchase Committee Head/Secretary', "Hon'ble Executive President"]),
         'acc_title' => (string)orgSetting($pdo, $orgId, 'bs_acc_title', '') ?: "Bill's submitted from Purchase Dept. to the Account Dept.",
@@ -180,7 +180,7 @@ function bsSetStatus(PDO $pdo, $orgId, array $s, $act, $uid, $note = '') {
     return null;
 }
 
-/** "Bill Inward To EP So. Sign 2026-27" Excel मधील पत्रके — एकदाच */
+/** "Bill Inward To Executive President Sir Sign 2026-27" Excel मधील पत्रके — एकदाच */
 function bsSeedImport(PDO $pdo, $orgId, $uid) {
     if (orgSetting($pdo, $orgId, 'bs_seed_done', '') !== '') return 0;
     $D = require __DIR__ . '/bill-sign-seed.php'; $n = 0;
@@ -194,7 +194,7 @@ function bsSeedImport(PDO $pdo, $orgId, $uid) {
         $d = ['fy' => $fy, 'sheet_no' => (int)$sh['no'], 'sheet_date' => $date, 'status' => $status, 'submitted_at' => $date . ' 12:00:00',
             'approved_at' => $status !== 'submitted' ? $date . ' 18:00:00' : null, 'accounts_at' => $sh['acc'] ? $sh['acc'] . ' 18:00:00' : null];
         $id = bsSave($pdo, $orgId, $uid, $d, $items, 0, 'import');
-        bsLog($pdo, $orgId, $id, 'imported', 'Excel मधून (Bill Inward To EP So. Sign 2026-27)', $uid);
+        bsLog($pdo, $orgId, $id, 'imported', 'Excel मधून (Bill Inward To Executive President Sir Sign 2026-27)', $uid);
         $n++;
     }
     orgSettingSet($pdo, $orgId, 'bs_seed_done', date('Y-m-d H:i:s'));
