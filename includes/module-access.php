@@ -29,6 +29,7 @@ function moduleAccessPermissions() {
         'purchase-compare' => ['purchase_compare', 'purchase_compare_approve', 'purchase_compare_view', 'manage_purchase'],
         'bill-recon'   => ['bill_recon_store', 'manage_purchase', 'bill_recon_accounts', 'bill_recon_view'],
         'office-register' => ['office_register', 'office_register_view'],
+        'work-orders' => ['work_order_all', 'work_order_dept', 'manage_purchase'],
     ];
 }
 
