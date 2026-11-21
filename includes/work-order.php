@@ -191,3 +191,10 @@ function woSeedImport(PDO $pdo, $orgId, $uid) {
     orgSettingSet($pdo, $orgId, 'wo_seed_done', date('Y-m-d H:i:s'));
     return $n;
 }
+
+/** "2026-05" → "मे 2026" */
+function woMonthName($ym) {
+    $m = [1 => 'जानेवारी', 'फेब्रुवारी', 'मार्च', 'एप्रिल', 'मे', 'जून', 'जुलै', 'ऑगस्ट', 'सप्टेंबर', 'ऑक्टोबर', 'नोव्हेंबर', 'डिसेंबर'];
+    $t = strtotime($ym . '-01');
+    return ($m[(int)date('n', $t)] ?? '') . ' ' . date('Y', $t);
+}

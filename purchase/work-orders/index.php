@@ -91,28 +91,42 @@ $rootPath = '../../';
 require_once __DIR__ . '/../../includes/header.php';
 ?>
 <style>
-  .wo-act{display:flex;gap:6px;flex-wrap:wrap;} .wo-act a,.wo-act button{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:10px;font-size:12.5px;font-weight:600;padding:8px 12px;text-decoration:none;}
-  .wo-act .pri{background:linear-gradient(90deg,#0F766E,#0D9488);color:#fff;border:0;}
-  .wo-next{display:inline-flex;gap:6px;align-items:center;font-size:12.5px;font-weight:700;background:color-mix(in srgb,#0D9488 10%,var(--surface));color:#0F766E;border-radius:99px;padding:4px 12px;}
-  .wo-scope{font-size:11.5px;font-weight:700;border-radius:99px;padding:2px 10px;background:color-mix(in srgb,#7C3AED 12%,var(--surface));color:#6D28D9;vertical-align:middle;}
-  .wo-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;} .wo-chips a{font-size:12px;padding:5px 10px;border-radius:99px;border:1px solid var(--line);text-decoration:none;color:inherit;background:var(--surface);}
-  .wo-chips a.on{background:#0F766E;border-color:#0F766E;color:#fff;} .wo-chips small{color:var(--text-dim);margin-left:3px;} .wo-chips a.on small{color:#CCFBF1;}
-  .wo-ins{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;margin-bottom:12px;} .wo-ins > div{border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:10px 12px;font-size:12.5px;}
-  .wo-ins h6{font-size:12px;font-weight:800;margin:0 0 6px;color:var(--text-dim);} .wo-bar{display:flex;align-items:center;gap:6px;margin:3px 0;} .wo-bar span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;} .wo-bar i{display:block;height:7px;border-radius:5px;background:linear-gradient(90deg,#0D9488,#5EEAD4);} .wo-bar b{white-space:nowrap;}
-  .wo-t{width:100%;border-collapse:separate;border-spacing:0 6px;font-size:13px;} .wo-t td{background:var(--surface);border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:9px 10px;vertical-align:top;} .wo-t td:first-child{border-left:1px solid var(--line);border-radius:12px 0 0 12px;} .wo-t td:last-child{border-right:1px solid var(--line);border-radius:0 12px 12px 0;}
-  .wo-no{font-weight:800;color:#0F766E;font-size:14px;white-space:nowrap;} .wo-sub{font-weight:700;line-height:1.35;} .wo-dim{font-size:11.5px;color:var(--text-dim);}
-  .wo-amt{font-weight:800;font-size:15px;white-space:nowrap;text-align:right;}
-  .wo-chip{font-size:11px;font-weight:700;padding:2px 9px;border-radius:99px;white-space:nowrap;} .st-dr{background:#E5E7EB;color:#374151;} .st-is{background:#DBEAFE;color:#1E40AF;} .st-dn{background:#DCFCE7;color:#166534;} .st-cx{background:#FEE2E2;color:#991B1B;}
-  .wo-btns{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end;} .wo-btns a,.wo-btns button{font-size:12px;border-radius:8px;padding:4px 9px;border:1px solid var(--line);background:var(--surface);color:var(--text);text-decoration:none;font-weight:600;white-space:nowrap;}
-  .wo-seed{border:2px dashed #0D9488;border-radius:14px;padding:14px 16px;margin-bottom:12px;background:color-mix(in srgb,#0D9488 6%,var(--surface));display:flex;gap:12px;align-items:center;flex-wrap:wrap;}
-  @media (max-width:760px){ .wo-t, .wo-t tbody, .wo-t tr, .wo-t td{display:block;} .wo-t tr{border:1px solid var(--line);border-radius:12px;margin-bottom:8px;overflow:hidden;} .wo-t td{border:0 !important;border-radius:0 !important;padding:5px 12px;} .wo-amt,.wo-btns{text-align:left;justify-content:flex-start;} }
+  .wo-hero{border-radius:20px;padding:20px 22px;background:linear-gradient(120deg,#0F766E,#0D9488 55%,#2DD4BF);color:#fff;display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:14px;box-shadow:0 14px 34px -18px rgba(15,118,110,.8);position:relative;overflow:hidden;}
+  .wo-hero:after{content:"";position:absolute;right:-40px;top:-60px;width:220px;height:220px;border-radius:50%;background:rgba(255,255,255,.08);}
+  .wo-hero h1{font-size:22px;font-weight:900;margin:0;color:#fff;} .wo-hero .ey{font-size:12px;opacity:.85;font-weight:700;}
+  .wo-hero .sc{display:inline-block;margin-top:6px;font-size:12px;font-weight:700;background:rgba(255,255,255,.18);border-radius:99px;padding:3px 11px;}
+  .wo-hero .nx{text-align:center;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25);border-radius:14px;padding:8px 16px;position:relative;z-index:1;}
+  .wo-hero .nx small{display:block;font-size:11px;opacity:.85;} .wo-hero .nx b{font-size:22px;font-weight:900;letter-spacing:.4px;}
+  .wo-hero .acts{display:flex;gap:8px;flex-wrap:wrap;position:relative;z-index:1;}
+  .wo-hero .acts a,.wo-hero .acts button{border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.12);color:#fff;border-radius:11px;padding:9px 14px;font-size:13px;font-weight:700;text-decoration:none;}
+  .wo-hero .acts .pri{background:#fff;color:#0F766E;border-color:#fff;box-shadow:0 6px 14px -8px rgba(0,0,0,.4);}
+  .wo-bar2{display:flex;gap:8px;flex-wrap:wrap;align-items:center;border:1px solid var(--line);background:var(--surface);border-radius:14px;padding:8px;margin-bottom:12px;}
+  .wo-bar2 .srch{flex:1;min-width:220px;position:relative;} .wo-bar2 .srch input{width:100%;border:1px solid var(--line);border-radius:10px;padding:8px 10px 8px 34px;font:inherit;font-size:13px;background:var(--canvas);color:var(--text);} .wo-bar2 .srch:before{content:"🔍";position:absolute;left:10px;top:7px;font-size:13px;}
+  .wo-seg{display:flex;gap:4px;flex-wrap:wrap;} .wo-seg a{font-size:12.5px;font-weight:700;padding:7px 11px;border-radius:10px;text-decoration:none;color:var(--text);background:var(--canvas);}
+  .wo-seg a.on{background:#0F766E;color:#fff;} .wo-seg a small{font-weight:800;opacity:.7;margin-left:4px;}
+  .wo-ins{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin-bottom:14px;} .wo-ins > div{border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:12px 14px;font-size:12.5px;}
+  .wo-ins h6{font-size:12.5px;font-weight:800;margin:0 0 8px;} .wo-bar{display:flex;align-items:center;gap:8px;margin:4px 0;padding:3px 4px;border-radius:8px;} .wo-bar:hover{background:var(--canvas);} .wo-bar span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .wo-bar i{display:block;height:8px;border-radius:5px;background:linear-gradient(90deg,#0D9488,#5EEAD4);} .wo-bar b{white-space:nowrap;font-variant-numeric:tabular-nums;} .wo-dim{font-size:11.5px;color:var(--text-dim);}
+  .wo-mon{font-size:12px;font-weight:800;color:var(--text-dim);margin:16px 2px 8px;display:flex;align-items:center;gap:8px;} .wo-mon:after{content:"";flex:1;height:1px;background:var(--line);} .wo-mon b{color:#0F766E;}
+  .wo-card{display:grid;grid-template-columns:96px minmax(0,1fr) auto;gap:14px;align-items:center;border:1px solid var(--line);border-left:5px solid #3B82F6;border-radius:14px;background:var(--surface);padding:12px 14px;margin-bottom:8px;transition:box-shadow .15s,transform .15s;}
+  .wo-card:hover{box-shadow:0 8px 22px -14px rgba(15,23,42,.45);transform:translateY(-1px);}
+  .wo-card.s-draft{border-left-color:#9CA3AF;} .wo-card.s-completed{border-left-color:#16A34A;} .wo-card.s-cancelled{border-left-color:#DC2626;opacity:.75;}
+  .wo-num{text-align:center;border-radius:12px;background:color-mix(in srgb,#0D9488 10%,var(--surface));padding:8px 4px;} .wo-num b{display:block;font-size:20px;font-weight:900;color:#0F766E;line-height:1.1;} .wo-num small{font-size:10.5px;color:var(--text-dim);font-weight:700;}
+  .wo-sub{font-weight:800;font-size:14px;line-height:1.35;color:inherit;text-decoration:none;} .wo-sub:hover{color:#0F766E;}
+  .wo-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;font-size:11.5px;} .wo-tags span{background:var(--canvas);border-radius:7px;padding:2px 8px;color:var(--text-dim);} .wo-tags b{color:var(--text);font-weight:700;}
+  .wo-right{text-align:right;min-width:180px;} .wo-amt{font-weight:900;font-size:18px;font-variant-numeric:tabular-nums;} .wo-amt small{display:block;font-size:11px;color:var(--text-dim);font-weight:600;}
+  .wo-chip{display:inline-block;font-size:11px;font-weight:800;padding:2px 9px;border-radius:99px;white-space:nowrap;margin-top:4px;} .st-dr{background:#E5E7EB;color:#374151;} .st-is{background:#DBEAFE;color:#1E40AF;} .st-dn{background:#DCFCE7;color:#166534;} .st-cx{background:#FEE2E2;color:#991B1B;}
+  .wo-btns{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end;margin-top:8px;} .wo-btns a,.wo-btns button{font-size:12px;border-radius:9px;padding:5px 10px;border:1px solid var(--line);background:var(--surface);color:var(--text);text-decoration:none;font-weight:700;white-space:nowrap;}
+  .wo-btns form{display:contents;} .wo-btns .pr{border-color:#0D9488;color:#0F766E;} .wo-btns .ok{background:#16A34A;border-color:#16A34A;color:#fff;}
+  .wo-seed{border:2px dashed #0D9488;border-radius:16px;padding:14px 16px;margin-bottom:14px;background:color-mix(in srgb,#0D9488 6%,var(--surface));display:flex;gap:12px;align-items:center;flex-wrap:wrap;}
+  .wo-empty{border:1px dashed var(--line);border-radius:16px;padding:36px 20px;text-align:center;color:var(--text-dim);font-size:13.5px;background:var(--surface);} .wo-empty div{font-size:40px;}
+  @media (max-width:760px){ .wo-hero{padding:16px;} .wo-hero h1{font-size:19px;} .wo-card{grid-template-columns:64px minmax(0,1fr);} .wo-num b{font-size:16px;} .wo-right{grid-column:1/-1;text-align:left;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;min-width:0;} .wo-btns{justify-content:flex-start;margin-top:0;} }
 </style>
 
-<div class="page-eyebrow">🛒 खरेदी विभाग</div>
-<div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
-  <div class="page-title mb-0">🧾 वर्क ऑर्डर <span class="wo-scope"><?= $central ? '🏢 केंद्रीय — सर्व विभाग' : '🗂️ ' . h(implode(', ', $myDeptNames)) ?></span></div>
-  <div class="wo-act">
-    <?php if ($ready): ?><span class="wo-next" title="संपूर्ण संस्थेचा सलग क्रम — कोणत्याही विभागाने बनवली तरी">🔢 पुढचा W.O. क्र. <?= h(woFmtNo($nextNo) . '/' . $curFy) ?></span><?php endif; ?>
+<div class="wo-hero">
+  <div style="position:relative;z-index:1;"><div class="ey">🛒 खरेदी विभाग</div><h1>🧾 वर्क ऑर्डर</h1><span class="sc"><?= $central ? '🏢 केंद्रीय — सर्व विभागांच्या वर्क ऑर्डर' : '🗂️ ' . h(implode(', ', $myDeptNames)) . ' — फक्त तुमच्या विभागाच्या' ?></span></div>
+  <?php if ($ready): ?><div class="nx" title="संपूर्ण संस्थेचा सलग क्रम — कोणत्याही विभागाने बनवली तरी"><small>🔢 पुढचा W.O. क्र.</small><b><?= h(woFmtNo($nextNo) . '/' . $curFy) ?></b></div><?php endif; ?>
+  <div class="acts">
     <?php if ($ready && woCanCreate()): ?><a class="pri" href="wo.php">＋ नवीन वर्क ऑर्डर</a><?php endif; ?>
     <a href="<?= h($qs(['export' => 'csv'])) ?>">📊 Excel</a>
     <?php if ($ready && $canAll): ?><button type="button" data-bs-toggle="modal" data-bs-target="#woSet">⚙️ सेटिंग्ज</button><?php endif; ?>
@@ -129,14 +143,6 @@ require_once __DIR__ . '/../../includes/header.php';
 <?php endif; ?>
 
 <?php if ($ready): ?>
-<form method="GET" class="d-flex flex-wrap gap-2 mb-2" data-no-smart-filter>
-  <select name="fy" class="form-select-custom" style="width:auto;" onchange="this.form.submit()"><?php foreach ($fys as $y): ?><option value="<?= h($y) ?>" <?= $f['fy'] === $y ? 'selected' : '' ?>>आ.व. <?= h(purchaseFyLabel($y)) ?></option><?php endforeach; ?></select>
-  <?php if ($f['st'] !== ''): ?><input type="hidden" name="st" value="<?= h($f['st']) ?>"><?php endif; ?><?php if ($f['dept']): ?><input type="hidden" name="dept" value="<?= (int)$f['dept'] ?>"><?php endif; ?>
-  <input type="search" name="q" value="<?= h($f['q']) ?>" class="form-control-custom" style="width:auto;min-width:240px;flex:1;max-width:420px;" placeholder="पुरवठादार, विषय, W.O. क्र., विभाग, वस्तू…">
-  <button class="btn btn-sm" style="border:1px solid var(--line);border-radius:8px;">शोधा</button>
-  <?php if ($f['q'] !== '' || $f['st'] !== '' || $f['dept']): ?><a href="<?= h($qs(['q' => '', 'st' => '', 'dept' => ''])) ?>" class="btn btn-sm" style="border:1px solid var(--line);border-radius:8px;">✕ Filter काढा</a><?php endif; ?>
-</form>
-
 <?php if ((int)$K['n']): ?>
 <?= smartTiles([
     ['label' => '🧾 वर्क ऑर्डर', 'value' => (int)$K['n'], 'sub' => 'आ.व. ' . purchaseFyLabel($f['fy']) . ' · ' . (int)$K['vendors'] . ' पुरवठादार'],
@@ -147,40 +153,51 @@ require_once __DIR__ . '/../../includes/header.php';
 ]) ?>
 <?php endif; ?>
 
-<div class="wo-chips">
-  <a href="<?= h($qs(['st' => ''])) ?>" class="<?= $f['st'] === '' ? 'on' : '' ?>">सर्व</a>
-  <?php foreach ($ST as $k => [$l]): ?><a href="<?= h($qs(['st' => $k])) ?>" class="<?= $f['st'] === $k ? 'on' : '' ?>"><?= h($l) ?></a><?php endforeach; ?>
-</div>
+<form method="GET" class="wo-bar2" data-no-smart-filter>
+  <select name="fy" class="form-select-custom" style="width:auto;" onchange="this.form.submit()"><?php foreach ($fys as $y): ?><option value="<?= h($y) ?>" <?= $f['fy'] === $y ? 'selected' : '' ?>>आ.व. <?= h(purchaseFyLabel($y)) ?></option><?php endforeach; ?></select>
+  <?php if ($f['st'] !== ''): ?><input type="hidden" name="st" value="<?= h($f['st']) ?>"><?php endif; ?><?php if ($f['dept']): ?><input type="hidden" name="dept" value="<?= (int)$f['dept'] ?>"><?php endif; ?>
+  <div class="srch"><input type="search" name="q" value="<?= h($f['q']) ?>" placeholder="पुरवठादार, विषय, W.O. क्र., विभाग, वस्तू…"></div>
+  <div class="wo-seg">
+    <?php $cnt = ['' => (int)($K['n'] ?? 0), 'draft' => (int)($K['dr'] ?? 0), 'issued' => (int)($K['iss'] ?? 0), 'completed' => (int)($K['done'] ?? 0), 'cancelled' => (int)($K['cx'] ?? 0)];
+    foreach (['' => 'सर्व'] + array_map(fn($x) => $x[0], $ST) as $k => $l): ?><a href="<?= h($qs(['st' => $k])) ?>" class="<?= $f['st'] === $k ? 'on' : '' ?>"><?= h($l) ?><small><?= $cnt[$k] ?? 0 ?></small></a><?php endforeach; ?>
+  </div>
+  <?php if ($f['q'] !== '' || $f['st'] !== '' || $f['dept']): ?><a href="<?= h($qs(['q' => '', 'st' => '', 'dept' => ''])) ?>" class="btn btn-sm" style="border:1px solid var(--line);border-radius:9px;">✕ Filter</a><?php endif; ?>
+</form>
 
 <?php if ($byDept && ($central || count($byDept) > 1)): ?>
 <div class="wo-ins">
-  <div><h6>🏢 विभागनिहाय</h6><?php $mx = max(1, ...array_map(fn($x) => (float)$x['amt'], $byDept)); foreach ($byDept as $d): $dn = $depts[$d['department_id']] ?? ($d['dn'] ?: 'विभाग नाही'); ?>
-    <a class="wo-bar" href="<?= h((int)$d['department_id'] ? $qs(['dept' => (int)$d['department_id'] === $f['dept'] ? '' : (int)$d['department_id'], 'q' => '']) : $qs(['dept' => '', 'q' => $d['dn']])) ?>" style="color:inherit;text-decoration:none;<?= (int)$d['department_id'] && (int)$d['department_id'] === $f['dept'] ? 'font-weight:800;' : '' ?>"><span><?= h($dn) ?> <small class="wo-dim">(<?= (int)$d['n'] ?>)</small></span><i style="width:<?= round((float)$d['amt'] * 90 / $mx) ?>px;"></i><b><?= h(purchaseInr($d['amt'])) ?></b></a><?php endforeach; ?></div>
+  <div><h6>🏢 विभागनिहाय रक्कम</h6><?php $mx = max(1, ...array_map(fn($x) => (float)$x['amt'], $byDept)); foreach ($byDept as $d): $dn = $depts[$d['department_id']] ?? ($d['dn'] ?: 'विभाग नाही'); ?>
+    <a class="wo-bar" href="<?= h((int)$d['department_id'] ? $qs(['dept' => (int)$d['department_id'] === $f['dept'] ? '' : (int)$d['department_id'], 'q' => '']) : $qs(['dept' => '', 'q' => $d['dn']])) ?>" style="color:inherit;text-decoration:none;<?= (int)$d['department_id'] && (int)$d['department_id'] === $f['dept'] ? 'font-weight:800;background:var(--canvas);' : '' ?>"><span><?= h($dn) ?> <small class="wo-dim">(<?= (int)$d['n'] ?>)</small></span><i style="width:<?= round((float)$d['amt'] * 100 / $mx) ?>px;"></i><b><?= h(purchaseInr($d['amt'])) ?></b></a><?php endforeach; ?></div>
   <?php if ($byVendor): ?><div><h6>👷 सर्वात जास्त काम — पुरवठादार / ठेकेदार</h6><?php $mx = max(1, ...array_map(fn($x) => (float)$x['amt'], $byVendor)); foreach ($byVendor as $v): ?>
-    <a class="wo-bar" href="<?= h($qs(['q' => $v['vendor_name']])) ?>" style="color:inherit;text-decoration:none;"><span><?= h($v['vendor_name']) ?> <small class="wo-dim">(<?= (int)$v['n'] ?>)</small></span><i style="width:<?= round((float)$v['amt'] * 90 / $mx) ?>px;background:linear-gradient(90deg,#7C3AED,#C4B5FD);"></i><b><?= h(purchaseInr($v['amt'])) ?></b></a><?php endforeach; ?></div><?php endif; ?>
+    <a class="wo-bar" href="<?= h($qs(['q' => $v['vendor_name']])) ?>" style="color:inherit;text-decoration:none;"><span><?= h($v['vendor_name']) ?> <small class="wo-dim">(<?= (int)$v['n'] ?>)</small></span><i style="width:<?= round((float)$v['amt'] * 100 / $mx) ?>px;background:linear-gradient(90deg,#7C3AED,#C4B5FD);"></i><b><?= h(purchaseInr($v['amt'])) ?></b></a><?php endforeach; ?></div><?php endif; ?>
 </div>
 <?php endif; ?>
 
 <?php if (!$rows): ?>
-  <div class="panel" style="padding:30px;text-align:center;color:var(--text-dim);font-size:13.5px;"><?= (int)($K['n'] ?? 0) ? 'या अटींनुसार वर्क ऑर्डर नाही.' : 'या आर्थिक वर्षात अजून वर्क ऑर्डर नाही.' ?>
-    <?php if (woCanCreate()): ?><div class="mt-2"><a href="wo.php" class="btn btn-sm" style="background:#0D9488;color:#fff;border-radius:8px;">＋ नवीन वर्क ऑर्डर</a></div><?php endif; ?></div>
+  <div class="wo-empty"><div>🧾</div><?= (int)($K['n'] ?? 0) ? 'या अटींनुसार वर्क ऑर्डर नाही.' : 'या आर्थिक वर्षात अजून वर्क ऑर्डर नाही.' ?>
+    <?php if (woCanCreate()): ?><div class="mt-2" style="font-size:13px;"><a href="wo.php" class="btn btn-sm" style="background:#0D9488;color:#fff;border-radius:9px;font-weight:700;">＋ नवीन वर्क ऑर्डर</a></div><?php endif; ?></div>
 <?php else: ?>
-<table class="wo-t"><tbody>
-<?php foreach ($rows as $r): $dn = $depts[$r['department_id']] ?? ($r['department_name'] ?: '—'); $mod = woCanModify($r); ?>
-  <tr>
-    <td style="width:110px;"><div class="wo-no"><?= h($r['wo_no']) ?><small class="wo-dim">/<?= h($r['fy']) ?></small></div><div class="wo-dim"><?= h(purchaseDate($r['wo_date'])) ?></div></td>
-    <td><div class="wo-sub"><?= h($r['subject']) ?></div><div class="wo-dim">👷 <b style="color:var(--text);"><?= h($r['vendor_name']) ?></b><?= $r['vendor_phone'] ? ' · ' . h($r['vendor_phone']) : '' ?> · 🏢 <?= h($dn) ?> · <?= (int)$r['n_items'] ?> ओळी</div></td>
-    <td style="width:150px;"><div class="wo-amt">₹<?= h(woMoney($r['grand_total'])) ?></div><div class="wo-dim" style="text-align:right;"><?= (float)$r['gst_amount'] ? 'GST ' . h(rtrim(rtrim((string)$r['gst_pct'], '0'), '.')) . '% सह' : 'GST शिवाय' ?></div></td>
-    <td style="width:120px;"><span class="wo-chip <?= $ST[$r['status']][1] ?? '' ?>"><?= h($ST[$r['status']][0] ?? $r['status']) ?></span></td>
-    <td style="width:250px;"><div class="wo-btns">
-      <a href="print.php?id=<?= (int)$r['id'] ?>" target="_blank">🖨️ Print</a>
-      <?php if ($mod): ?><a href="wo.php?id=<?= (int)$r['id'] ?>">✎ बदला</a><?php endif; ?>
-      <?php if (woCanCreate()): ?><a href="wo.php?copy=<?= (int)$r['id'] ?>" title="याच वर्क ऑर्डरवरून नवीन (नवीन क्रमांक)">📄 याच वरून नवीन</a><?php endif; ?>
-      <?php if ($mod && $r['status'] === 'issued'): ?><form method="POST" class="m-0" onsubmit="return confirm('W.O. <?= h(woFullNo($r)) ?> — काम पूर्ण झालं?');"><input type="hidden" name="action" value="set_wo_status"><input type="hidden" name="id" value="<?= (int)$r['id'] ?>"><input type="hidden" name="status" value="completed"><input type="hidden" name="back" value="<?= h(basename($qs())) ?>"><button type="submit" style="background:#16A34A;border-color:#16A34A;color:#fff;">🏁 पूर्ण</button></form><?php endif; ?>
-    </div></td>
-  </tr>
+<?php $mon = ''; foreach ($rows as $r): $dn = $depts[$r['department_id']] ?? ($r['department_name'] ?: '—'); $mod = woCanModify($r);
+  $mk = date('Y-m', strtotime($r['wo_date'])); if ($mk !== $mon): $mon = $mk; $mrs = array_filter($rows, fn($x) => date('Y-m', strtotime($x['wo_date'])) === $mk); ?>
+  <div class="wo-mon">📅 <?= h(woMonthName($mk)) ?> <b><?= count($mrs) ?></b> · <?= h(purchaseInr(array_sum(array_map(fn($x) => $x['status'] !== 'cancelled' ? (float)$x['grand_total'] : 0, $mrs)))) ?></div>
+  <?php endif; ?>
+  <div class="wo-card s-<?= h($r['status']) ?>">
+    <div class="wo-num"><b><?= h($r['wo_no']) ?></b><small><?= h($r['fy']) ?><br><?= h(purchaseDate($r['wo_date'])) ?></small></div>
+    <div style="min-width:0;">
+      <a class="wo-sub" href="print.php?id=<?= (int)$r['id'] ?>" target="_blank"><?= h($r['subject']) ?></a>
+      <div class="wo-tags"><span>👷 <b><?= h($r['vendor_name']) ?></b></span><?= $r['vendor_phone'] ? '<span>📞 ' . h($r['vendor_phone']) . '</span>' : '' ?><span>🏢 <?= h($dn) ?></span><span>🧾 <?= (int)$r['n_items'] ?> ओळी</span></div>
+    </div>
+    <div class="wo-right">
+      <div><div class="wo-amt">₹<?= h(woMoney($r['grand_total'])) ?><small><?= (float)$r['gst_amount'] ? 'GST ' . h(rtrim(rtrim((string)$r['gst_pct'], '0'), '.')) . '% सह' : 'GST शिवाय' ?></small></div><span class="wo-chip <?= $ST[$r['status']][1] ?? '' ?>"><?= h($ST[$r['status']][0] ?? $r['status']) ?></span></div>
+      <div class="wo-btns">
+        <a class="pr" href="print.php?id=<?= (int)$r['id'] ?>" target="_blank">🖨️ Print</a>
+        <?php if ($mod): ?><a href="wo.php?id=<?= (int)$r['id'] ?>">✎ बदला</a><?php endif; ?>
+        <?php if (woCanCreate()): ?><a href="wo.php?copy=<?= (int)$r['id'] ?>" title="याच वर्क ऑर्डरवरून नवीन (नवीन क्रमांक)">📄 याच वरून नवीन</a><?php endif; ?>
+        <?php if ($mod && $r['status'] === 'issued'): ?><form method="POST" class="m-0" onsubmit="return confirm('W.O. <?= h(woFullNo($r)) ?> — काम पूर्ण झालं?');"><input type="hidden" name="action" value="set_wo_status"><input type="hidden" name="id" value="<?= (int)$r['id'] ?>"><input type="hidden" name="status" value="completed"><input type="hidden" name="back" value="<?= h(basename($qs())) ?>"><button type="submit" class="ok">🏁 पूर्ण</button></form><?php endif; ?>
+      </div>
+    </div>
+  </div>
 <?php endforeach; ?>
-</tbody></table>
 <?php endif; ?>
 
 <?php if ($canAll): ?>
