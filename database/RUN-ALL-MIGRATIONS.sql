@@ -5243,3 +5243,51 @@ CREATE TABLE IF NOT EXISTS purchase_request_items (
   INDEX idx_pri_req (request_id, sort_order),
   INDEX idx_pri_org (organization_id, status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
+-- FROM: migration-office-register.sql
+-- ============================================================
+-- 📨 आवक-जावक नोंदवही (कार्यालय) — व्यवस्थापक (सामान्य प्रशासन) यांच्याकडील आवक / जावक पत्रे, शेरा, कामाची स्थिती, अहवाल
+CREATE TABLE IF NOT EXISTS office_letters (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  organization_id INT NOT NULL,
+  direction VARCHAR(3) NOT NULL,
+  fy VARCHAR(9) NOT NULL,
+  reg_month DATE NOT NULL,
+  reg_no VARCHAR(20) NOT NULL,
+  reg_num INT NOT NULL DEFAULT 0,
+  sort_order INT NOT NULL DEFAULT 0,
+  letter_date DATE NULL,
+  ref_no VARCHAR(80) NULL,
+  party VARCHAR(255) NULL,
+  subject TEXT NULL,
+  remark TEXT NULL,
+  assigned_to VARCHAR(255) NULL,
+  work_status TEXT NULL,
+  status VARCHAR(10) NOT NULL DEFAULT 'pending',
+  priority VARCHAR(10) NOT NULL DEFAULT 'normal',
+  due_date DATE NULL,
+  done_on DATE NULL,
+  linked_no VARCHAR(40) NULL,
+  source VARCHAR(10) NOT NULL DEFAULT 'manual',
+  created_by INT NULL,
+  updated_by INT NULL,
+  created_at DATETIME NOT NULL,
+  updated_at DATETIME NULL,
+  UNIQUE KEY uq_ol_no (organization_id, direction, fy, reg_no),
+  INDEX idx_ol_list (organization_id, direction, fy, reg_month, reg_num),
+  INDEX idx_ol_status (organization_id, status, letter_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE IF NOT EXISTS office_letter_events (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  letter_id INT NOT NULL,
+  organization_id INT NOT NULL,
+  event VARCHAR(20) NOT NULL,
+  note VARCHAR(500) NULL,
+  user_id INT NULL,
+  created_at DATETIME NOT NULL,
+  INDEX idx_ole_letter (letter_id, id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+INSERT IGNORE INTO permissions (permission_key, label, label_local, sort_order) VALUES
+  ('office_register', 'Inward / outward register — add, edit, work status, Excel import, reports', 'आवक-जावक नोंदवही — नोंद, बदल, कामाची स्थिती, Excel आयात, अहवाल', 60),
+  ('office_register_view', 'Inward / outward register — view and reports only', 'आवक-जावक नोंदवही — फक्त पाहणे व अहवाल', 61);

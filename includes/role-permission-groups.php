@@ -7,6 +7,7 @@ function rolePermissionGroups() {
     return [
         'tasks'    => ['✅ Tasks', ['assign_tasks', 'view_task_tracker', 'assign_tasks_org_wide']],
         'org'      => ['🏢 संपूर्ण संस्था — पाहणे', ['view_org_wide_dashboards', 'view_org_wide_reports', 'manage_requests_org_wide', 'manage_letters_org_wide']],
+        'office'   => ['📨 कार्यालय — आवक-जावक नोंदवही', ['office_register', 'office_register_view']],
         'staff'    => ['👥 कर्मचारी व हजेरी', ['view_staff_directory', 'view_staff_track_own_campus', 'view_staff_track_org_wide', 'manage_attendance', 'manage_hr', 'manage_salary', 'gate_scan']],
         'students' => ['🎓 विद्यार्थी', ['manage_students', 'student_id_cards', 'manage_bus_passes']],
         'setup'    => ['⚙️ रचना व आर्थिक', ['manage_campuses', 'manage_departments', 'manage_budget', 'manage_dept_finance', 'manage_purchase', 'purchase_compare', 'purchase_compare_approve', 'purchase_compare_view', 'bill_recon_store', 'bill_recon_kitchen', 'bill_recon_accounts', 'bill_recon_view', 'manage_sop', 'manage_maintenance_settings']],
