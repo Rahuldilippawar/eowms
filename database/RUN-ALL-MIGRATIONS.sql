@@ -5425,3 +5425,73 @@ CREATE TABLE IF NOT EXISTS work_order_events (
 INSERT IGNORE INTO permissions (permission_key, label, label_local, sort_order) VALUES
   ('work_order_dept', 'Work order — create & view for own department', 'वर्क ऑर्डर — स्वतःच्या विभागाची बनवणे व पाहणे', 62),
   ('work_order_all', 'Work order — all departments (central, like purchase dept)', 'वर्क ऑर्डर — सर्व विभागांच्या (खरेदी विभागासारखे केंद्रीय)', 63);
+
+-- ============================================================
+-- FROM: migration-bill-sign.sql
+-- ============================================================
+-- ✍️ बिल परवानगी पत्रक — खरेदी विभाग एकत्रित बिलांची फाईल कार्यकारी अध्यक्षांच्या सहीसाठी पाठवतो; परवानगी झाली की Done, नंतर लेखा विभागास जमा
+CREATE TABLE IF NOT EXISTS bill_sign_sheets (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  organization_id INT NOT NULL,
+  fy VARCHAR(9) NOT NULL,
+  sheet_no INT NOT NULL DEFAULT 0,
+  sheet_date DATE NOT NULL,
+  title VARCHAR(200) NULL,
+  note VARCHAR(500) NULL,
+  status VARCHAR(10) NOT NULL DEFAULT 'draft',
+  total_amount DECIMAL(14,2) NOT NULL DEFAULT 0,
+  n_bills INT NOT NULL DEFAULT 0,
+  submitted_at DATETIME NULL,
+  submitted_to VARCHAR(150) NULL,
+  approved_at DATETIME NULL,
+  approved_by INT NULL,
+  accounts_at DATETIME NULL,
+  accounts_by INT NULL,
+  accounts_note VARCHAR(300) NULL,
+  source VARCHAR(10) NOT NULL DEFAULT 'manual',
+  created_by INT NULL,
+  updated_by INT NULL,
+  created_at DATETIME NOT NULL,
+  updated_at DATETIME NULL,
+  INDEX idx_bss_list (organization_id, fy, sheet_no),
+  INDEX idx_bss_status (organization_id, status, sheet_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE IF NOT EXISTS bill_sign_items (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  sheet_id INT NOT NULL,
+  organization_id INT NOT NULL,
+  sort_order INT NOT NULL DEFAULT 0,
+  sr INT NOT NULL DEFAULT 1,
+  is_sub TINYINT(1) NOT NULL DEFAULT 0,
+  doc_type VARCHAR(20) NULL,
+  tippani_no VARCHAR(40) NULL,
+  party VARCHAR(250) NULL,
+  particular VARCHAR(250) NULL,
+  paid_by VARCHAR(120) NULL,
+  bill_no VARCHAR(120) NULL,
+  bill_date VARCHAR(60) NULL,
+  amount DECIMAL(14,2) NULL,
+  inward_date VARCHAR(60) NULL,
+  material_date VARCHAR(60) NULL,
+  return_date VARCHAR(60) NULL,
+  remark VARCHAR(250) NULL,
+  status VARCHAR(10) NOT NULL DEFAULT 'pending',
+  decision_note VARCHAR(250) NULL,
+  decided_at DATETIME NULL,
+  decided_by INT NULL,
+  INDEX idx_bsi_sheet (sheet_id, sort_order),
+  INDEX idx_bsi_org (organization_id, status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE IF NOT EXISTS bill_sign_events (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  sheet_id INT NOT NULL,
+  organization_id INT NOT NULL,
+  event VARCHAR(20) NOT NULL,
+  note VARCHAR(500) NULL,
+  user_id INT NULL,
+  created_at DATETIME NOT NULL,
+  INDEX idx_bse (sheet_id, id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+INSERT IGNORE INTO permissions (permission_key, label, label_local, sort_order) VALUES
+  ('bill_sign', 'Bill permission sheets — create, submit for sign, mark permission done, send to accounts', 'बिल परवानगी पत्रक — बनवणे, सहीसाठी जमा, परवानगी Done, लेखा विभागास जमा', 64),
+  ('bill_sign_view', 'Bill permission sheets — view & print', 'बिल परवानगी पत्रक — पाहणे व Print', 65);

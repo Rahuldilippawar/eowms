@@ -501,6 +501,11 @@ function navGroupHead($id, $key, $activeGroup, $icon, $label, $badge = 0) {
         <i class="fa-solid fa-file-signature fa-fw"></i><span>वर्क ऑर्डर</span>
       </a>
     <?php endif; ?>
+    <?php require_once __DIR__ . '/bill-sign.php'; if (bsCanView()): ?>
+      <a href="<?= $rp ?>purchase/bill-sign/index.php" class="tree-node <?= $currentDir === 'bill-sign' ? 'active' : '' ?>">
+        <i class="fa-solid fa-signature fa-fw"></i><span>बिल परवानगी पत्रक</span>
+      </a>
+    <?php endif; ?>
     <?php require_once __DIR__ . '/purchase-compare.php'; if (purchaseCmpCanView()): ?>
       <a href="<?= $rp ?>purchase/compare/index.php" class="tree-node <?= $currentDir === 'compare' ? 'active' : '' ?>">
         <i class="fa-solid fa-scale-unbalanced fa-fw"></i><span>तुलनात्मक तक्ते</span>
