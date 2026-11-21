@@ -109,75 +109,108 @@ $rootPath = '../../';
 require_once __DIR__ . '/../../includes/header.php';
 ?>
 <style>
-  .wf-card{border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:14px;margin-bottom:12px;} .wf-card h6{font-size:13.5px;font-weight:800;margin:0 0 10px;}
-  .wf-no{display:inline-flex;align-items:center;gap:8px;font-weight:800;color:#0F766E;background:color-mix(in srgb,#0D9488 10%,var(--surface));border-radius:10px;padding:6px 12px;font-size:15px;}
-  .wf-it{width:100%;border-collapse:collapse;font-size:13px;} .wf-it th{font-size:11.5px;color:var(--text-dim);text-align:left;padding:4px;} .wf-it td{padding:3px;vertical-align:top;}
-  .wf-it input,.wf-it textarea{width:100%;border:1px solid var(--line);border-radius:8px;padding:6px 7px;font:inherit;background:var(--surface);color:var(--text);} .wf-it textarea{min-height:38px;resize:vertical;}
-  .wf-it .n{text-align:right;} .wf-it .x{border:0;background:none;color:#DC2626;font-size:15px;}
-  .wf-tot{display:grid;grid-template-columns:1fr 160px;gap:6px 12px;max-width:440px;margin-left:auto;font-size:13.5px;align-items:center;} .wf-tot b{text-align:right;} .wf-tot .g{font-size:17px;color:#0F766E;}
-  .wf-words{font-size:12.5px;color:var(--text-dim);text-align:right;margin-top:4px;}
-  .wf-tm{display:grid;grid-template-columns:28px 1fr 92px 30px;gap:6px;align-items:start;margin-bottom:5px;font-size:12.5px;} .wf-tm textarea{width:100%;border:1px solid var(--line);border-radius:8px;padding:5px 7px;font:inherit;font-size:12.5px;min-height:34px;background:var(--surface);color:var(--text);}
-  .wf-tm select{border:1px solid var(--line);border-radius:8px;padding:5px;font-size:12px;background:var(--surface);color:var(--text);} .wf-tm .x{border:0;background:none;color:#DC2626;}
-  .wf-hint{font-size:11.5px;color:var(--text-dim);margin-top:3px;}
-  .wf-chips{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px;} .wf-chips button{font-size:11.5px;border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:99px;padding:3px 10px;font-weight:600;}
-  @media (max-width:760px){ .wf-it thead{display:none;} .wf-it tr{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;border-bottom:1px dashed var(--line);padding:6px 0;} .wf-it td:first-child{grid-column:1/-1;} .wf-it td{padding:0;} .wf-tm{grid-template-columns:22px 1fr 80px 24px;} }
+  .wf-top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px;}
+  .wf-grid{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:16px;align-items:start;}
+  .wf-card{border:1px solid var(--line);border-radius:16px;background:var(--surface);padding:16px 18px;margin-bottom:14px;box-shadow:0 1px 2px rgba(16,24,40,.04);}
+  .wf-h{display:flex;align-items:center;gap:10px;margin:0 0 12px;} .wf-h b{font-size:14.5px;font-weight:800;} .wf-h small{font-size:12px;color:var(--text-dim);margin-left:auto;}
+  .wf-step{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:800;color:#fff;background:linear-gradient(135deg,#0D9488,#0F766E);flex:0 0 auto;}
+  .wf-hint{font-size:11.5px;color:var(--text-dim);margin-top:4px;}
+  .wf-mem{display:none;font-size:11px;font-weight:700;color:#166534;background:#DCFCE7;border-radius:99px;padding:2px 8px;margin-left:6px;}
+  /* वस्तूंचा तक्ता */
+  .wf-itw{border:1px solid var(--line);border-radius:12px;overflow:hidden;}
+  .wf-it{width:100%;border-collapse:collapse;font-size:13px;}
+  .wf-it th{background:color-mix(in srgb,#0D9488 9%,var(--surface));color:#0F766E;font-size:11.5px;font-weight:800;text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);}
+  .wf-it td{padding:4px;border-bottom:1px solid var(--line);vertical-align:top;} .wf-it tr:last-child td{border-bottom:0;}
+  .wf-it tbody tr:nth-child(even) td{background:color-mix(in srgb,var(--canvas) 60%,transparent);}
+  .wf-it input,.wf-it textarea{width:100%;border:1px solid transparent;border-radius:8px;padding:7px 8px;font:inherit;background:transparent;color:var(--text);}
+  .wf-it input:focus,.wf-it textarea:focus{border-color:#0D9488;background:var(--surface);outline:0;box-shadow:0 0 0 3px color-mix(in srgb,#0D9488 15%,transparent);}
+  .wf-it textarea{min-height:36px;resize:vertical;} .wf-it .n{text-align:right;} .wf-it .sr{width:34px;text-align:center;color:var(--text-dim);font-weight:700;padding-top:12px;}
+  .wf-it input[data-auto="1"]{color:#0F766E;font-weight:700;} .wf-it .x{border:0;background:none;color:#DC2626;font-size:15px;opacity:.55;padding-top:9px;} .wf-it tr:hover .x{opacity:1;}
+  .wf-add{display:flex;gap:8px;align-items:center;padding:8px;background:var(--canvas);border-top:1px solid var(--line);}
+  .wf-add button{border:1px dashed #0D9488;color:#0F766E;background:var(--surface);border-radius:9px;padding:5px 12px;font-size:12.5px;font-weight:700;}
+  .wf-presets{display:flex;gap:6px;flex-wrap:wrap;} .wf-presets button{font-size:12px;border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:99px;padding:4px 11px;font-weight:600;}
+  .wf-presets button.on{background:#0F766E;border-color:#0F766E;color:#fff;}
+  /* अटी */
+  .wf-terms > summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;} .wf-terms > summary::-webkit-details-marker{display:none;}
+  .wf-terms > summary .chev{margin-left:auto;transition:transform .2s;color:var(--text-dim);} .wf-terms[open] > summary .chev{transform:rotate(90deg);}
+  .wf-pill{font-size:11px;font-weight:800;border-radius:99px;padding:2px 8px;} .p-yes{background:#DCFCE7;color:#166534;} .p-no{background:#FEE2E2;color:#991B1B;} .p-na{background:var(--canvas);color:var(--text-dim);}
+  .wf-tm{display:grid;grid-template-columns:30px 1fr auto 26px;gap:8px;align-items:start;padding:6px 0;border-bottom:1px dashed var(--line);font-size:12.5px;}
+  .wf-tm b{color:var(--text-dim);padding-top:7px;} .wf-tm textarea{width:100%;border:1px solid var(--line);border-radius:8px;padding:6px 8px;font:inherit;font-size:12.5px;min-height:34px;background:var(--surface);color:var(--text);resize:vertical;}
+  .wf-tm select{border:1px solid var(--line);border-radius:99px;padding:4px 8px;font-size:11.5px;font-weight:800;background:var(--surface);color:var(--text);}
+  .wf-tm select.v-YES{background:#DCFCE7;color:#166534;border-color:#86EFAC;} .wf-tm select.v-NO{background:#FEE2E2;color:#991B1B;border-color:#FCA5A5;}
+  .wf-tm .x{border:0;background:none;color:#DC2626;opacity:.55;padding-top:6px;} .wf-tm:hover .x{opacity:1;}
+  /* उजवीकडचा सारांश */
+  .wf-sum{position:sticky;top:76px;border-radius:18px;overflow:hidden;border:1px solid var(--line);background:var(--surface);box-shadow:0 10px 30px -14px rgba(15,118,110,.45);}
+  .wf-sum-h{background:linear-gradient(135deg,#0F766E,#0D9488 60%,#14B8A6);color:#fff;padding:16px 18px;}
+  .wf-sum-h small{display:block;font-size:11.5px;opacity:.85;font-weight:600;} .wf-sum-h .no{font-size:24px;font-weight:900;letter-spacing:.3px;} .wf-sum-h .sub{font-size:12px;opacity:.9;margin-top:4px;}
+  .wf-sum-b{padding:14px 18px;font-size:13px;}
+  .wf-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;} .wf-row b{font-variant-numeric:tabular-nums;}
+  .wf-row select{border:1px solid var(--line);border-radius:8px;padding:2px 6px;font-size:12.5px;background:var(--surface);color:var(--text);}
+  .wf-grand{display:flex;justify-content:space-between;align-items:baseline;border-top:2px solid var(--line);margin-top:6px;padding-top:10px;} .wf-grand span{font-weight:800;} .wf-grand b{font-size:24px;color:#0F766E;font-weight:900;}
+  .wf-words{font-size:11.5px;color:var(--text-dim);margin-top:4px;line-height:1.45;}
+  .wf-meta{font-size:12px;color:var(--text-dim);border-top:1px dashed var(--line);margin-top:10px;padding-top:10px;line-height:1.7;} .wf-meta b{color:var(--text);}
+  .wf-save{display:block;width:100%;border:0;border-radius:12px;padding:11px;font-weight:800;font-size:14px;color:#fff;background:linear-gradient(90deg,#0F766E,#0D9488);margin-top:12px;box-shadow:0 6px 16px -8px rgba(13,148,136,.8);}
+  .wf-cancel{display:block;text-align:center;font-size:12.5px;margin-top:8px;color:var(--text-dim);}
+  .wf-mbar{display:none;}
+  @media (max-width:1100px){ .wf-grid{grid-template-columns:1fr;} .wf-sum{position:static;} }
+  @media (max-width:760px){
+    .wf-card{padding:14px;} .wf-it thead{display:none;} .wf-it tr{display:grid;grid-template-columns:repeat(4,1fr);gap:2px;padding:6px 4px;position:relative;} .wf-it td{border:0;padding:1px;} .wf-it .sr{display:none;} .wf-it td.part{grid-column:1/-1;padding-right:28px;} .wf-it td.xx{position:absolute;right:2px;top:6px;}
+    .wf-it tbody tr{border-bottom:1px solid var(--line);} .wf-tm{grid-template-columns:22px 1fr auto 22px;}
+    .wf-mbar{display:flex;position:fixed;left:0;right:0;bottom:62px;z-index:30;background:var(--surface);border-top:1px solid var(--line);padding:8px 14px;align-items:center;gap:10px;box-shadow:0 -6px 18px -10px rgba(0,0,0,.25);}
+    .wf-mbar div{flex:1;font-size:11px;color:var(--text-dim);} .wf-mbar b{display:block;font-size:17px;color:#0F766E;} .wf-mbar button{border:0;border-radius:10px;padding:9px 16px;font-weight:800;color:#fff;background:#0D9488;}
+  }
 </style>
 
-<div class="page-eyebrow"><a href="index.php" style="color:inherit;">🧾 वर्क ऑर्डर</a></div>
-<div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
-  <div class="page-title mb-0"><?= $row ? '✎ वर्क ऑर्डर ' . h(woFullNo($row)) : '＋ नवीन वर्क ऑर्डर' ?></div>
-  <span class="wf-no"><?= $row ? '🔢 W.O. ' . h(woFullNo($row)) : '🔢 W.O. क्र. आपोआप: ' . h(woFmtNo($nextNo) . '/' . $curFy) ?></span>
+<div class="wf-top">
+  <div><div class="page-eyebrow"><a href="index.php" style="color:inherit;">🧾 वर्क ऑर्डर</a></div>
+    <div class="page-title mb-0"><?= $row ? '✎ वर्क ऑर्डर ' . h(woFullNo($row)) : ($copy ? '📄 याच वरून नवीन वर्क ऑर्डर' : '＋ नवीन वर्क ऑर्डर') ?></div></div>
 </div>
 <?php if ($error): ?><div class="alert alert-danger" style="border-radius:10px;font-size:13px;">⚠️ <?= h($error) ?></div><?php endif; ?>
 <?php if ($copy): ?><div class="alert alert-info" style="border-radius:10px;font-size:13px;">📄 W.O. <?= h(woFullNo($copy)) ?> वरून नवीन — नवीन दिनांक व पुढचा सलग क्रमांक मिळेल; मजकूर तपासा.</div><?php endif; ?>
-<?php if (!$row): ?><div class="wf-hint mb-2">🔢 क्रमांक संपूर्ण संस्थेत एकच सलग — कोणत्याही विभागाने बनवली तरी जतन करताना खरेदी विभागाच्या शेवटच्या क्रमांकाच्या पुढचा मिळतो.</div><?php endif; ?>
 
-<form method="POST" id="wf" data-no-smart-filter>
+<form method="POST" id="wf" class="wf-grid" data-no-smart-filter>
+  <div>
   <input type="hidden" name="action" value="save_wo"><input type="hidden" name="id" value="<?= (int)$id ?>">
-  <div class="wf-card"><h6>🏢 विभाग व दिनांक</h6>
+
+  <div class="wf-card"><div class="wf-h"><span class="wf-step">1</span><b>विभाग व दिनांक</b></div>
     <div class="row g-2">
-      <div class="col-md-4"><label class="form-label-custom">विभाग <?= $canAll ? '' : '*' ?></label><select name="department_id" id="wfDept" class="form-select-custom"><?php if ($canAll): ?><option value="0">— विभाग नाही / खाली लिहा —</option><?php endif; ?><?php foreach ($depts as $did => $d): ?><option value="<?= $did ?>" <?= (int)$F['department_id'] === $did ? 'selected' : '' ?>><?= h($d['nm']) ?></option><?php endforeach; ?></select></div>
+      <div class="col-md-5"><label class="form-label-custom">विभाग <?= $canAll ? '' : '*' ?></label><select name="department_id" id="wfDept" class="form-select-custom"><?php if ($canAll): ?><option value="0">— विभाग नाही / खाली लिहा —</option><?php endif; ?><?php foreach ($depts as $did => $d): ?><option value="<?= $did ?>" <?= (int)$F['department_id'] === $did ? 'selected' : '' ?>><?= h($d['nm']) ?></option><?php endforeach; ?></select></div>
       <div class="col-md-4"><label class="form-label-custom">विभागाचं नाव (Work Order वर)</label><input name="department_name" class="form-control-custom" value="<?= h($F['department_name']) ?>" maxlength="150" placeholder="उदा. Civil Dept."></div>
-      <div class="col-md-2 col-6"><label class="form-label-custom">दिनांक</label><input type="date" name="wo_date" class="form-control-custom" value="<?= h($F['wo_date']) ?>"></div>
-      <div class="col-md-2 col-6"><label class="form-label-custom">स्थिती</label><select name="status" class="form-select-custom"><option value="issued" <?= $F['status'] === 'issued' ? 'selected' : '' ?>><?= h($ST['issued'][0]) ?></option><option value="draft" <?= $F['status'] === 'draft' ? 'selected' : '' ?>><?= h($ST['draft'][0]) ?></option></select></div>
+      <div class="col-md-3"><label class="form-label-custom">दिनांक</label><input type="date" name="wo_date" class="form-control-custom" value="<?= h($F['wo_date']) ?>"></div>
     </div>
   </div>
 
-  <div class="wf-card"><h6>👷 पुरवठादार / ठेकेदार (To)</h6>
+  <div class="wf-card"><div class="wf-h"><span class="wf-step">2</span><b>पुरवठादार / ठेकेदार (To)</b><span class="wf-mem" id="wfMem">✓ आधीचा पत्ता भरला</span></div>
     <div class="row g-2">
       <div class="col-md-6"><label class="form-label-custom">नाव *</label><input name="vendor_name" id="wfVendor" class="form-control-custom" value="<?= h($F['vendor_name']) ?>" maxlength="200" list="wfVendors" required autocomplete="off" placeholder="टाईप करा — आधीचे पत्ते आपोआप"></div>
       <div class="col-md-6"><label class="form-label-custom">Kind Attn.</label><input name="attn" class="form-control-custom" value="<?= h($F['attn']) ?>" maxlength="200" placeholder="रिकामं ठेवलं तर M/s + नाव"></div>
-      <div class="col-md-6"><label class="form-label-custom">पत्ता</label><input name="vendor_address" class="form-control-custom" value="<?= h($F['vendor_address']) ?>" maxlength="500"></div>
-      <div class="col-md-2 col-6"><label class="form-label-custom">Phone</label><input name="vendor_phone" class="form-control-custom" value="<?= h($F['vendor_phone']) ?>" maxlength="100"></div>
-      <div class="col-md-2 col-6"><label class="form-label-custom">E-mail</label><input name="vendor_email" class="form-control-custom" value="<?= h($F['vendor_email']) ?>" maxlength="150"></div>
-      <div class="col-md-2"><label class="form-label-custom">GSTIN</label><input name="vendor_gstin" class="form-control-custom" value="<?= h($F['vendor_gstin'] ?? '') ?>" maxlength="30"></div>
+      <div class="col-12"><label class="form-label-custom">पत्ता</label><input name="vendor_address" class="form-control-custom" value="<?= h($F['vendor_address']) ?>" maxlength="500"></div>
+      <div class="col-md-4 col-6"><label class="form-label-custom">📞 Phone</label><input name="vendor_phone" class="form-control-custom" value="<?= h($F['vendor_phone']) ?>" maxlength="100"></div>
+      <div class="col-md-4 col-6"><label class="form-label-custom">✉️ E-mail</label><input name="vendor_email" class="form-control-custom" value="<?= h($F['vendor_email']) ?>" maxlength="150"></div>
+      <div class="col-md-4"><label class="form-label-custom">GSTIN</label><input name="vendor_gstin" class="form-control-custom" value="<?= h($F['vendor_gstin'] ?? '') ?>" maxlength="30"></div>
     </div>
   </div>
 
-  <div class="wf-card"><h6>📌 विषय (Ref) व काम</h6>
+  <div class="wf-card"><div class="wf-h"><span class="wf-step">3</span><b>विषय (Ref) व काम</b></div>
     <label class="form-label-custom">Ref / विषय *</label><input name="subject" id="wfSub" class="form-control-custom" value="<?= h($F['subject']) ?>" maxlength="500" required placeholder="उदा. C Wing Roofing Sheet Maintenance Labour Charges">
-    <div class="d-flex gap-2 flex-wrap align-items-end mt-2" style="font-size:12.5px;">
-      <div><label class="form-label-custom">रकाने</label><select id="wfPreset" class="form-select-custom" style="width:auto;"><option value="">— नमुना —</option><?php foreach (woLabelPresets() as $k => $p): ?><option value="<?= $k ?>" data-l='<?= h(json_encode(array_slice($p, 0, 3), JSON_UNESCAPED_UNICODE)) ?>'><?= h($p[3]) ?></option><?php endforeach; ?></select></div>
-      <div><label class="form-label-custom">नग रकाना</label><input name="l_qty" class="form-control-custom" style="width:110px;" value="<?= h($L['qty']) ?>"></div>
-      <div><label class="form-label-custom">Unit रकाना</label><input name="l_unit" class="form-control-custom" style="width:110px;" value="<?= h($L['unit']) ?>" placeholder="(नको तर रिकामं)"></div>
-      <div><label class="form-label-custom">दर रकाना</label><input name="l_rate" class="form-control-custom" style="width:130px;" value="<?= h($L['rate']) ?>"></div>
+    <div class="d-flex gap-3 flex-wrap align-items-end mt-3 mb-2">
+      <div><label class="form-label-custom">रकाने — नमुना</label><div class="wf-presets" id="wfPresets"><?php foreach (woLabelPresets() as $k => $p): ?><button type="button" data-l='<?= h(json_encode(array_slice($p, 0, 3), JSON_UNESCAPED_UNICODE)) ?>' title="<?= h(implode(' / ', array_slice($p, 0, 3))) ?>"><?= h($p[3]) ?></button><?php endforeach; ?></div></div>
+      <div class="d-flex gap-2" style="font-size:12.5px;">
+        <div><label class="form-label-custom">नग रकाना</label><input name="l_qty" class="form-control-custom" style="width:100px;" value="<?= h($L['qty']) ?>"></div>
+        <div><label class="form-label-custom">Unit रकाना</label><input name="l_unit" class="form-control-custom" style="width:100px;" value="<?= h($L['unit']) ?>" placeholder="(नको तर रिकामं)"></div>
+        <div><label class="form-label-custom">दर रकाना</label><input name="l_rate" class="form-control-custom" style="width:120px;" value="<?= h($L['rate']) ?>"></div>
+      </div>
     </div>
-    <table class="wf-it mt-2"><thead><tr><th style="width:44%;">Particular / काम</th><th>नग</th><th>Unit</th><th>दर ₹</th><th>रक्कम ₹</th><th style="width:30px;"></th></tr></thead><tbody id="wfItems">
-      <?php foreach ($items as $it): ?><tr><td><textarea name="it_part[]" rows="1"><?= h($it[0]) ?></textarea></td><td><input name="it_qty[]" value="<?= h($it[1]) ?>" class="n"></td><td><input name="it_unit[]" value="<?= h($it[2]) ?>"></td><td><input name="it_rate[]" value="<?= h($it[3] === null ? '' : rtrim(rtrim((string)$it[3], '0'), '.')) ?>" class="n" inputmode="decimal"></td><td><input name="it_amt[]" value="<?= h($it[4] === null ? '' : $it[4]) ?>" class="n" inputmode="decimal"></td><td><button type="button" class="x" title="काढा">✕</button></td></tr><?php endforeach; ?>
-    </tbody></table>
-    <button type="button" id="wfAdd" class="btn btn-sm mt-1" style="border:1px dashed var(--line);border-radius:8px;">＋ ओळ जोडा</button>
-    <div class="wf-hint">रक्कम रिकामी ठेवली तर नग × दर आपोआप ("4 Days", "96 sqcm" मधला अंकही चालतो). मथळ्याच्या ओळीसाठी फक्त Particular लिहा.</div>
-    <div class="wf-tot mt-3">
-      <span>TOTAL</span><b id="wfSubT">0.00</b>
-      <span class="d-flex gap-2 align-items-center">GST <select name="gst_pct" id="wfGst" class="form-select-custom" style="width:auto;padding:3px 8px;"><?php foreach ([0, 5, 12, 18, 28] as $g): ?><option value="<?= $g ?>" <?= (float)$F['gst_pct'] == $g ? 'selected' : '' ?>><?= $g ?>%</option><?php endforeach; ?></select></span><b id="wfGstT">0.00</b>
-      <span><label style="font-weight:600;"><input type="checkbox" name="round" id="wfRound" value="1" <?= (float)($F['round_off'] ?? 0) != 0 || !$src ? 'checked' : '' ?>> Round Off</label></span><b id="wfRoT">0.00</b>
-      <span style="font-weight:800;">Grand Total ₹</span><b class="g" id="wfGrand">0.00</b>
+    <div class="wf-itw">
+      <table class="wf-it"><thead><tr><th class="sr">#</th><th style="width:46%;">Particular / काम</th><th>नग</th><th>Unit</th><th>दर ₹</th><th>रक्कम ₹</th><th style="width:30px;"></th></tr></thead><tbody id="wfItems">
+        <?php foreach ($items as $k => $it): ?><tr><td class="sr"><?= $k + 1 ?></td><td class="part"><textarea name="it_part[]" rows="1" placeholder="काम / वस्तू"><?= h($it[0]) ?></textarea></td><td><input name="it_qty[]" value="<?= h($it[1]) ?>" class="n" placeholder="नग"></td><td><input name="it_unit[]" value="<?= h($it[2]) ?>" placeholder="Unit"></td><td><input name="it_rate[]" value="<?= h($it[3] === null ? '' : rtrim(rtrim((string)$it[3], '0'), '.')) ?>" class="n" inputmode="decimal" placeholder="दर"></td><td><input name="it_amt[]" value="<?= h($it[4] === null ? '' : $it[4]) ?>" class="n" inputmode="decimal" placeholder="रक्कम"></td><td class="xx"><button type="button" class="x" title="काढा">✕</button></td></tr><?php endforeach; ?>
+      </tbody></table>
+      <div class="wf-add"><button type="button" id="wfAdd">＋ ओळ जोडा</button><span class="wf-hint" style="margin:0;">रक्कम रिकामी → नग × दर आपोआप · मथळ्याच्या ओळीसाठी फक्त Particular</span></div>
     </div>
-    <div class="wf-words" id="wfWords"></div>
-    <label class="form-label-custom mt-2">Purpose</label><input name="purpose" id="wfPur" class="form-control-custom" value="<?= h($F['purpose']) ?>" maxlength="1000" placeholder="रिकामं ठेवलं तर विषयच">
+    <label class="form-label-custom mt-3">Purpose</label><input name="purpose" id="wfPur" class="form-control-custom" value="<?= h($F['purpose']) ?>" maxlength="1000" placeholder="रिकामं ठेवलं तर विषयच">
   </div>
 
-  <div class="wf-card"><h6>⏱️ कालावधी व कर</h6>
+  <div class="wf-card"><div class="wf-h"><span class="wf-step">4</span><b>कालावधी व कर</b></div>
     <div class="row g-2">
       <div class="col-md-6"><label class="form-label-custom">Date of Execution (Work start)</label><input name="execution_note" class="form-control-custom" value="<?= h($F['execution_note']) ?>" maxlength="300" list="wfExec"></div>
       <div class="col-md-6"><label class="form-label-custom">Target Date of Completion</label><input name="completion_note" class="form-control-custom" value="<?= h($F['completion_note']) ?>" maxlength="300" list="wfComp"></div>
@@ -185,21 +218,33 @@ require_once __DIR__ . '/../../includes/header.php';
     </div>
   </div>
 
-  <div class="wf-card"><h6>📜 अटी व शर्ती (<span id="wfTmN"><?= count($terms) ?></span>)</h6>
-    <div id="wfTerms"><?php foreach ($terms as $i => $tm): ?><div class="wf-tm"><b><?= $i + 1 ?>)</b><textarea name="tm_text[]" rows="1"><?= h($tm[0]) ?></textarea><select name="tm_flag[]"><option value="">—</option><option value="YES" <?= ($tm[1] ?? '') === 'YES' ? 'selected' : '' ?>>YES</option><option value="NO" <?= ($tm[1] ?? '') === 'NO' ? 'selected' : '' ?>>NO</option></select><button type="button" class="x" title="काढा">✕</button></div><?php endforeach; ?></div>
-    <div class="d-flex gap-2 flex-wrap"><button type="button" id="wfTmAdd" class="btn btn-sm" style="border:1px dashed var(--line);border-radius:8px;">＋ अट जोडा</button><button type="button" id="wfTmReset" class="btn btn-sm" style="border:1px solid var(--line);border-radius:8px;">↺ नेहमीच्या अटी</button></div>
-    <label class="form-label-custom mt-2">Payment — बँक तपशील ओळी (Payment Terms अटीखाली छापल्या जातात)</label><textarea name="payment" class="form-control-custom" rows="4" style="font-size:12.5px;"><?= h(implode("\n", $pay)) ?></textarea>
-  </div>
+  <details class="wf-card wf-terms"><summary><span class="wf-step">5</span><b style="font-size:14.5px;">अटी व शर्ती</b> <span class="wf-pill p-na" id="wfTmN"><?= count($terms) ?></span> <span class="wf-pill p-yes" id="wfTmY">YES</span> <span class="wf-pill p-no" id="wfTmNo">NO</span><span class="chev">▶</span></summary>
+    <div class="mt-3" id="wfTerms"><?php foreach ($terms as $i => $tm): ?><div class="wf-tm"><b><?= $i + 1 ?>)</b><textarea name="tm_text[]" rows="1"><?= h($tm[0]) ?></textarea><select name="tm_flag[]"><option value="">—</option><option value="YES" <?= ($tm[1] ?? '') === 'YES' ? 'selected' : '' ?>>YES</option><option value="NO" <?= ($tm[1] ?? '') === 'NO' ? 'selected' : '' ?>>NO</option></select><button type="button" class="x" title="काढा">✕</button></div><?php endforeach; ?></div>
+    <div class="d-flex gap-2 flex-wrap mt-2"><button type="button" id="wfTmAdd" class="btn btn-sm" style="border:1px dashed #0D9488;color:#0F766E;border-radius:8px;font-weight:700;">＋ अट जोडा</button><button type="button" id="wfTmReset" class="btn btn-sm" style="border:1px solid var(--line);border-radius:8px;">↺ नेहमीच्या अटी</button></div>
+    <label class="form-label-custom mt-3">🏦 Payment — बँक तपशील ओळी (Payment Terms अटीखाली छापल्या जातात)</label><textarea name="payment" class="form-control-custom" rows="4" style="font-size:12.5px;"><?= h(implode("\n", $pay)) ?></textarea>
+  </details>
 
-  <div class="wf-card"><h6>✍️ सह्या</h6>
+  <div class="wf-card"><div class="wf-h"><span class="wf-step">6</span><b>सह्या</b><small>सहीखाली: <?= h($SET['sign_org']) ?></small></div>
     <div class="row g-2" id="wfSigns"><?php foreach (array_pad($signs ?: woDefaultSigns($F['department_name'] ?: ($allDepts[(int)$F['department_id']]['name'] ?? '')), 3, '') as $i => $s): ?><div class="col-md-4"><input name="sg[]" class="form-control-custom" value="<?= h($s) ?>" placeholder="सही <?= $i + 1 ?>"></div><?php endforeach; ?></div>
-    <div class="wf-hint">सहीखाली: <?= h($SET['sign_org']) ?></div>
+  </div>
   </div>
 
-  <div class="d-flex gap-2 flex-wrap mb-4">
-    <button type="submit" class="btn" style="background:#0D9488;color:#fff;border-radius:10px;font-weight:700;">✓ जतन करा <?= $row ? '' : '— W.O. क्रमांक मिळवा' ?></button>
-    <a href="index.php" class="btn" style="border:1px solid var(--line);border-radius:10px;">रद्द</a>
-  </div>
+  <aside class="wf-sum">
+    <div class="wf-sum-h"><small><?= $row ? 'W.O. क्रमांक' : 'W.O. क्रमांक (जतन करताना आपोआप)' ?></small><div class="no"><?= h($row ? woFullNo($row) : woFmtNo($nextNo) . '/' . $curFy) ?></div>
+      <div class="sub"><?= $row ? '' : '🔢 संस्थेचा सलग क्रम — कोणत्याही विभागाने बनवली तरी पुढचाच' ?></div></div>
+    <div class="wf-sum-b">
+      <div class="wf-row"><span>TOTAL</span><b id="wfSubT">0.00</b></div>
+      <div class="wf-row"><span>GST <select name="gst_pct" id="wfGst"><?php foreach ([0, 5, 12, 18, 28] as $g): ?><option value="<?= $g ?>" <?= (float)$F['gst_pct'] == $g ? 'selected' : '' ?>><?= $g ?>%</option><?php endforeach; ?></select></span><b id="wfGstT">0.00</b></div>
+      <div class="wf-row"><label style="font-weight:600;margin:0;"><input type="checkbox" name="round" id="wfRound" value="1" <?= (float)($F['round_off'] ?? 0) != 0 || !$src ? 'checked' : '' ?>> Round Off</label><b id="wfRoT">0.00</b></div>
+      <div class="wf-grand"><span>Grand Total</span><b>₹<span id="wfGrand">0.00</span></b></div>
+      <div class="wf-words" id="wfWords"></div>
+      <div class="wf-row mt-2"><span>स्थिती</span><select name="status"><option value="issued" <?= $F['status'] === 'issued' ? 'selected' : '' ?>><?= h($ST['issued'][0]) ?></option><option value="draft" <?= $F['status'] === 'draft' ? 'selected' : '' ?>><?= h($ST['draft'][0]) ?></option></select></div>
+      <div class="wf-meta">👷 <b id="wfMV"><?= h($F['vendor_name'] ?: '—') ?></b><br>🧾 <span id="wfMN">0</span> ओळी · 📜 <span id="wfMT"><?= count($terms) ?></span> अटी</div>
+      <button type="submit" class="wf-save">✓ जतन करा<?= $row ? '' : ' — W.O. क्रमांक मिळवा' ?></button>
+      <a href="index.php" class="wf-cancel">रद्द</a>
+    </div>
+  </aside>
+  <div class="wf-mbar"><div>Grand Total<b>₹<span id="wfGrand2">0.00</span></b></div><button type="submit">✓ जतन करा</button></div>
 </form>
 
 <datalist id="wfVendors"><?php foreach ($vendors as $v): ?><option value="<?= h($v) ?>"><?php endforeach; ?></datalist>
@@ -225,7 +270,11 @@ require_once __DIR__ . '/../../includes/header.php';
       sub += num(a.value) || 0; });
     var g = Math.round(sub * (parseFloat(f.gst_pct.value) || 0)) / 100, tot = sub + g, ro = f.round.checked ? Math.round(tot) - tot : 0;
     document.getElementById('wfSubT').textContent = fmt(sub); document.getElementById('wfGstT').textContent = fmt(g); document.getElementById('wfRoT').textContent = fmt(ro);
-    document.getElementById('wfGrand').textContent = fmt(tot + ro); document.getElementById('wfWords').textContent = '(In Words: ' + words(tot + ro) + ')';
+    document.getElementById('wfGrand').textContent = fmt(tot + ro); document.getElementById('wfGrand2').textContent = fmt(tot + ro); document.getElementById('wfWords').textContent = 'In Words: ' + words(tot + ro);
+    var n = 0; tb.querySelectorAll('tr').forEach(function (tr, i) { tr.querySelector('.sr').textContent = i + 1; if (tr.querySelector('[name="it_part[]"]').value.trim()) n++; });
+    document.getElementById('wfMN').textContent = n; document.getElementById('wfMV').textContent = f.vendor_name.value.trim() || '—';
+    var y = 0, no = 0; document.querySelectorAll('#wfTerms select').forEach(function (s) { s.className = s.value ? 'v-' + s.value : ''; if (s.value === 'YES') y++; if (s.value === 'NO') no++; });
+    document.getElementById('wfTmY').textContent = 'YES ' + y; document.getElementById('wfTmNo').textContent = 'NO ' + no; document.getElementById('wfMT').textContent = document.querySelectorAll('#wfTerms .wf-tm').length;
   }
   function bindRow(tr) {
     tr.querySelector('.x').onclick = function () { if (tb.children.length > 1) tr.remove(); else tr.querySelectorAll('input,textarea').forEach(function (i) { i.value = ''; }); calc(); };
@@ -233,17 +282,19 @@ require_once __DIR__ . '/../../includes/header.php';
     a.addEventListener('input', function () { a.dataset.auto = a.value === '' ? '' : '0'; });
   }
   tb.querySelectorAll('tr').forEach(bindRow);
-  document.getElementById('wfAdd').onclick = function () { var r = tb.lastElementChild.cloneNode(true); r.querySelectorAll('input,textarea').forEach(function (i) { i.value = ''; delete i.dataset.auto; }); tb.appendChild(r); bindRow(r); r.querySelector('textarea').focus(); };
+  document.getElementById('wfAdd').onclick = function () { var r = tb.lastElementChild.cloneNode(true); delete r.querySelector('[name="it_amt[]"]').dataset.auto; r.querySelectorAll('input,textarea').forEach(function (i) { i.value = ''; delete i.dataset.auto; }); tb.appendChild(r); bindRow(r); r.querySelector('textarea').focus(); };
   f.addEventListener('input', calc); f.addEventListener('change', calc); calc();
   // पुरवठादार — आधीचा पत्ता
-  document.getElementById('wfVendor').addEventListener('change', function () { var m = MEM[this.value]; if (!m) return; ['vendor_address', 'vendor_phone', 'vendor_email', 'vendor_gstin'].forEach(function (k, i) { if (!f[k].value.trim() && m[i]) f[k].value = m[i]; }); if (!f.attn.value.trim()) f.attn.value = 'M/s ' + this.value; });
+  document.getElementById('wfVendor').addEventListener('change', function () { var m = MEM[this.value]; document.getElementById('wfMem').style.display = m ? 'inline-block' : 'none'; if (!m) return; ['vendor_address', 'vendor_phone', 'vendor_email', 'vendor_gstin'].forEach(function (k, i) { if (!f[k].value.trim() && m[i]) f[k].value = m[i]; }); if (!f.attn.value.trim()) f.attn.value = 'M/s ' + this.value; });
   // विभाग → सह्या
   document.getElementById('wfDept').addEventListener('change', function () { var s = SG[this.value]; if (!s) return; var ins = document.querySelectorAll('#wfSigns input'); if (!ins[0].value.trim() || /\/ HOD$/.test(ins[0].value)) ins[0].value = s[0]; });
   // रकाने नमुना
-  document.getElementById('wfPreset').addEventListener('change', function () { var o = this.options[this.selectedIndex]; if (!o.value) return; var l = JSON.parse(o.dataset.l); f.l_qty.value = l[0]; f.l_unit.value = l[1]; f.l_rate.value = l[2]; tb.querySelectorAll('[name="it_unit[]"]').forEach(function (u) { if (!u.value) u.value = l[1] === 'Unit' || /Unit\//.test(l[1]) ? '' : l[1]; }); });
+  document.querySelectorAll('#wfPresets button').forEach(function (b) { b.addEventListener('click', function () { var l = JSON.parse(b.dataset.l); f.l_qty.value = l[0]; f.l_unit.value = l[1]; f.l_rate.value = l[2];
+    document.querySelectorAll('#wfPresets button').forEach(function (x) { x.classList.toggle('on', x === b); });
+    tb.querySelectorAll('[name="it_unit[]"]').forEach(function (u) { if (!u.value && !/Unit/.test(l[1])) u.value = l[1]; }); }); });
   // अटी
   var tmBox = document.getElementById('wfTerms');
-  function renum() { tmBox.querySelectorAll('.wf-tm').forEach(function (r, i) { r.querySelector('b').textContent = (i + 1) + ')'; r.querySelector('.x').onclick = function () { r.remove(); renum(); }; }); document.getElementById('wfTmN').textContent = tmBox.children.length; }
+  function renum() { tmBox.querySelectorAll('.wf-tm').forEach(function (r, i) { r.querySelector('b').textContent = (i + 1) + ')'; r.querySelector('.x').onclick = function () { r.remove(); renum(); }; }); document.getElementById('wfTmN').textContent = tmBox.children.length + ' अटी'; calc(); }
   function addTerm(t, fl) { var d = document.createElement('div'); d.className = 'wf-tm'; d.innerHTML = '<b></b><textarea name="tm_text[]" rows="1"></textarea><select name="tm_flag[]"><option value="">—</option><option value="YES">YES</option><option value="NO">NO</option></select><button type="button" class="x" title="काढा">✕</button>'; d.querySelector('textarea').value = t || ''; d.querySelector('select').value = fl || ''; tmBox.appendChild(d); renum(); return d; }
   document.getElementById('wfTmAdd').onclick = function () { addTerm('', '').querySelector('textarea').focus(); };
   document.getElementById('wfTmReset').onclick = function () { if (!confirm('अटी नेहमीच्या नमुन्याने बदलायच्या?')) return; tmBox.innerHTML = ''; TERMS.forEach(function (t) { addTerm(t[0], t[1]); }); };
