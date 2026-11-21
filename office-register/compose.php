@@ -8,20 +8,7 @@ if (!orCanEdit()) { http_response_code(403); die('<div style="font-family:sans-s
 $orgId = activeOrgId();
 $user = currentUser();
 if (!orReady($pdo)) { header('Location: index.php'); exit; }
-$SET = orLetterSettings($pdo, $orgId);
 $TPL = orLetterTemplates();
-
-// ---------- पत्र सेटिंग्ज ----------
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_letter_settings') {
-    orgSettingSet($pdo, $orgId, 'office_letterhead', mb_substr(trim((string)($_POST['head'] ?? '')), 0, 1000));
-    orgSettingSet($pdo, $orgId, 'office_letter_prefix', mb_substr(trim((string)($_POST['prefix'] ?? '')), 0, 120));
-    orgSettingSet($pdo, $orgId, 'office_letter_remark', mb_substr(trim((string)($_POST['remark'] ?? '')), 0, 200));
-    $sg = [];
-    foreach ((array)($_POST['dsn'] ?? []) as $i => $n) { $n = trim((string)$n); $p = trim((string)($_POST['dsp'][$i] ?? '')); if ($n !== '' || $p !== '') $sg[] = ($n !== '' ? mb_substr($n, 0, 80) . '|' : '') . mb_substr($p, 0, 80); }
-    orgSettingSet($pdo, $orgId, 'office_letter_signs', implode("\n", $sg));
-    $_SESSION['flash'] = '✓ पत्राची सेटिंग्ज जतन झाली.';
-    header('Location: compose.php' . (!empty($_POST['back_id']) ? '?id=' . (int)$_POST['back_id'] : '')); exit;
-}
 
 $id = (int)($_GET['id'] ?? $_POST['id'] ?? 0);
 $row = null; $reply = null; $copyOf = null;
@@ -30,6 +17,26 @@ if ($id) { $row = $load($id); if (!$row || $row['direction'] !== 'out') { header
 if (!$row && !empty($_GET['copy'])) $copyOf = $load($_GET['copy']);
 $replyId = (int)($_GET['reply'] ?? $_POST['reply'] ?? 0);
 if (!$row && $replyId) { $reply = $load($replyId); if ($reply && $reply['direction'] !== 'in') $reply = null; }
+
+// 📚 नोंदवही — पत्र बदलायचं तर "बदल" access, नवीन पत्र / उत्तर तर "नोंद" access
+$want = $row['register_id'] ?? $reply['register_id'] ?? $copyOf['register_id'] ?? null;
+$REG = orCurrentRegister($pdo, $orgId, $row ? 'edit' : 'write', $want);
+if (!$REG || ($want && (int)$REG['id'] !== (int)$want)) { http_response_code(403); die('<div style="font-family:sans-serif;padding:40px;">या नोंदवहीत पत्र ' . ($row ? 'बदलण्याचा' : 'बनवण्याचा') . ' access नाही.</div>'); }
+$rid = (int)$REG['id'];
+$canSettings = $REG['_level'] === 'edit';
+$st = $pdo->prepare("SELECT name FROM organizations WHERE id = ?"); $st->execute([$orgId]);
+$SET = orLetterSettings($REG, (string)$st->fetchColumn());
+$wRegs = array_filter(array_intersect_key(orRegisters($pdo, $orgId), orAccessMap($pdo, $orgId)), fn($r) => orLevelRank(orLevel($pdo, $orgId, $r['id'])) >= 2);
+
+// ---------- पत्र सेटिंग्ज (या नोंदवहीसाठी) ----------
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_letter_settings' && $canSettings) {
+    $sg = [];
+    foreach ((array)($_POST['dsn'] ?? []) as $i => $n) { $n = trim((string)$n); $p = trim((string)($_POST['dsp'][$i] ?? '')); if ($n !== '' || $p !== '') $sg[] = ($n !== '' ? mb_substr($n, 0, 80) . '|' : '') . mb_substr($p, 0, 80); }
+    $pdo->prepare("UPDATE office_registers SET letterhead = ?, prefix = ?, remark_line = ?, letter_signs = ?, updated_at = NOW() WHERE id = ? AND organization_id = ?")
+        ->execute([mb_substr(trim((string)($_POST['head'] ?? '')), 0, 1000) ?: null, mb_substr(trim((string)($_POST['prefix'] ?? '')), 0, 150) ?: null, mb_substr(trim((string)($_POST['remark'] ?? '')), 0, 200) ?: null, implode("\n", $sg) ?: null, $rid, $orgId]);
+    $_SESSION['flash'] = '✓ "' . $REG['name'] . '" — पत्राची सेटिंग्ज जतन झाली.';
+    header('Location: compose.php?r=' . $rid . (!empty($_POST['back_id']) ? '&id=' . (int)$_POST['back_id'] : '')); exit;
+}
 
 /** POST → [meta, doc] */
 $fromPost = function () use ($SET) {
@@ -46,7 +53,7 @@ $fromPost = function () use ($SET) {
 // ---------- थेट Preview (fetch) ----------
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'preview_letter') {
     [$m, $doc] = $fromPost();
-    if ($m['reg_no'] === '') $m['reg_no'] = (string)orNextNo($pdo, $orgId, 'out', $m['fy']);
+    if ($m['reg_no'] === '') $m['reg_no'] = (string)orNextNo($pdo, $orgId, $rid, 'out', $m['fy']);
     while (ob_get_level()) ob_end_clean();
     header('Content-Type: text/html; charset=utf-8');
     echo orLetterHtml($doc, $m, (string)($_POST['head'] ?? $SET['head']), $doc['digits'] === 'mr');
@@ -58,10 +65,10 @@ $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_letter_doc') {
     [$m, $doc] = $fromPost();
     $fy = $m['fy'];
-    $regNo = $m['reg_no'] !== '' ? $m['reg_no'] : (string)orNextNo($pdo, $orgId, 'out', $fy);
+    $regNo = $m['reg_no'] !== '' ? $m['reg_no'] : (string)orNextNo($pdo, $orgId, $rid, 'out', $fy);
     $party = trim(preg_replace('/[,.]+$/u', '', trim(explode("\n", $doc['to'])[0] ?? '')));
-    $dup = $pdo->prepare("SELECT id FROM office_letters WHERE organization_id = ? AND direction = 'out' AND fy = ? AND reg_no = ? AND id <> ?");
-    $dup->execute([$orgId, $fy, $regNo, $id]);
+    $dup = $pdo->prepare("SELECT id FROM office_letters WHERE organization_id = ? AND register_id = ? AND direction = 'out' AND fy = ? AND reg_no = ? AND id <> ?");
+    $dup->execute([$orgId, $rid, $fy, $regNo, $id]);
     if ($m['subject'] === '') $error = 'पत्राचा विषय लिहा.';
     elseif (trim($doc['body']) === '') $error = 'पत्राचा मजकूर लिहा.';
     elseif ($dup->fetchColumn()) $error = 'जावक क्र. ' . $regNo . ' (आ.व. ' . $fy . ') आधीच वापरलेला आहे — दुसरा क्रमांक द्या (उदा. ' . $regNo . '-अ).';
@@ -74,9 +81,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
             orLog($pdo, $orgId, $id, 'edited', 'पत्राचा मजकूर बदलला', $user['id']);
             $newId = $id;
         } else {
-            $pdo->prepare("INSERT INTO office_letters (organization_id, direction, fy, reg_month, reg_no, reg_num, letter_date, party, subject, status, linked_no, doc_json, source, created_by, created_at)
-                VALUES (?, 'out', ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, 'letter', ?, NOW())")
-                ->execute([$orgId, $fy, date('Y-m-01', strtotime($m['date'])), $regNo, orRegNum($regNo), $m['date'], $party ?: null, $m['subject'], $linked, $json, $user['id']]);
+            $pdo->prepare("INSERT INTO office_letters (organization_id, register_id, direction, fy, reg_month, reg_no, reg_num, letter_date, party, subject, status, linked_no, doc_json, source, created_by, created_at)
+                VALUES (?, ?, 'out', ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, 'letter', ?, NOW())")
+                ->execute([$orgId, $rid, $fy, date('Y-m-01', strtotime($m['date'])), $regNo, orRegNum($regNo), $m['date'], $party ?: null, $m['subject'], $linked, $json, $user['id']]);
             $newId = (int)$pdo->lastInsertId();
             orLog($pdo, $orgId, $newId, 'created', 'E-Admin मध्ये पत्र बनवले — जावक क्र. ' . $regNo, $user['id']);
             if ($reply) {
@@ -111,18 +118,18 @@ if ($row && empty($row['doc_json']) && $row['party']) $doc['to'] = $row['party']
 if (!$src && !$reply && $doc['to'] === '') $doc['to'] = $presetTo['माननीय कार्याध्यक्ष साहेब'];
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $error) { [$pm, $pd] = $fromPost(); $doc = $pd; $M = array_merge($M, ['date' => $pm['date'], 'subject' => $pm['subject'], 'reg_no' => $pm['reg_no']]); }
 $fyNow = orFy($M['date']);
-$nextNo = orNextNo($pdo, $orgId, 'out', $fyNow);
+$nextNo = orNextNo($pdo, $orgId, $rid, 'out', $fyNow);
 if (!$row && $M['reg_no'] === '') $M['reg_no'] = (string)$nextNo;
 if (!$doc['signs']) $doc['signs'] = [['', '']];
 
 // आधी पत्र पाठवलेल्यांचे पूर्ण पत्ते
 $memTo = [];
-$st = $pdo->prepare("SELECT party, doc_json FROM office_letters WHERE organization_id = ? AND direction = 'out' AND doc_json IS NOT NULL ORDER BY id DESC LIMIT 200"); $st->execute([$orgId]);
+$st = $pdo->prepare("SELECT party, doc_json FROM office_letters WHERE organization_id = ? AND register_id = ? AND direction = 'out' AND doc_json IS NOT NULL ORDER BY id DESC LIMIT 200"); $st->execute([$orgId, $rid]);
 foreach ($st->fetchAll() as $r) { $d = json_decode((string)$r['doc_json'], true); if ($r['party'] && !empty($d['to']) && !isset($memTo[$r['party']])) $memTo[$r['party']] = $d['to']; }
 $memTo = $presetTo + $memTo;
-$st = $pdo->prepare("SELECT party, COUNT(*) n FROM office_letters WHERE organization_id = ? AND direction = 'out' AND party IS NOT NULL GROUP BY party ORDER BY n DESC LIMIT 60"); $st->execute([$orgId]);
+$st = $pdo->prepare("SELECT party, COUNT(*) n FROM office_letters WHERE organization_id = ? AND register_id = ? AND direction = 'out' AND party IS NOT NULL GROUP BY party ORDER BY n DESC LIMIT 60"); $st->execute([$orgId, $rid]);
 $parties = $st->fetchAll(PDO::FETCH_COLUMN);
-$recent = $pdo->prepare("SELECT id, reg_no, subject, letter_date FROM office_letters WHERE organization_id = ? AND direction = 'out' AND doc_json IS NOT NULL ORDER BY id DESC LIMIT 8"); $recent->execute([$orgId]); $recent = $recent->fetchAll();
+$recent = $pdo->prepare("SELECT id, reg_no, subject, letter_date FROM office_letters WHERE organization_id = ? AND register_id = ? AND direction = 'out' AND doc_json IS NOT NULL ORDER BY id DESC LIMIT 8"); $recent->execute([$orgId, $rid]); $recent = $recent->fetchAll();
 
 $pageTitle = $row ? 'जावक पत्र — क्र. ' . $row['reg_no'] : 'नवीन जावक पत्र';
 $rootPath = '../';
@@ -146,12 +153,13 @@ require_once __DIR__ . '/../includes/header.php';
   @media (max-width:1000px){ .lc-wrap{grid-template-columns:1fr;} .lc-prev{position:static;max-height:none;} .lc-page{padding:18px 16px;} .ltr{font-size:13.5px;} }
 </style>
 
-<div class="page-eyebrow"><a href="index.php?dir=out" style="color:inherit;">📨 आवक-जावक नोंदवही</a></div>
+<div class="page-eyebrow"><a href="index.php?r=<?= $rid ?>&amp;dir=out" style="color:inherit;">📨 <?= h($REG['name']) ?></a></div>
 <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
-  <div class="page-title mb-0"><?= $row ? '✎ जावक पत्र — क्र. ' . h($row['reg_no']) : '📝 नवीन जावक पत्र' ?></div>
+  <div class="page-title mb-0"><?= $row ? '✎ जावक पत्र — क्र. ' . h($row['reg_no']) : '📝 नवीन जावक पत्र' ?> <small style="font-size:13px;color:var(--text-dim);font-weight:700;">· <?= h($REG['name']) ?></small></div>
   <div class="lc-bar">
     <?php if ($row): ?><a href="letter.php?id=<?= (int)$row['id'] ?>" class="btn btn-sm" style="border:1px solid var(--line);border-radius:9px;">🖨️ पत्र पहा / Print</a><?php endif; ?>
-    <button type="button" class="btn btn-sm" style="border:1px solid var(--line);border-radius:9px;" data-bs-toggle="modal" data-bs-target="#lcSet">⚙️ पत्र सेटिंग्ज</button>
+    <?php if (!$row && !$reply && !$copyOf && count($wRegs) > 1): ?><select class="form-select-custom" style="width:auto;font-size:12.5px;" onchange="location.href='compose.php?r='+this.value" title="कोणत्या नोंदवहीचं पत्र"><?php foreach ($wRegs as $wr): ?><option value="<?= (int)$wr['id'] ?>" <?= (int)$wr['id'] === $rid ? 'selected' : '' ?>>📚 <?= h($wr['name']) ?></option><?php endforeach; ?></select><?php endif; ?>
+    <?php if ($canSettings): ?><button type="button" class="btn btn-sm" style="border:1px solid var(--line);border-radius:9px;" data-bs-toggle="modal" data-bs-target="#lcSet">⚙️ पत्र सेटिंग्ज</button><?php endif; ?>
   </div>
 </div>
 <?php if ($error): ?><div class="alert alert-danger" style="border-radius:10px;font-size:13px;">⚠️ <?= h($error) ?></div><?php endif; ?>
@@ -160,7 +168,7 @@ require_once __DIR__ . '/../includes/header.php';
 
 <div class="lc-wrap">
 <form method="POST" id="lcForm" data-no-smart-filter>
-  <input type="hidden" name="action" value="save_letter_doc"><input type="hidden" name="id" value="<?= (int)$id ?>"><input type="hidden" name="reply" value="<?= $reply ? (int)$reply['id'] : '' ?>">
+  <input type="hidden" name="action" value="save_letter_doc"><input type="hidden" name="r" value="<?= $rid ?>"><input type="hidden" name="id" value="<?= (int)$id ?>"><input type="hidden" name="reply" value="<?= $reply ? (int)$reply['id'] : '' ?>">
   <input type="hidden" name="template" value="<?= h($doc['template']) ?>"><input type="hidden" name="head" value="<?= h($SET['head']) ?>">
 
   <?php if (!$row): ?>
@@ -211,7 +219,7 @@ require_once __DIR__ . '/../includes/header.php';
 
   <div class="d-flex gap-2 flex-wrap mb-4">
     <button type="submit" class="btn" style="background:#7E22CE;color:#fff;border-radius:10px;font-weight:700;">✓ जतन करा व जावक नोंदवहीत नोंदवा</button>
-    <a href="<?= $row ? 'letter.php?id=' . (int)$row['id'] : 'index.php?dir=out' ?>" class="btn" style="border:1px solid var(--line);border-radius:10px;">रद्द</a>
+    <a href="<?= $row ? 'letter.php?id=' . (int)$row['id'] : 'index.php?r=' . $rid . '&amp;dir=out' ?>" class="btn" style="border:1px solid var(--line);border-radius:10px;">रद्द</a>
   </div>
 </form>
 
@@ -225,8 +233,8 @@ require_once __DIR__ . '/../includes/header.php';
 
 <!-- ⚙️ पत्र सेटिंग्ज -->
 <div class="modal fade" id="lcSet" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content" style="border-radius:16px;">
-  <form method="POST" data-no-smart-filter><input type="hidden" name="action" value="save_letter_settings"><input type="hidden" name="back_id" value="<?= (int)$id ?>">
-    <div class="modal-header"><div class="modal-title" style="font-weight:800;">⚙️ पत्र सेटिंग्ज (प्रत्येक नवीन पत्रासाठी)</div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+  <form method="POST" data-no-smart-filter><input type="hidden" name="action" value="save_letter_settings"><input type="hidden" name="r" value="<?= $rid ?>"><input type="hidden" name="back_id" value="<?= (int)$id ?>">
+    <div class="modal-header"><div class="modal-title" style="font-weight:800;">⚙️ पत्र सेटिंग्ज — <?= h($REG['name']) ?></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
     <div class="modal-body">
       <label class="form-label-custom">Letterhead — शीर्षकाच्या ओळी</label><textarea name="head" class="form-control-custom" rows="4"><?= h($SET['head']) ?></textarea>
       <label class="form-label-custom mt-2">जा.क्र. उपसर्ग</label><input name="prefix" class="form-control-custom" value="<?= h($SET['prefix']) ?>" maxlength="120">

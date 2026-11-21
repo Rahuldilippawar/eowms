@@ -7,7 +7,6 @@ if (!orCanView()) { http_response_code(403); die('<div style="font-family:sans-s
 $orgId = activeOrgId();
 $user = currentUser();
 if (!orReady($pdo)) { header('Location: index.php'); exit; }
-$canEdit = orCanEdit();
 $ST = orStatuses();
 
 $id = (int)($_GET['id'] ?? $_POST['id'] ?? 0);
@@ -15,8 +14,13 @@ $row = null;
 if ($id) {
     $st = $pdo->prepare("SELECT o.*, cu.name created_name, uu.name updated_name FROM office_letters o LEFT JOIN users cu ON cu.id = o.created_by LEFT JOIN users uu ON uu.id = o.updated_by WHERE o.id = ? AND o.organization_id = ?");
     $st->execute([$id, $orgId]); $row = $st->fetch();
-    if (!$row) { header('Location: index.php'); exit; }
+    if (!$row || !orCan($pdo, $orgId, $row['register_id'], 'read')) { header('Location: index.php'); exit; }
 }
+// 📚 नोंदवही: आधीची नोंद → तिचीच; नवीन → आत्ताची (नोंद करण्याचा access असलेली)
+$REG = $row ? orCurrentRegister($pdo, $orgId, 'read', $row['register_id']) : orCurrentRegister($pdo, $orgId, 'write');
+if (!$REG) { http_response_code(403); die('<div style="font-family:sans-serif;padding:40px;">या नोंदवहीत नोंद करण्याचा access नाही.</div>'); }
+$rid = (int)$REG['id'];
+$canEdit = $row ? $REG['_level'] === 'edit' : orLevelRank($REG['_level']) >= 2;
 $dir = $row ? $row['direction'] : (($_GET['dir'] ?? $_POST['direction'] ?? 'in') === 'out' ? 'out' : 'in');
 
 $error = '';
@@ -29,7 +33,7 @@ if ($canEdit && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? ''
     $regMonth = preg_match('/^\d{4}-\d{2}$/', (string)($_POST['reg_month'] ?? '')) ? $_POST['reg_month'] . '-01' : date('Y-m-01', strtotime($date ?: 'today'));
     $fy = orFy($regMonth);
     $regNo = orNormNo($_POST['reg_no'] ?? '');
-    if ($regNo === '') $regNo = (string)orNextNo($pdo, $orgId, $dir, $fy);
+    if ($regNo === '') $regNo = (string)orNextNo($pdo, $orgId, $rid, $dir, $fy);
     $ws = $in('work_status', 1000);
     $status = isset($ST[$_POST['status'] ?? '']) ? $_POST['status'] : orClassify($ws);
     $assigned = $in('assigned_to');
@@ -43,8 +47,8 @@ if ($canEdit && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? ''
         'priority' => ($_POST['priority'] ?? '') === 'urgent' ? 'urgent' : 'normal', 'due_date' => preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)($_POST['due_date'] ?? '')) ? $_POST['due_date'] : null,
         'done_on' => $doneOn, 'linked_no' => orNormNo($_POST['linked_no'] ?? '') ?: null];
     $F = array_merge($F, $d);
-    $dup = $pdo->prepare("SELECT id FROM office_letters WHERE organization_id = ? AND direction = ? AND fy = ? AND reg_no = ? AND id <> ?");
-    $dup->execute([$orgId, $dir, $fy, $regNo, $id]);
+    $dup = $pdo->prepare("SELECT id FROM office_letters WHERE organization_id = ? AND register_id = ? AND direction = ? AND fy = ? AND reg_no = ? AND id <> ?");
+    $dup->execute([$orgId, $rid, $dir, $fy, $regNo, $id]);
     if (!$d['subject'] && !$d['party']) $error = 'विषय किंवा कोणाकडून / कोणाकडे — किमान एक लिहा.';
     elseif ($dup->fetchColumn()) $error = orDirLabel($dir, true) . ' क्र. ' . $regNo . ' (आ.व. ' . $fy . ') आधीच नोंदलेला आहे — दुसरा क्रमांक द्या (उदा. ' . $regNo . '-अ).';
     if (!$error) {
@@ -59,14 +63,14 @@ if ($canEdit && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? ''
             $newId = $id;
         } else {
             $cols = array_keys($d);
-            $pdo->prepare("INSERT INTO office_letters (organization_id, " . implode(', ', $cols) . ", source, created_by, created_at) VALUES (?, " . implode(', ', array_fill(0, count($cols), '?')) . ", 'manual', ?, NOW())")
-                ->execute([$orgId, ...array_values($d), $user['id']]);
+            $pdo->prepare("INSERT INTO office_letters (organization_id, register_id, " . implode(', ', $cols) . ", source, created_by, created_at) VALUES (?, ?, " . implode(', ', array_fill(0, count($cols), '?')) . ", 'manual', ?, NOW())")
+                ->execute([$orgId, $rid, ...array_values($d), $user['id']]);
             $newId = (int)$pdo->lastInsertId();
             orLog($pdo, $orgId, $newId, 'created', orDirLabel($dir, true) . ' क्र. ' . $regNo, $user['id']);
             logActivity('आवक-जावक नोंद', 'office_letter', $newId, orDirLabel($dir, true) . ' ' . $regNo . ' — ' . mb_strimwidth((string)$d['subject'], 0, 80, '…'));
         }
         $_SESSION['flash'] = '✓ ' . orDirLabel($dir, true) . ' क्र. ' . $regNo . ' जतन झाला.' . (!$row && $d['assigned_to'] && trim((string)($_POST['assigned_to'] ?? '')) === '' ? ' काम: ' . $d['assigned_to'] . ' (शेऱ्यातून)' : '');
-        if (($_POST['next'] ?? '') === '1') { header('Location: entry.php?dir=' . $dir . '&m=' . substr($regMonth, 0, 7) . '&last=' . $newId); exit; }
+        if (($_POST['next'] ?? '') === '1') { header('Location: entry.php?r=' . $rid . '&dir=' . $dir . '&m=' . substr($regMonth, 0, 7) . '&last=' . $newId); exit; }
         header('Location: entry.php?id=' . $newId); exit;
     }
 }
@@ -76,29 +80,29 @@ if (!$row) {
     if (!empty($_GET['m']) && preg_match('/^\d{4}-\d{2}$/', $_GET['m']) && $_SERVER['REQUEST_METHOD'] !== 'POST') $F['reg_month'] = $_GET['m'] . '-01';
     $F['fy'] = orFy($F['reg_month']);
 }
-$nextNo = orNextNo($pdo, $orgId, $dir, orFy($F['reg_month']));
+$nextNo = orNextNo($pdo, $orgId, $rid, $dir, orFy($F['reg_month']));
 if (!$row && $F['reg_no'] === '') $F['reg_no'] = (string)$nextNo;
 
 // सुचवण्या — आधीच्या नोंदींतून
-$sug = function ($col, $lim = 300) use ($pdo, $orgId, $dir) {
-    $st = $pdo->prepare("SELECT $col, COUNT(*) n FROM office_letters WHERE organization_id = ? AND direction = ? AND $col IS NOT NULL AND $col <> '' GROUP BY $col ORDER BY n DESC LIMIT $lim");
-    $st->execute([$orgId, $dir]); return $st->fetchAll(PDO::FETCH_COLUMN);
+$sug = function ($col, $lim = 300) use ($pdo, $orgId, $dir, $rid) {
+    $st = $pdo->prepare("SELECT $col, COUNT(*) n FROM office_letters WHERE organization_id = ? AND register_id = ? AND direction = ? AND $col IS NOT NULL AND $col <> '' GROUP BY $col ORDER BY n DESC LIMIT $lim");
+    $st->execute([$orgId, $rid, $dir]); return $st->fetchAll(PDO::FETCH_COLUMN);
 };
 $parties = $sug('party');
 $wsList = array_values(array_unique(array_merge(['कार्यवाही झाली आहे.', 'काम पूर्ण झाले आहे.', 'कार्यवाही चालू आहे.', 'प्रक्रियाधीन', 'प्रलंबित.', 'निर्णयाधीन'], $sug('work_status', 40))));
 $depts = array_keys(orDeptKeywords());
 try { $st = $pdo->prepare("SELECT DISTINCT COALESCE(NULLIF(name_local, ''), name) FROM departments WHERE organization_id = ? ORDER BY 1"); $st->execute([$orgId]); $depts = array_values(array_unique(array_merge($depts, $st->fetchAll(PDO::FETCH_COLUMN)))); } catch (PDOException $e) {}
-$st = $pdo->prepare("SELECT reg_no, subject FROM office_letters WHERE organization_id = ? AND direction = ? ORDER BY id DESC LIMIT 60"); $st->execute([$orgId, $dir === 'in' ? 'out' : 'in']); $linkOpts = $st->fetchAll();
+$st = $pdo->prepare("SELECT reg_no, subject FROM office_letters WHERE organization_id = ? AND register_id = ? AND direction = ? ORDER BY id DESC LIMIT 60"); $st->execute([$orgId, $rid, $dir === 'in' ? 'out' : 'in']); $linkOpts = $st->fetchAll();
 
 // याच व्यक्तीची / कार्यालयाची आधीची पत्रे, इतिहास
 $related = []; $events = []; $last = null;
 if ($row) {
     if ($row['party']) {
-        $st = $pdo->prepare("SELECT id, direction, reg_no, letter_date, subject, status FROM office_letters WHERE organization_id = ? AND id <> ? AND party = ? ORDER BY COALESCE(letter_date, created_at) DESC LIMIT 6");
+        $st = $pdo->prepare("SELECT id, direction, reg_no, letter_date, subject, status FROM office_letters WHERE organization_id = ? AND register_id = $rid AND id <> ? AND party = ? ORDER BY COALESCE(letter_date, created_at) DESC LIMIT 6");
         $st->execute([$orgId, $id, $row['party']]); $related = $st->fetchAll();
     }
     if ($row['linked_no']) {
-        $st = $pdo->prepare("SELECT id, direction, reg_no, letter_date, subject, status FROM office_letters WHERE organization_id = ? AND direction <> ? AND reg_no = ? ORDER BY fy DESC LIMIT 1");
+        $st = $pdo->prepare("SELECT id, direction, reg_no, letter_date, subject, status FROM office_letters WHERE organization_id = ? AND register_id = $rid AND direction <> ? AND reg_no = ? ORDER BY fy DESC LIMIT 1");
         $st->execute([$orgId, $row['direction'], $row['linked_no']]); if ($lk = $st->fetch()) array_unshift($related, $lk + ['_link' => 1]);
     }
     $st = $pdo->prepare("SELECT e.*, u.name FROM office_letter_events e LEFT JOIN users u ON u.id = e.user_id WHERE e.letter_id = ? AND e.organization_id = ? ORDER BY e.id DESC LIMIT 30");
@@ -129,15 +133,15 @@ require_once __DIR__ . '/../includes/header.php';
   @media (max-width:900px){ .oe-wrap{grid-template-columns:1fr;} }
 </style>
 
-<div class="page-eyebrow"><a href="index.php<?= $dir === 'out' ? '?dir=out' : '' ?>" style="color:inherit;">📨 आवक-जावक नोंदवही</a></div>
+<div class="page-eyebrow"><a href="index.php?r=<?= $rid ?><?= $dir === 'out' ? '&amp;dir=out' : '' ?>" style="color:inherit;">📨 <?= h($REG['name']) ?></a></div>
 <div class="page-title"><?= $row ? orDirLabel($dir) . ' क्र. ' . h($row['reg_no']) : '＋ नवीन ' . orDirLabel($dir) . ' नोंद' ?></div>
 <?php if ($error): ?><div class="alert alert-danger" style="border-radius:10px;font-size:13px;">⚠️ <?= h($error) ?></div><?php endif; ?>
 <?php if ($last): ?><div class="oe-last">✓ आधीची नोंद जतन: <a href="entry.php?id=<?= (int)$last['id'] ?>"><b><?= orDirLabel($last['direction'], true) ?> क्र. <?= h($last['reg_no']) ?></b></a> — <?= h(mb_strimwidth((string)$last['subject'], 0, 80, '…')) ?>. आता पुढची नोंद 👇</div><?php endif; ?>
 
 <div class="oe-wrap">
 <form method="POST" class="oe-card" data-no-smart-filter id="oeForm">
-  <input type="hidden" name="action" value="save_letter"><input type="hidden" name="id" value="<?= (int)$id ?>"><input type="hidden" name="direction" value="<?= $dir ?>"><input type="hidden" name="next" value="0">
-  <?php if (!$row): ?><div class="oe-dir"><a href="entry.php?dir=in" class="in <?= $dir === 'in' ? 'on' : '' ?>">📥 आवक (आलेले पत्र)</a><a href="entry.php?dir=out" class="out <?= $dir === 'out' ? 'on' : '' ?>">📤 जावक (पाठवलेले पत्र)</a></div><?php endif; ?>
+  <input type="hidden" name="action" value="save_letter"><input type="hidden" name="r" value="<?= $rid ?>"><input type="hidden" name="id" value="<?= (int)$id ?>"><input type="hidden" name="direction" value="<?= $dir ?>"><input type="hidden" name="next" value="0">
+  <?php if (!$row): ?><div class="oe-dir"><a href="entry.php?r=<?= $rid ?>&amp;dir=in" class="in <?= $dir === 'in' ? 'on' : '' ?>">📥 आवक (आलेले पत्र)</a><a href="entry.php?r=<?= $rid ?>&amp;dir=out" class="out <?= $dir === 'out' ? 'on' : '' ?>">📤 जावक (पाठवलेले पत्र)</a></div><?php endif; ?>
   <fieldset <?= $ro ? 'disabled' : '' ?>>
   <div class="row g-2">
     <div class="col-md-3 col-6"><label class="form-label-custom"><?= orDirLabel($dir, true) ?> क्र. *</label><input type="text" name="reg_no" class="form-control-custom" value="<?= h($F['reg_no']) ?>" maxlength="20" required style="font-weight:800;font-size:16px;">
@@ -164,7 +168,7 @@ require_once __DIR__ . '/../includes/header.php';
   <div class="d-flex gap-2 flex-wrap mt-3">
     <button type="submit" class="btn" style="background:<?= $dir === 'out' ? '#9333EA' : '#2563EB' ?>;color:#fff;border-radius:10px;font-weight:700;">✓ जतन करा</button>
     <?php if (!$row): ?><button type="submit" class="btn" onclick="this.form.next.value='1'" style="border:1px solid var(--line);border-radius:10px;font-weight:700;">✓ जतन करा व पुढची नोंद ➜</button><?php endif; ?>
-    <a href="index.php<?= $dir === 'out' ? '?dir=out' : '' ?>" class="btn" style="border:1px solid var(--line);border-radius:10px;">रद्द</a>
+ <a href="index.php?r=<?= $rid ?><?= $dir === 'out' ? '&amp;dir=out' : '' ?>" class="btn" style="border:1px solid var(--line);border-radius:10px;">रद्द</a>
   </div>
   <?php endif; ?>
 </form>

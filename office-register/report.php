@@ -8,18 +8,23 @@ $orgId = activeOrgId();
 $me = currentUser();
 if (!orReady($pdo)) { header('Location: index.php'); exit; }
 $st = $pdo->prepare("SELECT * FROM organizations WHERE id = ?"); $st->execute([$orgId]); $org = $st->fetch() ?: ['name' => ''];
+// 📚 नोंदवही
+$REG = orCurrentRegister($pdo, $orgId, 'read');
+if (!$REG) { http_response_code(403); die('<div style="font-family:sans-serif;padding:40px;">कोणत्याही नोंदवहीचा access नाही.</div>'); }
+$rid = (int)$REG['id'];
+$canHead = $REG['_level'] === 'edit';
+$myRegs = array_intersect_key(orRegisters($pdo, $orgId), orAccessMap($pdo, $orgId));
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_head' && orCanEdit()) {
-    orgSettingSet($pdo, $orgId, 'office_reg_head', mb_substr(trim((string)($_POST['head'] ?? '')), 0, 1000));
-    orgSettingSet($pdo, $orgId, 'office_reg_title', mb_substr(trim((string)($_POST['title'] ?? '')), 0, 120));
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_head' && $canHead) {
     $sg = [];
     foreach ([1, 2, 3] as $i) { $n = trim((string)($_POST['sn' . $i] ?? '')); $p = trim((string)($_POST['sp' . $i] ?? '')); if ($n !== '' || $p !== '') $sg[] = mb_substr($n, 0, 80) . '|' . mb_substr($p, 0, 80); }
-    orgSettingSet($pdo, $orgId, 'office_reg_signs', implode("\n", $sg));
-    header('Location: report.php?' . http_build_query(array_intersect_key($_GET, array_flip(['dir', 'fy', 'm', 'st', 'dept', 'dg', 'sum'])))); exit;
+    $pdo->prepare("UPDATE office_registers SET report_head = ?, title = ?, report_signs = ?, updated_at = NOW() WHERE id = ? AND organization_id = ?")
+        ->execute([mb_substr(trim((string)($_POST['head'] ?? '')), 0, 1000) ?: null, mb_substr(trim((string)($_POST['title'] ?? '')), 0, 150) ?: null, implode("\n", $sg) ?: null, $rid, $orgId]);
+    header('Location: report.php?' . http_build_query(['r' => $rid] + array_intersect_key($_GET, array_flip(['dir', 'fy', 'm', 'st', 'dept', 'dg', 'sum'])))); exit;
 }
 
 $dir = in_array($_GET['dir'] ?? '', ['in', 'out'], true) ? $_GET['dir'] : 'all';
-$st = $pdo->prepare("SELECT DISTINCT fy FROM office_letters WHERE organization_id = ? ORDER BY fy DESC"); $st->execute([$orgId]); $fys = $st->fetchAll(PDO::FETCH_COLUMN);
+$st = $pdo->prepare("SELECT DISTINCT fy FROM office_letters WHERE organization_id = ? AND register_id = ? ORDER BY fy DESC"); $st->execute([$orgId, $rid]); $fys = $st->fetchAll(PDO::FETCH_COLUMN);
 $fy = preg_match('/^\d{4}-\d{2}$/', (string)($_GET['fy'] ?? '')) ? $_GET['fy'] : ($fys[0] ?? orFy());
 $m = preg_match('/^\d{4}-\d{2}$/', (string)($_GET['m'] ?? '')) ? $_GET['m'] . '-01' : '';
 $sf = in_array($_GET['st'] ?? '', ['open', 'done'], true) ? $_GET['st'] : '';
@@ -29,7 +34,7 @@ $withSum = ($_GET['sum'] ?? '1') !== '0';
 $N = fn($x) => $mr ? orMr($x) : (string)$x;
 $h = fn($x) => htmlspecialchars((string)$x, ENT_QUOTES, 'UTF-8');
 
-$w = " FROM office_letters o WHERE o.organization_id = ? AND o.fy = ?"; $p = [$orgId, $fy];
+$w = " FROM office_letters o WHERE o.organization_id = ? AND o.register_id = ? AND o.fy = ?"; $p = [$orgId, $rid, $fy];
 if ($dir !== 'all') { $w .= " AND o.direction = ?"; $p[] = $dir; }
 if ($m !== '') { $w .= " AND o.reg_month = ?"; $p[] = $m; }
 if ($sf === 'open') $w .= " AND o.status IN ('pending','progress')"; elseif ($sf === 'done') $w .= " AND o.status = 'done'";
@@ -67,9 +72,9 @@ $S['old'] = array_slice($S['old'], 0, 12);
 $act = max(1, $S['n'] - $S['st']['info'] - $S['st']['cancelled']);
 $pc = fn($a, $b) => $N(rtrim(rtrim(number_format($b ? $a * 100 / $b : 0, 1, '.', ''), '0'), '.')) . '%';
 
-$head = orHead($pdo, $orgId, $org['name']);
-$title = orTitle($pdo, $orgId);
-$signs = orSigns($pdo, $orgId);
+$head = orHead($REG, $org['name']);
+$title = orTitle($REG);
+$signs = orSigns($REG);
 $fyMr = $N($fy);
 $ST = orStatuses();
 ?>
@@ -115,7 +120,8 @@ $ST = orStatuses();
 </head>
 <body>
 <form class="bar" method="get">
-  <a href="index.php">← नोंदवही</a>
+  <a href="index.php?r=<?= $rid ?>">← नोंदवही</a>
+  <?php if (count($myRegs) > 1): ?><select name="r" onchange="this.form.submit()"><?php foreach ($myRegs as $mr): ?><option value="<?= (int)$mr['id'] ?>" <?= (int)$mr['id'] === $rid ? 'selected' : '' ?>>📚 <?= $h($mr['name']) ?></option><?php endforeach; ?></select><?php else: ?><input type="hidden" name="r" value="<?= $rid ?>"><?php endif; ?>
   <select name="dir" onchange="this.form.submit()"><option value="all" <?= $dir === 'all' ? 'selected' : '' ?>>आवक + जावक</option><option value="in" <?= $dir === 'in' ? 'selected' : '' ?>>📥 आवक</option><option value="out" <?= $dir === 'out' ? 'selected' : '' ?>>📤 जावक</option></select>
   <select name="fy" onchange="this.form.submit()"><?php foreach ($fys ?: [$fy] as $y): ?><option value="<?= $h($y) ?>" <?= $fy === $y ? 'selected' : '' ?>>आ.व. <?= $h($y) ?></option><?php endforeach; ?></select>
   <select name="m" onchange="this.form.submit()"><option value="">सर्व महिने</option><?php foreach (orFyMonths($fy) as $mm): ?><option value="<?= substr($mm, 0, 7) ?>" <?= $m === $mm ? 'selected' : '' ?>><?= $h(orMonthName($mm)) ?></option><?php endforeach; ?></select>
@@ -123,7 +129,7 @@ $ST = orStatuses();
   <?php if ($dept !== ''): ?><input type="hidden" name="dept" value="<?= $h($dept) ?>"><span style="background:rgba(255,255,255,.15);border-radius:7px;padding:4px 8px;">🏢 <?= $h($dept) ?> <a href="report.php?<?= $h(http_build_query(array_diff_key($_GET, ['dept' => 1]))) ?>" style="padding:0 4px;">✕</a></span><?php endif; ?>
   <select name="dg" onchange="this.form.submit()"><option value="mr" <?= $mr ? 'selected' : '' ?>>१२३ मराठी अंक</option><option value="en" <?= !$mr ? 'selected' : '' ?>>123 English</option></select>
   <select name="sum" onchange="this.form.submit()"><option value="1" <?= $withSum ? 'selected' : '' ?>>सारांश पान: हो</option><option value="0" <?= !$withSum ? 'selected' : '' ?>>सारांश: नाही</option></select>
-  <?php if (orCanEdit()): ?><button type="button" onclick="document.getElementById('hedit').classList.add('on')">✎ शीर्षक व सह्या</button><?php endif; ?>
+  <?php if ($canHead): ?><button type="button" onclick="document.getElementById('hedit').classList.add('on')">✎ शीर्षक व सह्या</button><?php endif; ?>
   <button type="button" class="print" onclick="window.print()">🖨️ Print / PDF</button>
 </form>
 
@@ -227,7 +233,7 @@ $ST = orStatuses();
 <?php if ($rows): ?><div class="foot">E-Admin — <?= date('d/m/Y h:i A') ?> · <?= $h($me['name'] ?? '') ?></div><?php endif; ?>
 </div>
 
-<?php if (orCanEdit()): $sg = array_pad($signs, 3, ['', '']); ?>
+<?php if ($canHead): $sg = array_pad($signs, 3, ['', '']); ?>
 <div class="hedit" id="hedit">
   <form method="POST"><input type="hidden" name="action" value="save_head">
     <b>✎ नोंदवहीचं शीर्षक व सह्या</b>

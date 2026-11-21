@@ -4,20 +4,25 @@ require_once __DIR__ . '/../includes/auth.php';
 requireLogin('../');
 require_once __DIR__ . '/../includes/office-register.php';
 require_once __DIR__ . '/../includes/smart-insights.php';
-if (!orCanView()) { http_response_code(403); die('<div style="font-family:sans-serif;padding:40px;">आवक-जावक नोंदवही पाहण्याची परवानगी नाही.</div>'); }
+if (!orCanView() && !orIsAdmin()) { http_response_code(403); die('<div style="font-family:sans-serif;padding:40px;">आवक-जावक नोंदवही पाहण्याची परवानगी नाही.</div>'); }
 $orgId = activeOrgId();
 $user = currentUser();
 $ready = orReady($pdo);
-$canEdit = orCanEdit();
+// 📚 आत्ताची नोंदवही (ज्या नोंदवह्यांचा access आहे त्यांपैकी)
+$REG = $ready ? orCurrentRegister($pdo, $orgId, 'read') : null;
+$rid = (int)($REG['id'] ?? 0); $lvl = $REG['_level'] ?? '';
+$canEdit = orLevelRank($lvl) >= 2;      // नवीन नोंद, पत्र, कामाची स्थिती
+$canModify = $lvl === 'edit';            // आधीच्या नोंदी बदलणे, Excel आयात
+$myRegs = $ready ? array_intersect_key(orRegisters($pdo, $orgId), orAccessMap($pdo, $orgId)) : [];
 $ST = orStatuses();
 
 // ---------- कृती ----------
-if ($ready && $canEdit && $_SERVER['REQUEST_METHOD'] === 'POST') {
+if ($ready && ($canEdit || orIsAdmin()) && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $act = (string)($_POST['action'] ?? '');
     $back = (string)($_POST['back'] ?? 'index.php');
     if (!preg_match('#^index\.php(\?[^"\'<>]*)?$#', $back)) $back = 'index.php';
-    if ($act === 'import_seed') {
-        [$n, $skip] = orSeedImport($pdo, $orgId, (int)$user['id']);
+    if ($act === 'import_seed' && ($canModify || orIsAdmin())) {
+        [$n, $skip] = orSeedImport($pdo, $orgId, (int)$user['id'], $rid);
         if ($n) logActivity('आवक-जावक नोंदवही — Excel मधील नोंदी आयात', 'organization', $orgId, $n . ' नोंदी');
         $_SESSION['flash'] = $n ? '✓ Excel मधील ' . $n . ' नोंदी (आवक व जावक, एप्रिल ते नोव्हेंबर) आयात झाल्या.' . ($skip ? ' ' . $skip . ' आधीच होत्या.' : '') : '⚠️ नोंदी आधीच आयात केलेल्या आहेत.';
         header('Location: index.php'); exit;
@@ -25,6 +30,7 @@ if ($ready && $canEdit && $_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($act === 'set_status') {
         $id = (int)($_POST['id'] ?? 0);
         $st = $pdo->prepare("SELECT * FROM office_letters WHERE id = ? AND organization_id = ?"); $st->execute([$id, $orgId]); $row = $st->fetch();
+        if ($row && !orCan($pdo, $orgId, $row['register_id'], 'write')) $row = null;
         $new = (string)($_POST['status'] ?? '');
         if (!$row || !isset($ST[$new])) { $_SESSION['flash'] = '⚠️ नोंद सापडली नाही.'; header('Location: ' . $back); exit; }
         $txt = trim((string)($_POST['work_status'] ?? ''));
@@ -41,28 +47,28 @@ if ($ready && $canEdit && $_SERVER['REQUEST_METHOD'] === 'POST') {
 // ---------- Filters ----------
 $tab = in_array($_GET['dir'] ?? '', ['in', 'out', 'all'], true) ? $_GET['dir'] : 'in';
 $fys = [];
-if ($ready) { $st = $pdo->prepare("SELECT DISTINCT fy FROM office_letters WHERE organization_id = ? ORDER BY fy DESC"); $st->execute([$orgId]); $fys = $st->fetchAll(PDO::FETCH_COLUMN); }
+if ($ready) { $st = $pdo->prepare("SELECT DISTINCT fy FROM office_letters WHERE organization_id = ? AND register_id = ? ORDER BY fy DESC"); $st->execute([$orgId, $rid]); $fys = $st->fetchAll(PDO::FETCH_COLUMN); }
 $curFy = orFy();
 if (!in_array($curFy, $fys, true)) array_unshift($fys, $curFy);
 $f = ['fy' => preg_match('/^\d{4}-\d{2}$/', (string)($_GET['fy'] ?? '')) ? $_GET['fy'] : ($fys[0] ?? $curFy),
     'm' => preg_match('/^\d{4}-\d{2}$/', (string)($_GET['m'] ?? '')) ? $_GET['m'] . '-01' : '',
     'st' => in_array($_GET['st'] ?? '', ['open', 'pending', 'progress', 'done', 'info', 'cancelled', 'old', 'nostatus'], true) ? $_GET['st'] : '',
     'dept' => trim((string)($_GET['dept'] ?? '')), 'q' => trim((string)($_GET['q'] ?? ''))];
-$qs = function (array $over = []) use ($tab, $f) {
-    $q = array_filter(array_merge(['dir' => $tab !== 'in' ? $tab : '', 'fy' => $f['fy'], 'm' => $f['m'] ? substr($f['m'], 0, 7) : '', 'st' => $f['st'], 'dept' => $f['dept'], 'q' => $f['q']], $over), fn($v) => $v !== '' && $v !== null);
+$qs = function (array $over = []) use ($tab, $f, &$rid) {
+    $q = array_filter(array_merge(['r' => $rid ?: '', 'dir' => $tab !== 'in' ? $tab : '', 'fy' => $f['fy'], 'm' => $f['m'] ? substr($f['m'], 0, 7) : '', 'st' => $f['st'], 'dept' => $f['dept'], 'q' => $f['q']], $over), fn($v) => $v !== '' && $v !== null);
     return 'index.php' . ($q ? '?' . http_build_query($q) : '');
 };
 
 $rows = []; $K = []; $months = []; $byDept = []; $counts = ['in' => 0, 'out' => 0]; $total = 0; $page = 1; $pages = 1; $hasAny = false; $topParty = []; $todayN = ['in' => 0, 'out' => 0];
 $age = "DATEDIFF(CURDATE(), COALESCE(o.letter_date, DATE(o.created_at)))";
 if ($ready) {
-    $st = $pdo->prepare("SELECT direction, COUNT(*) FROM office_letters WHERE organization_id = ? AND fy = ? GROUP BY direction"); $st->execute([$orgId, $f['fy']]);
+    $st = $pdo->prepare("SELECT direction, COUNT(*) FROM office_letters WHERE organization_id = ? AND register_id = ? AND fy = ? GROUP BY direction"); $st->execute([$orgId, $rid, $f['fy']]);
     foreach ($st->fetchAll(PDO::FETCH_KEY_PAIR) as $d => $n) $counts[$d] = (int)$n;
-    $st = $pdo->prepare("SELECT COUNT(*) FROM office_letters WHERE organization_id = ?"); $st->execute([$orgId]); $hasAny = (int)$st->fetchColumn() > 0;
-    $st = $pdo->prepare("SELECT direction, COUNT(*) FROM office_letters WHERE organization_id = ? AND DATE(created_at) = CURDATE() AND source = 'manual' GROUP BY direction"); $st->execute([$orgId]);
+    $st = $pdo->prepare("SELECT COUNT(*) FROM office_letters WHERE organization_id = ? AND register_id = ?"); $st->execute([$orgId, $rid]); $hasAny = (int)$st->fetchColumn() > 0;
+    $st = $pdo->prepare("SELECT direction, COUNT(*) FROM office_letters WHERE organization_id = ? AND register_id = ? AND DATE(created_at) = CURDATE() AND source <> 'seed' AND source <> 'excel' GROUP BY direction"); $st->execute([$orgId, $rid]);
     foreach ($st->fetchAll(PDO::FETCH_KEY_PAIR) as $d => $n) $todayN[$d] = (int)$n;
 
-    $base = " FROM office_letters o WHERE o.organization_id = ? AND o.fy = ?"; $bp = [$orgId, $f['fy']];
+    $base = " FROM office_letters o WHERE o.organization_id = ? AND o.register_id = ? AND o.fy = ?"; $bp = [$orgId, $rid, $f['fy']];
     if ($tab !== 'all') { $base .= " AND o.direction = ?"; $bp[] = $tab; }
     // महिना-चिप्स (बाकी filters शिवाय)
     $st = $pdo->prepare("SELECT o.reg_month, COUNT(*) n, SUM(o.status IN ('pending','progress')) op $base GROUP BY o.reg_month"); $st->execute($bp);
@@ -108,7 +114,7 @@ if ($ready) {
     $st = $pdo->prepare("SELECT o.*, $age AS age_days" . $where . " ORDER BY $order LIMIT $per OFFSET " . (($page - 1) * $per));
     $st->execute($wp); $rows = $st->fetchAll();
 }
-$seedPending = $ready && $canEdit && orgSetting($pdo, $orgId, 'office_reg_seed_done', '') === '';
+$seedPending = $ready && ($canModify || (orIsAdmin() && !$REG)) && !$hasAny && orgSetting($pdo, $orgId, 'office_reg_seed_done', '') === '';
 $open = (int)($K['p'] ?? 0) + (int)($K['g'] ?? 0);
 $actionable = max(1, (int)($K['n'] ?? 0) - (int)($K['i'] ?? 0) - (int)($K['c'] ?? 0));
 $donePct = (int)round((int)($K['d'] ?? 0) * 100 / $actionable);
@@ -152,31 +158,48 @@ $ageCls = fn($d) => $d === null ? '' : ($d > 30 ? 'a-red' : ($d > 15 ? 'a-amb' :
   .or-ins h6{font-size:12px;font-weight:800;margin:0 0 6px;color:var(--text-dim);}
   .or-bar{display:flex;align-items:center;gap:6px;margin:3px 0;} .or-bar span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;} .or-bar i{display:block;height:7px;border-radius:5px;background:linear-gradient(90deg,#2563EB,#60A5FA);} .or-bar b{min-width:24px;text-align:right;}
   .or-prog{height:8px;border-radius:9px;background:var(--canvas);overflow:hidden;display:flex;} .or-prog i{display:block;height:100%;}
+  .or-lvl{font-size:11.5px;font-weight:700;vertical-align:middle;background:color-mix(in srgb,#16A34A 12%,var(--surface));color:#166534;border-radius:99px;padding:2px 10px;}
+  .or-regs{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:10px;} .or-regs a{white-space:nowrap;font-size:12.5px;font-weight:700;padding:7px 12px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--text);text-decoration:none;}
+  .or-regs a.on{background:#1D4ED8;border-color:#1D4ED8;color:#fff;} .or-regs small{font-weight:700;color:#B45309;margin-left:3px;} .or-regs a.on small{color:#FDE68A;}
   @media (max-width:640px){ .or-card{grid-template-columns:52px 1fr;} .or-right{grid-column:1/-1;text-align:left;} .or-btns{justify-content:flex-start;} }
 </style>
 
-<div class="page-eyebrow">📨 कार्यालय — व्यवस्थापक (सामान्य प्रशासन)</div>
+<div class="page-eyebrow">📨 पत्रव्यवहार — आवक-जावक<?= $REG ? ' · ' . h(orRegKinds()[$REG['kind']] ?? '') : '' ?></div>
 <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
-  <div class="page-title mb-0">📨 आवक-जावक नोंदवही</div>
+  <div class="page-title mb-0">📨 <?= $REG ? h($REG['name']) : 'आवक-जावक नोंदवही' ?><?= $REG ? ' <span class="or-lvl">' . h(orLevelLabel($lvl)) . '</span>' : '' ?></div>
   <div class="or-act">
-    <?php if ($canEdit && $ready): ?><a class="pri" href="entry.php?dir=in">＋ आवक नोंद</a><a class="pri2" href="compose.php">📝 जावक पत्र बनवा</a><a href="entry.php?dir=out">＋ जावक नोंद</a><?php endif; ?>
-    <a href="report.php?<?= h(http_build_query(array_filter(['dir' => $tab, 'fy' => $f['fy'], 'm' => $f['m'] ? substr($f['m'], 0, 7) : '']))) ?>" target="_blank">📄 नोंदवही / अहवाल</a>
-    <?php if ($canEdit && $ready): ?><a href="import.php">📥 Excel आयात</a><?php endif; ?>
+    <?php if ($canEdit && $ready): ?><a class="pri" href="entry.php?dir=in&amp;r=<?= $rid ?>">＋ आवक नोंद</a><a class="pri2" href="compose.php?r=<?= $rid ?>">📝 जावक पत्र बनवा</a><a href="entry.php?dir=out&amp;r=<?= $rid ?>">＋ जावक नोंद</a><?php endif; ?>
+    <?php if ($REG): ?><a href="report.php?<?= h(http_build_query(array_filter(['r' => $rid, 'dir' => $tab, 'fy' => $f['fy'], 'm' => $f['m'] ? substr($f['m'], 0, 7) : '']))) ?>" target="_blank">📄 नोंदवही / अहवाल</a><?php endif; ?>
+    <?php if ($canModify && $ready): ?><a href="import.php?r=<?= $rid ?>">📥 Excel आयात</a><?php endif; ?>
+    <?php if (orIsAdmin() && $ready): ?><a href="registers.php">📚 नोंदवह्या व access</a><?php endif; ?>
     <a href="<?= h($qs(['export' => 'csv'])) ?>">📊 Excel</a>
   </div>
 </div>
 <?php if (!$ready): ?><div class="alert alert-warning" style="border-radius:10px;font-size:13px;">⚠️ आवक-जावक नोंदवहीसाठी Database Update बाकी आहे — Super Admin ने System Update → Database Update चालवावं.</div><?php endif; ?>
 
+<?php if ($ready && count($myRegs) > 1): ?>
+<div class="or-regs">
+  <?php $opn = []; $st = $pdo->prepare("SELECT register_id, COUNT(*) FROM office_letters WHERE organization_id = ? AND status IN ('pending','progress') GROUP BY register_id"); $st->execute([$orgId]); $opn = $st->fetchAll(PDO::FETCH_KEY_PAIR);
+  foreach ($myRegs as $mr): ?><a href="index.php?r=<?= (int)$mr['id'] ?>" class="<?= (int)$mr['id'] === $rid ? 'on' : '' ?>"><?= h(explode(' ', orRegKinds()[$mr['kind']] ?? '📁')[0]) ?> <?= h($mr['name']) ?><?= !empty($opn[$mr['id']]) ? ' <small>' . (int)$opn[$mr['id']] . ' उघडी</small>' : '' ?></a><?php endforeach; ?>
+</div>
+<?php endif; ?>
+<?php if ($ready && !$REG): ?>
+  <div class="panel" style="padding:26px;text-align:center;font-size:14px;">
+    <div style="font-size:34px;">📚</div>
+    <?php if (orIsAdmin()): ?><b>अजून एकही नोंदवही नाही.</b><div style="color:var(--text-dim);margin:6px 0 12px;">प्रत्येक विभाग / कॉलेज / शाळा / कार्यालयासाठी नोंदवही तयार करा व कोणाला कोणता access ते ठरवा.</div><a href="registers.php?new=1" class="btn" style="background:#1D4ED8;color:#fff;border-radius:10px;font-weight:700;">＋ नोंदवही तयार करा</a>
+    <?php else: ?>तुम्हाला अजून कोणत्याही नोंदवहीचा access दिलेला नाही — Super Admin ला कळवा.<?php endif; ?>
+  </div>
+<?php endif; ?>
 <?php if ($seedPending): ?>
 <form method="POST" class="or-seed" onsubmit="return confirm('Excel मधील ट्रस्ट व्यवस्थापक आवक / जावक रजिस्टर 2026-27 (एप्रिल ते नोव्हेंबर) च्या सगळ्या नोंदी आयात करायच्या?');">
-  <input type="hidden" name="action" value="import_seed">
+  <input type="hidden" name="action" value="import_seed"><input type="hidden" name="r" value="<?= $rid ?>">
   <span style="font-size:26px;">📥</span>
   <div style="flex:1;min-width:220px;"><b>ट्रस्ट व्यवस्थापक आवक / जावक रजिस्टर 2026-27 — 525 नोंदी</b><div style="font-size:12.5px;color:var(--text-dim);">Excel मधील एप्रिल ते नोव्हेंबर: आवक 363 व जावक 162 — शेरा, कामाची स्थिती, सह्यांसह एका क्लिकमध्ये. पुढच्या नोंदी इथेच करा.</div></div>
   <button type="submit" class="btn btn-sm" style="background:#2563EB;color:#fff;border-radius:9px;font-weight:700;">आयात करा</button>
 </form>
 <?php endif; ?>
 
-<?php if ($ready): ?>
+<?php if ($ready && $REG): ?>
 <div class="or-tabs">
   <a href="<?= h($qs(['dir' => '', 'pg' => null])) ?>" class="<?= $tab === 'in' ? 'on' : '' ?>">📥 आवक<small><?= $counts['in'] ?></small></a>
   <a href="<?= h($qs(['dir' => 'out', 'pg' => null])) ?>" class="<?= $tab === 'out' ? 'on' : '' ?>">📤 जावक<small><?= $counts['out'] ?></small></a>
@@ -184,6 +207,7 @@ $ageCls = fn($d) => $d === null ? '' : ($d > 30 ? 'a-red' : ($d > 15 ? 'a-amb' :
 </div>
 
 <form method="GET" class="d-flex flex-wrap gap-2 mb-2" data-no-smart-filter>
+  <input type="hidden" name="r" value="<?= $rid ?>">
   <?php if ($tab !== 'in'): ?><input type="hidden" name="dir" value="<?= h($tab) ?>"><?php endif; ?>
   <select name="fy" class="form-select-custom" style="width:auto;" onchange="this.form.submit()"><?php foreach ($fys as $y): ?><option value="<?= h($y) ?>" <?= $f['fy'] === $y ? 'selected' : '' ?>>आर्थिक वर्ष <?= h($y) ?></option><?php endforeach; ?></select>
   <?php foreach (['m' => $f['m'] ? substr($f['m'], 0, 7) : '', 'st' => $f['st'], 'dept' => $f['dept']] as $k => $v): if ($v !== ''): ?><input type="hidden" name="<?= $k ?>" value="<?= h($v) ?>"><?php endif; endforeach; ?>
@@ -242,7 +266,7 @@ $ageCls = fn($d) => $d === null ? '' : ($d > 30 ? 'a-red' : ($d > 15 ? 'a-amb' :
 <?php if (!$rows): ?>
   <div class="panel" style="padding:30px;text-align:center;color:var(--text-dim);font-size:13.5px;">
     <?= $hasAny ? 'या अटींनुसार नोंद नाही.' : 'अजून एकही नोंद नाही.' ?>
-    <?php if ($canEdit): ?><div class="mt-2"><a href="entry.php?dir=<?= $tab === 'out' ? 'out' : 'in' ?>" class="btn btn-sm" style="background:#2563EB;color:#fff;border-radius:8px;">＋ <?= $tab === 'out' ? 'जावक' : 'आवक' ?> नोंद</a></div><?php endif; ?>
+    <?php if ($canEdit): ?><div class="mt-2"><a href="entry.php?r=<?= $rid ?>&amp;dir=<?= $tab === 'out' ? 'out' : 'in' ?>" class="btn btn-sm" style="background:#2563EB;color:#fff;border-radius:8px;">＋ <?= $tab === 'out' ? 'जावक' : 'आवक' ?> नोंद</a></div><?php endif; ?>
   </div>
 <?php else: ?>
   <div style="font-size:12px;color:var(--text-dim);margin-bottom:6px;"><?= $total ?> नोंदी<?= $pages > 1 ? ' · पान ' . $page . '/' . $pages : '' ?></div>
@@ -270,7 +294,7 @@ $ageCls = fn($d) => $d === null ? '' : ($d > 30 ? 'a-red' : ($d > 15 ? 'a-amb' :
         <?php if ($canEdit): ?><button type="button" class="or-st" data-id="<?= (int)$r['id'] ?>" data-st="<?= h($r['status']) ?>" data-ws="<?= h($r['work_status'] ?? '') ?>" data-title="<?= h(orDirLabel($r['direction'], true) . ' क्र. ' . $r['reg_no'] . ' — ' . mb_strimwidth((string)$r['subject'], 0, 90, '…')) ?>">🛠️ स्थिती</button><?php endif; ?>
         <?php if ($r['direction'] === 'out' && !empty($r['doc_json'])): ?><a href="letter.php?id=<?= (int)$r['id'] ?>" style="border-color:#9333EA;color:#7E22CE;">📄 पत्र</a><?php endif; ?>
         <?php if ($canEdit && $r['direction'] === 'in' && $open1): ?><a href="compose.php?reply=<?= (int)$r['id'] ?>" title="या पत्राला उत्तर — जावक पत्र">↩ उत्तर</a><?php endif; ?>
-        <a href="entry.php?id=<?= (int)$r['id'] ?>"><?= $canEdit ? '✎ उघडा' : 'पहा' ?></a>
+        <a href="entry.php?id=<?= (int)$r['id'] ?>"><?= $canModify ? '✎ उघडा' : 'पहा' ?></a>
       </div>
     </div>
   </div>

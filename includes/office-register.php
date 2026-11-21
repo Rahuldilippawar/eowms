@@ -11,13 +11,97 @@ require_once __DIR__ . '/app-settings.php';
 function orReady(PDO $pdo) {
     static $ok = null;
     if ($ok !== null) return $ok;
-    try { $pdo->query("SELECT 1 FROM office_letters LIMIT 0"); return $ok = true; } catch (PDOException $e) { return $ok = false; }
+    try { $pdo->query("SELECT register_id FROM office_letters LIMIT 0"); $pdo->query("SELECT 1 FROM office_registers LIMIT 0"); $pdo->query("SELECT 1 FROM office_register_access LIMIT 0"); return $ok = true; } catch (PDOException $e) { return $ok = false; }
 }
 
-/** नोंद / बदल / आयात — Super Admin किंवा "आवक-जावक नोंदवही" परवानगी */
-function orCanEdit() { return hasRole('super_admin') || hasPermission('office_register'); }
-/** पाहणे व अहवाल — वरचे + "फक्त पाहणे" परवानगी + Management */
-function orCanView() { return orCanEdit() || hasPermission('office_register_view') || isManagementOrAbove(); }
+/* ---------- 📚 नोंदवह्या व access ----------
+ * प्रत्येक विभाग / कॉलेज / शाळा / कार्यालयाची स्वतंत्र नोंदवही (office_registers).
+ * Access (Super Admin ठरवतो): read = फक्त पाहणे व अहवाल · write = + नवीन नोंद, जावक पत्र, कामाची स्थिती · edit = + आधीच्या नोंदी / पत्रे बदलणे, Excel आयात, letterhead
+ * Super Admin व "सर्व नोंदवह्या" परवानगीवाल्यांना सगळ्या नोंदवह्या; बाकीच्यांना फक्त दिलेल्या (व्यक्तीला दिलेला access किंवा नोंदवहीला जोडलेलं पद).
+ */
+function orLevels() {
+    return ['read' => ['👁️ फक्त पाहणे', 'पाहणे व अहवाल'], 'write' => ['✍️ पाहणे + नोंद', 'नवीन आवक / जावक नोंद, जावक पत्र, कामाची स्थिती'],
+        'edit' => ['🛠️ पाहणे + नोंद + बदल', 'आधीच्या नोंदी व पत्रे बदलणे, Excel आयात, letterhead व सह्या']];
+}
+function orLevelRank($l) { return ['read' => 1, 'write' => 2, 'edit' => 3][$l] ?? 0; }
+function orLevelLabel($l) { return orLevels()[$l][0] ?? ''; }
+function orRegKinds() { return ['office' => '🏢 कार्यालय', 'dept' => '🗂️ विभाग', 'college' => '🎓 कॉलेज', 'school' => '🏫 शाळा', 'other' => '📁 इतर']; }
+
+/** संस्थेच्या नोंदवह्या (जुन्या नोंदी असतील तर पहिली नोंदवही आपोआप) */
+function orRegisters(PDO $pdo, $orgId, $all = false) {
+    static $c = [];
+    $k = (int)$orgId . ($all ? 'a' : '');
+    if (isset($c[$k])) return $c[$k];
+    if (!orReady($pdo)) return $c[$k] = [];
+    orEnsureDefaultRegister($pdo, $orgId);
+    $st = $pdo->prepare("SELECT * FROM office_registers WHERE organization_id = ?" . ($all ? '' : " AND is_active = 1") . " ORDER BY sort_order, id");
+    $st->execute([(int)$orgId]);
+    $o = [];
+    foreach ($st->fetchAll() as $r) $o[(int)$r['id']] = $r;
+    return $c[$k] = $o;
+}
+function orRegister(PDO $pdo, $orgId, $id) { return orRegisters($pdo, $orgId, true)[(int)$id] ?? null; }
+
+/**
+ * आधीच्या (एकाच नोंदवहीच्या) नोंदी → "व्यवस्थापक — सामान्य प्रशासन" नोंदवही, संस्थेच्या जुन्या सेटिंग्जसह.
+ * $force = नोंदी नसल्या तरी तयार करा (Excel आयात करताना).
+ */
+function orEnsureDefaultRegister(PDO $pdo, $orgId, $force = false) {
+    static $done = [];
+    if (!$force && isset($done[(int)$orgId])) return null;
+    $done[(int)$orgId] = 1;
+    $st = $pdo->prepare("SELECT id FROM office_registers WHERE organization_id = ? ORDER BY sort_order, id LIMIT 1"); $st->execute([(int)$orgId]);
+    $rid = (int)$st->fetchColumn();
+    if (!$rid) {
+        $st = $pdo->prepare("SELECT COUNT(*) FROM office_letters WHERE organization_id = ?"); $st->execute([(int)$orgId]);
+        if (!$force && !(int)$st->fetchColumn()) return null;
+        $g = fn($k) => trim((string)orgSetting($pdo, $orgId, $k, ''));
+        $sd = [];
+        if ($g('office_reg_seed_done') !== '' || $force) { require_once __DIR__ . '/office-register-seed.php'; $sd = orSeedData()['letter'] ?? []; }
+        $pdo->prepare("INSERT INTO office_registers (organization_id, name, kind, title, report_head, letterhead, prefix, letter_signs, report_signs, remark_line, role_keys, role_level, sort_order, created_at)
+            VALUES (?, ?, 'office', ?, ?, ?, ?, ?, ?, ?, 'general_admin_manager,office_clerk', 'edit', 0, NOW())")
+            ->execute([(int)$orgId, 'व्यवस्थापक — सामान्य प्रशासन', $g('office_reg_title') ?: null, $g('office_reg_head') ?: null, $g('office_letterhead') ?: ($sd['head'] ?? null),
+                $g('office_letter_prefix') ?: ($sd['prefix'] ?? null), $g('office_letter_signs') ?: ($sd['signs'] ?? null), $g('office_reg_signs') ?: null, $g('office_letter_remark') ?: null]);
+        $rid = (int)$pdo->lastInsertId();
+    }
+    $pdo->prepare("UPDATE office_letters SET register_id = ? WHERE organization_id = ? AND register_id = 0")->execute([$rid, (int)$orgId]);
+    return $rid;
+}
+
+/** या व्यक्तीला कोणत्या नोंदवहीचा कोणता access — [register_id => level] */
+function orAccessMap(PDO $pdo, $orgId) {
+    static $c = [];
+    if (isset($c[(int)$orgId])) return $c[(int)$orgId];
+    $u = currentUser(); $m = [];
+    if (!$u || !orReady($pdo)) return $c[(int)$orgId] = [];
+    $regs = orRegisters($pdo, $orgId);
+    $up = function ($rid, $lv) use (&$m) { if (orLevelRank($lv) > orLevelRank($m[$rid] ?? '')) $m[$rid] = $lv; };
+    if (hasRole('super_admin') || hasPermission('office_register')) { foreach ($regs as $rid => $r) $m[$rid] = 'edit'; return $c[(int)$orgId] = $m; }
+    if (hasPermission('office_register_view')) foreach ($regs as $rid => $r) $up($rid, 'read');
+    foreach ($regs as $rid => $r) if ($r['role_keys'] && in_array((string)($u['role'] ?? ''), array_map('trim', explode(',', $r['role_keys'])), true)) $up($rid, $r['role_level']);
+    $st = $pdo->prepare("SELECT register_id, level FROM office_register_access WHERE organization_id = ? AND user_id = ?"); $st->execute([(int)$orgId, (int)$u['id']]);
+    foreach ($st->fetchAll() as $a) if (isset($regs[(int)$a['register_id']])) $up((int)$a['register_id'], $a['level']);
+    return $c[(int)$orgId] = $m;
+}
+function orLevel(PDO $pdo, $orgId, $rid) { return orAccessMap($pdo, $orgId)[(int)$rid] ?? ''; }
+function orCan(PDO $pdo, $orgId, $rid, $need) { return orLevelRank(orLevel($pdo, $orgId, $rid)) >= orLevelRank($need); }
+/** Sidebar / पाने: कोणत्याही नोंदवहीचा access आहे का */
+function orCanView() { global $pdo; return $pdo instanceof PDO && (bool)orAccessMap($pdo, activeOrgId()); }
+/** कोणत्याही नोंदवहीत नोंद करता येते का */
+function orCanEdit() { global $pdo; if (!($pdo instanceof PDO)) return false; foreach (orAccessMap($pdo, activeOrgId()) as $l) if (orLevelRank($l) >= 2) return true; return false; }
+/** नोंदवह्या तयार करणे व access देणे — फक्त Super Admin */
+function orIsAdmin() { return hasRole('super_admin'); }
+
+/** आत्ताची नोंदवही (?r= / Session) — $need इतका access असलेली; नसेल तर null */
+function orCurrentRegister(PDO $pdo, $orgId, $need = 'read', $want = null) {
+    $map = array_filter(orAccessMap($pdo, $orgId), fn($l) => orLevelRank($l) >= orLevelRank($need));
+    if (!$map) return null;
+    $want = (int)($want ?? ($_GET['r'] ?? $_POST['r'] ?? ($_SESSION['or_reg'][(int)$orgId] ?? 0)));
+    $rid = isset($map[$want]) ? $want : (int)array_key_first($map);
+    $_SESSION['or_reg'][(int)$orgId] = $rid;
+    $r = orRegister($pdo, $orgId, $rid);
+    return $r ? $r + ['_level' => $map[$rid]] : null;
+}
 
 /** आर्थिक वर्ष (एप्रिल–मार्च): 2026-11-20 → "2026-27" */
 function orFy($date = null) {
@@ -105,9 +189,9 @@ function orDetectDepts($remark) {
 function orPartyKey($p) { return mb_strtolower(trim(preg_replace('/[\s.]+/u', ' ', str_replace(['साहेब', 'माननीय', 'मा.'], '', (string)$p)))); }
 
 /** या वर्षाचा पुढचा क्रमांक */
-function orNextNo(PDO $pdo, $orgId, $dir, $fy) {
-    $st = $pdo->prepare("SELECT MAX(reg_num) FROM office_letters WHERE organization_id = ? AND direction = ? AND fy = ?");
-    $st->execute([$orgId, $dir, $fy]);
+function orNextNo(PDO $pdo, $orgId, $rid, $dir, $fy) {
+    $st = $pdo->prepare("SELECT MAX(reg_num) FROM office_letters WHERE organization_id = ? AND register_id = ? AND direction = ? AND fy = ?");
+    $st->execute([$orgId, (int)$rid, $dir, $fy]);
     return (int)$st->fetchColumn() + 1;
 }
 
@@ -125,17 +209,16 @@ function orAge(array $r) {
     return max(0, (int)floor((strtotime($end) - strtotime($ref)) / 86400));
 }
 
-/** अहवालाचं शीर्षक, नोंदवहीचं नाव, सह्या (संस्थेनुसार बदलता येतात) */
-function orHead(PDO $pdo, $orgId, $orgName = '') { $h = (string)orgSetting($pdo, $orgId, 'office_reg_head', ''); return trim($h) !== '' ? $h : (string)$orgName; }
-function orTitle(PDO $pdo, $orgId) { $t = trim((string)orgSetting($pdo, $orgId, 'office_reg_title', '')); return $t !== '' ? $t : 'ट्रस्ट व्यवस्थापक'; }
-/** [[नाव, पद], …] */
-function orSigns(PDO $pdo, $orgId) {
-    $raw = (string)orgSetting($pdo, $orgId, 'office_reg_signs', '');
-    if (trim($raw) === '') $raw = "|व्यवस्थापक-सामान्य प्रशासन\n|माननीय कार्याध्यक्ष";
+/** नोंदवहीचं अहवाल-शीर्षक, नाव ("… आवक रजिस्टर"), सह्या — नोंदवहीनिहाय */
+function orHead(array $reg, $orgName = '') { $h = trim((string)($reg['report_head'] ?? '')); return $h !== '' ? $h : (trim((string)($reg['letterhead'] ?? '')) ?: (string)$orgName); }
+function orTitle(array $reg) { $t = trim((string)($reg['title'] ?? '')); return $t !== '' ? $t : (string)$reg['name']; }
+/** "नाव|पद" ओळी → [[नाव, पद], …] */
+function orSignLines($raw) {
     $o = [];
-    foreach (array_filter(array_map('trim', explode("\n", $raw))) as $ln) { $p = array_map('trim', explode('|', $ln, 2)); $o[] = [$p[0], $p[1] ?? '']; }
+    foreach (array_filter(array_map('trim', explode("\n", (string)$raw))) as $ln) { $p = array_map('trim', explode('|', $ln, 2)); $o[] = count($p) > 1 ? [$p[0], $p[1]] : ['', $p[0]]; }
     return $o;
 }
+function orSigns(array $reg) { return orSignLines(trim((string)($reg['report_signs'] ?? '')) !== '' ? $reg['report_signs'] : "|व्यवस्थापक-सामान्य प्रशासन\n|माननीय कार्याध्यक्ष"); }
 
 /** Excel तारीख (Serial / "०४/०६/२०२६" / "4.6.26") → Y-m-d */
 function orParseDate($v) {
@@ -261,16 +344,16 @@ function orParseWorkbook($path) {
 }
 
 /** यादी DB मध्ये — आधीच असलेला क्रमांक (वर्ष + आवक/जावक) वगळतो. परत: [घातल्या, वगळल्या] */
-function orImportRows(PDO $pdo, $orgId, array $rows, $uid, $source = 'excel') {
-    $ins = $pdo->prepare("INSERT IGNORE INTO office_letters (organization_id, direction, fy, reg_month, reg_no, reg_num, sort_order, letter_date, ref_no, party, subject, remark, assigned_to, work_status, status, done_on, source, created_by, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+function orImportRows(PDO $pdo, $orgId, $rid, array $rows, $uid, $source = 'excel') {
+    $ins = $pdo->prepare("INSERT IGNORE INTO office_letters (organization_id, register_id, direction, fy, reg_month, reg_no, reg_num, sort_order, letter_date, ref_no, party, subject, remark, assigned_to, work_status, status, done_on, source, created_by, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
     $n = 0; $skip = 0; $i = 0;
     $pdo->beginTransaction();
     try {
         foreach ($rows as $x) {
             $i++;
             $st = orClassify($x['work_status'] ?? '');
-            $ins->execute([$orgId, $x['_dir'] ?? $x['direction'], $x['fy'], $x['reg_month'], $x['reg_no'], orRegNum($x['reg_no']), $i, $x['letter_date'] ?: null,
+            $ins->execute([$orgId, (int)$rid, $x['_dir'] ?? $x['direction'], $x['fy'], $x['reg_month'], $x['reg_no'], orRegNum($x['reg_no']), $i, $x['letter_date'] ?: null,
                 ($x['ref_no'] ?? '') !== '' ? mb_substr($x['ref_no'], 0, 80) : null, ($x['party'] ?? '') !== '' ? mb_substr($x['party'], 0, 255) : null,
                 ($x['subject'] ?? '') !== '' ? $x['subject'] : null, ($x['remark'] ?? '') !== '' ? $x['remark'] : null, orDetectDepts($x['remark'] ?? '') ?: null,
                 ($x['work_status'] ?? '') !== '' ? $x['work_status'] : null, $st, null, $source, $uid]);
@@ -282,14 +365,21 @@ function orImportRows(PDO $pdo, $orgId, array $rows, $uid, $source = 'excel') {
 }
 
 /** सुरुवातीची आयात — "ट्रस्ट व्यवस्थापक आवक / जावक रजिस्टर 2026-27" (एप्रिल ते नोव्हेंबर) */
-function orSeedImport(PDO $pdo, $orgId, $uid) {
+function orSeedImport(PDO $pdo, $orgId, $uid, $rid = 0) {
     if (orgSetting($pdo, $orgId, 'office_reg_seed_done', '') !== '') return [0, 0];
     require_once __DIR__ . '/office-register-seed.php';
     $d = orSeedData();
-    [$n, $skip] = orImportRows($pdo, $orgId, $d['rows'], $uid, 'seed');
-    if (trim((string)orgSetting($pdo, $orgId, 'office_reg_head', '')) === '' && !empty($d['head'])) orgSettingSet($pdo, $orgId, 'office_reg_head', implode("\n", $d['head']));
-    if (trim((string)orgSetting($pdo, $orgId, 'office_reg_title', '')) === '' && !empty($d['title'])) orgSettingSet($pdo, $orgId, 'office_reg_title', $d['title']);
-    if (trim((string)orgSetting($pdo, $orgId, 'office_reg_signs', '')) === '' && !empty($d['signs'])) orgSettingSet($pdo, $orgId, 'office_reg_signs', implode("\n", $d['signs']));
+    if (!$rid) $rid = (int)orEnsureDefaultRegister($pdo, $orgId, true);
+    [$n, $skip] = orImportRows($pdo, $orgId, $rid, $d['rows'], $uid, 'seed');
+    // नोंदवहीचं शीर्षक, नाव, सह्या, पत्राचं letterhead — रिकामे असतील तर Excel / पत्राप्रमाणे
+    $st = $pdo->prepare("SELECT * FROM office_registers WHERE id = ? AND organization_id = ?"); $st->execute([$rid, $orgId]); $r = $st->fetch();
+    if ($r) {
+        $set = [];
+        foreach (['report_head' => implode("\n", $d['head'] ?? []), 'title' => $d['title'] ?? '', 'report_signs' => implode("\n", $d['signs'] ?? []),
+            'letterhead' => $d['letter']['head'] ?? '', 'prefix' => $d['letter']['prefix'] ?? '', 'letter_signs' => $d['letter']['signs'] ?? ''] as $k => $v)
+            if (trim((string)$r[$k]) === '' && trim((string)$v) !== '') $set[$k] = $v;
+        if ($set) $pdo->prepare("UPDATE office_registers SET " . implode(', ', array_map(fn($k) => "$k = ?", array_keys($set))) . ", updated_at = NOW() WHERE id = ?")->execute([...array_values($set), $rid]);
+    }
     orgSettingSet($pdo, $orgId, 'office_reg_seed_done', date('Y-m-d H:i:s'));
     return [$n, $skip];
 }
@@ -300,20 +390,14 @@ function orSeedImport(PDO $pdo, $orgId, $uid) {
  * जतन करताच तेच पत्र जावक नोंदवहीत नोंदलं जातं (office_letters.doc_json).
  * ====================================================================== */
 
-/** पत्राची सेटिंग्ज (संस्थेनुसार) */
-function orLetterSettings(PDO $pdo, $orgId) {
-    $g = fn($k, $d = '') => trim((string)orgSetting($pdo, $orgId, $k, '')) !== '' ? (string)orgSetting($pdo, $orgId, $k, '') : $d;
-    // Excel नोंदवही आयात केलेल्या संस्थेसाठी — त्यांच्या पत्राचं letterhead व जा.क्र. (सेटिंग्ज बदलल्यावर तेच)
-    $sd = [];
-    if ($g('office_reg_seed_done') !== '') { require_once __DIR__ . '/office-register-seed.php'; $sd = orSeedData()['letter'] ?? []; }
-    $signs = [];
-    foreach (array_filter(array_map('trim', explode("\n", $g('office_letter_signs', $sd['signs'] ?? "व्यवस्थापक सामान्य प्रशासन")))) as $ln) { $p = array_map('trim', explode('|', $ln, 2)); $signs[] = count($p) > 1 ? [$p[0], $p[1]] : ['', $p[0]]; }
+/** पत्राची सेटिंग्ज — नोंदवहीनिहाय letterhead, जा.क्र. उपसर्ग, सह्या, शेरा ओळ */
+function orLetterSettings(array $reg, $orgName = '') {
+    $signs = orSignLines(trim((string)$reg['letter_signs']) !== '' ? $reg['letter_signs'] : 'व्यवस्थापक सामान्य प्रशासन');
     return [
-        'head' => $g('office_letterhead', $sd['head'] ?? orHead($pdo, $orgId)),
-        'prefix' => $g('office_letter_prefix', $sd['prefix'] ?? 'जा.क्र.'),
+        'head' => trim((string)$reg['letterhead']) !== '' ? $reg['letterhead'] : orHead($reg, $orgName),
+        'prefix' => trim((string)$reg['prefix']) !== '' ? $reg['prefix'] : 'जा.क्र.',
         'signs' => $signs,
-        'remark' => $g('office_letter_remark', 'माननीय कार्याध्यक्ष साहेब यांचा शेरा/सही :'),
-        'to' => $g('office_letter_to', ''),
+        'remark' => trim((string)$reg['remark_line']) !== '' ? $reg['remark_line'] : 'माननीय कार्याध्यक्ष साहेब यांचा शेरा/सही :',
     ];
 }
 
