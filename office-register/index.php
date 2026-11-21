@@ -159,7 +159,7 @@ $ageCls = fn($d) => $d === null ? '' : ($d > 30 ? 'a-red' : ($d > 15 ? 'a-amb' :
 <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
   <div class="page-title mb-0">📨 आवक-जावक नोंदवही</div>
   <div class="or-act">
-    <?php if ($canEdit && $ready): ?><a class="pri" href="entry.php?dir=in">＋ आवक नोंद</a><a class="pri2" href="entry.php?dir=out">＋ जावक नोंद</a><?php endif; ?>
+    <?php if ($canEdit && $ready): ?><a class="pri" href="entry.php?dir=in">＋ आवक नोंद</a><a class="pri2" href="compose.php">📝 जावक पत्र बनवा</a><a href="entry.php?dir=out">＋ जावक नोंद</a><?php endif; ?>
     <a href="report.php?<?= h(http_build_query(array_filter(['dir' => $tab, 'fy' => $f['fy'], 'm' => $f['m'] ? substr($f['m'], 0, 7) : '']))) ?>" target="_blank">📄 नोंदवही / अहवाल</a>
     <?php if ($canEdit && $ready): ?><a href="import.php">📥 Excel आयात</a><?php endif; ?>
     <a href="<?= h($qs(['export' => 'csv'])) ?>">📊 Excel</a>
@@ -268,6 +268,8 @@ $ageCls = fn($d) => $d === null ? '' : ($d > 30 ? 'a-red' : ($d > 15 ? 'a-amb' :
       <div class="or-btns">
         <?php if ($canEdit && $r['status'] !== 'done'): ?><button type="button" class="ok or-st" data-id="<?= (int)$r['id'] ?>" data-st="done" data-ws="<?= h($r['work_status'] ?? '') ?>" data-title="<?= h(orDirLabel($r['direction'], true) . ' क्र. ' . $r['reg_no'] . ' — ' . mb_strimwidth((string)$r['subject'], 0, 90, '…')) ?>">✅ पूर्ण</button><?php endif; ?>
         <?php if ($canEdit): ?><button type="button" class="or-st" data-id="<?= (int)$r['id'] ?>" data-st="<?= h($r['status']) ?>" data-ws="<?= h($r['work_status'] ?? '') ?>" data-title="<?= h(orDirLabel($r['direction'], true) . ' क्र. ' . $r['reg_no'] . ' — ' . mb_strimwidth((string)$r['subject'], 0, 90, '…')) ?>">🛠️ स्थिती</button><?php endif; ?>
+        <?php if ($r['direction'] === 'out' && !empty($r['doc_json'])): ?><a href="letter.php?id=<?= (int)$r['id'] ?>" style="border-color:#9333EA;color:#7E22CE;">📄 पत्र</a><?php endif; ?>
+        <?php if ($canEdit && $r['direction'] === 'in' && $open1): ?><a href="compose.php?reply=<?= (int)$r['id'] ?>" title="या पत्राला उत्तर — जावक पत्र">↩ उत्तर</a><?php endif; ?>
         <a href="entry.php?id=<?= (int)$r['id'] ?>"><?= $canEdit ? '✎ उघडा' : 'पहा' ?></a>
       </div>
     </div>

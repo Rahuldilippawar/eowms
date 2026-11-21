@@ -3774,6 +3774,7 @@ CREATE TABLE office_letters (
   due_date DATE NULL,
   done_on DATE NULL,
   linked_no VARCHAR(40) NULL,
+  doc_json MEDIUMTEXT NULL,
   source VARCHAR(10) NOT NULL DEFAULT 'manual',
   created_by INT NULL,
   updated_by INT NULL,

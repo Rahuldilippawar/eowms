@@ -355,9 +355,14 @@ function navGroupHead($id, $key, $activeGroup, $icon, $label, $badge = 0) {
         <?= navCount($pendingLettersCount) ?>
       </a>
       <?php require_once __DIR__ . '/office-register.php'; if (orCanView()): ?>
-      <a href="<?= $rp ?>office-register/index.php" class="tree-node <?= $currentDir === 'office-register' ? 'active' : '' ?>">
+      <a href="<?= $rp ?>office-register/index.php" class="tree-node <?= $currentDir === 'office-register' && $currentPage !== 'compose.php' ? 'active' : '' ?>">
         <i class="fa-solid fa-book-bookmark fa-fw"></i><span>आवक-जावक नोंदवही</span>
       </a>
+      <?php if (orCanEdit()): ?>
+      <a href="<?= $rp ?>office-register/compose.php" class="tree-node <?= $currentDir === 'office-register' && $currentPage === 'compose.php' ? 'active' : '' ?>">
+        <i class="fa-solid fa-file-pen fa-fw"></i><span>जावक पत्र बनवा</span>
+      </a>
+      <?php endif; ?>
       <?php endif; ?>
       <a href="<?= $rp ?>requests/index.php" class="tree-node <?= $currentDir === 'requests' && in_array($currentPage, ['index.php', 'view.php']) && ($_GET['category'] ?? '') !== 'it' ? 'active' : '' ?>">
         <i class="fa-solid fa-inbox fa-fw"></i><span><?= h(t('nav_requests')) ?></span>

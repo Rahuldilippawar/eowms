@@ -171,6 +171,8 @@ require_once __DIR__ . '/../includes/header.php';
 
 <div class="oe-side">
   <?php if ($row): ?>
+  <?php if ($dir === 'out'): ?><a href="<?= !empty($row['doc_json']) ? 'letter.php?id=' . (int)$row['id'] : 'compose.php?id=' . (int)$row['id'] ?>" class="oe-card mb-3 d-block" style="text-decoration:none;color:#7E22CE;font-weight:800;font-size:13.5px;border-color:#9333EA;"><?= !empty($row['doc_json']) ? '📄 पत्र पहा / Print' : ($canEdit ? '📝 या नोंदीचं पत्र बनवा' : '') ?></a>
+  <?php elseif ($canEdit): ?><a href="compose.php?reply=<?= (int)$row['id'] ?>" class="oe-card mb-3 d-block" style="text-decoration:none;color:#7E22CE;font-weight:800;font-size:13.5px;border-color:#9333EA;">↩ या पत्राला उत्तर — जावक पत्र बनवा</a><?php endif; ?>
   <div class="oe-card mb-3" style="font-size:12.5px;">
     <div>आ.व. <b><?= h($row['fy']) ?></b> · <?= h(orMonthName($row['reg_month'])) ?></div>
     <?php if (in_array($row['status'], orOpenStatuses(), true) && ($ag = orAge($row)) !== null): ?><div>⏰ <b><?= $ag ?></b> दिवसांपासून कार्यवाही बाकी</div><?php elseif ($row['status'] === 'done' && ($ag = orAge($row)) !== null): ?><div>✅ <b><?= $ag ?></b> दिवसांत पूर्ण</div><?php endif; ?>

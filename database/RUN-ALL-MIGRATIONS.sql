@@ -5291,3 +5291,9 @@ CREATE TABLE IF NOT EXISTS office_letter_events (
 INSERT IGNORE INTO permissions (permission_key, label, label_local, sort_order) VALUES
   ('office_register', 'Inward / outward register — add, edit, work status, Excel import, reports', 'आवक-जावक नोंदवही — नोंद, बदल, कामाची स्थिती, Excel आयात, अहवाल', 60),
   ('office_register_view', 'Inward / outward register — view and reports only', 'आवक-जावक नोंदवही — फक्त पाहणे व अहवाल', 61);
+
+-- ============================================================
+-- FROM: migration-office-letter-compose.sql
+-- ============================================================
+-- 📝 जावक पत्र E-Admin मध्येच — letterhead, जा.क्र., प्रति, विषय, मजकूर, सह्या, प्रत माहितीसाठी (JSON)
+ALTER TABLE office_letters ADD COLUMN doc_json MEDIUMTEXT NULL AFTER linked_no;
