@@ -38,7 +38,7 @@ $byFy = [];
 foreach ($rows as $r) $byFy[$r['fy']][] = $r;
 
 // सारांश
-$tot = 0; $noAmt = 0; $stages = ['approve' => 0, 'order' => 0, 'process' => 0, 'done' => 0]; $ageB = ['0–30' => 0, '31–60' => 0, '61–90' => 0, '90+' => 0]; $dep = []; $oldest = [];
+$tot = 0; $noAmt = 0; $stages = ['approve' => 0, 'order' => 0, 'process' => 0, 'partial' => 0, 'done' => 0]; $ageB = ['0–30' => 0, '31–60' => 0, '61–90' => 0, '90+' => 0]; $dep = []; $oldest = [];
 foreach ($rows as $r) {
     $a = $r['status'] === 'done' && $r['actual_amount'] !== null ? (float)$r['actual_amount'] : ($r['est_amount'] !== null ? (float)$r['est_amount'] : null);
     if ($a === null) $noAmt++; else $tot += $a;
@@ -51,6 +51,41 @@ foreach ($rows as $r) {
 uasort($dep, fn($x, $y) => $y['amt'] <=> $x['amt']);
 usort($oldest, fn($x, $y) => $y['_age'] <=> $x['_age']);
 $oldest = array_slice($oldest, 0, 8);
+// 📈 टक्केवारी सारांश — निवडलेल्या वर्ष / विभागातील सगळ्या (बाकी + पूर्ण) मागण्यांच्या तुलनेत किती खरेदी बाकी
+$pc = ['req' => 0, 'req_done' => 0, 'req_part' => 0, 'it' => 0, 'it_done' => 0, 'amt' => 0.0, 'amt_left' => 0.0, 'dep' => [], 'fy' => [], 'stage' => ['approve' => 0, 'order' => 0, 'process' => 0, 'partial' => 0], 'age' => ['0–30' => 0, '31–60' => 0, '61–90' => 0, '90+' => 0]];
+if ($rows) {
+    $w2 = " FROM purchase_requests r WHERE r.organization_id = ? AND r.status <> 'cancelled'"; $p2 = [$orgId];
+    if ($fy !== '') { $w2 .= " AND r.fy = ?"; $p2[] = $fy; }
+    if ($dept !== '') { $w2 .= " AND r.department = ?"; $p2[] = $dept; }
+    $st = $pdo->prepare("SELECT r.* $w2"); $st->execute($p2); $all = $st->fetchAll();
+    purchaseItemsAttach($pdo, $orgId, $all);
+    $blank = fn() => ['req' => 0, 'req_done' => 0, 'it' => 0, 'it_done' => 0, 'amt' => 0.0, 'amt_left' => 0.0];
+    foreach ($all as $r) {
+        $done = $r['status'] === 'done';
+        $itT = (int)($r['_it_total'] ?? 0); $itD = $done ? $itT : (int)($r['_it_done'] ?? 0);
+        if (!$itT) { $itT = 1; $itD = $done ? 1 : 0; }   // वस्तू यादी नसलेली मागणी = 1 वस्तू
+        $est = $r['est_amount'] !== null ? (float)$r['est_amount'] : 0.0;
+        $a = $done && $r['actual_amount'] !== null ? (float)$r['actual_amount'] : $est;
+        // अंशतः खरेदी: बाकी रक्कम = अंदाजित − आत्तापर्यंत खरेदी झालेल्या वस्तूंची रक्कम (वस्तूंच्या प्रमाणात)
+        $left = 0.0;
+        if (!$done) { $paid = 0.0; foreach ($r['_items'] ?? [] as $it) if ($it['amount'] !== null) $paid += (float)$it['amount']; $left = $paid > 0 ? max(0, $est - $paid) : $est * ($itT - $itD) / $itT; }
+        foreach (['all', 'd', 'f'] as $k) {
+            if ($k === 'all') $b = &$pc; elseif ($k === 'd') { $pc['dep'][$r['department']] = $pc['dep'][$r['department']] ?? $blank(); $b = &$pc['dep'][$r['department']]; } else { $pc['fy'][$r['fy']] = $pc['fy'][$r['fy']] ?? $blank(); $b = &$pc['fy'][$r['fy']]; }
+            $b['req']++; $b['req_done'] += $done ? 1 : 0; $b['it'] += $itT; $b['it_done'] += $itD; $b['amt'] += $a; $b['amt_left'] += $left;
+            unset($b);
+        }
+        if (!$done) {
+            if ($itD > 0) $pc['req_part']++;
+            [$sk] = purchaseStage($r); if (isset($pc['stage'][$sk])) $pc['stage'][$sk]++;
+            $ag = purchaseAgeDays($r); if ($ag !== null) $pc['age'][$ag > 90 ? '90+' : ($ag > 60 ? '61–90' : ($ag > 30 ? '31–60' : '0–30'))]++;
+        }
+    }
+    $pcLeft = fn($b) => $b['it'] ? ($b['it'] - $b['it_done']) * 100 / $b['it'] : 0;
+    uasort($pc['dep'], fn($x, $y) => $pcLeft($y) <=> $pcLeft($x) ?: $y['it'] <=> $x['it']);
+    ksort($pc['fy']);
+}
+$pct = fn($a, $b) => $b ? round($a * 100 / $b, 1) : 0;
+$pctS = fn($a, $b) => $N(rtrim(rtrim(number_format($b ? $a * 100 / $b : 0, 1, '.', ''), '0'), '.')) . '%';
 $head = purchaseReportHead($pdo, $orgId, $org['name']);
 $typeT = ['pending' => 'खरेदी बाकी खरेदी वर्गीकरण तक्ता', 'done' => 'खरेदी पूर्ण झालेल्या खरेदीचा तक्ता', 'all' => 'खरेदी मागणी — बाकी व पूर्ण तक्ता'][$type];
 $h = fn($x) => htmlspecialchars((string)$x, ENT_QUOTES, 'UTF-8');
@@ -91,6 +126,19 @@ $ref = fn($no, $d) => trim(($no ?: '') . ($d ? ($no ? '/' : '') . date('d.m.Y', 
   .ins{margin:0;padding-left:16px;font-size:11.5px;line-height:1.7;}
   .sig{display:flex;justify-content:space-between;margin-top:34px;font-size:11.5px;} .sig div{width:23%;border-top:1px solid #000;text-align:center;padding-top:3px;}
   .foot{margin-top:10px;font-size:9.5px;color:#777;text-align:center;}
+  .pcs{display:flex;align-items:center;gap:10px;border:1.5px solid #000;border-bottom:0;padding:5px 8px;font-size:11.5px;flex-wrap:wrap;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  .pcs b{font-weight:800;} .pcs .sep{color:#999;}
+  .stk{display:flex;height:10px;border-radius:5px;overflow:hidden;background:#E5E7EB;min-width:160px;flex:1;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  .stk i{display:block;height:100%;} .stk .g{background:#16A34A;} .stk .o{background:#F59E0B;} .stk .r{background:#DC2626;}
+  .pcw{display:grid;grid-template-columns:150px 1fr;gap:14px;align-items:center;margin-top:10px;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  .ring{width:140px;height:140px;border-radius:50%;display:grid;place-items:center;}
+  .ring div{width:98px;height:98px;border-radius:50%;background:#fff;display:grid;place-items:center;text-align:center;line-height:1.15;} .ring b{font-size:24px;color:#B45309;} .ring span{font-size:10px;color:#555;font-weight:700;}
+  .pk{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;} .pk div{border:1px solid #D6CFC2;border-radius:8px;padding:6px 8px;} .pk span{display:block;font-size:10px;color:#555;font-weight:600;} .pk b{font-size:15px;} .pk em{font-style:normal;font-size:10.5px;font-weight:700;margin-left:4px;}
+  .pk .g b,.pk .g em{color:#15803D;} .pk .o b,.pk .o em{color:#B45309;}
+  td .stk{min-width:70px;height:8px;}
+  .sum h3{break-after:avoid;page-break-after:avoid;} .keep{break-inside:avoid;page-break-inside:avoid;}
+  .pctag{display:inline-block;border-radius:5px;padding:0 5px;font-weight:800;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  .pctag.hi{background:#FEE2E2;color:#991B1B;} .pctag.md{background:#FEF3C7;color:#92400E;} .pctag.lo{background:#DCFCE7;color:#166534;}
   .pgb{break-before:page;page-break-before:always;}
   .hedit{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9;align-items:center;justify-content:center;} .hedit.on{display:flex;}
   .hedit form{background:#fff;border-radius:12px;padding:16px;width:min(520px,92vw);} .hedit textarea{width:100%;height:110px;font:inherit;font-size:13px;}
@@ -117,6 +165,12 @@ $ref = fn($no, $d) => trim(($no ?: '') . ($d ? ($no ? '/' : '') . date('d.m.Y', 
 <?php if ($rows): $grand = 0; $fi = 0; ?>
     <div class="hd"><?php foreach (array_filter(explode("\n", $head)) as $line): ?><div><?= $h($line) ?></div><?php endforeach; ?><div class="ti"><?= $fy !== '' ? 'आर्थिक वर्ष-' . $h($N(purchaseFyLabel($fy))) . ' ' : (count($byFy) > 1 ? 'आर्थिक वर्ष-' . $h($N(purchaseFyLabel(array_key_first($byFy)))) . ' ते ' . $h($N(purchaseFyLabel(array_key_last($byFy)))) . ' ' : (count($byFy) === 1 ? 'आर्थिक वर्ष-' . $h($N(purchaseFyLabel(array_key_first($byFy)))) . ' ' : '')) ?><?= $h($typeT) ?><?= $dept !== '' ? ' — ' . $h($dept) : '' ?></div></div>
     <div class="dt"><span></span><b>दिनांक : <?= $h($N(date('d.m.Y'))) ?></b></div>
+    <?php if ($pc['it']): $gW = $pct($pc['it_done'], $pc['it']); ?>
+    <div class="pcs">📈 <span>एकूण मागण्या <b><?= $h($N($pc['req'])) ?></b> — पूर्ण <b><?= $h($N($pc['req_done'])) ?></b> · बाकी <b><?= $h($N($pc['req'] - $pc['req_done'])) ?></b></span><span class="sep">|</span>
+      <span>वस्तू <b><?= $h($N($pc['it'])) ?></b> पैकी खरेदी झाले <b style="color:#15803D;"><?= $h($pctS($pc['it_done'], $pc['it'])) ?></b> · खरेदी बाकी <b style="color:#B45309;"><?= $h($pctS($pc['it'] - $pc['it_done'], $pc['it'])) ?></b></span>
+      <span class="stk" title="खरेदी झाले / बाकी"><i class="g" style="width:<?= $gW ?>%"></i><i class="o" style="width:<?= 100 - $gW ?>%"></i></span>
+      <?php if ($pc['amt'] > 0): ?><span>बाकी रक्कम <b><?= $h($N(purchaseInr($pc['amt_left']))) ?></b> (<?= $h($pctS($pc['amt_left'], $pc['amt'])) ?>)</span><?php endif; ?></div>
+    <?php endif; ?>
     <table>
       <colgroup><col style="width:3.3%"><col style="width:9%"><col style="width:6.5%"><col style="width:7.5%"><col style="width:9%"><col style="width:9%"><col style="width:<?= $type === 'done' ? '26%' : '30%' ?>"><col style="width:7.5%"><?php if ($type === 'done'): ?><col style="width:7.5%"><col style="width:14.7%"><?php else: ?><col style="width:8.5%"><col style="width:9.7%"><?php endif; ?></colgroup>
       <thead><tr><th>अ. क्र.</th><th>विभाग</th><th>मागणी क्रमांक</th><th>मागणी दिनांक</th><th>मंजुरी क्र. / दिनांक</th><th>खरेदी आवक क्र व दिनांक</th><th>तपशील</th><th>अंदाजित रक्कम</th>
@@ -165,6 +219,62 @@ $ref = fn($no, $d) => trim(($no ?: '') . ($d ? ($no ? '/' : '') . date('d.m.Y', 
       <div><span>🛒 खरेदी प्रक्रियेत</span><b><?= $h($N($stages['process'])) ?></b></div>
       <?php else: ?><div><span>✅ खरेदी पूर्ण</span><b><?= $h($N($stages['done'])) ?></b></div><?php endif; ?>
     </div>
+    <?php if ($pc['it']):
+      $itL = $pc['it'] - $pc['it_done']; $rqL = $pc['req'] - $pc['req_done']; $gP = $pct($pc['it_done'], $pc['it']);
+      $tag = fn($v) => '<span class="pctag ' . ($v >= 60 ? 'hi' : ($v >= 30 ? 'md' : 'lo')) . '">' . $h($N(rtrim(rtrim(number_format($v, 1, '.', ''), '0'), '.'))) . '%</span>'; ?>
+    <h3>📈 खरेदी किती बाकी — टक्केवारी सारांश<?= $type === 'pending' ? ' (बाकी + पूर्ण मिळून)' : '' ?></h3>
+    <div class="pcw">
+      <div class="ring" style="background:conic-gradient(#F59E0B 0 <?= 100 - $gP ?>%, #16A34A <?= 100 - $gP ?>% 100%);"><div><span>खरेदी बाकी</span><b><?= $h($pctS($itL, $pc['it'])) ?></b><span><?= $h($N($itL)) ?> / <?= $h($N($pc['it'])) ?> वस्तू</span></div></div>
+      <div class="pk">
+        <div class="o"><span>मागण्या बाकी</span><b><?= $h($N($rqL)) ?></b><em><?= $h($pctS($rqL, $pc['req'])) ?></em></div>
+        <div class="g"><span>मागण्या पूर्ण</span><b><?= $h($N($pc['req_done'])) ?></b><em><?= $h($pctS($pc['req_done'], $pc['req'])) ?></em></div>
+        <div class="o"><span>वस्तू खरेदी बाकी</span><b><?= $h($N($itL)) ?></b><em><?= $h($pctS($itL, $pc['it'])) ?></em></div>
+        <div class="g"><span>वस्तू खरेदी झाले</span><b><?= $h($N($pc['it_done'])) ?></b><em><?= $h($pctS($pc['it_done'], $pc['it'])) ?></em></div>
+        <div><span>🧩 अंशतः खरेदी झालेल्या मागण्या</span><b><?= $h($N($pc['req_part'])) ?></b><em><?= $h($pctS($pc['req_part'], max(1, $rqL))) ?> बाकींपैकी</em></div>
+        <?php if ($pc['amt'] > 0): ?><div class="o"><span>बाकी रक्कम (अंदाजित)</span><b><?= $h($N(purchaseInr($pc['amt_left']))) ?></b><em><?= $h($pctS($pc['amt_left'], $pc['amt'])) ?></em></div>
+        <div class="g"><span>खरेदी झालेली रक्कम</span><b><?= $h($N(purchaseInr($pc['amt'] - $pc['amt_left']))) ?></b><em><?= $h($pctS($pc['amt'] - $pc['amt_left'], $pc['amt'])) ?></em></div><?php endif; ?>
+        <div><span>90+ दिवस जुन्या (बाकींपैकी)</span><b><?= $h($N($pc['age']['90+'])) ?></b><em><?= $h($pctS($pc['age']['90+'], max(1, $rqL))) ?></em></div>
+      </div>
+    </div>
+    <?php
+      $pins = [];
+      $pins[] = 'एकूण <b>' . $h($N($pc['it'])) . '</b> वस्तूंपैकी <b>' . $h($N($pc['it_done'])) . '</b> (' . $h($pctS($pc['it_done'], $pc['it'])) . ') खरेदी झाले, <b>' . $h($N($itL)) . '</b> (' . $h($pctS($itL, $pc['it'])) . ') खरेदी बाकी.';
+      $dk = array_keys(array_filter($pc['dep'], fn($b) => $b['it'] - $b['it_done'] > 0));
+      if ($dk && count($pc['dep']) > 1) { $w0 = $pc['dep'][$dk[0]]; $pins[] = 'सर्वात जास्त टक्के बाकी: <b>' . $h($dk[0]) . '</b> — ' . $h($pctS($w0['it'] - $w0['it_done'], $w0['it'])) . ' (' . $h($N($w0['it'] - $w0['it_done'])) . ' वस्तू).'; }
+      $best = null; foreach ($pc['dep'] as $dn => $b) if ($b['it'] >= 3 && ($best === null || $b['it_done'] / $b['it'] > $pc['dep'][$best]['it_done'] / $pc['dep'][$best]['it'])) $best = $dn;
+      if ($best !== null && count($pc['dep']) > 1 && $pc['dep'][$best]['it_done'] > 0) $pins[] = 'सर्वात चांगली प्रगती: <b>' . $h($best) . '</b> — ' . $h($pctS($pc['dep'][$best]['it_done'], $pc['dep'][$best]['it'])) . ' खरेदी पूर्ण.';
+      $stL = ['approve' => '⏳ मंजुरी बाकी', 'order' => '📝 आवक / आदेश बाकी', 'process' => '🛒 खरेदी प्रक्रियेत', 'partial' => '🧩 अंशतः खरेदी'];
+      arsort($pc['stage']); $sk0 = array_key_first($pc['stage']);
+      if ($rqL && $pc['stage'][$sk0]) $pins[] = 'बाकी मागण्यांपैकी <b>' . $h($pctS($pc['stage'][$sk0], $rqL)) . '</b> "' . $stL[$sk0] . '" टप्प्यावर अडकल्या आहेत.';
+      if ($pc['amt'] > 0 && $pc['amt_left'] > 0) $pins[] = 'अजून सुमारे <b>' . $h($N(purchaseInr($pc['amt_left']))) . '</b> (' . $h($pctS($pc['amt_left'], $pc['amt'])) . ') ची खरेदी बाकी आहे.'; ?>
+    <ul class="ins" style="margin-top:8px;"><?php foreach ($pins as $i): ?><li><?= $i ?></li><?php endforeach; ?></ul>
+    <div class="two">
+      <div>
+        <h3>🏢 विभागनिहाय खरेदी बाकी %</h3>
+        <table class="mini"><thead><tr><th style="width:32%">विभाग</th><th>मागण्या (बाकी/एकूण)</th><th>वस्तू (बाकी/एकूण)</th><th>बाकी %</th><th style="width:22%">प्रगती</th></tr></thead><tbody>
+        <?php foreach ($pc['dep'] as $dn => $b): $l = $b['it'] - $b['it_done']; $g = $pct($b['it_done'], $b['it']); ?><tr><td><?= $h($dn) ?></td><td class="c"><?= $h($N($b['req'] - $b['req_done'])) ?>/<?= $h($N($b['req'])) ?></td><td class="c"><?= $h($N($l)) ?>/<?= $h($N($b['it'])) ?></td><td class="c"><?= $tag($pct($l, $b['it'])) ?></td><td><span class="stk"><i class="g" style="width:<?= $g ?>%"></i><i class="o" style="width:<?= 100 - $g ?>%"></i></span></td></tr><?php endforeach; ?>
+        </tbody></table>
+      </div>
+      <div>
+        <?php if ($rqL): ?>
+        <div class="keep"><h3>🚦 बाकी मागण्या — टप्पानिहाय %</h3>
+        <table class="mini"><thead><tr><th style="width:44%">टप्पा</th><th>मागण्या</th><th>%</th><th style="width:30%"></th></tr></thead><tbody>
+        <?php foreach (['approve', 'order', 'process', 'partial'] as $k): $v = $pc['stage'][$k]; ?><tr><td><?= $stL[$k] ?></td><td class="c"><?= $h($N($v)) ?></td><td class="c"><?= $h($pctS($v, $rqL)) ?></td><td><span class="stk"><i class="o" style="width:<?= $pct($v, $rqL) ?>%"></i></span></td></tr><?php endforeach; ?>
+        </tbody></table></div>
+        <div class="keep"><h3>⏰ बाकी मागण्या — किती दिवसांपासून %</h3>
+        <table class="mini"><thead><tr><th>दिवस</th><th>मागण्या</th><th>%</th><th style="width:30%"></th></tr></thead><tbody>
+        <?php foreach ($pc['age'] as $k => $v): ?><tr><td class="c"><?= $h($N($k)) ?></td><td class="c"><?= $h($N($v)) ?></td><td class="c"><?= $h($pctS($v, $rqL)) ?></td><td><span class="stk"><i class="<?= $k === '90+' ? 'r' : 'o' ?>" style="width:<?= $pct($v, $rqL) ?>%"></i></span></td></tr><?php endforeach; ?>
+        </tbody></table></div>
+        <?php endif; ?>
+        <?php if (count($pc['fy']) > 1): ?>
+        <div class="keep"><h3>📅 आर्थिक वर्षनिहाय %</h3>
+        <table class="mini"><thead><tr><th>आ.व.</th><th>वस्तू (बाकी/एकूण)</th><th>बाकी %</th><th style="width:30%"></th></tr></thead><tbody>
+        <?php foreach ($pc['fy'] as $fk => $b): $l = $b['it'] - $b['it_done']; $g = $pct($b['it_done'], $b['it']); ?><tr><td class="c"><?= $h($N(purchaseFyLabel($fk))) ?></td><td class="c"><?= $h($N($l)) ?>/<?= $h($N($b['it'])) ?></td><td class="c"><?= $tag($pct($l, $b['it'])) ?></td><td><span class="stk"><i class="g" style="width:<?= $g ?>%"></i><i class="o" style="width:<?= 100 - $g ?>%"></i></span></td></tr><?php endforeach; ?>
+        </tbody></table></div>
+        <?php endif; ?>
+      </div>
+    </div>
+    <?php endif; ?>
     <?php if ($type !== 'done'):
       $ins = [];
       $topD = array_key_first($dep); if ($topD !== null) $ins[] = 'सर्वात जास्त बाकी: <b>' . $h($topD) . '</b> — ' . $h($N($dep[$topD]['n'])) . ' नोंदी, ' . $h($N(purchaseInr($dep[$topD]['amt']))) . '.';
