@@ -5502,3 +5502,10 @@ INSERT IGNORE INTO permissions (permission_key, label, label_local, sort_order) 
 -- ✍️ बिल परवानगी पत्रक फक्त खरेदी विभागाला; इतरांना परवानगीनेच — Done करण्यासाठी वेगळी परवानगी
 INSERT IGNORE INTO permissions (permission_key, label, label_local, sort_order) VALUES
   ('bill_sign_approve', 'Bill permission sheets — view & mark permission done (bill-wise decisions)', 'बिल परवानगी पत्रक — पाहणे व परवानगी Done (बिलनिहाय निर्णय)', 65);
+
+-- ============================================================
+-- FROM: migration-bill-sign-ep-name.sql
+-- ============================================================
+-- ✍️ बिल परवानगी पत्रक — "EP Sir" ऐवजी "Executive President Sir"
+UPDATE org_settings SET setting_value = REPLACE(setting_value, 'EP Sir', 'Executive President Sir') WHERE setting_key = 'bs_subtitle';
+UPDATE bill_sign_events SET note = REPLACE(note, 'EP So. Sign', 'Executive President Sir Sign') WHERE note LIKE '%EP So. Sign%';

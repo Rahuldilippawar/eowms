@@ -1,6 +1,6 @@
 <?php
 // 🖨️ बिल परवानगी पत्रक — फाईलवर लावायचे A4 (आडवे) पत्रक, black & white.
-//  copy=ep (default): "Inward Files For EP Sir Signing Purpose" — सर्व बिलं, 4 सह्या
+//  copy=ep (default): "Inward Files For Executive President Sir Signing Purpose" — सर्व बिलं, 4 सह्या
 //  copy=acc: "Bill's submitted from Purchase Dept. to the Account Dept." — फक्त परवानगी झालेली बिलं, टीप, 2 सह्या
 require_once __DIR__ . '/../../includes/auth.php';
 requireLogin('../../');
@@ -36,7 +36,7 @@ $ST = bsStatuses();
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title><?= $acc ? 'Acc. Dept.' : 'EP Sign' ?> — Sheet No. <?= $h(bsSheetLabel($s)) ?> (<?= $h(purchaseDate($s['sheet_date'])) ?>)</title>
+<title><?= $acc ? 'Acc. Dept.' : 'Executive President Sir Sign' ?> — Sheet No. <?= $h(bsSheetLabel($s)) ?> (<?= $h(purchaseDate($s['sheet_date'])) ?>)</title>
 <style>
   *{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
   body{margin:0;background:#E5E7EB;font-family:"Noto Sans","Noto Sans Devanagari",Arial,system-ui,sans-serif;color:#111;}
