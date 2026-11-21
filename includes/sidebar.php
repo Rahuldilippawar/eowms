@@ -354,13 +354,18 @@ function navGroupHead($id, $key, $activeGroup, $icon, $label, $badge = 0) {
         <i class="fa-solid fa-envelope-open-text fa-fw"></i><span>पत्र व्यवहार</span>
         <?= navCount($pendingLettersCount) ?>
       </a>
-      <?php require_once __DIR__ . '/office-register.php'; if (orCanView()): ?>
-      <a href="<?= $rp ?>office-register/index.php" class="tree-node <?= $currentDir === 'office-register' && $currentPage !== 'compose.php' ? 'active' : '' ?>">
+      <?php require_once __DIR__ . '/office-register.php'; if (orCanView() || orIsAdmin()): ?>
+      <a href="<?= $rp ?>office-register/index.php" class="tree-node <?= $currentDir === 'office-register' && !in_array($currentPage, ['compose.php', 'registers.php'], true) ? 'active' : '' ?>">
         <i class="fa-solid fa-book-bookmark fa-fw"></i><span>आवक-जावक नोंदवही</span>
       </a>
       <?php if (orCanEdit()): ?>
       <a href="<?= $rp ?>office-register/compose.php" class="tree-node <?= $currentDir === 'office-register' && $currentPage === 'compose.php' ? 'active' : '' ?>">
         <i class="fa-solid fa-file-pen fa-fw"></i><span>जावक पत्र बनवा</span>
+      </a>
+      <?php endif; ?>
+      <?php if (orIsAdmin()): ?>
+      <a href="<?= $rp ?>office-register/registers.php" class="tree-node <?= $currentDir === 'office-register' && $currentPage === 'registers.php' ? 'active' : '' ?>">
+        <i class="fa-solid fa-user-lock fa-fw"></i><span>नोंदवह्या व access</span>
       </a>
       <?php endif; ?>
       <?php endif; ?>

@@ -7,8 +7,11 @@ if (!orCanView()) { http_response_code(403); die('<div style="font-family:sans-s
 $orgId = activeOrgId();
 if (!orReady($pdo)) { header('Location: index.php'); exit; }
 $st = $pdo->prepare("SELECT * FROM office_letters WHERE id = ? AND organization_id = ? AND direction = 'out'"); $st->execute([(int)($_GET['id'] ?? 0), $orgId]); $row = $st->fetch();
-if (!$row) { header('Location: index.php?dir=out'); exit; }
-$SET = orLetterSettings($pdo, $orgId);
+if (!$row || !orCan($pdo, $orgId, $row['register_id'], 'read')) { header('Location: index.php?dir=out'); exit; }
+$REG = orRegister($pdo, $orgId, $row['register_id']) ?: ['name' => '', 'letterhead' => '', 'report_head' => '', 'prefix' => '', 'letter_signs' => '', 'remark_line' => ''];
+$lvl = orLevel($pdo, $orgId, $row['register_id']);
+$st = $pdo->prepare("SELECT name FROM organizations WHERE id = ?"); $st->execute([$orgId]);
+$SET = orLetterSettings($REG, (string)$st->fetchColumn());
 $doc = orLetterDoc($row, $SET);
 $hasDoc = !empty($row['doc_json']);
 if (!$hasDoc) { $doc['body'] = ''; $doc['to'] = (string)$row['party']; }
@@ -35,13 +38,14 @@ $flash = $_SESSION['flash'] ?? ''; unset($_SESSION['flash']);
 </head>
 <body>
 <div class="bar">
-  <a href="index.php?dir=out">← जावक नोंदवही</a>
-  <?php if (orCanEdit()): ?><a href="compose.php?id=<?= (int)$row['id'] ?>">✎ पत्र बदला</a><a href="compose.php?copy=<?= (int)$row['id'] ?>">📄 याच पत्रावरून नवीन</a><?php endif; ?>
+  <a href="index.php?r=<?= (int)$row['register_id'] ?>&amp;dir=out">← <?= $h($REG['name'] ?: 'जावक नोंदवही') ?></a>
+  <?php if ($lvl === 'edit'): ?><a href="compose.php?id=<?= (int)$row['id'] ?>">✎ पत्र बदला</a><?php endif; ?>
+  <?php if (orLevelRank($lvl) >= 2): ?><a href="compose.php?copy=<?= (int)$row['id'] ?>">📄 याच पत्रावरून नवीन</a><?php endif; ?>
   <a href="entry.php?id=<?= (int)$row['id'] ?>">🛠️ नोंद / कामाची स्थिती</a>
   <button type="button" class="print" onclick="window.print()">🖨️ Print / PDF</button>
 </div>
 <?php if ($flash): ?><div class="ok"><?= $h($flash) ?></div><?php endif; ?>
-<?php if (!$hasDoc): ?><div class="ok" style="background:#FEF3C7;color:#92400E;">हे पत्र E-Admin मध्ये बनवलेले नाही (नोंदवहीतील नोंद) — <?= orCanEdit() ? '<a href="compose.php?id=' . (int)$row['id'] . '" style="color:inherit;">✎ आता पत्र बनवा</a>' : 'फक्त विषय दिसत आहे.' ?></div><?php endif; ?>
+<?php if (!$hasDoc): ?><div class="ok" style="background:#FEF3C7;color:#92400E;">हे पत्र E-Admin मध्ये बनवलेले नाही (नोंदवहीतील नोंद) — <?= $lvl === 'edit' ? '<a href="compose.php?id=' . (int)$row['id'] . '" style="color:inherit;">✎ आता पत्र बनवा</a>' : 'फक्त विषय दिसत आहे.' ?></div><?php endif; ?>
 <div class="sheet"><?= orLetterHtml($doc, ['date' => $row['letter_date'], 'subject' => $row['subject'], 'reg_no' => $row['reg_no'], 'fy' => $row['fy']], $SET['head'], ($doc['digits'] ?? 'mr') === 'mr') ?></div>
 </body>
 </html>

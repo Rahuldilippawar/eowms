@@ -7,6 +7,11 @@ if (!orCanEdit()) { http_response_code(403); die('<div style="font-family:sans-s
 $orgId = activeOrgId();
 $user = currentUser();
 if (!orReady($pdo)) { header('Location: index.php'); exit; }
+// 📚 नोंदवही — Excel आयात "बदल" access असलेल्या नोंदवहीतच
+$REG = orCurrentRegister($pdo, $orgId, 'edit');
+if (!$REG) { http_response_code(403); die('<div style="font-family:sans-serif;padding:40px;">कोणत्याही नोंदवहीत Excel आयात करण्याचा access नाही.</div>'); }
+$rid = (int)$REG['id'];
+$eRegs = array_filter(array_intersect_key(orRegisters($pdo, $orgId), orAccessMap($pdo, $orgId)), fn($r) => orLevel($pdo, $orgId, $r['id']) === 'edit');
 
 $tmpDir = sys_get_temp_dir();
 $sessKey = 'or_import_file';
@@ -26,23 +31,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             else {
                 if ($fileOk($_SESSION[$sessKey] ?? null)) @unlink($_SESSION[$sessKey]);
                 $_SESSION[$sessKey] = $dest; $_SESSION[$sessKey . '_name'] = mb_substr((string)$up['name'], 0, 120);
-                header('Location: import.php?preview=1'); exit;
+                header('Location: import.php?preview=1&r=' . $rid); exit;
             }
         }
     }
     if ($act === 'import_file' && $fileOk($_SESSION[$sessKey] ?? null)) {
         try {
             $P = orParseWorkbook($_SESSION[$sessKey]);
-            [$n, $skip] = orImportRows($pdo, $orgId, $P['rows'], (int)$user['id'], 'excel');
+            [$n, $skip] = orImportRows($pdo, $orgId, $rid, $P['rows'], (int)$user['id'], 'excel');
             if (!empty($_POST['use_head'])) {
-                if ($P['head']) orgSettingSet($pdo, $orgId, 'office_reg_head', implode("\n", $P['head']));
-                if ($P['title'] !== '') orgSettingSet($pdo, $orgId, 'office_reg_title', $P['title']);
-                if ($P['signs']) orgSettingSet($pdo, $orgId, 'office_reg_signs', implode("\n", $P['signs']));
+                $pdo->prepare("UPDATE office_registers SET report_head = COALESCE(?, report_head), title = COALESCE(?, title), report_signs = COALESCE(?, report_signs), updated_at = NOW() WHERE id = ? AND organization_id = ?")
+                    ->execute([$P['head'] ? implode("\n", $P['head']) : null, $P['title'] !== '' ? $P['title'] : null, $P['signs'] ? implode("\n", $P['signs']) : null, $rid, $orgId]);
             }
             @unlink($_SESSION[$sessKey]); unset($_SESSION[$sessKey]);
             logActivity('आवक-जावक नोंदवही — Excel आयात', 'organization', $orgId, $n . ' नवीन, ' . $skip . ' आधीच होत्या');
             $_SESSION['flash'] = '✓ Excel मधील ' . $n . ' नवीन नोंदी आयात झाल्या.' . ($skip ? ' ' . $skip . ' आधीच होत्या — वगळल्या.' : '');
-            header('Location: index.php'); exit;
+            header('Location: index.php?r=' . $rid); exit;
         } catch (Throwable $e) { $error = 'आयात करता आली नाही: ' . $e->getMessage(); }
     }
 }
@@ -53,7 +57,7 @@ if (isset($_GET['preview']) && $fileOk($_SESSION[$sessKey] ?? null)) {
         $P = orParseWorkbook($_SESSION[$sessKey]);
         // आधीच असलेल्या नोंदी
         $ex = [];
-        $st = $pdo->prepare("SELECT CONCAT(direction, '|', fy, '|', reg_no) FROM office_letters WHERE organization_id = ?"); $st->execute([$orgId]);
+        $st = $pdo->prepare("SELECT CONCAT(direction, '|', fy, '|', reg_no) FROM office_letters WHERE organization_id = ? AND register_id = ?"); $st->execute([$orgId, $rid]);
         foreach ($st->fetchAll(PDO::FETCH_COLUMN) as $k) $ex[$k] = 1;
         $new = 0; $old = 0; $stc = []; $bySheet = [];
         foreach ($P['rows'] as $r) {
@@ -76,13 +80,14 @@ require_once __DIR__ . '/../includes/header.php';
   .oi-w{font-size:12.5px;max-height:220px;overflow:auto;border-left:3px solid #F59E0B;padding:4px 10px;background:color-mix(in srgb,#F59E0B 7%,transparent);border-radius:0 8px 8px 0;}
   .oi-k{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:10px 0;} .oi-k div{border:1px solid var(--line);border-radius:10px;padding:8px 10px;} .oi-k span{display:block;font-size:11.5px;color:var(--text-dim);} .oi-k b{font-size:18px;}
 </style>
-<div class="page-eyebrow"><a href="index.php" style="color:inherit;">📨 आवक-जावक नोंदवही</a></div>
-<div class="page-title">📥 Excel आयात</div>
+<div class="page-eyebrow"><a href="index.php?r=<?= $rid ?>" style="color:inherit;">📨 <?= h($REG['name']) ?></a></div>
+<div class="page-title">📥 Excel आयात <small style="font-size:13px;color:var(--text-dim);font-weight:700;">· <?= h($REG['name']) ?></small></div>
+<?php if (count($eRegs) > 1 && empty($preview)): ?><div class="mb-2"><select class="form-select-custom" style="width:auto;" onchange="location.href='import.php?r='+this.value"><?php foreach ($eRegs as $er): ?><option value="<?= (int)$er['id'] ?>" <?= (int)$er['id'] === $rid ? 'selected' : '' ?>>📚 <?= h($er['name']) ?></option><?php endforeach; ?></select></div><?php endif; ?>
 <?php if ($error): ?><div class="alert alert-danger" style="border-radius:10px;font-size:13px;">⚠️ <?= h($error) ?></div><?php endif; ?>
 
 <?php if (!$preview): ?>
 <form method="POST" enctype="multipart/form-data" class="oi-card" data-no-smart-filter>
-  <input type="hidden" name="action" value="preview_file">
+  <input type="hidden" name="action" value="preview_file"><input type="hidden" name="r" value="<?= $rid ?>">
   <div style="font-size:13px;line-height:1.7;margin-bottom:10px;">
     नोंदवहीची Excel — प्रत्येक महिन्याची <b>"आवक एप्रिल"</b>, <b>"जावक एप्रिल"</b> अशी Sheet.<br>
     रकाने: <b>अ.क्र. · आवक क्र. / जावक क्र. · दिनांक · प्राप्त पत्राचा जावक क्र. · कोणाकडून / कोणाकडे · विषय · शेरा · कामाची स्थिती</b> (क्रम बदलला तरी चालतो).<br>
@@ -105,7 +110,7 @@ require_once __DIR__ . '/../includes/header.php';
   <?php if ($P['warn']): ?><div class="mt-3"><div style="font-weight:700;font-size:13px;margin-bottom:4px;">⚠️ तपासा (<?= count($P['warn']) ?>)</div><div class="oi-w"><?php foreach ($P['warn'] as $w): ?><div><?= h($w) ?></div><?php endforeach; ?></div></div><?php endif; ?>
   <?php if ($P['head'] || $P['signs']): ?><div class="mt-3" style="font-size:12.5px;color:var(--text-dim);">शीर्षक: <?= h(implode(' · ', $P['head'])) ?><?= $P['signs'] ? '<br>सह्या: ' . h(implode(' · ', array_map(fn($s) => trim(str_replace('|', ' — ', $s), ' —'), $P['signs']))) : '' ?></div><?php endif; ?>
   <form method="POST" class="mt-3 d-flex gap-2 flex-wrap align-items-center" data-no-smart-filter>
-    <input type="hidden" name="action" value="import_file">
+    <input type="hidden" name="action" value="import_file"><input type="hidden" name="r" value="<?= $rid ?>">
     <?php if ($P['head'] || $P['signs']): ?><label style="font-size:12.5px;"><input type="checkbox" name="use_head" value="1"> अहवालाचं शीर्षक व सह्या या Excel प्रमाणे ठेवा</label><?php endif; ?>
     <button type="submit" class="btn" style="background:#16A34A;color:#fff;border-radius:10px;font-weight:700;" <?= $preview['new'] ? '' : 'disabled' ?>>✓ <?= $preview['new'] ?> नोंदी आयात करा</button>
     <a href="import.php" class="btn" style="border:1px solid var(--line);border-radius:10px;">दुसरी File</a>

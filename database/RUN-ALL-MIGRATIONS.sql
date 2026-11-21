@@ -5310,3 +5310,49 @@ INSERT IGNORE INTO role_permissions (role_key, permission_key) SELECT 'general_a
 INSERT IGNORE INTO role_permissions (role_key, permission_key) VALUES
   ('general_admin_manager', 'office_register'), ('general_admin_manager', 'office_register_view'),
   ('office_clerk', 'office_register'), ('office_clerk', 'office_register_view');
+
+-- ============================================================
+-- FROM: migration-office-registers-multi.sql
+-- ============================================================
+-- 📚 विभागनिहाय आवक-जावक नोंदवह्या — प्रत्येक विभाग / कॉलेज / शाळा / कार्यालयाची स्वतंत्र नोंदवही, स्वतःचं letterhead,
+--    व व्यक्तीनिहाय access (फक्त पाहणे / पाहणे + नोंद / पाहणे + नोंद + बदल) — Super Admin ठरवतो
+CREATE TABLE IF NOT EXISTS office_registers (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  organization_id INT NOT NULL,
+  name VARCHAR(150) NOT NULL,
+  kind VARCHAR(20) NOT NULL DEFAULT 'office',
+  campus_id INT NULL,
+  department_id INT NULL,
+  title VARCHAR(150) NULL,
+  report_head TEXT NULL,
+  letterhead TEXT NULL,
+  prefix VARCHAR(150) NULL,
+  letter_signs TEXT NULL,
+  report_signs TEXT NULL,
+  remark_line VARCHAR(200) NULL,
+  role_keys VARCHAR(255) NULL,
+  role_level VARCHAR(5) NOT NULL DEFAULT 'edit',
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  sort_order INT NOT NULL DEFAULT 0,
+  created_by INT NULL,
+  created_at DATETIME NOT NULL,
+  updated_at DATETIME NULL,
+  INDEX idx_oreg_org (organization_id, is_active, sort_order)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE IF NOT EXISTS office_register_access (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  register_id INT NOT NULL,
+  organization_id INT NOT NULL,
+  user_id INT NOT NULL,
+  level VARCHAR(5) NOT NULL DEFAULT 'read',
+  granted_by INT NULL,
+  created_at DATETIME NOT NULL,
+  UNIQUE KEY uq_ora (register_id, user_id),
+  INDEX idx_ora_user (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+ALTER TABLE office_letters ADD COLUMN register_id INT NOT NULL DEFAULT 0 AFTER organization_id;
+ALTER TABLE office_letters DROP INDEX uq_ol_no, ADD UNIQUE KEY uq_ol_reg_no (organization_id, register_id, direction, fy, reg_no), ADD INDEX idx_ol_reg (register_id, direction, fy, reg_month);
+-- आता access नोंदवहीनिहाय — जुन्या परवानग्या म्हणजे "सर्व नोंदवह्या"
+UPDATE permissions SET label = 'Inward / outward — ALL registers: add, edit, import, settings', label_local = 'आवक-जावक — सर्व नोंदवह्या: नोंद, बदल, आयात, सेटिंग्ज' WHERE permission_key = 'office_register';
+UPDATE permissions SET label = 'Inward / outward — ALL registers: view and reports only', label_local = 'आवक-जावक — सर्व नोंदवह्या: फक्त पाहणे व अहवाल' WHERE permission_key = 'office_register_view';
+DELETE FROM role_permissions WHERE role_key IN ('general_admin_manager', 'office_clerk') AND permission_key IN ('office_register', 'office_register_view');

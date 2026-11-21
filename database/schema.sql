@@ -296,8 +296,8 @@ INSERT INTO permissions (permission_key, label, label_local, sort_order) VALUES
 ('purchase_compare', 'Comparison chart — create, edit, print, Excel import', 'तुलनात्मक तक्ता — बनवणे, बदल, Print, Excel आयात', 56),
 ('purchase_compare_approve', 'Comparison chart — approve vendor selection', 'तुलनात्मक तक्ता — पुरवठादार निवड मान्यता (Approve)', 57),
 ('purchase_compare_view', 'Comparison chart — view & print', 'तुलनात्मक तक्ता — पाहणे व Print', 58),
-('office_register', 'Inward / outward register — add, edit, work status, Excel import, reports', 'आवक-जावक नोंदवही — नोंद, बदल, कामाची स्थिती, Excel आयात, अहवाल', 60),
-('office_register_view', 'Inward / outward register — view and reports only', 'आवक-जावक नोंदवही — फक्त पाहणे व अहवाल', 61);
+('office_register', 'Inward / outward — ALL registers: add, edit, import, settings', 'आवक-जावक — सर्व नोंदवह्या: नोंद, बदल, आयात, सेटिंग्ज', 60),
+('office_register_view', 'Inward / outward — ALL registers: view and reports only', 'आवक-जावक — सर्व नोंदवह्या: फक्त पाहणे व अहवाल', 61);
 
 INSERT INTO role_permissions (role_key, permission_key)
 SELECT role_key, 'manage_it' FROM role_definitions WHERE category = 'management';
@@ -3756,6 +3756,7 @@ CREATE TABLE purchase_requests (
 CREATE TABLE office_letters (
   id INT AUTO_INCREMENT PRIMARY KEY,
   organization_id INT NOT NULL,
+  register_id INT NOT NULL DEFAULT 0,
   direction VARCHAR(3) NOT NULL,
   fy VARCHAR(9) NOT NULL,
   reg_month DATE NOT NULL,
@@ -3780,9 +3781,45 @@ CREATE TABLE office_letters (
   updated_by INT NULL,
   created_at DATETIME NOT NULL,
   updated_at DATETIME NULL,
-  UNIQUE KEY uq_ol_no (organization_id, direction, fy, reg_no),
+  UNIQUE KEY uq_ol_reg_no (organization_id, register_id, direction, fy, reg_no),
+  INDEX idx_ol_reg (register_id, direction, fy, reg_month),
   INDEX idx_ol_list (organization_id, direction, fy, reg_month, reg_num),
   INDEX idx_ol_status (organization_id, status, letter_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+-- 📚 विभागनिहाय नोंदवह्या व व्यक्तीनिहाय access
+CREATE TABLE office_registers (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  organization_id INT NOT NULL,
+  name VARCHAR(150) NOT NULL,
+  kind VARCHAR(20) NOT NULL DEFAULT 'office',
+  campus_id INT NULL,
+  department_id INT NULL,
+  title VARCHAR(150) NULL,
+  report_head TEXT NULL,
+  letterhead TEXT NULL,
+  prefix VARCHAR(150) NULL,
+  letter_signs TEXT NULL,
+  report_signs TEXT NULL,
+  remark_line VARCHAR(200) NULL,
+  role_keys VARCHAR(255) NULL,
+  role_level VARCHAR(5) NOT NULL DEFAULT 'edit',
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  sort_order INT NOT NULL DEFAULT 0,
+  created_by INT NULL,
+  created_at DATETIME NOT NULL,
+  updated_at DATETIME NULL,
+  INDEX idx_oreg_org (organization_id, is_active, sort_order)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE office_register_access (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  register_id INT NOT NULL,
+  organization_id INT NOT NULL,
+  user_id INT NOT NULL,
+  level VARCHAR(5) NOT NULL DEFAULT 'read',
+  granted_by INT NULL,
+  created_at DATETIME NOT NULL,
+  UNIQUE KEY uq_ora (register_id, user_id),
+  INDEX idx_ora_user (user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 CREATE TABLE office_letter_events (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -3809,8 +3846,5 @@ CREATE TABLE purchase_request_events (
 INSERT IGNORE INTO role_definitions (role_key, label, label_local, category, is_system) VALUES
   ('general_admin_manager', 'Manager — General Administration', 'व्यवस्थापक — सामान्य प्रशासन', 'management', 0),
   ('office_clerk', 'Office Clerk', 'कार्यालयीन लिपिक', 'staff', 0);
--- व्यवस्थापक पदाच्या नेहमीच्या परवानग्या + आवक-जावक नोंदवही (पूर्ण)
+-- व्यवस्थापक पदाच्या नेहमीच्या परवानग्या; आवक-जावक access नोंदवहीनिहाय (office_registers.role_keys / office_register_access)
 INSERT IGNORE INTO role_permissions (role_key, permission_key) SELECT 'general_admin_manager', permission_key FROM role_permissions WHERE role_key = 'manager';
-INSERT IGNORE INTO role_permissions (role_key, permission_key) VALUES
-  ('general_admin_manager', 'office_register'), ('general_admin_manager', 'office_register_view'),
-  ('office_clerk', 'office_register'), ('office_clerk', 'office_register_view');
