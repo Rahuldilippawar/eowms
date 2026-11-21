@@ -92,7 +92,7 @@ $currentDir = basename(dirname($_SERVER['SCRIPT_NAME']));
 // Link दिसतो, त्याच्याशी जुळलेली असावी — नाहीतर त्या पानावर असताना Group
 // आपोआप उघडणार नाही.)
 $dirToGroup = [
-    'letters' => 'letters', 'requests' => 'letters', 'emergency' => 'letters',
+    'letters' => 'letters', 'requests' => 'letters', 'emergency' => 'letters', 'office-register' => 'letters',
     'messages' => 'communication', 'grievances' => 'communication',
     'renewals' => 'compliance', 'sop' => 'compliance',
     'staff' => 'staff', 'students' => 'staff',
@@ -354,6 +354,11 @@ function navGroupHead($id, $key, $activeGroup, $icon, $label, $badge = 0) {
         <i class="fa-solid fa-envelope-open-text fa-fw"></i><span>पत्र व्यवहार</span>
         <?= navCount($pendingLettersCount) ?>
       </a>
+      <?php require_once __DIR__ . '/office-register.php'; if (orCanView()): ?>
+      <a href="<?= $rp ?>office-register/index.php" class="tree-node <?= $currentDir === 'office-register' ? 'active' : '' ?>">
+        <i class="fa-solid fa-book-bookmark fa-fw"></i><span>आवक-जावक नोंदवही</span>
+      </a>
+      <?php endif; ?>
       <a href="<?= $rp ?>requests/index.php" class="tree-node <?= $currentDir === 'requests' && in_array($currentPage, ['index.php', 'view.php']) && ($_GET['category'] ?? '') !== 'it' ? 'active' : '' ?>">
         <i class="fa-solid fa-inbox fa-fw"></i><span><?= h(t('nav_requests')) ?></span>
         <?= navCount($pendingReqCount) ?>

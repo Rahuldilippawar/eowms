@@ -295,7 +295,9 @@ INSERT INTO permissions (permission_key, label, label_local, sort_order) VALUES
 ('bill_recon_kitchen', 'Kitchen (Bhojanalay) — monthly bill count & digital approval (bill reconciliation)', 'भोजनालय विभाग — मासिक बिल संख्या व डिजिटल मान्यता (बिल ताळमेळ)', 53),
 ('purchase_compare', 'Comparison chart — create, edit, print, Excel import', 'तुलनात्मक तक्ता — बनवणे, बदल, Print, Excel आयात', 56),
 ('purchase_compare_approve', 'Comparison chart — approve vendor selection', 'तुलनात्मक तक्ता — पुरवठादार निवड मान्यता (Approve)', 57),
-('purchase_compare_view', 'Comparison chart — view & print', 'तुलनात्मक तक्ता — पाहणे व Print', 58);
+('purchase_compare_view', 'Comparison chart — view & print', 'तुलनात्मक तक्ता — पाहणे व Print', 58),
+('office_register', 'Inward / outward register — add, edit, work status, Excel import, reports', 'आवक-जावक नोंदवही — नोंद, बदल, कामाची स्थिती, Excel आयात, अहवाल', 60),
+('office_register_view', 'Inward / outward register — view and reports only', 'आवक-जावक नोंदवही — फक्त पाहणे व अहवाल', 61);
 
 INSERT INTO role_permissions (role_key, permission_key)
 SELECT role_key, 'manage_it' FROM role_definitions WHERE category = 'management';
@@ -3748,6 +3750,48 @@ CREATE TABLE purchase_requests (
   updated_at DATETIME NULL,
   INDEX idx_pr_org (organization_id, status, fy),
   INDEX idx_pr_dept (organization_id, department)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 📨 आवक-जावक नोंदवही (कार्यालय)
+CREATE TABLE office_letters (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  organization_id INT NOT NULL,
+  direction VARCHAR(3) NOT NULL,
+  fy VARCHAR(9) NOT NULL,
+  reg_month DATE NOT NULL,
+  reg_no VARCHAR(20) NOT NULL,
+  reg_num INT NOT NULL DEFAULT 0,
+  sort_order INT NOT NULL DEFAULT 0,
+  letter_date DATE NULL,
+  ref_no VARCHAR(80) NULL,
+  party VARCHAR(255) NULL,
+  subject TEXT NULL,
+  remark TEXT NULL,
+  assigned_to VARCHAR(255) NULL,
+  work_status TEXT NULL,
+  status VARCHAR(10) NOT NULL DEFAULT 'pending',
+  priority VARCHAR(10) NOT NULL DEFAULT 'normal',
+  due_date DATE NULL,
+  done_on DATE NULL,
+  linked_no VARCHAR(40) NULL,
+  source VARCHAR(10) NOT NULL DEFAULT 'manual',
+  created_by INT NULL,
+  updated_by INT NULL,
+  created_at DATETIME NOT NULL,
+  updated_at DATETIME NULL,
+  UNIQUE KEY uq_ol_no (organization_id, direction, fy, reg_no),
+  INDEX idx_ol_list (organization_id, direction, fy, reg_month, reg_num),
+  INDEX idx_ol_status (organization_id, status, letter_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE office_letter_events (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  letter_id INT NOT NULL,
+  organization_id INT NOT NULL,
+  event VARCHAR(20) NOT NULL,
+  note VARCHAR(500) NULL,
+  user_id INT NULL,
+  created_at DATETIME NOT NULL,
+  INDEX idx_ole_letter (letter_id, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 CREATE TABLE purchase_request_events (
   id INT AUTO_INCREMENT PRIMARY KEY,

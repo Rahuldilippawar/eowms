@@ -278,6 +278,25 @@ function dailyReportData(PDO $pdo, $orgId, $date) {
         }
     }
 
+    // 15) 📨 आवक-जावक नोंदवही — आजची आवक / जावक, आज पूर्ण झालेली कामे, उघडी व जुनी पत्रे
+    if (is_file(__DIR__ . '/office-register.php')) {
+        require_once __DIR__ . '/office-register.php';
+        if (orReady($pdo)) {
+            $orAgg = $q("SELECT SUM(direction = 'in' AND letter_date = ?) tin, SUM(direction = 'out' AND letter_date = ?) tout, SUM(status = 'done' AND done_on = ?) tdone,
+                SUM(status IN ('pending','progress')) open, SUM(status IN ('pending','progress') AND DATEDIFF(?, COALESCE(letter_date, DATE(created_at))) > 15) old15,
+                SUM(status IN ('pending','progress') AND DATEDIFF(?, COALESCE(letter_date, DATE(created_at))) > 30) old30,
+                SUM(status IN ('pending','progress') AND due_date IS NOT NULL AND due_date < ?) overdue
+                FROM office_letters WHERE organization_id = ? AND fy = ?", [$d, $d, $d, $d, $d, $d, $o, orFy($d)], 'one');
+            $orToday = $q("SELECT direction, reg_no, party, subject, assigned_to, status FROM office_letters WHERE organization_id = ? AND (letter_date = ? OR (status = 'done' AND done_on = ?)) ORDER BY direction, reg_num LIMIT 12", [$o, $d, $d]);
+            if ($orAgg && ((int)$orAgg['tin'] + (int)$orAgg['tout'] + (int)$orAgg['tdone'] + (int)$orAgg['open'])) {
+                $S['officeReg'] = ['a' => $orAgg, 'today' => $orToday];
+                if ((int)$orAgg['overdue']) $alerts[] = ['bad', 'आवक-जावक — ' . (int)$orAgg['overdue'] . ' पत्रांची कामाची मुदत संपली'];
+                elseif ((int)$orAgg['old30']) $alerts[] = ['warn', 'आवक-जावक — ' . (int)$orAgg['old30'] . ' पत्रांवर 30 दिवसांपेक्षा जास्त काळ कार्यवाही बाकी'];
+                if ((int)$orAgg['tdone']) $good[] = 'आवक-जावक — आज ' . (int)$orAgg['tdone'] . ' पत्रांवरील कार्यवाही पूर्ण';
+            }
+        }
+    }
+
     // दिवसाचा गुण (0–100) — कामाची पूर्णता, हजेरी, मुदतबाह्य, SLA, SOS
     $score = 100;
     if (!empty($S['work']) && $w['total'] > 0) { $score -= (int)round((100 - $w['done'] * 100 / $w['total']) * 0.25); }
@@ -501,6 +520,20 @@ function dailyReportPdfHtml(array $D) {
         }
     }
 
+    // --- 📨 आवक-जावक नोंदवही ---
+    if (!empty($S['officeReg'])) {
+        $x = $S['officeReg']; $ag = $x['a'];
+        $html .= $sec(++$n, 'आवक-जावक नोंदवही', 'आजची पत्रे व कार्यवाही');
+        $html .= '<table class="g"><thead><tr><th class="num-r">आज आवक</th><th class="num-r">आज जावक</th><th class="num-r">आज पूर्ण</th><th class="num-r">उघडी कामे</th><th class="num-r">15+ दिवस</th><th class="num-r">मुदत संपली</th></tr></thead><tbody><tr>'
+            . '<td class="num-r"><b>' . (int)$ag['tin'] . '</b></td><td class="num-r"><b>' . (int)$ag['tout'] . '</b></td><td class="num-r" style="color:#137A4B;"><b>' . (int)$ag['tdone'] . '</b></td>'
+            . '<td class="num-r">' . (int)$ag['open'] . '</td><td class="num-r" style="color:#B45309;">' . (int)$ag['old15'] . '</td><td class="num-r" style="color:' . ((int)$ag['overdue'] ? '#B42318' : '#137A4B') . ';">' . (int)$ag['overdue'] . '</td></tr></tbody></table>';
+        if ($x['today']) {
+            $html .= '<div style="margin-top:6px;font-weight:bold;font-size:9.2pt;">आजची पत्रे</div>';
+            foreach ($x['today'] as $e) $html .= '<div style="font-size:8.8pt;margin:1px 0;">• ' . ($e['direction'] === 'out' ? 'जावक' : 'आवक') . ' ' . $h($e['reg_no']) . ' — ' . $h(mb_strimwidth((string)($e['party'] ?? ''), 0, 40, '…')) . ': ' . $h(mb_strimwidth((string)($e['subject'] ?? ''), 0, 90, '…'))
+                . ($e['assigned_to'] ? ' <span class="muted">(' . $h($e['assigned_to']) . ')</span>' : '') . ($e['status'] === 'done' ? ' <b style="color:#137A4B;">✓ पूर्ण</b>' : '') . '</div>';
+        }
+    }
+
     // --- नूतनीकरण --- (काहीच मुदतीत नसेल तरी "✓ सगळं वेळेत" — विसरलं की ठीक आहे, ते स्पष्ट)
     $RI = $S['renewInfo'] ?? null;
     $renLink = (defined('SITE_BASE_URL') ? SITE_BASE_URL : '') . '/renewals/index.php';
@@ -583,6 +616,7 @@ function dailyReportEmailHtml(array $D) {
         . "</tr></table>"
         . (!empty($S['ecampus']) ? "<div style='margin-top:12px;font-size:13px;background:#F7F5F2;border-radius:8px;padding:8px 12px;'>🎓 <b>E-Campus:</b> " . (int)$S['ecampus']['overall'] . "% पूर्ण — " . (int)$S['ecampus']['done'] . '/' . (int)$S['ecampus']['work'] .  " कामं पूर्ण — सविस्तर E-Campus अहवाल सोबतच्या दुसऱ्या PDF मध्ये</div>" : '')
         . (!empty($S['billRecon']) ? (function ($B) use ($h) { $l = []; foreach ($B['months'] as $m) $l[] = billReconMonthName($m['period'], false) . ': ' . trim(preg_replace('/^\S+\s/u', '', $m['label'])) . ($m['diff'] ? ' (फरक ' . $m['diff'] . ')' : ''); return "<div style='margin-top:8px;font-size:13px;background:#F7F5F2;border-radius:8px;padding:8px 12px;'>🧾 <b>बिल ताळमेळ:</b> " . $h(implode(' · ', $l)) . "</div>"; })($S['billRecon']) : '')
+        . (!empty($S['officeReg']) ? "<div style='margin-top:8px;font-size:13px;background:#F7F5F2;border-radius:8px;padding:8px 12px;'>📨 <b>आवक-जावक:</b> आज आवक " . (int)$S['officeReg']['a']['tin'] . ', जावक ' . (int)$S['officeReg']['a']['tout'] . ', पूर्ण ' . (int)$S['officeReg']['a']['tdone'] . ' · उघडी कामे ' . (int)$S['officeReg']['a']['open'] . "</div>" : '')
         . ($alerts ? "<div style='font-weight:bold;font-size:14px;margin:14px 0 4px;color:#191C3A;'>आजचे ठळक मुद्दे</div><ul style='padding-left:18px;margin:0;font-size:13px;line-height:1.6;'>$alerts</ul>" : '')
         . ($url ? "<a href='{$url}reports/daily.php' style='display:inline-block;margin-top:16px;background:#D9530F;color:#fff;text-decoration:none;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:bold;'>E-Admin मध्ये पाहा</a>" : '')
         . "<p style='font-size:11.5px;color:#8A90AC;margin-top:18px;'>!! आत्मा मालिक !! — हा अहवाल रोज संध्याकाळी आपोआप पाठवला जातो.</p>
