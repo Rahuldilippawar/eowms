@@ -3804,3 +3804,13 @@ CREATE TABLE purchase_request_events (
   created_at DATETIME NOT NULL,
   INDEX idx_pre_req (request_id, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 📨 नवीन पद: व्यवस्थापक — सामान्य प्रशासन (आवक-जावक नोंदी, जावक पत्र, अहवाल) + कार्यालयीन लिपिक (नोंदी करणारे)
+INSERT IGNORE INTO role_definitions (role_key, label, label_local, category, is_system) VALUES
+  ('general_admin_manager', 'Manager — General Administration', 'व्यवस्थापक — सामान्य प्रशासन', 'management', 0),
+  ('office_clerk', 'Office Clerk', 'कार्यालयीन लिपिक', 'staff', 0);
+-- व्यवस्थापक पदाच्या नेहमीच्या परवानग्या + आवक-जावक नोंदवही (पूर्ण)
+INSERT IGNORE INTO role_permissions (role_key, permission_key) SELECT 'general_admin_manager', permission_key FROM role_permissions WHERE role_key = 'manager';
+INSERT IGNORE INTO role_permissions (role_key, permission_key) VALUES
+  ('general_admin_manager', 'office_register'), ('general_admin_manager', 'office_register_view'),
+  ('office_clerk', 'office_register'), ('office_clerk', 'office_register_view');

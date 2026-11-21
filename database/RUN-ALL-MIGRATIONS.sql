@@ -5297,3 +5297,16 @@ INSERT IGNORE INTO permissions (permission_key, label, label_local, sort_order) 
 -- ============================================================
 -- 📝 जावक पत्र E-Admin मध्येच — letterhead, जा.क्र., प्रति, विषय, मजकूर, सह्या, प्रत माहितीसाठी (JSON)
 ALTER TABLE office_letters ADD COLUMN doc_json MEDIUMTEXT NULL AFTER linked_no;
+
+-- ============================================================
+-- FROM: migration-office-register-roles.sql
+-- ============================================================
+-- 📨 नवीन पद: व्यवस्थापक — सामान्य प्रशासन (आवक-जावक नोंदी, जावक पत्र, अहवाल) + कार्यालयीन लिपिक (नोंदी करणारे)
+INSERT IGNORE INTO role_definitions (role_key, label, label_local, category, is_system) VALUES
+  ('general_admin_manager', 'Manager — General Administration', 'व्यवस्थापक — सामान्य प्रशासन', 'management', 0),
+  ('office_clerk', 'Office Clerk', 'कार्यालयीन लिपिक', 'staff', 0);
+-- व्यवस्थापक पदाच्या नेहमीच्या परवानग्या + आवक-जावक नोंदवही (पूर्ण)
+INSERT IGNORE INTO role_permissions (role_key, permission_key) SELECT 'general_admin_manager', permission_key FROM role_permissions WHERE role_key = 'manager';
+INSERT IGNORE INTO role_permissions (role_key, permission_key) VALUES
+  ('general_admin_manager', 'office_register'), ('general_admin_manager', 'office_register_view'),
+  ('office_clerk', 'office_register'), ('office_clerk', 'office_register_view');
